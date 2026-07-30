@@ -163,9 +163,42 @@ export default function BasketCartPage() {
     setIsEditingAddress(false);
   };
 
+  // 1-Hour Countdown Timer for Non-Midtrans Payments (3600 seconds)
+  const [nonMidtransTimeLeft, setNonMidtransTimeLeft] = useState<number>(3600);
+  useEffect(() => {
+    let interval: any;
+    if (currentStep === 3 && paymentMethod !== 'midtrans') {
+      interval = setInterval(() => {
+        setNonMidtransTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            alert('Waktu batas pembayaran 1 Jam telah berakhir! Pesanan dibatalkan secara otomatis.');
+            setCurrentStep(1);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setNonMidtransTimeLeft(3600);
+    }
+    return () => clearInterval(interval);
+  }, [currentStep, paymentMethod]);
+
+  const formatCountdown = (totalSec: number) => {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   // Proceed from Checkout (Step 2) to Payment (Step 3)
   const handleProceedToPayment = () => {
     if (cartItems.length === 0) return;
+    if (!shippingAddress.address || shippingAddress.address.trim() === '' || shippingAddress.address === 'Belum diisi') {
+      setIsEditingAddress(true);
+      alert('Alamat pengiriman wajib diisi terlebih dahulu sebelum melanjutkan ke pembayaran!');
+      return;
+    }
     setCurrentStep(3);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -987,6 +1020,18 @@ export default function BasketCartPage() {
                           Midtrans Simulator Resmi ↗
                         </a>
                       </div>
+                    </div>
+                  )}
+                  {/* NON-MIDTRANS 1-HOUR EXPIRY COUNTDOWN TIMER */}
+                  {paymentMethod !== 'midtrans' && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4 animate-fade-in">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-amber-900">
+                        <Clock className="w-4 h-4 text-amber-700 animate-pulse" />
+                        <span>Selesaikan Pembayaran Dalam (Batas 1 Jam):</span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-amber-800 bg-amber-200/80 px-3 py-1 rounded-full shadow-xs">
+                        ⏱️ {formatCountdown(nonMidtransTimeLeft)}
+                      </span>
                     </div>
                   )}
 

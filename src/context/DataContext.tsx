@@ -26,6 +26,7 @@ export interface ProductItem {
   fat: string;
   sugar: string;
   satFat: string;
+  maxDeliveryKm?: number;
 }
 
 export interface AdminVoucher {
@@ -59,7 +60,7 @@ export interface AdminOrder {
   paymentMethod: string;
   paymentBadge: 'PAID' | 'AWAITING' | 'REFUNDED';
   deliveryType: 'EXPRESS' | 'STANDARD' | 'SAME DAY';
-  status: 'SHIPPING' | 'COOKING' | 'COMPLETED' | 'PENDING';
+  status: 'SHIPPING' | 'COOKING' | 'COMPLETED' | 'PENDING' | 'EXPIRED' | 'CANCELLED';
   subtotal: number;
   shippingCost: number;
   discount: number;
@@ -140,9 +141,12 @@ interface DataContextType {
   toggleProductVisibility: (id: string) => void;
   addVoucher: (voucher: Omit<AdminVoucher, 'id'>) => AdminVoucher;
   deleteVoucher: (id: string) => void;
+  toggleVoucherStatus: (id: string) => void;
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
+  deleteOrder: (id: string) => void;
+  cancelOrder: (id: string, reason?: string) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
   deleteReview: (id: string) => void;
   sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string) => void;
@@ -552,12 +556,60 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       likesCount: 0,
       status: 'PUBLISHED'
     };
+
     setReviews(prev => [newReview, ...prev]);
+
+    // Recalculate Product Average Rating automatically
+    if (reviewData.productName) {
+      const targetName = reviewData.productName.toLowerCase();
+      setProducts(prevProducts => prevProducts.map(prod => {
+        if (prod.name.toLowerCase() === targetName || prod.id === reviewData.productName) {
+          const currentRating = prod.rating || 5.0;
+          const currentCount = prod.reviewsCount || 10;
+          
+          // Formula Rata-rata Tertimbang (Weighted Average)
+          const totalPoints = (currentRating * currentCount) + reviewData.rating;
+          const newCount = currentCount + 1;
+          const newAvgRating = Math.max(1.0, Math.min(5.0, Number((totalPoints / newCount).toFixed(1))));
+
+          return {
+            ...prod,
+            rating: newAvgRating,
+            reviewsCount: newCount
+          };
+        }
+        return prod;
+      }));
+    }
+
     return newReview;
   };
 
   const deleteReview = (id: string) => {
+    const reviewToDelete = reviews.find(r => r.id === id);
     setReviews(prev => prev.filter(r => r.id !== id));
+
+    if (reviewToDelete && reviewToDelete.productName) {
+      const targetName = reviewToDelete.productName.toLowerCase();
+      setProducts(prevProducts => prevProducts.map(prod => {
+        if (prod.name.toLowerCase() === targetName || prod.id === reviewToDelete.productName) {
+          const currentRating = prod.rating || 5.0;
+          const currentCount = prod.reviewsCount || 10;
+          if (currentCount > 1) {
+            const totalPoints = (currentRating * currentCount) - reviewToDelete.rating;
+            const newCount = currentCount - 1;
+            const newAvgRating = Math.max(1.0, Math.min(5.0, Number((totalPoints / newCount).toFixed(1))));
+
+            return {
+              ...prod,
+              rating: newAvgRating,
+              reviewsCount: newCount
+            };
+          }
+        }
+        return prod;
+      }));
+    }
   };
 
   const setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>> = (action) => {
@@ -626,6 +678,23 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }));
   };
 
+  const deleteOrder = (id: string) => {
+    setOrders(prev => prev.filter(o => o.id !== id));
+  };
+
+  const cancelOrder = (id: string, reason?: string) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id === id) {
+        return {
+          ...o,
+          status: 'CANCELLED',
+          paymentBadge: o.paymentBadge === 'PAID' ? 'REFUNDED' : o.paymentBadge
+        };
+      }
+      return o;
+    }));
+  };
+
   return (
     <DataContext.Provider value={{
       products,
@@ -648,6 +717,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       addOrder,
       updateOrderStatus,
       updatePaymentStatus,
+      deleteOrder,
+      cancelOrder,
       addReview,
       deleteReview,
       sendChatMessage,

@@ -69,11 +69,11 @@ export default function CommentsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { totalCartCount } = useCart();
-  const { reviews, addReview } = useData();
+  const { products, reviews, addReview } = useData();
 
   const [newComment, setNewComment] = useState('');
   const [newRating, setNewRating] = useState(5);
-  const [selectedDish, setSelectedDish] = useState('Rendang Daging Premium');
+  const [selectedDish, setSelectedDish] = useState(products[0]?.name || 'Special Wagyu Bowl');
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // Auth Guard
@@ -155,12 +155,11 @@ export default function CommentsPage() {
                   onChange={(e) => setSelectedDish(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-[#F5F2EC] border border-stone-200 rounded-xl text-xs text-stone-800 focus:outline-none focus:border-[#5C3D28]"
                 >
-                  <option value="Rendang Daging Premium">Rendang Daging Premium</option>
-                  <option value="Sate Ayam Madura">Sate Ayam Madura</option>
-                  <option value="Es Cendol Durian">Es Cendol Durian</option>
-                  <option value="Special Wagyu Bowl">Special Wagyu Bowl</option>
-                  <option value="Creamy Truffle Pasta">Creamy Truffle Pasta</option>
-                  <option value="Berry Cheesecake">Berry Cheesecake</option>
+                  {(products || []).map((prod) => (
+                    <option key={prod.id} value={prod.name}>
+                      {prod.name} ({prod.category}) — Rating: {prod.rating.toFixed(1)} ★
+                    </option>
+                  ))}
                 </select>
               </div>
 

@@ -409,8 +409,10 @@ export default function AdminDashboardPage() {
     updateOrderStatus,
     vouchers: voucherListFromContext,
     setVouchers: setVouchersInContext,
-    toggleVoucherStatus,
     updatePaymentStatus,
+    toggleVoucherStatus,
+    deleteOrder,
+    cancelOrder,
     reviews: reviewList,
     setReviews: setReviewList,
     deleteReview,
@@ -3525,14 +3527,6 @@ export default function AdminDashboardPage() {
                   Real-time logistics and fulfillment tracking.
                 </p>
               </div>
-
-              <button
-                onClick={() => setShowCreateOrderModal(true)}
-                className="px-5 py-3 bg-[#613A1F] hover:bg-[#4A2B16] text-white font-medium text-xs rounded-full shadow-md transition-all flex items-center gap-2 shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Manual Order</span>
-              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -4434,12 +4428,38 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Quick Admin Actions (Update Status) */}
-            <div className="space-y-2 border-t border-stone-100 pt-4">
+            {/* Quick Admin Actions (Update Status & Cancel/Delete) */}
+            <div className="space-y-3 border-t border-stone-100 pt-4">
               <span className="text-[10px] tracking-wider text-stone-400 font-bold uppercase block">
-                UBAH STATUS PESANAN (REAL-TIME)
+                TINDAKAN ADMIN (LOKASI, AKSI CS & UBAH STATUS)
               </span>
-              <div className="flex flex-wrap items-center gap-2">
+
+              {/* Location Distance Tracking & Recommendation Alert */}
+              <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-amber-900">
+                  <MapPin className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span>
+                    <strong>Estimasi Jarak Pengiriman:</strong> ~8.5 km (Radius Maksimum Makanan: 15 km — <span className="text-emerald-700 font-semibold">Tahan/Aman</span>)
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    const userEmail = selectedOrderForDetail.customerEmail || 'nizarazzuhra@gmail.com';
+                    replyChatMessage(
+                      userEmail,
+                      `Halo Kak ${selectedOrderForDetail.customerName}, mengenai pesanan ${selectedOrderForDetail.id}: Jika lokasi Anda melebihi radius kesegaran makanan (15 km), kami menyarankan untuk beralih ke menu kemasan tahan lama atau dapat mengajukan pembatalan pesanan.`
+                    );
+                    setSelectedChatUserEmail(userEmail);
+                    setActiveTab('customer-service');
+                    setSelectedOrderForDetail(null);
+                  }}
+                  className="px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-xl font-semibold text-[11px] shrink-0 transition-colors"
+                >
+                  💬 Sarankan Ganti Menu / CS
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 <button
                   onClick={() => {
                     updateOrderStatus(selectedOrderForDetail.id, 'COOKING');
@@ -4478,6 +4498,20 @@ export default function AdminDashboardPage() {
                   }`}
                 >
                   ✅ Completed / Selesai
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (confirm(`Apakah Anda yakin ingin membatalkan & menghapus pesanan ${selectedOrderForDetail.id}?`)) {
+                      deleteOrder(selectedOrderForDetail.id);
+                      setSelectedOrderForDetail(null);
+                      alert(`Pesanan ${selectedOrderForDetail.id} berhasil dibatalkan dan dihapus!`);
+                    }
+                  }}
+                  className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-semibold transition-all ml-auto flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Batalkan & Hapus Pesanan</span>
                 </button>
               </div>
             </div>
