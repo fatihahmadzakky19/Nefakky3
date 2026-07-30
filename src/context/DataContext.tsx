@@ -38,6 +38,7 @@ export interface AdminVoucher {
   redemptions: string;
   expiry: string;
   status: 'Active' | 'Expired';
+  isActive?: boolean;
 }
 
 export interface AdminOrder {
@@ -84,6 +85,69 @@ export interface UserReview {
   isPinned?: boolean;
   isHidden?: boolean;
   photos?: string[];
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'admin';
+  userEmail: string;
+  userName: string;
+  userAvatar?: string;
+  text: string;
+  timestamp: string;
+  readByAdmin?: boolean;
+  readByUser?: boolean;
+}
+
+export const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [
+  {
+    id: 'chat-1',
+    sender: 'user',
+    userEmail: 'nizarazzuhra@gmail.com',
+    userName: 'Nizar Azzuhra',
+    userAvatar: 'https://ui-avatars.com/api/?name=Nizar+Azzuhra&background=5C3D28&color=ffffff',
+    text: 'Halo Min, saya mau tanya apakah pesanan Wagyu Bowl saya bisa request tanpa daun bawang?',
+    timestamp: '10:15 AM',
+    readByAdmin: false,
+    readByUser: true
+  },
+  {
+    id: 'chat-2',
+    sender: 'admin',
+    userEmail: 'nizarazzuhra@gmail.com',
+    userName: 'Admin CS Nefakky',
+    text: 'Halo Kak Nizar! Tentu saja bisa. Catatan tim dapur kami sudah diperbarui untuk pesanan Anda.',
+    timestamp: '10:18 AM',
+    readByAdmin: true,
+    readByUser: true
+  }
+];
+
+interface DataContextType {
+  products: ProductItem[];
+  vouchers: AdminVoucher[];
+  orders: AdminOrder[];
+  reviews: UserReview[];
+  chatMessages: ChatMessage[];
+  setProducts: React.Dispatch<React.SetStateAction<ProductItem[]>>;
+  setVouchers: React.Dispatch<React.SetStateAction<AdminVoucher[]>>;
+  setOrders: React.Dispatch<React.SetStateAction<AdminOrder[]>>;
+  setReviews: React.Dispatch<React.SetStateAction<UserReview[]>>;
+  setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  addProduct: (product: Omit<ProductItem, 'id'>) => ProductItem;
+  updateProduct: (id: string, updated: Partial<ProductItem>) => void;
+  deleteProduct: (id: string) => void;
+  toggleProductVisibility: (id: string) => void;
+  addVoucher: (voucher: Omit<AdminVoucher, 'id'>) => AdminVoucher;
+  deleteVoucher: (id: string) => void;
+  addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
+  updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
+  updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
+  addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
+  deleteReview: (id: string) => void;
+  sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string) => void;
+  replyChatMessage: (userEmail: string, text: string) => void;
+  markChatAsRead: (userEmail: string, role: 'admin' | 'user') => void;
 }
 
 export const DEFAULT_PRODUCTS: ProductItem[] = [
@@ -191,82 +255,56 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
 
 export const DEFAULT_VOUCHERS: AdminVoucher[] = [
   {
-    id: 'v1',
+    id: 'promo-1',
     code: 'WEEKENDSERU',
-    name: 'Promo Akhir Pekan 30%',
+    name: 'Promo Special Wagyu Bowl 30%',
     type: 'Percentage',
     discountPercent: 30,
     minSpend: 50000,
     redemptions: '142/500',
-    expiry: '31 Des 2026',
-    status: 'Active'
+    expiry: '01 Mei - 31 Des',
+    status: 'Active',
+    isActive: true
   },
   {
-    id: 'v2',
+    id: 'promo-2',
+    code: 'FLASHSALE',
+    name: 'Flash Sale: Rendang Daging Premium',
+    type: 'Fixed Amount',
+    discountPercent: 20,
+    minSpend: 30000,
+    redemptions: '98/1000',
+    expiry: 'Akhir Pekan',
+    status: 'Active',
+    isActive: true
+  },
+  {
+    id: 'promo-3',
+    code: 'HEMAT50',
+    name: 'Hemat Sate Ayam Madura (BOGO)',
+    type: 'Percentage',
+    discountPercent: 50,
+    minSpend: 45000,
+    redemptions: '45/100',
+    expiry: '01 Juni - 31 Des',
+    status: 'Active',
+    isActive: true
+  },
+  {
+    id: 'v4',
     code: 'NEFAKKY10',
     name: 'Voucher Pelanggan Baru 10%',
     type: 'Percentage',
     discountPercent: 10,
     minSpend: 30000,
-    redemptions: '98/1000',
+    redemptions: '50/500',
     expiry: '31 Des 2026',
-    status: 'Active'
-  },
-  {
-    id: 'v3',
-    code: 'HEMAT50',
-    name: 'Diskon Spesial 50%',
-    type: 'Percentage',
-    discountPercent: 50,
-    minSpend: 100000,
-    redemptions: '45/100',
-    expiry: '31 Des 2026',
-    status: 'Active'
+    status: 'Active',
+    isActive: true
   }
 ];
 
-export const DEFAULT_ORDERS: AdminOrder[] = [
-  {
-    id: 'ORD-9821',
-    customerName: 'Sarah Jenkins',
-    customerEmail: 'sarah.j@example.com',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-    address: 'Jl. Sudirman No. 45, Jakarta Selatan',
-    items: [
-      { id: 'm1', name: 'Special Wagyu Bowl', price: 85000, quantity: 2, image: '/images/wagyu_bowl.png' }
-    ],
-    itemCount: 2,
-    paymentMethod: 'QRIS Instant',
-    paymentBadge: 'PAID',
-    deliveryType: 'EXPRESS',
-    status: 'COOKING',
-    subtotal: 170000,
-    shippingCost: 25000,
-    discount: 51000,
-    total: 144000,
-    date: 'Hari ini, 14:32'
-  },
-  {
-    id: 'ORD-9820',
-    customerName: 'Budi Santoso',
-    customerEmail: 'budi.s@example.com',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-    address: 'Jl. Kebon Jeruk No. 12, Jakarta Barat',
-    items: [
-      { id: 'm4', name: 'Rendang Daging Premium', price: 75000, quantity: 1, image: '/images/hero_rendang.png' }
-    ],
-    itemCount: 1,
-    paymentMethod: 'BCA Virtual Account',
-    paymentBadge: 'PAID',
-    deliveryType: 'STANDARD',
-    status: 'SHIPPING',
-    subtotal: 75000,
-    shippingCost: 12000,
-    discount: 0,
-    total: 87000,
-    date: 'Hari ini, 13:15'
-  }
-];
+export const DEFAULT_ORDERS: AdminOrder[] = [];
 
 export const DEFAULT_REVIEWS: UserReview[] = [
   {
@@ -306,21 +344,27 @@ interface DataContextType {
   vouchers: AdminVoucher[];
   orders: AdminOrder[];
   reviews: UserReview[];
+  chatMessages: ChatMessage[];
   setProducts: React.Dispatch<React.SetStateAction<ProductItem[]>>;
   setVouchers: React.Dispatch<React.SetStateAction<AdminVoucher[]>>;
   setOrders: React.Dispatch<React.SetStateAction<AdminOrder[]>>;
   setReviews: React.Dispatch<React.SetStateAction<UserReview[]>>;
+  setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   addProduct: (product: Omit<ProductItem, 'id'>) => ProductItem;
   updateProduct: (id: string, updated: Partial<ProductItem>) => void;
   deleteProduct: (id: string) => void;
   toggleProductVisibility: (id: string) => void;
   addVoucher: (voucher: Omit<AdminVoucher, 'id'>) => AdminVoucher;
   deleteVoucher: (id: string) => void;
+  toggleVoucherStatus: (id: string) => void;
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
   deleteReview: (id: string) => void;
+  sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string) => void;
+  replyChatMessage: (userEmail: string, text: string) => void;
+  markChatAsRead: (userEmail: string, role: 'admin' | 'user') => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -330,8 +374,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [vouchers, setVouchersState] = useState<AdminVoucher[]>(DEFAULT_VOUCHERS);
   const [orders, setOrdersState] = useState<AdminOrder[]>(DEFAULT_ORDERS);
   const [reviews, setReviewsState] = useState<UserReview[]>(DEFAULT_REVIEWS);
+  const [chatMessages, setChatMessagesState] = useState<ChatMessage[]>(DEFAULT_CHAT_MESSAGES);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount & listen to storage events for cross-tab live updates
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedProd = localStorage.getItem('nefakky_products');
@@ -353,6 +398,32 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       if (savedRev) {
         try { setReviewsState(JSON.parse(savedRev)); } catch (e) {}
       }
+
+      const savedChat = localStorage.getItem('nefakky_chat_messages');
+      if (savedChat) {
+        try { setChatMessagesState(JSON.parse(savedChat)); } catch (e) {}
+      }
+
+      const handleStorage = (e: StorageEvent) => {
+        if (e.key === 'nefakky_orders' && e.newValue) {
+          try { setOrdersState(JSON.parse(e.newValue)); } catch (err) {}
+        }
+        if (e.key === 'nefakky_products' && e.newValue) {
+          try { setProductsState(JSON.parse(e.newValue)); } catch (err) {}
+        }
+        if (e.key === 'nefakky_vouchers' && e.newValue) {
+          try { setVouchersState(JSON.parse(e.newValue)); } catch (err) {}
+        }
+        if (e.key === 'nefakky_reviews' && e.newValue) {
+          try { setReviewsState(JSON.parse(e.newValue)); } catch (err) {}
+        }
+        if (e.key === 'nefakky_chat_messages' && e.newValue) {
+          try { setChatMessagesState(JSON.parse(e.newValue)); } catch (err) {}
+        }
+      };
+
+      window.addEventListener('storage', handleStorage);
+      return () => window.removeEventListener('storage', handleStorage);
     }
   }, []);
 
@@ -489,27 +560,99 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setReviews(prev => prev.filter(r => r.id !== id));
   };
 
+  const setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>> = (action) => {
+    setChatMessagesState(prev => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nefakky_chat_messages', JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
+  const sendChatMessage = (userEmail: string, userName: string, text: string, userAvatar?: string) => {
+    const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const newMsg: ChatMessage = {
+      id: 'msg-' + Date.now(),
+      sender: 'user',
+      userEmail: userEmail.trim().toLowerCase(),
+      userName,
+      userAvatar,
+      text,
+      timestamp: timeStr,
+      readByAdmin: false,
+      readByUser: true
+    };
+    setChatMessages(prev => [...prev, newMsg]);
+  };
+
+  const replyChatMessage = (userEmail: string, text: string) => {
+    const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const newMsg: ChatMessage = {
+      id: 'msg-' + Date.now(),
+      sender: 'admin',
+      userEmail: userEmail.trim().toLowerCase(),
+      userName: 'Admin CS Nefakky',
+      text,
+      timestamp: timeStr,
+      readByAdmin: true,
+      readByUser: false
+    };
+    setChatMessages(prev => [...prev, newMsg]);
+  };
+
+  const markChatAsRead = (userEmail: string, role: 'admin' | 'user') => {
+    const emailNorm = userEmail.trim().toLowerCase();
+    setChatMessages(prev => prev.map(m => {
+      if (m.userEmail.toLowerCase() === emailNorm) {
+        if (role === 'admin') return { ...m, readByAdmin: true };
+        if (role === 'user') return { ...m, readByUser: true };
+      }
+      return m;
+    }));
+  };
+
+  const toggleVoucherStatus = (id: string) => {
+    setVouchers(prev => prev.map(v => {
+      if (v.id === id || v.code.toUpperCase() === id.toUpperCase()) {
+        const nextActive = !(v.status === 'Active' && v.isActive !== false);
+        return {
+          ...v,
+          status: nextActive ? 'Active' : 'Expired',
+          isActive: nextActive
+        };
+      }
+      return v;
+    }));
+  };
+
   return (
     <DataContext.Provider value={{
       products,
       vouchers,
       orders,
       reviews,
+      chatMessages,
       setProducts,
       setVouchers,
       setOrders,
       setReviews,
+      setChatMessages,
       addProduct,
       updateProduct,
       deleteProduct,
       toggleProductVisibility,
       addVoucher,
       deleteVoucher,
+      toggleVoucherStatus,
       addOrder,
       updateOrderStatus,
       updatePaymentStatus,
       addReview,
-      deleteReview
+      deleteReview,
+      sendChatMessage,
+      replyChatMessage,
+      markChatAsRead
     }}>
       {children}
     </DataContext.Provider>

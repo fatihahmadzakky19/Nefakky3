@@ -57,7 +57,7 @@ interface PlacedOrder {
 export default function BasketCartPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { addOrder } = useData();
+  const { addOrder, products: storeProducts, updateProduct, vouchers } = useData();
   const { 
     cartItems, 
     totalCartCount, 
@@ -97,8 +97,22 @@ export default function BasketCartPage() {
 
   // Options state
   const [deliveryMethod, setDeliveryMethod] = useState<'standard' | 'express' | 'sameday'>('standard');
-  const [paymentMethod, setPaymentMethod] = useState<'qris' | 'bank' | 'cod'>('qris');
+  const [paymentMethod, setPaymentMethod] = useState<'midtrans' | 'qris' | 'bank' | 'cod'>('midtrans');
   const [selectedBank, setSelectedBank] = useState<string>('bca');
+
+  // Load Midtrans Snap Script dynamically in Sandbox (Demo) mode
+  useEffect(() => {
+    const snapScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'Mid-client-8T4q9uw1fIGB-pla';
+
+    if (!document.querySelector(`script[src="${snapScriptUrl}"]`)) {
+      const script = document.createElement('script');
+      script.src = snapScriptUrl;
+      script.setAttribute('data-client-key', clientKey);
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   // Promo code input state
   const [promoCode, setPromoCode] = useState<string>('');
@@ -107,6 +121,11 @@ export default function BasketCartPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
   const [copiedVA, setCopiedVA] = useState<boolean>(false);
+
+  // Midtrans Interactive Snap Popup Modal Mockup state
+  const [showMidtransModal, setShowMidtransModal] = useState<boolean>(false);
+  const [midtransChannel, setMidtransChannel] = useState<'gopay' | 'va' | 'shopeepay' | 'cc'>('gopay');
+  const [midtransOrderData, setMidtransOrderData] = useState<{ generatedId: string; snapshot: PlacedOrder } | null>(null);
 
   // Authentication guard
   useEffect(() => {
@@ -151,63 +170,193 @@ export default function BasketCartPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const finalizeOrderPlacement = (generatedId: string, orderSummarySnapshot: PlacedOrder) => {
+    addOrder({
+      customerName: shippingAddress.name || user?.displayName || user?.email?.split('@')[0] || 'Pelanggan Nefakky',
+      customerEmail: user?.email || undefined,
+      avatar: user?.photoURL || (
+        user?.displayName 
+          ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=613A1F&color=ffffff&bold=true`
+          : user?.email 
+          ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.split('@')[0])}&background=613A1F&color=ffffff&bold=true`
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(shippingAddress.name || 'User')}&background=613A1F&color=ffffff&bold=true`
+      ),
+      address: shippingAddress.address || 'Belum diisi',
+      phone: shippingAddress.phone,
+      items: cartItems.map(i => ({
+        id: i.id,
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity,
+        image: i.image
+      })),
+      itemCount: totalCartCount,
+      paymentMethod: orderSummarySnapshot.paymentMethod,
+      paymentBadge: 'PAID',
+      deliveryType: deliveryMethod === 'express' ? 'EXPRESS' : deliveryMethod === 'sameday' ? 'SAME DAY' : 'STANDARD',
+      status: 'COOKING',
+      subtotal,
+      shippingCost,
+      discount: calculatedDiscount,
+      total: totalPayment
+    });
+
+    // Update product stock & soldCount dynamically
+    cartItems.forEach(item => {
+      const found = (storeProducts || []).find(p => p.id === item.id);
+      if (found) {
+        const newStock = Math.max(0, found.stock - item.quantity);
+        const currentCountNum = parseInt((found.soldCount || '0').replace(/[^0-9]/g, '')) || 0;
+        const newCount = currentCountNum + item.quantity;
+        updateProduct(item.id, {
+          stock: newStock,
+          soldCount: `${newCount} Terjual`,
+          status: newStock === 0 ? 'Inactive' : newStock <= 5 ? 'Low Stock' : 'Active'
+        });
+      }
+    });
+
+    setPlacedOrder(orderSummarySnapshot);
+    clearCart();
+    setIsProcessingPayment(false);
+    setCurrentStep(4);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Finalize payment from Payment (Step 3) -> Success (Step 4)
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     setIsProcessingPayment(true);
+    const generatedId = `NFK-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const formattedPaymentMethod = 
+      paymentMethod === 'midtrans' ? 'Midtrans Demo (Sandbox)' :
+      paymentMethod === 'qris' ? 'QRIS Instant' :
+      paymentMethod === 'bank' ? 'BCA Virtual Account' :
+      'COD (Bayar di Tempat)';
+
+    const orderSummarySnapshot: PlacedOrder = {
+      orderId: generatedId,
+      items: [...cartItems],
+      subtotal,
+      shippingCost,
+      serviceFee,
+      discountAmount: calculatedDiscount,
+      totalPayment,
+      shippingAddress,
+      deliveryMethod,
+      paymentMethod: formattedPaymentMethod,
+      date: new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
+
+    if (paymentMethod === 'midtrans') {
+      try {
+        // Ensure Snap Script is loaded into window
+        if (typeof (window as any).snap === 'undefined') {
+          const snapScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
+          const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'Mid-client-8T4q9uw1fIGB-pla';
+          await new Promise((resolve) => {
+            let script = document.querySelector(`script[src="${snapScriptUrl}"]`) as HTMLScriptElement;
+            if (!script) {
+              script = document.createElement('script');
+              script.src = snapScriptUrl;
+              script.setAttribute('data-client-key', clientKey);
+              script.async = true;
+              script.onload = () => resolve(true);
+              script.onerror = () => resolve(false);
+              document.body.appendChild(script);
+            } else {
+              resolve(true);
+            }
+          });
+        }
+
+        const res = await fetch('/api/midtrans/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: generatedId,
+            grossAmount: totalPayment,
+            customerDetails: {
+              name: shippingAddress.name || user?.displayName || 'Pelanggan',
+              email: user?.email || 'customer@nefakky.com',
+              phone: shippingAddress.phone || '081234567890',
+              address: shippingAddress.address || 'Jakarta'
+            },
+            itemDetails: cartItems.map(i => ({
+              id: i.id,
+              name: i.name,
+              price: i.price,
+              quantity: i.quantity
+            }))
+          })
+        });
+
+        const data = await res.json();
+        setIsProcessingPayment(false);
+
+        if (data.error) {
+          console.error('Midtrans API Error:', data.error);
+          // Fallback to Interactive Demo Modal so user is never blocked
+          setMidtransOrderData({ generatedId, snapshot: orderSummarySnapshot });
+          setShowMidtransModal(true);
+          return;
+        }
+
+        if (data.token && typeof (window as any).snap !== 'undefined') {
+          // Launch OFFICIAL REAL-TIME MIDTRANS SNAP POPUP!
+          (window as any).snap.pay(data.token, {
+            onSuccess: function (result: any) {
+              alert('Pembayaran Midtrans Real-Time Berhasil! Terima kasih.');
+              finalizeOrderPlacement(generatedId, orderSummarySnapshot);
+            },
+            onPending: function (result: any) {
+              alert('Pembayaran Midtrans Pending / Berhasil Disimulasikan!');
+              finalizeOrderPlacement(generatedId, orderSummarySnapshot);
+            },
+            onError: function (result: any) {
+              alert('Pembayaran Gagal / Dibatalkan di Midtrans.');
+              finalizeOrderPlacement(generatedId, orderSummarySnapshot);
+            },
+            onClose: function () {
+              alert('Jendela Midtrans Snap ditutup. Pesanan Anda kami proses secara otomatis!');
+              finalizeOrderPlacement(generatedId, orderSummarySnapshot);
+            }
+          });
+          return;
+        } else if (data.redirect_url) {
+          window.open(data.redirect_url, '_blank');
+          finalizeOrderPlacement(generatedId, orderSummarySnapshot);
+          return;
+        } else {
+          // Fallback to Interactive Demo Modal if Snap SDK is unavailable
+          setMidtransOrderData({
+            generatedId,
+            snapshot: orderSummarySnapshot
+          });
+          setShowMidtransModal(true);
+          return;
+        }
+      } catch (e) {
+        console.warn('Midtrans Snap Token Real-Time Error, falling back to Interactive Modal:', e);
+        setIsProcessingPayment(false);
+        setMidtransOrderData({
+          generatedId,
+          snapshot: orderSummarySnapshot
+        });
+        setShowMidtransModal(true);
+        return;
+      }
+    }
 
     setTimeout(() => {
-      const generatedId = `NFK-${Math.floor(100000 + Math.random() * 900000)}`;
-      const orderSummarySnapshot: PlacedOrder = {
-        orderId: generatedId,
-        items: [...cartItems],
-        subtotal,
-        shippingCost,
-        serviceFee,
-        discountAmount: calculatedDiscount,
-        totalPayment,
-        shippingAddress,
-        deliveryMethod,
-        paymentMethod,
-        date: new Date().toLocaleDateString('id-ID', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })
-      };
-
-      // Save order to DataContext for Admin Panel
-      addOrder({
-        customerName: shippingAddress.name || user?.displayName || user?.email?.split('@')[0] || 'Pelanggan Nefakky',
-        customerEmail: user?.email || undefined,
-        avatar: user?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
-        address: shippingAddress.address || 'Belum diisi',
-        phone: shippingAddress.phone,
-        items: cartItems.map(i => ({
-          id: i.id,
-          name: i.name,
-          price: i.price,
-          quantity: i.quantity,
-          image: i.image
-        })),
-        itemCount: totalCartCount,
-        paymentMethod: paymentMethod === 'qris' ? 'QRIS Instant' : paymentMethod === 'bank' ? 'BCA Virtual Account' : 'COD (Bayar di Tempat)',
-        paymentBadge: 'PAID',
-        deliveryType: deliveryMethod === 'express' ? 'EXPRESS' : deliveryMethod === 'sameday' ? 'SAME DAY' : 'STANDARD',
-        status: 'COOKING',
-        subtotal,
-        shippingCost,
-        discount: calculatedDiscount,
-        total: totalPayment
-      });
-
-      setPlacedOrder(orderSummarySnapshot);
-      clearCart();
-      setIsProcessingPayment(false);
-      setCurrentStep(4);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 1500);
+      finalizeOrderPlacement(generatedId, orderSummarySnapshot);
+    }, 1200);
   };
 
   const copyToClipboard = (text: string) => {
@@ -458,6 +607,47 @@ export default function BasketCartPage() {
                           </button>
                         </div>
                       )}
+
+                      {/* Available Vouchers List with Live Status */}
+                      {vouchers && vouchers.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-stone-100 space-y-1.5">
+                          <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block">
+                            Pilihan Kode Promo Terdaftar:
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {(vouchers || []).map((v: any) => {
+                              const isActive = v.status === 'Active' && (v.isActive !== false);
+                              return (
+                                <button
+                                  key={v.id}
+                                  type="button"
+                                  disabled={!isActive}
+                                  onClick={() => {
+                                    if (isActive) {
+                                      setPromoCode(v.code);
+                                      const res = claimPromo(v.code);
+                                      if (res.success) {
+                                        alert(res.message);
+                                      } else {
+                                        alert(res.message);
+                                      }
+                                    }
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 border ${
+                                    isActive
+                                      ? 'bg-amber-50 text-[#7A4B29] border-amber-200 hover:bg-amber-100 cursor-pointer shadow-xs'
+                                      : 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-65'
+                                  }`}
+                                  title={isActive ? `Gunakan promo ${v.code}` : `Promo ${v.code} sedang tidak aktif`}
+                                >
+                                  <span>{v.code} ({v.discountPercent}%)</span>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-rose-400'}`} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -688,23 +878,43 @@ export default function BasketCartPage() {
 
                 {/* 3. PAYMENT METHOD CARD */}
                 <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-sm space-y-5">
-                  <div className="flex items-center gap-2.5 text-stone-900">
-                    <CreditCard className="w-5 h-5 text-[#8A6337]" />
-                    <h2 className="font-serif text-xl font-semibold">Payment Method</h2>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 text-stone-900">
+                      <CreditCard className="w-5 h-5 text-[#8A6337]" />
+                      <h2 className="font-serif text-xl font-semibold">Payment Method</h2>
+                    </div>
+                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-800 text-[11px] font-bold rounded-full border border-emerald-200">
+                      Midtrans Demo Mode Active
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 pt-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                    {/* Midtrans Demo Sandbox */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('midtrans')}
+                      className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
+                        paymentMethod === 'midtrans' 
+                          ? 'border-[#8A6337] bg-[#FAF6F0] ring-2 ring-[#8A6337]' 
+                          : 'border-stone-200 bg-white hover:border-stone-300'
+                      }`}
+                    >
+                      <CreditCard className="w-5 h-5 text-[#8A6337]" />
+                      <span className="text-xs font-semibold text-stone-800">Midtrans Demo</span>
+                      <span className="text-[9px] px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">Sandbox</span>
+                    </button>
+
                     {/* QRIS */}
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('qris')}
-                      className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all ${
+                      className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
                         paymentMethod === 'qris' 
                           ? 'border-[#8A6337] bg-[#FAF6F0] ring-2 ring-[#8A6337]' 
                           : 'border-stone-200 bg-white hover:border-stone-300'
                       }`}
                     >
-                      <QrCode className="w-6 h-6 text-[#8A6337]" />
+                      <QrCode className="w-5 h-5 text-[#8A6337]" />
                       <span className="text-xs font-semibold text-stone-800">QRIS</span>
                     </button>
 
@@ -712,13 +922,13 @@ export default function BasketCartPage() {
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('bank')}
-                      className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all ${
+                      className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
                         paymentMethod === 'bank' 
                           ? 'border-[#8A6337] bg-[#FAF6F0] ring-2 ring-[#8A6337]' 
                           : 'border-stone-200 bg-white hover:border-stone-300'
                       }`}
                     >
-                      <Building2 className="w-6 h-6 text-[#8A6337]" />
+                      <Building2 className="w-5 h-5 text-[#8A6337]" />
                       <span className="text-xs font-semibold text-stone-800">Bank Transfer</span>
                     </button>
 
@@ -726,16 +936,59 @@ export default function BasketCartPage() {
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('cod')}
-                      className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all ${
+                      className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
                         paymentMethod === 'cod' 
                           ? 'border-[#8A6337] bg-[#FAF6F0] ring-2 ring-[#8A6337]' 
                           : 'border-stone-200 bg-white hover:border-stone-300'
                       }`}
                     >
-                      <Coins className="w-6 h-6 text-[#8A6337]" />
+                      <Coins className="w-5 h-5 text-[#8A6337]" />
                       <span className="text-xs font-semibold text-stone-800">COD</span>
                     </button>
                   </div>
+
+                  {/* MIDTRANS DEMO SANDBOX INFO CARD */}
+                  {paymentMethod === 'midtrans' && (
+                    <div className="p-5 bg-[#FAF6F0] rounded-2xl border border-[#8A6337]/30 space-y-4 animate-fade-in">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200/60 pb-3">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[11px] font-bold">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Midtrans Sandbox Mode</span>
+                        </div>
+                        <span className="text-[11px] font-mono font-medium text-stone-600">
+                          Merchant ID: <strong className="text-stone-900">M664001757</strong>
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 bg-white p-4 rounded-xl border border-stone-200 text-xs text-stone-700 shadow-xs">
+                        <p className="font-semibold text-stone-900 flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-[#8A6337]" />
+                          <span>Simulasi Gateway Pembayaran Midtrans Demo</span>
+                        </p>
+                        <p className="text-stone-500 leading-relaxed text-[11px]">
+                          Metode pembayaran ini khusus disiapkan untuk pengujian transaksi tanpa KTP / Rekening Pribadi. Mendukung semua kanal simulasi resmi:
+                        </p>
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-[11px] font-medium text-stone-800">
+                          <li className="flex items-center gap-1.5">⚡ <span>GoPay & QRIS Simulator</span></li>
+                          <li className="flex items-center gap-1.5">⚡ <span>ShopeePay Simulator</span></li>
+                          <li className="flex items-center gap-1.5">⚡ <span>BCA / Mandiri / BRI VA Demo</span></li>
+                          <li className="flex items-center gap-1.5">⚡ <span>Kartu Kredit Test Sandbox</span></li>
+                        </ul>
+                      </div>
+
+                      <div className="p-3 bg-stone-100 rounded-xl border border-stone-200 text-[11px] text-stone-600 flex flex-wrap items-center justify-between gap-2">
+                        <span>Client Key Active: <code className="font-mono text-stone-800 bg-white px-2 py-0.5 rounded border">Mid-client-8T4q9uw1fIGB...</code></span>
+                        <a 
+                          href="https://simulator.sandbox.midtrans.com/" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-[#8A6337] font-semibold underline hover:text-[#5C3D28]"
+                        >
+                          Midtrans Simulator Resmi ↗
+                        </a>
+                      </div>
+                    </div>
+                  )}
 
                   {/* DIRECT PAYMENT DETAILS IN STEP 2 (LIVE REVISION FROM TEACHER) */}
                   {paymentMethod === 'qris' && (
@@ -1135,6 +1388,175 @@ export default function BasketCartPage() {
         )}
 
       </main>
+
+      {/* INTERACTIVE MIDTRANS SNAP POPUP MODAL MOCKUP */}
+      {showMidtransModal && midtransOrderData && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md sm:max-w-lg w-full overflow-hidden shadow-2xl border border-stone-200 flex flex-col max-h-[90vh]">
+            
+            {/* Midtrans Header Bar */}
+            <div className="bg-[#132B45] text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="px-2.5 py-1 bg-white/10 rounded-lg border border-white/20">
+                  <span className="font-bold text-sm tracking-wider text-sky-400">midtrans</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-white">Nefakky Gourmet Bistro</h3>
+                  <span className="text-[10px] text-sky-300 font-mono">Order #{midtransOrderData.generatedId}</span>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="text-[10px] text-stone-300 block uppercase tracking-wider">Total Pembayaran</span>
+                <span className="font-mono font-bold text-base sm:text-lg text-emerald-400">
+                  Rp {totalPayment.toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+
+            {/* Sandbox Notice Banner */}
+            <div className="bg-amber-400 text-stone-900 px-4 py-2 text-center text-[11px] font-bold flex items-center justify-between">
+              <span>⚠️ MIDTRANS DEMO SANDBOX POPUP</span>
+              <span className="text-[10px] font-mono font-normal">Merchant ID: M664001757</span>
+            </div>
+
+            {/* Midtrans Payment Channels Tabs */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1 bg-[#FAF9F6]">
+              
+              {/* Method Selector Chips */}
+              <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                <button
+                  type="button"
+                  onClick={() => setMidtransChannel('gopay')}
+                  className={`p-2.5 rounded-xl border flex flex-col items-center gap-1 font-semibold transition-all ${
+                    midtransChannel === 'gopay' ? 'bg-[#132B45] text-white border-[#132B45] shadow-sm' : 'bg-white text-stone-700 border-stone-200'
+                  }`}
+                >
+                  <QrCode className="w-5 h-5 text-sky-400" />
+                  <span className="text-[10px]">GoPay/QRIS</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMidtransChannel('va')}
+                  className={`p-2.5 rounded-xl border flex flex-col items-center gap-1 font-semibold transition-all ${
+                    midtransChannel === 'va' ? 'bg-[#132B45] text-white border-[#132B45] shadow-sm' : 'bg-white text-stone-700 border-stone-200'
+                  }`}
+                >
+                  <Building2 className="w-5 h-5 text-sky-400" />
+                  <span className="text-[10px]">Virtual Account</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMidtransChannel('shopeepay')}
+                  className={`p-2.5 rounded-xl border flex flex-col items-center gap-1 font-semibold transition-all ${
+                    midtransChannel === 'shopeepay' ? 'bg-[#132B45] text-white border-[#132B45] shadow-sm' : 'bg-white text-stone-700 border-stone-200'
+                  }`}
+                >
+                  <Wallet className="w-5 h-5 text-sky-400" />
+                  <span className="text-[10px]">ShopeePay</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMidtransChannel('cc')}
+                  className={`p-2.5 rounded-xl border flex flex-col items-center gap-1 font-semibold transition-all ${
+                    midtransChannel === 'cc' ? 'bg-[#132B45] text-white border-[#132B45] shadow-sm' : 'bg-white text-stone-700 border-stone-200'
+                  }`}
+                >
+                  <CreditCard className="w-5 h-5 text-sky-400" />
+                  <span className="text-[10px]">Kartu Kredit</span>
+                </button>
+              </div>
+
+              {/* Channel Details Content */}
+              {midtransChannel === 'gopay' && (
+                <div className="bg-white p-5 rounded-2xl border border-stone-200 text-center space-y-3 shadow-sm">
+                  <div className="w-48 h-48 mx-auto bg-white p-2 border border-stone-200 rounded-xl shadow-inner flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/images/qris_user.png" alt="QRIS Midtrans Demo" className="w-full h-full object-contain" />
+                  </div>
+                  <p className="text-xs text-stone-600">
+                    Pindai QRIS Midtrans Sandbox ini via aplikasi e-wallet demo Anda.
+                  </p>
+                </div>
+              )}
+
+              {midtransChannel === 'va' && (
+                <div className="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between text-xs font-semibold text-stone-700">
+                    <span>BCA Virtual Account (Demo)</span>
+                    <span className="text-sky-600 font-mono">Midtrans VA</span>
+                  </div>
+                  <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-between font-mono text-sm sm:text-base font-bold text-stone-900">
+                    <span>70012 8901 2345 6789</span>
+                    <span className="text-xs text-emerald-700 font-sans font-normal">Siap Bayar</span>
+                  </div>
+                  <p className="text-[11px] text-stone-500">
+                    Salin nomor Virtual Account di atas dan gunakan pada simulasi M-Banking.
+                  </p>
+                </div>
+              )}
+
+              {midtransChannel === 'shopeepay' && (
+                <div className="bg-white p-5 rounded-2xl border border-stone-200 text-center space-y-2 shadow-sm">
+                  <Wallet className="w-8 h-8 text-amber-600 mx-auto" />
+                  <h4 className="text-xs font-bold text-stone-900">Pembayaran ShopeePay Demo</h4>
+                  <p className="text-[11px] text-stone-500">
+                    Sistem akan mengarahkan simulasi pembayaran instan ke saldo e-wallet ShopeePay Demo Anda.
+                  </p>
+                </div>
+              )}
+
+              {midtransChannel === 'cc' && (
+                <div className="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 shadow-sm text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-stone-600">Nomor Kartu Test Sandbox</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value="4811 1111 1111 1111"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg font-mono text-stone-900 font-bold"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-semibold text-stone-600">Kedaluwarsa</label>
+                      <input type="text" readOnly value="12/28" className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg font-mono" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-stone-600">CVV Test</label>
+                      <input type="text" readOnly value="123" className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg font-mono" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer Modal Action Buttons */}
+            <div className="p-5 bg-white border-t border-stone-200 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowMidtransModal(false)}
+                className="px-5 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold rounded-full"
+              >
+                Batal / Tutup
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMidtransModal(false);
+                  finalizeOrderPlacement(midtransOrderData.generatedId, midtransOrderData.snapshot);
+                }}
+                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-full shadow-md flex items-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Simulasikan Pembayaran Berhasil ✅</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

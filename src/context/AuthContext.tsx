@@ -26,6 +26,7 @@ interface AuthContextType {
   isAdmin: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; role: 'admin' | 'customer'; error?: string }>;
   register: (name: string, email: string, phone: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  registerWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; role: 'admin' | 'customer'; error?: string }>;
   logout: () => Promise<void>;
   updatePhoto: (photoURL: string) => void;
@@ -42,11 +43,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Initialize and listen to persistent state
   useEffect(() => {
-    // Check if session is active in current browser session
+    // Check if user is saved in localStorage
     const savedUser = typeof window !== 'undefined' ? localStorage.getItem('nefakky_user') : null;
-    const sessionActive = typeof window !== 'undefined' ? sessionStorage.getItem('nefakky_session_active') : null;
 
-    if (savedUser && sessionActive) {
+    if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
@@ -54,29 +54,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Error parsing saved session", e);
       }
     } else {
-      // Force initial load/run to land on login page
       setUser(null);
     }
 
     const unsubscribe = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
-      if (fbUser && typeof window !== 'undefined' && sessionStorage.getItem('nefakky_session_active')) {
+      if (fbUser && typeof window !== 'undefined') {
         const role = fbUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'customer';
+        
+        // Retrieve local displayName if Firebase user does not have it set
+        let name = fbUser.displayName;
+        if (!name && fbUser.email) {
+          const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+          const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+          const matched = registeredUsers.find((u: any) => u.email && u.email.trim().toLowerCase() === fbUser.email?.toLowerCase());
+          if (matched) name = matched.displayName || matched.name;
+        }
+
         const userProf: UserProfile = {
           uid: fbUser.uid,
           email: fbUser.email,
-          displayName: fbUser.displayName || (role === 'admin' ? 'Admin Fatih' : 'Pelanggan Nefakky'),
+          displayName: name || (role === 'admin' ? 'Fatih Ahmad Zakky' : 'Pelanggan Nefakky'),
           photoURL: fbUser.photoURL,
           role: role,
         };
         setUser(userProf);
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
-      } else if (!savedUser || !sessionActive) {
-        setUser(null);
+      } else {
+        const currentSaved = typeof window !== 'undefined' ? localStorage.getItem('nefakky_user') : null;
+        if (currentSaved) {
+          try {
+            setUser(JSON.parse(currentSaved));
+          } catch {
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Listen for localStorage changes across browser tabs/windows
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'nefakky_user') {
+        if (e.newValue) {
+          try {
+            setUser(JSON.parse(e.newValue));
+          } catch {
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+    }
+
+    return () => {
+      unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorageChange);
+      }
+    };
   }, []);
 
   // Standard Email / Password Login (Admin + Customer on same form)
@@ -96,7 +138,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(adminUser);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(adminUser));
-        sessionStorage.setItem('nefakky_session_active', 'true');
       }
       setLoading(false);
       return { success: true, role: 'admin' as const };
@@ -104,14 +145,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       // 2. Try Firebase login
-      const cred = await firebaseSignIn(auth, email, pass);
+      const cred = await firebaseSignIn(auth, normalizedEmail, pass);
       const isUserAdmin = cred.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
       const role: 'admin' | 'customer' = isUserAdmin ? 'admin' : 'customer';
+
+      let displayName = cred.user.displayName;
+      if (!displayName && typeof window !== 'undefined') {
+        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        const matchedUser = registeredUsers.find(
+          (u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail
+        );
+        if (matchedUser) {
+          displayName = matchedUser.displayName || matchedUser.name;
+        }
+      }
 
       const userProf: UserProfile = {
         uid: cred.user.uid,
         email: cred.user.email,
-        displayName: cred.user.displayName || (role === 'admin' ? 'Fatih Ahmad Zakky' : 'Pelanggan Nefakky'),
+        displayName: displayName || (role === 'admin' ? 'Fatih Ahmad Zakky' : normalizedEmail.split('@')[0]),
         photoURL: cred.user.photoURL,
         role: role,
       };
@@ -119,20 +172,65 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(userProf);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
-        sessionStorage.setItem('nefakky_session_active', 'true');
+
+        // Sync to registered users in localStorage for seamless cross-tab & offline support
+        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        const existingIdx = registeredUsers.findIndex(
+          (u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail
+        );
+        if (existingIdx < 0) {
+          registeredUsers.push({
+            uid: cred.user.uid,
+            name: userProf.displayName,
+            displayName: userProf.displayName,
+            email: normalizedEmail,
+            password: pass,
+            role
+          });
+          localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
+        }
       }
       setLoading(false);
       return { success: true, role };
     } catch (err: any) {
-      console.warn("Firebase Auth sign-in failed or local validation checked:", err.message);
+      console.warn("Firebase Auth sign-in error:", err.code, err.message);
+
+      // Handle specific Firebase Auth error codes
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Email atau password yang Anda masukkan salah. Silakan periksa kembali email dan password Anda.'
+        };
+      }
+
+      if (err.code === 'auth/invalid-email') {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Format email tidak valid. Periksa kembali penulisan email Anda.'
+        };
+      }
+
+      if (err.code === 'auth/too-many-requests') {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Terlalu banyak percobaan login yang gagal. Silakan coba lagi beberapa saat lagi.'
+        };
+      }
       
-      // 3. Fallback check local registered users database in localStorage
+      // Fallback check local registered users database in localStorage for offline/demo support
       if (typeof window !== 'undefined') {
         const storedUsersStr = localStorage.getItem('nefakky_registered_users');
         const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
         
         const matchedUser = registeredUsers.find(
-          (u: any) => u.email.trim().toLowerCase() === normalizedEmail
+          (u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail
         );
 
         if (matchedUser) {
@@ -141,7 +239,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return {
               success: false,
               role: 'customer' as const,
-              error: 'Password yang Anda masukkan salah.'
+              error: 'Password yang Anda masukkan salah. Silakan periksa kembali password Anda.'
             };
           }
 
@@ -150,13 +248,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             email: matchedUser.email,
             displayName: matchedUser.displayName || matchedUser.name || normalizedEmail.split('@')[0],
             phoneNumber: matchedUser.phoneNumber || matchedUser.phone,
-            role: 'customer'
+            role: matchedUser.role || 'customer'
           };
           setUser(userProf);
           localStorage.setItem('nefakky_user', JSON.stringify(userProf));
-          sessionStorage.setItem('nefakky_session_active', 'true');
           setLoading(false);
-          return { success: true, role: 'customer' as const };
+          return { success: true, role: userProf.role };
         }
       }
 
@@ -164,7 +261,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return { 
         success: false, 
         role: 'customer' as const,
-        error: 'Akun tidak ditemukan. Silakan lakukan registrasi terlebih dahulu.'
+        error: `Akun dengan email "${email}" belum terdaftar atau email/password salah. Silakan periksa ejaan email Anda.`
       };
     }
   };
@@ -180,21 +277,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const storedUsersStr = localStorage.getItem('nefakky_registered_users');
       const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
       
-      // Check if already registered
-      const existing = registeredUsers.find((u: any) => u.email.trim().toLowerCase() === normalizedEmail);
-      if (!existing) {
-        registeredUsers.push({
-          uid: 'user-reg-' + Date.now(),
-          name,
-          displayName: name,
-          email: normalizedEmail,
-          phone,
-          phoneNumber: phone,
-          password: pass,
-          role: isOwnerAdmin ? 'admin' : 'customer'
-        });
-        localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
+      const existingIndex = registeredUsers.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail);
+      const userObj = {
+        uid: existingIndex >= 0 ? registeredUsers[existingIndex].uid : 'user-reg-' + Date.now(),
+        name,
+        displayName: name,
+        email: normalizedEmail,
+        phone,
+        phoneNumber: phone,
+        password: pass,
+        role: isOwnerAdmin ? 'admin' : 'customer'
+      };
+
+      if (existingIndex >= 0) {
+        registeredUsers[existingIndex] = userObj;
+      } else {
+        registeredUsers.push(userObj);
       }
+      localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
     }
 
     try {
@@ -209,7 +309,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(userProf);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
-        sessionStorage.setItem('nefakky_session_active', 'true');
       }
       setLoading(false);
       return { success: true };
@@ -226,19 +325,129 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(userProf);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
-        sessionStorage.setItem('nefakky_session_active', 'true');
       }
       setLoading(false);
       return { success: true };
     }
   };
 
-  // Google SSO
+  // Register with Google
+  const registerWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      const userEmail = cred.user.email?.toLowerCase();
+      const isOwnerAdmin = userEmail === ADMIN_EMAIL.toLowerCase();
+
+      if (typeof window !== 'undefined' && userEmail) {
+        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        
+        const existing = registeredUsers.find((u: any) => u.email && u.email.trim().toLowerCase() === userEmail);
+        if (!existing) {
+          registeredUsers.push({
+            uid: cred.user.uid,
+            name: cred.user.displayName || 'Pengguna Google',
+            displayName: cred.user.displayName || 'Pengguna Google',
+            email: userEmail,
+            phone: cred.user.phoneNumber || '',
+            photoURL: cred.user.photoURL,
+            role: isOwnerAdmin ? 'admin' : 'customer'
+          });
+          localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
+        }
+      }
+
+      const userProf: UserProfile = {
+        uid: cred.user.uid,
+        email: cred.user.email,
+        displayName: cred.user.displayName || 'Pengguna Google',
+        photoURL: cred.user.photoURL,
+        role: isOwnerAdmin ? 'admin' : 'customer'
+      };
+
+      setUser(userProf);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nefakky_user', JSON.stringify(userProf));
+      }
+      setLoading(false);
+      return { success: true };
+    } catch (err: any) {
+      console.warn("Google Registration error / demo fallback:", err.message);
+
+      if (err.code === 'auth/popup-closed-by-user') {
+        setLoading(false);
+        return { success: false, error: 'Proses registrasi Google dibatalkan.' };
+      }
+
+      // Demo fallback registration
+      const demoEmail = 'user.google@nefakky.com';
+      if (typeof window !== 'undefined') {
+        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        
+        const existing = registeredUsers.find((u: any) => u.email && u.email.trim().toLowerCase() === demoEmail);
+        if (!existing) {
+          registeredUsers.push({
+            uid: 'google-demo-' + Date.now(),
+            name: 'Google Demo User',
+            displayName: 'Google Demo User',
+            email: demoEmail,
+            phone: '',
+            role: 'customer'
+          });
+          localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
+        }
+      }
+
+      const demoUser: UserProfile = {
+        uid: 'google-demo-' + Date.now(),
+        email: demoEmail,
+        displayName: 'Google Demo User',
+        role: 'customer'
+      };
+      setUser(demoUser);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nefakky_user', JSON.stringify(demoUser));
+      }
+      setLoading(false);
+      return { success: true };
+    }
+  };
+
+  // Google SSO (Login only if registered)
   const loginWithGoogle = async () => {
     setLoading(true);
     try {
       const cred = await signInWithPopup(auth, googleProvider);
-      const isUserAdmin = cred.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      const userEmail = cred.user.email?.toLowerCase();
+      const isUserAdmin = userEmail === ADMIN_EMAIL.toLowerCase();
+
+      // Check if user is registered
+      let isRegistered = isUserAdmin;
+      if (!isRegistered && typeof window !== 'undefined' && userEmail) {
+        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        isRegistered = registeredUsers.some(
+          (u: any) => u.email && u.email.trim().toLowerCase() === userEmail
+        );
+      }
+
+      if (!isRegistered) {
+        // Sign out Firebase session since account is not registered yet
+        await firebaseSignOut(auth);
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('nefakky_user');
+        }
+        setLoading(false);
+        return { 
+          success: false, 
+          role: 'customer' as const,
+          error: `Akun Google (${userEmail || 'Anda'}) belum terdaftar. Silakan melakukan registrasi akun terlebih dahulu.`
+        };
+      }
+
       const role: 'admin' | 'customer' = isUserAdmin ? 'admin' : 'customer';
 
       const userProf: UserProfile = {
@@ -252,22 +461,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(userProf);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
-        sessionStorage.setItem('nefakky_session_active', 'true');
       }
       setLoading(false);
       return { success: true, role };
     } catch (err: any) {
-      console.warn("Google Sign-In demo fallback triggered");
+      console.warn("Google Sign-In error / demo fallback:", err.message);
+
+      if (err.code === 'auth/popup-closed-by-user') {
+        setLoading(false);
+        return { success: false, role: 'customer' as const, error: 'Proses login Google dibatalkan.' };
+      }
+
+      // Demo fallback check
+      const demoEmail = 'user.google@nefakky.com';
+      let isRegistered = false;
+      if (typeof window !== 'undefined') {
+        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        isRegistered = registeredUsers.some(
+          (u: any) => u.email && u.email.trim().toLowerCase() === demoEmail
+        );
+      }
+
+      if (!isRegistered) {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Akun Google (user.google@nefakky.com) belum terdaftar. Silakan melakukan registrasi akun terlebih dahulu.'
+        };
+      }
+
       const demoUser: UserProfile = {
         uid: 'google-demo-' + Date.now(),
-        email: 'user.google@nefakky.com',
+        email: demoEmail,
         displayName: 'Google Demo User',
         role: 'customer'
       };
       setUser(demoUser);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(demoUser));
-        sessionStorage.setItem('nefakky_session_active', 'true');
       }
       setLoading(false);
       return { success: true, role: 'customer' as const };
@@ -285,7 +518,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('nefakky_user');
-      sessionStorage.removeItem('nefakky_session_active');
     }
     setLoading(false);
   };
@@ -308,6 +540,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isAdmin: user?.role === 'admin',
       login,
       register,
+      registerWithGoogle,
       loginWithGoogle,
       logout,
       updatePhoto

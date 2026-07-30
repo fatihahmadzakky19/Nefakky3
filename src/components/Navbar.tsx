@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { ShoppingBag, Bell, Search } from 'lucide-react';
+import { ShoppingBag, Bell, Search, ShieldCheck } from 'lucide-react';
 
 interface NavbarProps {
   showSearch?: boolean;
@@ -97,9 +97,11 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
           {isAdmin && (
             <Link
               href="/admin"
-              className="px-2.5 py-1 bg-amber-900 text-amber-200 text-[11px] font-semibold rounded-full hover:bg-amber-800 transition-colors hidden sm:inline-block"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#4A3222] hover:bg-[#5C3D28] text-amber-200 text-xs font-semibold rounded-full transition-all shadow-sm hover:shadow"
+              title="Masuk ke Admin Panel"
             >
-              Admin Panel
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span>Admin Panel</span>
             </Link>
           )}
 

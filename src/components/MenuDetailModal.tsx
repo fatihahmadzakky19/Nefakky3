@@ -59,13 +59,13 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   if (!product) return null;
 
   const currentMainImage = selectedImage || product.image;
-  const productThumbnails = product.thumbnails && product.thumbnails.length > 0
+  const rawThumbnails = product.thumbnails && product.thumbnails.length > 0
     ? product.thumbnails
     : [
         product.image,
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80',
-        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80'
+        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80'
       ];
+  const productThumbnails = rawThumbnails.slice(0, 2);
 
   const defaultReviews = product.reviews || [
     {
@@ -191,7 +191,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                 Rp {product.price.toLocaleString('id-ID')}
               </div>
 
-              {/* Quantity Selector & Wishlist */}
+              {/* Quantity Selector */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3 bg-[#F5F2EC] px-4 py-2 rounded-full border border-stone-200/60">
                   <button
@@ -210,16 +210,6 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                     <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
-
-                <button
-                  onClick={() => setIsWishlist(!isWishlist)}
-                  className={`w-11 h-11 rounded-full border flex items-center justify-center transition-colors shadow-sm ${
-                    isWishlist ? 'border-red-300 bg-red-50 text-red-500' : 'border-stone-300 bg-white text-stone-600 hover:text-red-500'
-                  }`}
-                  title="Simpan ke Favorit"
-                >
-                  <Heart className={`w-5 h-5 ${isWishlist ? 'fill-red-500 text-red-500' : ''}`} />
-                </button>
               </div>
 
               {/* Action Buttons: Add to Cart & Buy Now */}

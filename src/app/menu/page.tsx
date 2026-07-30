@@ -138,12 +138,6 @@ export default function MenuCatalogPage() {
   // Filter visible products from DataContext
   const visibleProducts = products.filter(p => p.visibility !== false);
 
-  // Auth Guard
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
 
   const categories = ['Semua', 'Makanan', 'Makanan Berat', 'Minuman', 'Snack', 'Dessert', 'Paket Hemat'];
 

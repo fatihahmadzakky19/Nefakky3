@@ -114,7 +114,7 @@ const ALL_MENUS: MenuItem[] = [
 export default function UserHomePage() {
   const router = useRouter();
   const { user, loading, logout, isAdmin } = useAuth();
-  const { products } = useData();
+  const { products, vouchers } = useData();
   const { cart, totalCartCount, addToCart, removeFromCart, cartItems, subtotal, claimPromo } = useCart();
 
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
@@ -127,14 +127,8 @@ export default function UserHomePage() {
   // Filter visible products from DataContext
   const visibleProducts = products.filter(p => p.visibility !== false);
 
-  // Authentication Guard: Redirect unauthenticated visitors to /login
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
-  if (loading || !user) {
+  // Loading state handler
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-3 border-amber-800/20 border-t-[#7A4B29] rounded-full animate-spin mb-3" />
@@ -405,47 +399,83 @@ export default function UserHomePage() {
 
       {/* 5. WEEKEND PROMO BANNER */}
       <section id="promo-section" className="px-4 sm:px-8 py-6 max-w-6xl mx-auto">
-        <div className="bg-[#7D4A2B] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
-          
-          {/* Left Text */}
-          <div className="space-y-4 max-w-md text-left relative z-10">
-            <h2 className="font-serif text-3xl sm:text-4xl font-semibold leading-tight text-stone-50">
-              Weekend Promo: Diskon 30%
-            </h2>
-            <p className="text-xs sm:text-sm text-stone-200 font-light leading-relaxed">
-              Meriahkan akhir pekanmu dengan sajian istimewa dari Nefakky. Gunakan kode promo <strong className="underline text-amber-200">WEEKENDSERU</strong>.
-            </p>
-            <div>
-              <button 
-                onClick={() => {
-                  claimPromo('WEEKENDSERU');
-                  if (totalCartCount === 0) {
-                    addToCart('m2');
-                  }
-                  router.push('/cart');
-                }}
-                className="px-6 py-3 bg-[#D9A353] hover:bg-[#C28E42] text-[#3D2512] font-semibold text-xs rounded-full shadow-md transition-colors flex items-center gap-2"
-              >
-                <span>Ambil Promonya &amp; Checkout</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+        {(() => {
+          const weekendVoucher = (vouchers || []).find((v: any) => v.code === 'WEEKENDSERU');
+          const isWeekendActive = weekendVoucher ? (weekendVoucher.status === 'Active' && weekendVoucher.isActive !== false) : true;
 
-          {/* Right Ticket Illustration */}
-          <div className="relative z-10 shrink-0">
-            <div className="w-48 h-32 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex flex-col items-center justify-center gap-2 shadow-2xl rotate-3 hover:rotate-0 transition-transform">
-              <Ticket className="w-10 h-10 text-amber-300" />
-              <span className="font-mono text-xs font-bold tracking-wider text-amber-200">
-                WEEKENDSERU
-              </span>
-              <span className="text-[10px] text-stone-200">Diskon 30% All Items</span>
-            </div>
-          </div>
+          return (
+            <div className={`rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl transition-all ${
+              isWeekendActive ? 'bg-[#7D4A2B]' : 'bg-stone-800'
+            }`}>
+              
+              {/* Left Text */}
+              <div className="space-y-4 max-w-md text-left relative z-10">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    isWeekendActive ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40' : 'bg-rose-500/30 text-rose-200 border border-rose-400/40'
+                  }`}>
+                    {isWeekendActive ? '● Promo Aktif' : '● Promo Non-Aktif'}
+                  </span>
+                </div>
 
-          {/* Background Decorative Pattern */}
-          <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-        </div>
+                <h2 className="font-serif text-3xl sm:text-4xl font-semibold leading-tight text-stone-50">
+                  Weekend Promo: Diskon 30%
+                </h2>
+                <p className="text-xs sm:text-sm text-stone-200 font-light leading-relaxed">
+                  {isWeekendActive ? (
+                    <>Meriahkan akhir pekanmu dengan sajian istimewa dari Nefakky. Gunakan kode promo <strong className="underline text-amber-200">WEEKENDSERU</strong>.</>
+                  ) : (
+                    <>Maaf, promosi diskon akhir pekan saat ini sedang dinonaktifkan oleh Admin.</>
+                  )}
+                </p>
+                <div>
+                  {isWeekendActive ? (
+                    <button 
+                      onClick={() => {
+                        const res = claimPromo('WEEKENDSERU');
+                        if (res.success) {
+                          if (totalCartCount === 0) {
+                            addToCart('m2');
+                          }
+                          router.push('/cart');
+                        } else {
+                          alert(res.message);
+                        }
+                      }}
+                      className="px-6 py-3 bg-[#D9A353] hover:bg-[#C28E42] text-[#3D2512] font-semibold text-xs rounded-full shadow-md transition-colors flex items-center gap-2"
+                    >
+                      <span>Ambil Promonya &amp; Checkout</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button 
+                      disabled
+                      className="px-6 py-3 bg-stone-700 text-stone-400 font-medium text-xs rounded-full cursor-not-allowed flex items-center gap-2 border border-stone-600"
+                    >
+                      <span>Promo Sedang Non-Aktif</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Ticket Illustration */}
+              <div className="relative z-10 shrink-0">
+                <div className="w-48 h-32 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex flex-col items-center justify-center gap-2 shadow-2xl rotate-3 hover:rotate-0 transition-transform">
+                  <Ticket className={`w-10 h-10 ${isWeekendActive ? 'text-amber-300' : 'text-stone-400'}`} />
+                  <span className="font-mono text-xs font-bold tracking-wider text-amber-200">
+                    WEEKENDSERU
+                  </span>
+                  <span className="text-[10px] text-stone-200">
+                    {isWeekendActive ? 'Diskon 30% All Items' : 'Tidak Dapat Digunakan'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Background Decorative Pattern */}
+              <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+            </div>
+          );
+        })()}
       </section>
 
       {/* 6. CART DRAWER SLIDE-OVER */}

@@ -119,17 +119,55 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const removePromo = () => {
+    setAppliedPromo(null);
+    setDiscountPercent(0);
+    if (user?.uid && typeof window !== 'undefined') {
+      localStorage.removeItem(`nefakky_promo_${user.uid}`);
+    }
+  };
+
+  // Real-time effect: Auto-revoke applied promo if Admin deactivates it
+  useEffect(() => {
+    if (appliedPromo && vouchers.length > 0) {
+      const foundVoucher = vouchers.find(
+        v => (v.code.toUpperCase() === appliedPromo.toUpperCase() || v.id.toUpperCase() === appliedPromo.toUpperCase())
+      );
+      const isStillActive = foundVoucher && foundVoucher.status === 'Active' && (foundVoucher.isActive !== false);
+      if (!isStillActive) {
+        removePromo();
+      }
+    }
+  }, [vouchers, appliedPromo]);
+
   const claimPromo = (code: string) => {
     const upper = code.trim().toUpperCase();
-    const foundVoucher = vouchers.find(v => v.code.toUpperCase() === upper && v.status === 'Active');
-    let percent = foundVoucher ? foundVoucher.discountPercent : 0;
+    
+    // Find matching voucher from live DataContext vouchers list
+    const foundVoucher = vouchers.find(
+      v => v.code.toUpperCase() === upper || v.id.toUpperCase() === upper
+    );
 
     if (!foundVoucher) {
-      if (upper === 'NEFAKKY10') percent = 10;
-      else if (upper === 'WEEKENDSERU') percent = 30;
-      else if (upper === 'NEFAKKY50' || upper === 'HEMAT50') percent = 50;
-      else percent = 20;
+      return {
+        success: false,
+        message: `Maaf, kode promo "${upper}" tidak ditemukan! Silakan periksa kembali kode promo Anda.`,
+        percent: 0
+      };
     }
+
+    const isVoucherActive = foundVoucher.status === 'Active' && (foundVoucher.isActive !== false);
+
+    if (!isVoucherActive) {
+      removePromo();
+      return {
+        success: false,
+        message: `Maaf, promosi "${foundVoucher.name}" (${upper}) sedang NON-AKTIF atau telah dimatikan oleh Admin.`,
+        percent: 0
+      };
+    }
+
+    const percent = foundVoucher.discountPercent || 20;
 
     setAppliedPromo(upper);
     setDiscountPercent(percent);
@@ -140,17 +178,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
     return {
       success: true,
-      message: `Kode promo ${upper} berhasil digunakan! Diskon ${percent}% diterapkan pada checkout Anda.`,
+      message: `Kode promo "${upper}" (${foundVoucher.name}) BERHASIL digunakan! Diskon ${percent}% diterapkan pada checkout Anda.`,
       percent
     };
-  };
-
-  const removePromo = () => {
-    setAppliedPromo(null);
-    setDiscountPercent(0);
-    if (user?.uid && typeof window !== 'undefined') {
-      localStorage.removeItem(`nefakky_promo_${user.uid}`);
-    }
   };
 
   const addToCart = (productId: string) => {

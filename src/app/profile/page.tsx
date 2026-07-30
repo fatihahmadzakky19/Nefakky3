@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
+import { useData, ChatMessage } from '@/context/DataContext';
 import { 
   ShoppingBag, 
   Bell, 
@@ -15,7 +16,12 @@ import {
   LogOut, 
   ArrowRight,
   X,
-  CheckCircle2
+  CheckCircle2,
+  MessageSquare,
+  Send,
+  Headphones,
+  ShieldCheck,
+  Clock
 } from 'lucide-react';
 
 interface UserOrder {
@@ -30,8 +36,10 @@ interface UserOrder {
 export default function UserProfilePage() {
   const router = useRouter();
   const { user, loading, logout, updatePhoto } = useAuth();
+  const { chatMessages, sendChatMessage, markChatAsRead } = useData();
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const chatBottomRef = React.useRef<HTMLDivElement>(null);
 
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
@@ -39,11 +47,27 @@ export default function UserProfilePage() {
   const [isEditingModal, setIsEditingModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [orders, setOrders] = useState<UserOrder[]>([]);
+  const [chatInput, setChatInput] = useState('');
 
   // Generate dynamic initial avatar per user email/name if photoURL is not uploaded yet
   const nameForAvatar = user?.displayName || user?.email || 'User';
   const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForAvatar)}&background=5C3D28&color=ffffff&bold=true&size=256`;
   const userAvatar = user?.photoURL || defaultAvatar;
+
+  const currentUserEmail = (user?.email || '').toLowerCase();
+  const userChatHistory = chatMessages.filter(m => m.userEmail.toLowerCase() === currentUserEmail);
+
+  // Auto mark chat as read by user when visiting profile
+  useEffect(() => {
+    if (user?.email) {
+      markChatAsRead(user.email, 'user');
+    }
+  }, [user, chatMessages.length]);
+
+  // Auto scroll to bottom of chat
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [userChatHistory.length]);
 
   // Authentication Guard: Redirect to /login if unauthenticated
   useEffect(() => {
@@ -56,6 +80,19 @@ export default function UserProfilePage() {
       }
     }
   }, [user, loading, router]);
+
+  const handleSendChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !user?.email) return;
+
+    sendChatMessage(user.email, displayName, chatInput.trim(), userAvatar);
+    setChatInput('');
+  };
+
+  const handleChipClick = (text: string) => {
+    if (!user?.email) return;
+    sendChatMessage(user.email, displayName, text, userAvatar);
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,13 +177,22 @@ export default function UserProfilePage() {
                 {user.email || 'eleanor.vance@lifestyle.com'}
               </p>
 
-              <div className="pt-2">
+              <div className="pt-2 flex items-center gap-3 flex-wrap justify-center sm:justify-start">
                 <button
                   onClick={() => setIsEditingModal(true)}
                   className="px-6 py-2.5 bg-[#424242] hover:bg-[#262626] text-white text-xs font-medium rounded-full shadow-sm transition-all"
                 >
                   Edit Profile
                 </button>
+                {(user.role === 'admin' || user.email === 'fatihahmadzakky19@gmail.com') && (
+                  <Link
+                    href="/admin"
+                    className="px-6 py-2.5 bg-[#613A1F] hover:bg-[#4A2B16] text-white text-xs font-semibold rounded-full shadow-md transition-all flex items-center gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-amber-300" />
+                    <span>Kembali ke Admin Panel</span>
+                  </Link>
+                )}
               </div>
             </div>
 
@@ -212,9 +258,118 @@ export default function UserProfilePage() {
 
           </div>
 
-          {/* RIGHT COLUMN: Recent Orders */}
-          <div className="lg:col-span-8 space-y-5">
+          {/* RIGHT COLUMN: Recent Orders & Customer Service */}
+          <div className="lg:col-span-8 space-y-8">
             
+            {/* LIVE CHAT CUSTOMER SERVICE CARD */}
+            <div className="bg-white border border-stone-200/60 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+              {/* CS Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#5C3D28] text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <Headphones className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-xl font-semibold text-stone-900 flex items-center gap-2">
+                      Customer Service & Support
+                    </h3>
+                    <p className="text-xs text-stone-500 font-light">
+                      Tuliskan keresahan, kendala, atau pertanyaan Anda. Tim Admin CS siap membantu via Live Chat.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Online Badge */}
+                <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-200/60 rounded-full text-emerald-800 text-xs font-semibold self-start sm:self-auto shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>CS Admin Online</span>
+                </div>
+              </div>
+
+              {/* Quick Chips */}
+              <div className="flex flex-wrap gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => handleChipClick('Halo Min, pesanan saya belum sampai nih, tolong dicek ya.')}
+                  className="px-3 py-1.5 bg-[#FAF8F5] hover:bg-[#F5F2EC] text-stone-700 rounded-full border border-stone-200/80 transition-colors text-[11px]"
+                >
+                  🚚 Pesanan Belum Sampai
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleChipClick('Halo Min, saya ada kendala saat proses pembayaran.')}
+                  className="px-3 py-1.5 bg-[#FAF8F5] hover:bg-[#F5F2EC] text-stone-700 rounded-full border border-stone-200/80 transition-colors text-[11px]"
+                >
+                  💳 Kendala Pembayaran
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleChipClick('Halo Min, mau tanya rekomendasi menu paling favorit dong.')}
+                  className="px-3 py-1.5 bg-[#FAF8F5] hover:bg-[#F5F2EC] text-stone-700 rounded-full border border-stone-200/80 transition-colors text-[11px]"
+                >
+                  🍲 Tanya Menu & Bumbu
+                </button>
+              </div>
+
+              {/* Chat History Container */}
+              <div className="bg-[#FAF8F5] rounded-2xl p-4 sm:p-5 border border-stone-200/60 max-h-[340px] overflow-y-auto space-y-3">
+                {userChatHistory.length === 0 ? (
+                  <div className="py-8 text-center space-y-2">
+                    <MessageSquare className="w-8 h-8 text-stone-300 mx-auto stroke-[1.5]" />
+                    <p className="text-xs font-medium text-stone-600">Belum ada obrolan dengan CS</p>
+                    <p className="text-[11px] text-stone-400 max-w-xs mx-auto">
+                      Tuliskan keresahan atau pertanyaan Anda di bawah untuk memulai obrolan langsung dengan Admin Nefakky.
+                    </p>
+                  </div>
+                ) : (
+                  userChatHistory.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'} space-y-1`}
+                    >
+                      <div className="flex items-center gap-1.5 text-[10px] text-stone-400">
+                        <span className="font-semibold text-stone-600">
+                          {msg.sender === 'user' ? 'Anda' : 'Admin CS Nefakky'}
+                        </span>
+                        <span>•</span>
+                        <span>{msg.timestamp}</span>
+                      </div>
+
+                      <div
+                        className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
+                          msg.sender === 'user'
+                            ? 'bg-[#5C3D28] text-white rounded-br-none'
+                            : 'bg-white border border-stone-200 text-stone-900 rounded-bl-none font-normal'
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={chatBottomRef} />
+              </div>
+
+              {/* Chat Input Form */}
+              <form onSubmit={handleSendChat} className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ketikkan keresahan atau kendala Anda di sini..."
+                  className="flex-1 px-4 py-3 bg-[#FAF8F5] border border-stone-200 rounded-full text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#5C3D28]/30 placeholder-stone-400"
+                />
+                <button
+                  type="submit"
+                  disabled={!chatInput.trim()}
+                  className="px-5 py-3 bg-[#5C3D28] hover:bg-[#432A1B] disabled:opacity-50 text-white text-xs font-semibold rounded-full shadow transition-all flex items-center gap-1.5 shrink-0"
+                >
+                  <span>Kirim</span>
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </form>
+            </div>
+
             {/* Header */}
             <div className="flex items-center justify-between">
               <h2 className="font-serif text-2xl font-semibold text-stone-900">
