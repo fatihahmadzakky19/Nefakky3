@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart, CartLineItem } from '@/context/CartContext';
 import { useData } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
+import AutoMapPickerModal from '@/components/AutoMapPickerModal';
 import { 
   Search, 
   ShoppingBag, 
@@ -33,7 +34,8 @@ import {
   ArrowRight,
   Clock,
   ShieldCheck,
-  X
+  X,
+  Navigation
 } from 'lucide-react';
 
 interface PlacedOrder {
@@ -75,6 +77,8 @@ export default function BasketCartPage() {
 
   // Multi-step Checkout state: 1 (Cart) -> 2 (Checkout) -> 3 (Payment) -> 4 (Success)
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [showMapPickerModal, setShowMapPickerModal] = useState<boolean>(false);
+  const [detectedDistanceKm, setDetectedDistanceKm] = useState<number>(4.2);
 
   // Address State
   const [shippingAddress, setShippingAddress] = useState({
@@ -788,6 +792,16 @@ export default function BasketCartPage() {
                     </button>
                   </div>
 
+                  {/* Auto Map GPS Picker Trigger Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPickerModal(true)}
+                    className="w-full py-2.5 px-4 bg-[#F5EBE1] hover:bg-[#EBDCCF] text-[#5C3D28] text-xs font-semibold rounded-2xl transition-all flex items-center justify-center gap-2 border border-[#5C3D28]/20 shadow-xs"
+                  >
+                    <Navigation className="w-4 h-4 text-[#5C3D28]" />
+                    <span>📍 Pilih Alamat via Peta Otomatis (GPS &amp; Pinpoint)</span>
+                  </button>
+
                   {isEditingAddress ? (
                     <form onSubmit={handleSaveAddress} className="space-y-3 pt-2">
                       <div>
@@ -828,10 +842,16 @@ export default function BasketCartPage() {
                       </button>
                     </form>
                   ) : (
-                    <div className="text-xs space-y-1 text-stone-600 font-light pt-1">
+                    <div className="text-xs space-y-1.5 text-stone-600 font-light pt-1">
                       <p className="font-semibold text-stone-900 text-sm">{shippingAddress.name}</p>
                       <p className="text-stone-500">{shippingAddress.phone}</p>
-                      <p className="text-stone-600 leading-relaxed">{shippingAddress.address}</p>
+                      <p className="text-stone-600 leading-relaxed font-medium">{shippingAddress.address}</p>
+                      <div className="pt-1 flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded-full text-[10px] border border-emerald-200 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-emerald-600" />
+                          <span>Radius Dapur: ~{detectedDistanceKm} km ({detectedDistanceKm <= 15 ? 'Aman / Tahan' : 'Cek Lokasi'})</span>
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1602,6 +1622,18 @@ export default function BasketCartPage() {
           </div>
         </div>
       )}
+
+      {/* AUTOMATIC MAP PICKER MODAL */}
+      <AutoMapPickerModal
+        isOpen={showMapPickerModal}
+        onClose={() => setShowMapPickerModal(false)}
+        initialAddress={shippingAddress.address}
+        onSelectAddress={(selectedAddr, dist) => {
+          setShippingAddress(prev => ({ ...prev, address: selectedAddr }));
+          setTempAddress(prev => ({ ...prev, address: selectedAddr }));
+          setDetectedDistanceKm(dist);
+        }}
+      />
     </div>
   );
 }
