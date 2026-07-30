@@ -1524,7 +1524,9 @@ export default function AdminDashboardPage() {
                           </div>
                           <div>
                             <h4 className="font-semibold text-stone-900 text-xs">{prod.name}</h4>
-                            <p className="text-[11px] text-stone-400 mt-0.5">{prod.category}</p>
+                            <p className="text-[11px] text-stone-400 mt-0.5">
+                              {prod.category} • <span className="text-[#8A6337] font-medium">🏭 {prod.origin || 'Dapur Utama Menteng'}</span>
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">

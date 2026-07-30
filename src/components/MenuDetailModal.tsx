@@ -14,7 +14,8 @@ import {
   ShoppingBag, 
   CheckCircle2,
   Sparkles,
-  Share2
+  Share2,
+  MapPin
 } from 'lucide-react';
 
 export interface DetailProduct {
@@ -189,6 +190,19 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
               {/* Price */}
               <div className="font-serif text-3xl font-bold text-[#5C3D28]">
                 Rp {product.price.toLocaleString('id-ID')}
+              </div>
+
+              {/* Production Origin Address Card */}
+              <div className="p-3.5 bg-[#FAF6F0] border border-[#8A6337]/30 rounded-2xl flex items-start gap-3 text-xs text-stone-700">
+                <MapPin className="w-4 h-4 text-[#8A6337] shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-[10px] text-[#7A4B29] font-bold uppercase tracking-wider block mb-0.5">
+                    🏭 ALAMAT &amp; DAERAH PRODUKSI:
+                  </span>
+                  <span className="font-semibold text-stone-900 leading-relaxed block">
+                    {(product as any).origin || 'Dapur Utama Menteng, Jl. H.O.S. Cokroaminoto No. 88, Menteng, Jakarta Pusat, 10310'}
+                  </span>
+                </div>
               </div>
 
               {/* Quantity Selector */}
