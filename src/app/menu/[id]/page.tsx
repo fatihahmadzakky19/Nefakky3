@@ -32,14 +32,8 @@ export default function MenuDetailPage() {
   const [isWishlist, setIsWishlist] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'description' | 'ingredients' | 'storage' | 'serving'>('description');
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [addedNotice, setAddedNotice] = useState<boolean>(false);
-
-  // Auth Guard
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
 
   const currentMainImage = selectedImage || product.image;
   const productThumbnails = [
@@ -48,6 +42,10 @@ export default function MenuDetailPage() {
   ].slice(0, 2);
 
   const handleAddToCart = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     for (let i = 0; i < quantity; i++) {
       addToCart(product.id);
     }
@@ -56,13 +54,17 @@ export default function MenuDetailPage() {
   };
 
   const handleBuyNow = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     for (let i = 0; i < quantity; i++) {
       addToCart(product.id);
     }
     router.push('/cart');
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-3 border-stone-300 border-t-[#5C3D28] rounded-full animate-spin mb-4" />
@@ -362,6 +364,43 @@ export default function MenuDetailPage() {
         </div>
 
       </main>
+
+      {/* GUEST AUTH MODAL */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
+            <div className="w-14 h-14 bg-amber-100 text-[#5C3D28] rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+              🔒
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-serif text-xl font-bold text-stone-900">Silakan Masuk Terlebih Dahulu</h3>
+              <p className="text-xs text-stone-600 font-light leading-relaxed">
+                Anda perlu masuk atau mendaftar akun untuk menambahkan makanan ini ke keranjang atau membeli.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => router.push('/login')}
+                className="w-full py-3 bg-[#5C3D28] hover:bg-[#472B17] text-white font-medium text-xs rounded-full shadow transition-all"
+              >
+                Masuk ke Akun Saya
+              </button>
+              <button
+                onClick={() => router.push('/register')}
+                className="w-full py-3 border border-[#5C3D28] text-[#5C3D28] hover:bg-[#5C3D28]/5 font-medium text-xs rounded-full transition-all"
+              >
+                Daftar Akun Baru
+              </button>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="text-xs text-stone-400 hover:text-stone-600 font-light pt-1"
+              >
+                Lanjutkan Melihat Menu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

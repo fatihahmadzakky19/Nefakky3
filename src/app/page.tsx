@@ -1,5 +1,14 @@
 'use client';
 
+/**
+ * ============================================================================
+ * HALAMAN: Dashboard Utama Pelanggan (User Dashboard - /)
+ * DESKRIPSI: Menampilkan Hero Banner, Kategori Pilihan, Menu Terlaris, Promo,
+ *            serta Akses Tamu Tanpa Wajib Login Terlebih Dahulu.
+ * GUIDELINES: Sesuai standar Clean Code, modular, dan Bahasa Indonesia 100%.
+ * ============================================================================
+ */
+
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -45,68 +54,60 @@ interface MenuItem {
 const ALL_MENUS: MenuItem[] = [
   {
     id: 'm1',
-    name: 'Special Wagyu Bowl',
+    name: 'Ayam Bakar',
     category: 'Makanan Berat',
-    price: 85000,
+    price: 35000,
     rating: 4.9,
-    image: '/images/wagyu_bowl.png',
-    description: 'Nasi hangat dengan irisan daging wagyu premium dan kualitas istimewa disajikan dengan kuning telur segar.',
+    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    description: 'Ayam pejantan pilihan dibakar dengan lumuran bumbu kecap rempah tradisional yang meresap hingga ke tulang.',
     badge: 'TERPOPULER'
   },
   {
     id: 'm2',
-    name: 'Creamy Truffle Pasta',
+    name: 'Nasi Bakar',
     category: 'Makanan Berat',
-    price: 72000,
+    price: 28000,
     rating: 4.8,
-    image: '/images/truffle_pasta.png',
-    description: 'Pasta artisanal dengan saus truffle putih yang wangi dan bumbu rempah pilihan yang creamy.'
-  },
-  {
-    id: 'm3',
-    name: 'Berry Cheesecake',
-    category: 'Dessert',
-    price: 45000,
-    rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80',
-    description: 'Cheesecake lembut ala Jepang dengan topping buah beri segar dan taburan gula halus.',
+    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+    description: 'Nasi gurih rempah dibungkus daun pisang dengan isian cumi pedas manis yang dibakar harum khas nusantara.',
     badge: 'BARU'
   },
   {
+    id: 'm3',
+    name: 'Krecek',
+    category: 'Menu Hemat',
+    price: 22000,
+    rating: 4.9,
+    image: '/images/hero_rendang.png',
+    description: 'Olahan krecek kulit sapi lembut dimasak dengan santan kental gurih, cabai rawit pedas, dan kacang tolo.',
+    badge: 'TERPOPULER'
+  },
+  {
     id: 'm4',
-    name: 'Ceremonial Matcha',
-    category: 'Minuman',
-    price: 38000,
-    rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=600&q=80',
-    description: 'Matcha berkualitas tinggi yang diimpor langsung dari Uji dengan racikan susu segar gurih.'
+    name: 'Gudeg',
+    category: 'Makanan Berat',
+    price: 40000,
+    rating: 5.0,
+    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    description: 'Nangka muda dimasak perlahan dengan santan dan gula jawa disajikan dengan telur bacem, suwiran ayam, dan krecek.'
   },
   {
     id: 'm5',
-    name: 'Rendang Sapi Rempah Padang',
-    category: 'Makanan Berat',
-    price: 65000,
-    rating: 5.0,
-    image: '/images/hero_rendang.png',
-    description: 'Daging sapi empuk bumbu racikan warisan yang dimasak perlahan 8 jam.'
+    name: 'Garang Asam',
+    category: 'Menu Hemat',
+    price: 32000,
+    rating: 4.8,
+    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80',
+    description: 'Potongan ayam kampung segar dikukus dalam bungkus daun pisang dengan kuah santan asam segar, belimbing wulung, dan cabai rawit.'
   },
   {
     id: 'm6',
-    name: 'Croissant Butter Paris',
-    category: 'Snack',
-    price: 28000,
-    rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
-    description: 'Pastry mentega impor renyah berlapis dengan aroma khas toko roti Paris.'
-  },
-  {
-    id: 'm7',
-    name: 'Paket Family Bento Box',
-    category: 'Paket Hemat',
-    price: 120000,
-    rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
-    description: 'Paket hemat hidangan lengkap untuk keluarga dengan lauk pauk komplit.'
+    name: 'Jus (Jambu, Sirsak, Mangga)',
+    category: 'Minuman',
+    price: 15000,
+    rating: 4.7,
+    image: '/images/jus_mangga.jpg',
+    description: 'Aneka pilihan jus buah segar alami berkualitas premium: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis.'
   }
 ];
 
@@ -123,6 +124,7 @@ export default function UserHomePage() {
   const [showCartDrawer, setShowCartDrawer] = useState<boolean>(false);
   const [promoApplied, setPromoApplied] = useState<boolean>(false);
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
   // Filter visible products from DataContext
   const visibleProducts = products.filter(p => p.visibility !== false);
@@ -137,13 +139,11 @@ export default function UserHomePage() {
     );
   }
 
-  // Categories list matching visual design
+  // 3 Categories matching teacher revision
   const categoriesList = [
     { name: 'Makanan Berat', icon: Utensils },
-    { name: 'Snack', icon: Cookie },
+    { name: 'Menu Hemat', icon: Gift },
     { name: 'Minuman', icon: Coffee },
-    { name: 'Dessert', icon: IceCream },
-    { name: 'Paket Hemat', icon: Gift },
   ];
 
   // Filtering products
@@ -174,7 +174,7 @@ export default function UserHomePage() {
             
             {/* Pill Tag */}
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-[#7A4B29]/5 border border-[#7A4B29]/20 rounded-full text-[11px] font-medium text-[#7A4B29]">
-              Premium Food Marketplace
+              Pasar Kuliner Premium
             </div>
 
             {/* Main Headline */}
@@ -226,10 +226,10 @@ export default function UserHomePage() {
                 </div>
                 <div>
                   <div className="text-xs font-bold text-stone-900 leading-tight">
-                    4.8/5 Rating
+                    Penilaian 4.8/5
                   </div>
                   <div className="text-[10px] text-stone-400 font-normal">
-                    Dari 2,000+ Pelanggan
+                    Dari 2.000+ Pelanggan
                   </div>
                 </div>
               </div>
@@ -373,7 +373,10 @@ export default function UserHomePage() {
                       </button>
                       <span className="text-xs font-bold text-stone-800 px-1">{qty}</span>
                       <button
-                        onClick={() => addToCart(item.id)}
+                        onClick={() => {
+                          if (!user) { setShowAuthModal(true); return; }
+                          addToCart(item.id);
+                        }}
                         className="w-6 h-6 rounded-full bg-[#5E3A20] text-white flex items-center justify-center shadow-sm"
                       >
                         <Plus className="w-3 h-3" />
@@ -381,7 +384,10 @@ export default function UserHomePage() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => addToCart(item.id)}
+                      onClick={() => {
+                        if (!user) { setShowAuthModal(true); return; }
+                        addToCart(item.id);
+                      }}
                       className="w-9 h-9 rounded-full bg-[#5E3A20] hover:bg-[#472B17] text-white flex items-center justify-center transition-all shadow active:scale-95"
                       title="Tambah ke Keranjang"
                     >
@@ -583,6 +589,43 @@ export default function UserHomePage() {
 
       {/* Menu Detail Modal Overlay */}
       <MenuDetailModal product={detailProduct} onClose={() => setDetailProduct(null)} />
+
+      {/* Guest Auth Modal Overlay */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
+            <div className="w-14 h-14 bg-amber-100 text-[#5C3D28] rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+              🔒
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-serif text-xl font-bold text-stone-900">Silakan Masuk Terlebih Dahulu</h3>
+              <p className="text-xs text-stone-600 font-light leading-relaxed">
+                Anda perlu masuk atau mendaftar akun untuk membeli dan menambahkan makanan ini ke keranjang.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => router.push('/login')}
+                className="w-full py-3 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow transition-all"
+              >
+                Masuk ke Akun Saya
+              </button>
+              <button
+                onClick={() => router.push('/register')}
+                className="w-full py-3 border border-[#7A4B29] text-[#7A4B29] hover:bg-[#7A4B29]/5 font-medium text-xs rounded-full transition-all"
+              >
+                Daftar Akun Baru
+              </button>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="text-xs text-stone-400 hover:text-stone-600 font-light pt-1"
+              >
+                Lanjutkan Melihat Menu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

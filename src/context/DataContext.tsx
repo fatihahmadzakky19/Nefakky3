@@ -1,7 +1,17 @@
 'use client';
 
+/**
+ * ============================================================================
+ * CONTEXT: DataContext & State Persistence (DataContext.tsx)
+ * DESKRIPSI: Penyimpanan dan manajemen data global (Produk, Promo, Pesanan, Ulasan, Chat)
+ *            yang terhubung langsung ke Browser localStorage.
+ * GUIDELINES: Sesuai standar Clean Code, modular, dan Bahasa Indonesia 100%.
+ * ============================================================================
+ */
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+/** Interface Data Produk Utama */
 export interface ProductItem {
   id: string;
   name: string;
@@ -29,6 +39,22 @@ export interface ProductItem {
   maxDeliveryKm?: number;
 }
 
+/** Interface Data Promosi Admin */
+export interface PromotionItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  tag: string;
+  badge: 'Active' | 'Scheduled' | 'Ended';
+  image: string;
+  duration: string;
+  type: string;
+  usedCount: number;
+  totalLimit: number;
+  isActive: boolean;
+}
+
+/** Interface Voucher / Promo Admin */
 export interface AdminVoucher {
   id: string;
   code: string;
@@ -42,6 +68,7 @@ export interface AdminVoucher {
   isActive?: boolean;
 }
 
+/** Interface Data Pesanan (Orders) */
 export interface AdminOrder {
   id: string;
   customerName: string;
@@ -68,6 +95,7 @@ export interface AdminOrder {
   date: string;
 }
 
+/** Interface Data Ulasan (Reviews) */
 export interface UserReview {
   id: string;
   authorName: string;
@@ -88,6 +116,7 @@ export interface UserReview {
   photos?: string[];
 }
 
+/** Interface Pesan Bantuan (Customer Support Chat) */
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'admin';
@@ -107,7 +136,7 @@ export const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [
     userEmail: 'nizarazzuhra@gmail.com',
     userName: 'Nizar Azzuhra',
     userAvatar: 'https://ui-avatars.com/api/?name=Nizar+Azzuhra&background=5C3D28&color=ffffff',
-    text: 'Halo Min, saya mau tanya apakah pesanan Wagyu Bowl saya bisa request tanpa daun bawang?',
+    text: 'Halo Min, saya mau tanya apakah pesanan Ayam Bakar saya bisa request tanpa sambal pedas?',
     timestamp: '10:15 AM',
     readByAdmin: false,
     readByUser: true
@@ -157,60 +186,60 @@ interface DataContextType {
 export const DEFAULT_PRODUCTS: ProductItem[] = [
   {
     id: 'm1',
-    name: 'Special Wagyu Bowl',
-    sku: 'SKU-9812-V',
+    name: 'Ayam Bakar',
+    sku: 'SKU-1001-AB',
     category: 'Makanan Berat',
-    price: 85000,
+    price: 35000,
+    discount: 0,
+    stock: 35,
+    visibility: true,
+    status: 'Active',
+    rating: 4.9,
+    reviewsCount: 156,
+    soldCount: '1.5k+ Terjual',
+    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80'],
+    description: 'Ayam pejantan pilihan dibakar dengan lumuran bumbu kecap rempah tradisional yang meresap hingga ke tulang.',
+    badge: 'TERPOPULER',
+    ingredients: 'Ayam Pejantan Segar, Kecap Rempah Bango, Bawang Merah, Bawang Putih, Ketumbar, Serai, Lengkuas.',
+    usageAdvice: 'Santap selagi hangat dengan nasi panas dan sambal terasi',
+    origin: 'Jakarta, Indonesia',
+    calories: '450 kcal',
+    fat: '18g',
+    sugar: '6g',
+    satFat: '5g'
+  },
+  {
+    id: 'm2',
+    name: 'Nasi Bakar',
+    sku: 'SKU-1002-NB',
+    category: 'Makanan Berat',
+    price: 28000,
     discount: 0,
     stock: 25,
     visibility: true,
     status: 'Active',
-    rating: 4.9,
-    reviewsCount: 128,
-    soldCount: '1.2k+ Terjual',
-    image: '/images/wagyu_bowl.png',
-    gallery: ['/images/wagyu_bowl.png'],
-    description: 'Nasi hangat dengan irisan daging wagyu premium dan kualitas istimewa disajikan dengan kuning telur segar.',
-    badge: 'TERPOPULER',
-    ingredients: 'Daging Wagyu MB7, Beras Jepang Premium, Telur Organik, Saus Shoyu Special.',
-    usageAdvice: 'Santap selagi hangat',
-    origin: 'Jakarta, Indonesia',
-    calories: '650 kcal',
-    fat: '22g',
-    sugar: '4g',
-    satFat: '8g'
-  },
-  {
-    id: 'm2',
-    name: 'Creamy Truffle Pasta',
-    sku: 'SKU-9813-V',
-    category: 'Makanan Berat',
-    price: 72000,
-    discount: 10,
-    stock: 18,
-    visibility: true,
-    status: 'Active',
     rating: 4.8,
-    reviewsCount: 94,
-    soldCount: '850 Terjual',
-    image: '/images/truffle_pasta.png',
-    gallery: ['/images/truffle_pasta.png'],
-    description: 'Pasta artisanal dengan saus truffle putih creamy bertabur parutan keju parmesan impor.',
+    reviewsCount: 98,
+    soldCount: '920 Terjual',
+    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'],
+    description: 'Nasi gurih rempah dibungkus daun pisang dengan isian cumi pedas manis yang dibakar harum khas nusantara.',
     badge: 'BARU',
-    ingredients: 'Fettuccine Artisanal, Extra Virgin Truffle Oil, Parmesan Cheese, Heavy Cream.',
-    usageAdvice: 'Sajikan segera',
-    origin: 'Umbria, Italy / Jakarta',
-    calories: '720 kcal',
-    fat: '34g',
-    sugar: '2g',
-    satFat: '14g'
+    ingredients: 'Beras Pulen, Santan, Cumi Segar, Cabai Rawit, Daun Kemangi, Daun Salam, Daun Pisang.',
+    usageAdvice: 'Buka bungkus daun pisang saat siap santap',
+    origin: 'Jawa Barat, Indonesia',
+    calories: '520 kcal',
+    fat: '16g',
+    sugar: '3g',
+    satFat: '6g'
   },
   {
     id: 'm3',
-    name: 'Sate Ayam Madura',
-    sku: 'SKU-9814-V',
-    category: 'Makanan Berat',
-    price: 45000,
+    name: 'Krecek',
+    sku: 'SKU-1003-KC',
+    category: 'Menu Hemat',
+    price: 22000,
     discount: 0,
     stock: 40,
     visibility: true,
@@ -218,24 +247,24 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     rating: 4.9,
     reviewsCount: 210,
     soldCount: '2.1k Terjual',
-    image: '/images/sate_ayam.png',
-    gallery: ['/images/sate_ayam.png'],
-    description: 'Daging ayam pilihan dibakar dengan bumbu kacang khas Madura yang kaya rasa.',
+    image: '/images/hero_rendang.png',
+    gallery: ['/images/hero_rendang.png'],
+    description: 'Olahan krecek kulit sapi lembut dimasak dengan santan kental gurih, cabai rawit pedas, dan kacang tolo.',
     badge: 'TERPOPULER',
-    ingredients: 'Daging Dada Ayam Pilihan, Kacang Tanah Sangrai, Kecap Manis Bango, Lontong.',
-    usageAdvice: 'Kocok bumbu kacang sebelum disantap',
-    origin: 'Madura, Indonesia',
-    calories: '480 kcal',
-    fat: '18g',
-    sugar: '12g',
-    satFat: '4g'
+    ingredients: 'Krecek Kulit Sapi, Kacang Tolo, Santan Kelapa, Cabai Rawit Merah, Lengkuas, Daun Salam.',
+    usageAdvice: 'Sangat cocok disandingkan dengan Gudeg atau Nasi Hangat',
+    origin: 'Yogyakarta, Indonesia',
+    calories: '380 kcal',
+    fat: '20g',
+    sugar: '4g',
+    satFat: '9g'
   },
   {
     id: 'm4',
-    name: 'Rendang Daging Premium',
-    sku: 'SKU-9815-V',
+    name: 'Gudeg',
+    sku: 'SKU-1004-GD',
     category: 'Makanan Berat',
-    price: 75000,
+    price: 40000,
     discount: 0,
     stock: 30,
     visibility: true,
@@ -243,17 +272,107 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     rating: 5.0,
     reviewsCount: 312,
     soldCount: '3.5k Terjual',
-    image: '/images/hero_rendang.png',
-    gallery: ['/images/hero_rendang.png'],
-    description: 'Daging sapi olahan 12 jam dengan rempah padang pilihan khas warisan leluhur.',
-    badge: 'TERPOPULER',
-    ingredients: 'Daging Sapi Has Dalam, Santan Kelapa Murni, Rempah-rempah Komplit Minang.',
-    usageAdvice: 'Bisa dipanaskan kembali',
-    origin: 'Padang, Indonesia',
-    calories: '550 kcal',
-    fat: '28g',
+    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80'],
+    description: 'Nangka muda dimasak perlahan dengan santan dan gula jawa disajikan dengan telur bacem, suwiran ayam, dan krecek.',
+    badge: 'BEST SELLER',
+    ingredients: 'Nangka Muda (Gori), Gula Jawa Asli, Santan Kelapa, Telur Bebek Bacem, Ayam Suwir, Daun Jati.',
+    usageAdvice: 'Nikmati rasa manis gurih otentik ala Malioboro',
+    origin: 'Yogyakarta, Indonesia',
+    calories: '490 kcal',
+    fat: '19g',
+    sugar: '18g',
+    satFat: '7g'
+  },
+  {
+    id: 'm5',
+    name: 'Garang Asam',
+    sku: 'SKU-1005-GA',
+    category: 'Menu Hemat',
+    price: 32000,
+    discount: 0,
+    stock: 20,
+    visibility: true,
+    status: 'Active',
+    rating: 4.8,
+    reviewsCount: 88,
+    soldCount: '750 Terjual',
+    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80'],
+    description: 'Potongan ayam kampung segar dikukus dalam bungkus daun pisang dengan kuah santan asam segar, belimbing wulung, dan cabai rawit.',
+    ingredients: 'Ayam Kampung Segar, Belimbing Wulung, Tomat Hijau, Cabai Rawit Utuh, Santan Encuk, Daun Pisang.',
+    usageAdvice: 'Kuah asam pedas gurih terasa nikmat disajikan hangat',
+    origin: 'Kudus, Jawa Tengah',
+    calories: '410 kcal',
+    fat: '17g',
     sugar: '3g',
-    satFat: '12g'
+    satFat: '6g'
+  },
+  {
+    id: 'm6',
+    name: 'Jus Segar (Jambu, Sirsak, Mangga)',
+    sku: 'SKU-1006-JS',
+    category: 'Minuman',
+    price: 15000,
+    discount: 0,
+    stock: 50,
+    visibility: true,
+    status: 'Active',
+    rating: 4.7,
+    reviewsCount: 140,
+    soldCount: '1.8k Terjual',
+    image: '/images/jus_mangga.jpg',
+    gallery: ['/images/jus_mangga.jpg', '/images/jus_sirsak.jpg', '/images/jus_jambu.jpg'],
+    description: 'Aneka pilihan jus buah segar alami berkualitas premium: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis.',
+    ingredients: 'Buah Asli Segar Pilihan, Es Batu, Gula Cair Alami.',
+    usageAdvice: 'Pilih rasa favoritmu di catatan pesanan (Jambu / Sirsak / Mangga)',
+    origin: 'Indonesia',
+    calories: '130 kcal',
+    fat: '0.5g',
+    sugar: '24g',
+    satFat: '0g'
+  }
+];
+
+export const DEFAULT_PROMOTIONS: PromotionItem[] = [
+  {
+    id: 'promo-1',
+    title: 'Promo Ayam Bakar 30%',
+    subtitle: 'Ayam bakar pejantan pilihan dengan kecap rempah pilihan.',
+    tag: '30% OFF',
+    badge: 'Active',
+    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    duration: '01 Mei - 31 Des',
+    type: 'Percentage',
+    usedCount: 142,
+    totalLimit: 500,
+    isActive: true
+  },
+  {
+    id: 'promo-2',
+    title: 'Flash Sale: Gudeg Komplit',
+    subtitle: 'Gudeg nangka muda olahan tradisional rasa otentik.',
+    tag: 'FLASH SALE',
+    badge: 'Active',
+    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    duration: 'Akhir Pekan',
+    type: 'Fixed Amount',
+    usedCount: 98,
+    totalLimit: 1000,
+    isActive: true
+  },
+  {
+    id: 'promo-3',
+    title: 'Hemat Nasi Bakar Cumi',
+    subtitle: 'Nasi bakar daun pisang isian cumi pedas gurih.',
+    tag: 'BOGO',
+    badge: 'Active',
+    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+    duration: '01 Juni - 31 Des',
+    type: 'Buy 1 Get 1',
+    usedCount: 45,
+    totalLimit: 100,
+    isActive: true
   }
 ];
 
@@ -261,7 +380,7 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
   {
     id: 'promo-1',
     code: 'WEEKENDSERU',
-    name: 'Promo Special Wagyu Bowl 30%',
+    name: 'Promo Ayam Bakar Rempah 30%',
     type: 'Percentage',
     discountPercent: 30,
     minSpend: 50000,
@@ -273,7 +392,7 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
   {
     id: 'promo-2',
     code: 'FLASHSALE',
-    name: 'Flash Sale: Rendang Daging Premium',
+    name: 'Flash Sale: Gudeg Komplit Jogja',
     type: 'Fixed Amount',
     discountPercent: 20,
     minSpend: 30000,
@@ -285,7 +404,7 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
   {
     id: 'promo-3',
     code: 'HEMAT50',
-    name: 'Hemat Sate Ayam Madura (BOGO)',
+    name: 'Hemat Nasi Bakar Cumi (BOGO)',
     type: 'Percentage',
     discountPercent: 50,
     minSpend: 45000,
@@ -320,9 +439,9 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     authorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
     rating: 5,
     date: 'Kemarin',
-    productName: 'Special Wagyu Bowl',
-    productImage: '/images/wagyu_bowl.png',
-    comment: 'Daging wagyu nya sangat lembut dan bumbunya meresap sempurna. Pengiriman super cepat!',
+    productName: 'Ayam Bakar Rempah Bango',
+    productImage: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    comment: 'Ayam bakarnya sangat empuk dan bumbu kecap rempahnya meresap sempurna sampai ke dalam. Pengiriman super cepat!',
     likesCount: 12,
     status: 'PUBLISHED'
   },
@@ -335,9 +454,9 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
     rating: 5,
     date: '2 hari lalu',
-    productName: 'Rendang Daging Premium',
-    productImage: '/images/hero_rendang.png',
-    comment: 'Rendang terbaik yang pernah saya pesan online. Bumbu kelapa sangrainya beraroma wangi harum.',
+    productName: 'Gudeg Komplit Jogja',
+    productImage: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    comment: 'Gudeg paling otentik yang pernah saya pesan online. Bumbu kreceknya gurih pedas manis beraroma harum.',
     likesCount: 8,
     status: 'PUBLISHED'
   }
@@ -345,11 +464,13 @@ export const DEFAULT_REVIEWS: UserReview[] = [
 
 interface DataContextType {
   products: ProductItem[];
+  promotions: PromotionItem[];
   vouchers: AdminVoucher[];
   orders: AdminOrder[];
   reviews: UserReview[];
   chatMessages: ChatMessage[];
   setProducts: React.Dispatch<React.SetStateAction<ProductItem[]>>;
+  setPromotions: React.Dispatch<React.SetStateAction<PromotionItem[]>>;
   setVouchers: React.Dispatch<React.SetStateAction<AdminVoucher[]>>;
   setOrders: React.Dispatch<React.SetStateAction<AdminOrder[]>>;
   setReviews: React.Dispatch<React.SetStateAction<UserReview[]>>;
@@ -358,12 +479,17 @@ interface DataContextType {
   updateProduct: (id: string, updated: Partial<ProductItem>) => void;
   deleteProduct: (id: string) => void;
   toggleProductVisibility: (id: string) => void;
+  addPromotion: (promo: Omit<PromotionItem, 'id'>) => PromotionItem;
+  deletePromotion: (id: string) => void;
+  togglePromotionActive: (id: string) => void;
   addVoucher: (voucher: Omit<AdminVoucher, 'id'>) => AdminVoucher;
   deleteVoucher: (id: string) => void;
   toggleVoucherStatus: (id: string) => void;
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
+  deleteOrder: (id: string) => void;
+  cancelOrder: (id: string, reason?: string) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
   deleteReview: (id: string) => void;
   sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string) => void;
@@ -375,6 +501,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProductsState] = useState<ProductItem[]>(DEFAULT_PRODUCTS);
+  const [promotions, setPromotionsState] = useState<PromotionItem[]>(DEFAULT_PROMOTIONS);
   const [vouchers, setVouchersState] = useState<AdminVoucher[]>(DEFAULT_VOUCHERS);
   const [orders, setOrdersState] = useState<AdminOrder[]>(DEFAULT_ORDERS);
   const [reviews, setReviewsState] = useState<UserReview[]>(DEFAULT_REVIEWS);
@@ -385,7 +512,41 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (typeof window !== 'undefined') {
       const savedProd = localStorage.getItem('nefakky_products');
       if (savedProd) {
-        try { setProductsState(JSON.parse(savedProd)); } catch (e) {}
+        try {
+          const parsed = JSON.parse(savedProd);
+          const hasOldNames = parsed.some((p: any) => 
+            p.name.includes('Wagyu') || 
+            p.name.includes('Truffle') || 
+            p.name.includes('Sate') || 
+            p.name.includes('Rendang') ||
+            p.name.includes('Olive') ||
+            p.name.includes('Sourdough') ||
+            p.name.includes('Honey') ||
+            p.name.includes('Spice') ||
+            p.name.includes('Bango') ||
+            p.name.includes('Spesial') ||
+            p.name.includes('Jogja') ||
+            p.name.includes('Kampung') ||
+            p.name.includes('Jus Segar')
+          );
+          if (hasOldNames || !Array.isArray(parsed) || parsed.length === 0) {
+            localStorage.setItem('nefakky_products', JSON.stringify(DEFAULT_PRODUCTS));
+            setProductsState(DEFAULT_PRODUCTS);
+          } else {
+            setProductsState(parsed);
+          }
+        } catch (e) {
+          setProductsState(DEFAULT_PRODUCTS);
+        }
+      } else {
+        localStorage.setItem('nefakky_products', JSON.stringify(DEFAULT_PRODUCTS));
+      }
+
+      const savedPromo = localStorage.getItem('nefakky_promotions');
+      if (savedPromo) {
+        try { setPromotionsState(JSON.parse(savedPromo)); } catch (e) {}
+      } else {
+        localStorage.setItem('nefakky_promotions', JSON.stringify(DEFAULT_PROMOTIONS));
       }
 
       const savedVouch = localStorage.getItem('nefakky_vouchers');
@@ -409,6 +570,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       const handleStorage = (e: StorageEvent) => {
+        if (e.key === 'nefakky_promotions' && e.newValue) {
+          try { setPromotionsState(JSON.parse(e.newValue)); } catch (err) {}
+        }
         if (e.key === 'nefakky_orders' && e.newValue) {
           try { setOrdersState(JSON.parse(e.newValue)); } catch (err) {}
         }
@@ -436,6 +600,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       const next = typeof action === 'function' ? action(prev) : action;
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_products', JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
+  const setPromotions: React.Dispatch<React.SetStateAction<PromotionItem[]>> = (action) => {
+    setPromotionsState(prev => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nefakky_promotions', JSON.stringify(next));
       }
       return next;
     });
@@ -505,6 +679,37 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }));
   };
 
+  const addPromotion = (promoData: Omit<PromotionItem, 'id'>): PromotionItem => {
+    const newId = `promo-${Date.now()}`;
+    const newPromo: PromotionItem = {
+      ...promoData,
+      id: newId,
+      badge: promoData.badge || 'Active',
+      isActive: promoData.isActive ?? true
+    };
+    setPromotions(prev => [newPromo, ...prev]);
+    return newPromo;
+  };
+
+  const deletePromotion = (id: string) => {
+    setPromotions(prev => prev.filter(p => p.id !== id));
+    setVouchers(prev => prev.filter(v => v.id !== id));
+  };
+
+  const togglePromotionActive = (id: string) => {
+    setPromotions(prev => prev.map(p => {
+      if (p.id === id) {
+        const nextActive = !p.isActive;
+        return {
+          ...p,
+          isActive: nextActive,
+          badge: (nextActive ? 'Active' : 'Ended') as PromotionItem['badge']
+        };
+      }
+      return p;
+    }));
+  };
+
   const addVoucher = (voucherData: Omit<AdminVoucher, 'id'>): AdminVoucher => {
     const newId = `v_${Date.now()}`;
     const newVoucher: AdminVoucher = {
@@ -519,6 +724,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   const deleteVoucher = (id: string) => {
     setVouchers(prev => prev.filter(v => v.id !== id));
+    setPromotions(prev => prev.filter(p => p.id !== id));
   };
 
   const addOrder = (orderData: Omit<AdminOrder, 'id' | 'date'>): AdminOrder => {
@@ -698,11 +904,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <DataContext.Provider value={{
       products,
+      promotions,
       vouchers,
       orders,
       reviews,
       chatMessages,
       setProducts,
+      setPromotions,
       setVouchers,
       setOrders,
       setReviews,
@@ -711,6 +919,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       updateProduct,
       deleteProduct,
       toggleProductVisibility,
+      addPromotion,
+      deletePromotion,
+      togglePromotionActive,
       addVoucher,
       deleteVoucher,
       toggleVoucherStatus,

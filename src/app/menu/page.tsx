@@ -1,5 +1,17 @@
 'use client';
 
+/**
+ * ============================================================================
+ * HALAMAN: Katalog Menu Utama (src/app/menu/page.tsx)
+ * DESKRIPSI: Antarmuka katalog produk kuliner dengan pencarian real-time,
+ *            filter 3 kategori utama (Makanan Berat, Menu Hemat, Minuman),
+ *            pengurutan harga & popularitas, modal pratinjau produk,
+ *            serta integrasi Keranjang Kerajinan & Autentikasi Pengguna.
+ * GUIDELINES: Mengikuti Standar Industri UI/UX, Clean Code, Aksesibilitas,
+ *            dan 100% Bahasa Indonesia.
+ * ============================================================================
+ */
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -32,93 +44,74 @@ interface MenuProduct {
   description: string;
   soldCount: string;
   image: string;
+  gallery?: string[];
   badge?: 'BEST SELLER' | 'NEW';
 }
 
 const MENU_PRODUCTS: MenuProduct[] = [
-  // Top Row Items
   {
     id: 'm1',
-    name: 'Sate Ayam Madura',
-    category: 'Makanan',
-    price: 45000,
+    name: 'Ayam Bakar',
+    category: 'Makanan Berat',
+    price: 35000,
     rating: 4.9,
-    description: 'Authentic grilled chicken with rich Madurese peanut sauce and savory lontong rice cakes.',
-    soldCount: '1.2k+ Terjual',
-    image: '/images/sate_ayam.png'
-  },
-  {
-    id: 'm2',
-    name: 'Rendang Daging Premium',
-    category: 'Makanan',
-    price: 75000,
-    rating: 5.0,
-    description: 'Slow-cooked beef for 12 hours in traditional Padang spices and thick coconut milk reduction.',
-    soldCount: '850 Terjual',
-    image: '/images/hero_rendang.png',
+    description: 'Ayam pejantan pilihan dibakar dengan lumuran bumbu kecap rempah tradisional yang meresap hingga ke tulang.',
+    soldCount: '1.5k+ Terjual',
+    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
     badge: 'BEST SELLER'
   },
   {
-    id: 'm3',
-    name: 'Es Cendol Durian',
-    category: 'Minuman',
-    price: 38000,
+    id: 'm2',
+    name: 'Nasi Bakar',
+    category: 'Makanan Berat',
+    price: 28000,
     rating: 4.8,
-    description: 'Traditional iced dessert with premium Monthong durian and authentic palm sugar syrup.',
-    soldCount: '2.3k Terjual',
-    image: '/images/cendol_durian.png'
-  },
-  {
-    id: 'm4',
-    name: 'Gado-Gado Royal',
-    category: 'Makanan',
-    price: 32000,
-    rating: 4.7,
-    description: 'Fresh garden salad with signature velvety peanut sauce, boiled eggs, and crispy crackers.',
-    soldCount: '500+ Terjual',
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
-  },
-  // Bottom Row Items
-  {
-    id: 'm5',
-    name: 'Bubur Sumsum Sutra',
-    category: 'Dessert',
-    price: 25000,
-    rating: 4.9,
-    description: 'Silky smooth white rice pudding with premium liquid palm sugar and pandan fragrance.',
-    soldCount: '150+ Terjual',
-    image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80'
-  },
-  {
-    id: 'm6',
-    name: 'Soto Betawi Mbah Nef',
-    category: 'Makanan',
-    price: 52000,
-    rating: 4.8,
-    description: "Grandma's secret recipe beef soup with rich creamy milk-herbal broth and fried emping.",
-    soldCount: '980 Terjual',
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80'
-  },
-  {
-    id: 'm7',
-    name: 'Martabak Dark Velvet',
-    category: 'Dessert',
-    price: 65000,
-    rating: 4.9,
-    description: 'Premium thick pancake with 70% dark chocolate and roasted crushed peanuts.',
-    soldCount: '45 Terjual',
-    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80',
+    description: 'Nasi gurih rempah dibungkus daun pisang dengan isian cumi pedas manis yang dibakar harum khas nusantara.',
+    soldCount: '920 Terjual',
+    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
     badge: 'NEW'
   },
   {
-    id: 'm8',
-    name: 'Es Jeruk Kelapa Muda',
-    category: 'Minuman',
+    id: 'm3',
+    name: 'Krecek',
+    category: 'Menu Hemat',
     price: 22000,
-    rating: 4.6,
-    description: 'Freshly squeezed Pontianak oranges with tender young coconut meat and fresh mint leaves.',
+    rating: 4.9,
+    description: 'Olahan krecek kulit sapi lembut dimasak dengan santan kental gurih, cabai rawit pedas, dan kacang tolo.',
+    soldCount: '2.1k Terjual',
+    image: '/images/hero_rendang.png'
+  },
+  {
+    id: 'm4',
+    name: 'Gudeg',
+    category: 'Makanan Berat',
+    price: 40000,
+    rating: 5.0,
+    description: 'Nangka muda dimasak perlahan dengan santan dan gula jawa disajikan dengan telur bacem, suwiran ayam, dan krecek.',
     soldCount: '3.5k Terjual',
-    image: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=600&q=80'
+    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    badge: 'BEST SELLER'
+  },
+  {
+    id: 'm5',
+    name: 'Garang Asam',
+    category: 'Menu Hemat',
+    price: 32000,
+    rating: 4.8,
+    description: 'Potongan ayam kampung segar dikukus dalam bungkus daun pisang dengan kuah santan asam segar, belimbing wulung, dan cabai rawit.',
+    soldCount: '750 Terjual',
+    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80'
+  },
+  {
+    id: 'm6',
+    name: 'Jus (Jambu, Sirsak, Mangga)',
+    category: 'Minuman',
+    price: 15000,
+    rating: 4.7,
+    description: 'Aneka pilihan jus buah segar alami berkualitas premium: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis.',
+    soldCount: '1.8k Terjual',
+    image: '/images/jus_mangga.jpg',
+    gallery: ['/images/jus_mangga.jpg', '/images/jus_sirsak.jpg', '/images/jus_jambu.jpg']
   }
 ];
 
@@ -134,12 +127,13 @@ export default function MenuCatalogPage() {
   const [sortBy, setSortBy] = useState<'bestseller' | 'rating' | 'price-asc' | 'price-desc'>('bestseller');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
   // Filter visible products from DataContext
   const visibleProducts = products.filter(p => p.visibility !== false);
 
 
-  const categories = ['Semua', 'Makanan', 'Makanan Berat', 'Minuman', 'Snack', 'Dessert', 'Paket Hemat'];
+  const categories = ['Semua', 'Makanan Berat', 'Menu Hemat', 'Minuman'];
 
   const toggleWishlist = (id: string) => {
     setFavorites(prev => 
@@ -163,7 +157,7 @@ export default function MenuCatalogPage() {
   const topRowProducts = filteredProducts.slice(0, 4);
   const bottomRowProducts = filteredProducts.slice(4);
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-3 border-stone-300 border-t-[#5E3A20] rounded-full animate-spin mb-4" />
@@ -520,6 +514,43 @@ export default function MenuCatalogPage() {
 
       {/* Menu Detail Modal Overlay */}
       <MenuDetailModal product={detailProduct} onClose={() => setDetailProduct(null)} />
+
+      {/* Guest Auth Modal Overlay */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
+            <div className="w-14 h-14 bg-amber-100 text-[#5C3D28] rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+              🔒
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-serif text-xl font-bold text-stone-900">Silakan Masuk Terlebih Dahulu</h3>
+              <p className="text-xs text-stone-600 font-light leading-relaxed">
+                Anda perlu masuk atau mendaftar akun untuk menambahkan makanan ini ke keranjang atau memesan.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => router.push('/login')}
+                className="w-full py-3 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow transition-all"
+              >
+                Masuk ke Akun Saya
+              </button>
+              <button
+                onClick={() => router.push('/register')}
+                className="w-full py-3 border border-[#7A4B29] text-[#7A4B29] hover:bg-[#7A4B29]/5 font-medium text-xs rounded-full transition-all"
+              >
+                Daftar Akun Baru
+              </button>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="text-xs text-stone-400 hover:text-stone-600 font-light pt-1"
+              >
+                Lanjutkan Melihat Menu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

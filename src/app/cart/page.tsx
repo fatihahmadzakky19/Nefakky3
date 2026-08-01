@@ -1,5 +1,16 @@
 'use client';
 
+/**
+ * ============================================================================
+ * HALAMAN: Keranjang & Checkout (src/app/cart/page.tsx)
+ * DESKRIPSI: Antarmuka belanja interaktif lengkap dengan penyesuaian kuantitas,
+ *            sistem diskon voucher otomatis, penghitungan ongkir berbasis lokasi,
+ *            metode pembayaran (Bank Transfer & QRIS Midtrans), serta animasi konfirmasi.
+ * GUIDELINES: Mengikuti Standar Industri UI/UX, Clean Code, Aksesibilitas,
+ *            dan 100% Bahasa Indonesia.
+ * ============================================================================
+ */
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -131,12 +142,7 @@ export default function BasketCartPage() {
   const [midtransChannel, setMidtransChannel] = useState<'gopay' | 'va' | 'shopeepay' | 'cc'>('gopay');
   const [midtransOrderData, setMidtransOrderData] = useState<{ generatedId: string; snapshot: PlacedOrder } | null>(null);
 
-  // Authentication guard
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
+  // Authentication guard handled via UI prompt when !user
 
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,32 +173,47 @@ export default function BasketCartPage() {
     setIsEditingAddress(false);
   };
 
-  // 1-Hour Countdown Timer for Non-Midtrans Payments (3600 seconds)
-  const [nonMidtransTimeLeft, setNonMidtransTimeLeft] = useState<number>(3600);
+  // 24-Hour (23:59:59) Interactive Payment Countdown Timer
+  const [paymentTimeLeft, setPaymentTimeLeft] = useState<number>(86399); // 23:59:59 (86399 seconds)
+  const [paymentDeadline, setPaymentDeadline] = useState<number | null>(null);
+
   useEffect(() => {
     let interval: any;
-    if (currentStep === 3 && paymentMethod !== 'midtrans') {
-      interval = setInterval(() => {
-        setNonMidtransTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            alert('Waktu batas pembayaran 1 Jam telah berakhir! Pesanan dibatalkan secara otomatis.');
-            setCurrentStep(1);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    if (currentStep === 3) {
+      // Establish 24-hour target deadline when entering Payment step
+      let deadline = paymentDeadline;
+      if (!deadline) {
+        deadline = Date.now() + 24 * 60 * 60 * 1000;
+        setPaymentDeadline(deadline);
+      }
+
+      const updateTimer = () => {
+        const remaining = Math.max(0, Math.floor((deadline! - Date.now()) / 1000));
+        setPaymentTimeLeft(remaining);
+        if (remaining <= 0) {
+          if (interval) clearInterval(interval);
+          alert('Waktu batas pembayaran (24 Jam) telah berakhir! Pesanan dibatalkan secara otomatis.');
+          setCurrentStep(1);
+          setPaymentDeadline(null);
+        }
+      };
+
+      updateTimer();
+      interval = setInterval(updateTimer, 1000);
     } else {
-      setNonMidtransTimeLeft(3600);
+      setPaymentDeadline(null);
+      setPaymentTimeLeft(86399);
     }
-    return () => clearInterval(interval);
-  }, [currentStep, paymentMethod]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentStep, paymentDeadline]);
 
   const formatCountdown = (totalSec: number) => {
-    const m = Math.floor(totalSec / 60);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
     const s = totalSec % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   // Proceed from Checkout (Step 2) to Payment (Step 3)
@@ -402,11 +423,44 @@ export default function BasketCartPage() {
     setTimeout(() => setCopiedVA(false), 2000);
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-3 border-stone-300 border-t-[#5C3D28] rounded-full animate-spin mb-4" />
         <p className="text-xs text-stone-500 font-medium">Memuat Halaman Keranjang...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] text-stone-800 font-sans">
+        <Navbar />
+        <div className="max-w-md mx-auto py-20 px-4 text-center space-y-6">
+          <div className="w-20 h-20 bg-amber-100 text-[#5C3D28] rounded-full flex items-center justify-center mx-auto text-4xl shadow-sm">
+            🛒
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-serif text-2xl font-bold text-stone-900">Keranjang Belanja Anda</h2>
+            <p className="text-xs text-stone-600 font-light leading-relaxed">
+              Silakan masuk atau mendaftar akun terlebih dahulu untuk melihat dan mengelola pesanan makanan Anda.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 pt-2">
+            <Link
+              href="/login"
+              className="w-full py-3.5 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow transition-all block text-center"
+            >
+              Masuk ke Akun Saya
+            </Link>
+            <Link
+              href="/register"
+              className="w-full py-3.5 border border-[#7A4B29] text-[#7A4B29] hover:bg-[#7A4B29]/5 font-medium text-xs rounded-full transition-all block text-center"
+            >
+              Daftar Akun Baru
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1050,7 +1104,7 @@ export default function BasketCartPage() {
                         <span>Selesaikan Pembayaran Dalam (Batas 1 Jam):</span>
                       </div>
                       <span className="font-mono text-xs font-bold text-amber-800 bg-amber-200/80 px-3 py-1 rounded-full shadow-xs">
-                        ⏱️ {formatCountdown(nonMidtransTimeLeft)}
+                        ⏱️ {formatCountdown(paymentTimeLeft)}
                       </span>
                     </div>
                   )}
@@ -1256,7 +1310,7 @@ export default function BasketCartPage() {
                 </div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100/80 text-amber-900 rounded-full text-xs font-semibold">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>Batas waktu: 23:59:59</span>
+                  <span>Batas waktu: {formatCountdown(paymentTimeLeft)}</span>
                 </div>
               </div>
 

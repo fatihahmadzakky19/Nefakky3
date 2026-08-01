@@ -49,7 +49,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                 : 'hover:text-[#5C3D28]'
             }`}
           >
-            Home
+            Beranda
           </Link>
           <Link 
             href="/menu" 
@@ -59,13 +59,13 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                 : 'hover:text-[#5C3D28]'
             }`}
           >
-            Menu
+            Katalog Menu
           </Link>
           <Link 
             href="/#promo-section" 
             className="hover:text-[#5C3D28] transition-colors relative pb-0.5"
           >
-            Promo
+            Promo Spesial
           </Link>
           <Link 
             href="/comments" 
@@ -75,7 +75,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                 : 'hover:text-[#5C3D28]'
             }`}
           >
-            Komentar
+            Ulasan Pelanggan
           </Link>
         </nav>
 
@@ -88,7 +88,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                 type="text"
                 value={searchQuery || ''}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Cari menu makanan..."
+                placeholder="Cari menu favoritmu..."
                 className="w-48 lg:w-64 pl-9 pr-4 py-2 bg-[#EFECE6] border border-transparent rounded-full text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:bg-white focus:border-stone-300 transition-all"
               />
             </div>
@@ -98,10 +98,10 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
             <Link
               href="/admin"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#4A3222] hover:bg-[#5C3D28] text-amber-200 text-xs font-semibold rounded-full transition-all shadow-sm hover:shadow"
-              title="Masuk ke Admin Panel"
+              title="Masuk ke Panel Admin"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-              <span>Admin Panel</span>
+              <span>Panel Admin</span>
             </Link>
           )}
 
@@ -132,21 +132,30 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
             <Bell className="w-5 h-5 stroke-[1.5]" />
           </Link>
 
-          {/* User Profile Avatar */}
-          <Link 
-            href="/profile"
-            className={`relative w-8 h-8 rounded-full overflow-hidden border transition-all shrink-0 flex items-center justify-center bg-stone-100 ${
-              isProfileActive ? 'border-2 border-[#5C3D28] ring-2 ring-[#5C3D28]/30' : 'border-stone-300 hover:border-[#5C3D28]'
-            }`}
-            title="Lihat Profil"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={userAvatar}
-              alt="User Profile Avatar"
-              className="w-full h-full object-cover"
-            />
-          </Link>
+          {/* User Profile Avatar or Guest Login Button */}
+          {user ? (
+            <Link 
+              href="/profile"
+              className={`relative w-8 h-8 rounded-full overflow-hidden border transition-all shrink-0 flex items-center justify-center bg-stone-100 ${
+                isProfileActive ? 'border-2 border-[#5C3D28] ring-2 ring-[#5C3D28]/30' : 'border-stone-300 hover:border-[#5C3D28]'
+              }`}
+              title="Lihat Profil Akun"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={userAvatar}
+                alt="Foto Profil Pelanggan"
+                className="w-full h-full object-cover"
+              />
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center px-4 py-2 bg-[#7A4B29] hover:bg-[#613A1F] text-white text-xs font-semibold rounded-full transition-all shadow-sm active:scale-95"
+            >
+              Masuk Akun
+            </Link>
+          )}
         </div>
 
       </div>

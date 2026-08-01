@@ -60,13 +60,11 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   if (!product) return null;
 
   const currentMainImage = selectedImage || product.image;
-  const rawThumbnails = product.thumbnails && product.thumbnails.length > 0
+  const productThumbnails = (product as any).gallery && (product as any).gallery.length > 0
+    ? (product as any).gallery
+    : product.thumbnails && product.thumbnails.length > 0
     ? product.thumbnails
-    : [
-        product.image,
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80'
-      ];
-  const productThumbnails = rawThumbnails.slice(0, 2);
+    : [product.image];
 
   const defaultReviews = product.reviews || [
     {
@@ -141,7 +139,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
               {/* Thumbnails Row */}
               <div className="flex items-center gap-3">
-                {productThumbnails.map((imgUrl, idx) => (
+                {productThumbnails.map((imgUrl: string, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(imgUrl)}
@@ -258,25 +256,25 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                     onClick={() => setActiveTab('description')}
                     className={`pb-2 transition-colors ${activeTab === 'description' ? 'text-[#5C3D28] font-semibold border-b-2 border-[#5C3D28]' : 'hover:text-stone-800'}`}
                   >
-                    Description
+                    Deskripsi
                   </button>
                   <button
                     onClick={() => setActiveTab('ingredients')}
                     className={`pb-2 transition-colors ${activeTab === 'ingredients' ? 'text-[#5C3D28] font-semibold border-b-2 border-[#5C3D28]' : 'hover:text-stone-800'}`}
                   >
-                    Ingredients
+                    Bahan-Bahan
                   </button>
                   <button
                     onClick={() => setActiveTab('storage')}
                     className={`pb-2 transition-colors ${activeTab === 'storage' ? 'text-[#5C3D28] font-semibold border-b-2 border-[#5C3D28]' : 'hover:text-stone-800'}`}
                   >
-                    Storage
+                    Cara Penyimpanan
                   </button>
                   <button
                     onClick={() => setActiveTab('serving')}
                     className={`pb-2 transition-colors ${activeTab === 'serving' ? 'text-[#5C3D28] font-semibold border-b-2 border-[#5C3D28]' : 'hover:text-stone-800'}`}
                   >
-                    Serving
+                    Saran Penyajian
                   </button>
                 </div>
 

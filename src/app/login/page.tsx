@@ -16,7 +16,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [googleWarning, setGoogleWarning] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Automatically redirect if already logged in
@@ -33,7 +32,6 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    setGoogleWarning('');
     if (!email || !password) {
       setErrorMessage('Silakan isi email dan password Anda.');
       return;
@@ -61,7 +59,6 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setErrorMessage('');
-    setGoogleWarning('');
     setIsSubmitting(true);
     try {
       const res = await loginWithGoogle();
@@ -72,15 +69,11 @@ export default function LoginPage() {
           router.push('/');
         }
         router.refresh();
-      } else {
-        if (res.error?.includes('belum terdaftar') || res.error?.includes('Google')) {
-          setGoogleWarning(res.error);
-        } else {
-          setErrorMessage(res.error || 'Gagal login dengan Google.');
-        }
+      } else if (res.error) {
+        setErrorMessage(res.error);
       }
     } catch (err: any) {
-      setGoogleWarning('Akun Google ini belum terdaftar di sistem. Silakan melakukan registrasi terlebih dahulu.');
+      setErrorMessage('Terjadi kesalahan saat login dengan akun Google.');
     } finally {
       setIsSubmitting(false);
     }
@@ -268,31 +261,7 @@ export default function LoginPage() {
                 <span>Sign in with Google</span>
               </button>
 
-              {/* Google Unregistered Warning Alert Box */}
-              {googleWarning && (
-                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col gap-2 animate-fade-in shadow-sm">
-                  <div className="flex items-start gap-2.5">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-semibold text-amber-900 block mb-0.5">
-                        Peringatan: Akun Belum Terdaftar
-                      </span>
-                      <p className="text-amber-800 text-[11px] leading-relaxed">
-                        {googleWarning}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex justify-end pt-1 border-t border-amber-200/60 mt-1">
-                    <Link
-                      href="/register"
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#8A6337] hover:text-[#735129] hover:underline"
-                    >
-                      <span>Lakukan Registrasi Sekarang</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
 

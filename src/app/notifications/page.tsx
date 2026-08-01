@@ -83,12 +83,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [pageLimit, setPageLimit] = useState<number>(5);
 
-  // Auth Guard
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
+  // Auth Guard: handled via UI prompt when !user
 
   const filteredNotifications = notifications.filter(item => {
     if (activeFilter === 'Unread') return !item.read;
@@ -118,11 +113,44 @@ export default function NotificationsPage() {
     }
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-3 border-stone-300 border-t-[#5C3D28] rounded-full animate-spin mb-4" />
         <p className="text-xs text-stone-500 font-medium">Memuat Notifikasi...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] text-stone-800 font-sans">
+        <Navbar />
+        <div className="max-w-md mx-auto py-20 px-4 text-center space-y-6">
+          <div className="w-20 h-20 bg-amber-100 text-[#5C3D28] rounded-full flex items-center justify-center mx-auto text-4xl shadow-sm">
+            🔔
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-serif text-2xl font-bold text-stone-900">Notifikasi Akun</h2>
+            <p className="text-xs text-stone-600 font-light leading-relaxed">
+              Silakan masuk atau mendaftar akun terlebih dahulu untuk melihat notifikasi dan pembaruan pesanan Anda.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 pt-2">
+            <Link
+              href="/login"
+              className="w-full py-3.5 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow transition-all block text-center"
+            >
+              Masuk ke Akun Saya
+            </Link>
+            <Link
+              href="/register"
+              className="w-full py-3.5 border border-[#7A4B29] text-[#7A4B29] hover:bg-[#7A4B29]/5 font-medium text-xs rounded-full transition-all block text-center"
+            >
+              Daftar Akun Baru
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

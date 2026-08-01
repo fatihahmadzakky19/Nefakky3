@@ -1,5 +1,16 @@
 'use client';
 
+/**
+ * ============================================================================
+ * HALAMAN: Profil Pengguna (src/app/profile/page.tsx)
+ * DESKRIPSI: Dashboard pribadi pelanggan untuk mengelola data akun, riwayat pesanan,
+ *            status pengiriman real-time, obrolan bantuan live chat dengan admin,
+ *            serta pengaturan alamat & telepon.
+ * GUIDELINES: Mengikuti Standar Industri UI/UX, Clean Code, Aksesibilitas,
+ *            dan 100% Bahasa Indonesia.
+ * ============================================================================
+ */
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -69,17 +80,13 @@ export default function UserProfilePage() {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [userChatHistory.length]);
 
-  // Authentication Guard: Redirect to /login if unauthenticated
+  // Authentication Guard: handled via UI prompt when !user
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push('/login');
-      } else {
-        setDisplayName(user.displayName || user.email?.split('@')[0] || 'Pelanggan');
-        setPhone(user.phoneNumber || '');
-      }
+    if (!loading && user) {
+      setDisplayName(user.displayName || user.email?.split('@')[0] || 'Pelanggan');
+      setPhone(user.phoneNumber || '');
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,11 +124,44 @@ export default function UserProfilePage() {
     }, 1200);
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-3 border-stone-300 border-t-[#5C3D28] rounded-full animate-spin mb-4" />
         <p className="text-xs text-stone-500 font-medium">Memuat Profil Pengguna...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] text-stone-800 font-sans">
+        <Navbar />
+        <div className="max-w-md mx-auto py-20 px-4 text-center space-y-6">
+          <div className="w-20 h-20 bg-amber-100 text-[#5C3D28] rounded-full flex items-center justify-center mx-auto text-4xl shadow-sm">
+            👤
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-serif text-2xl font-bold text-stone-900">Profil Pelanggan</h2>
+            <p className="text-xs text-stone-600 font-light leading-relaxed">
+              Silakan masuk atau mendaftar akun terlebih dahulu untuk melihat profil, riwayat pesanan, dan dukungan pelanggan.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 pt-2">
+            <Link
+              href="/login"
+              className="w-full py-3.5 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow transition-all block text-center"
+            >
+              Masuk ke Akun Saya
+            </Link>
+            <Link
+              href="/register"
+              className="w-full py-3.5 border border-[#7A4B29] text-[#7A4B29] hover:bg-[#7A4B29]/5 font-medium text-xs rounded-full transition-all block text-center"
+            >
+              Daftar Akun Baru
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

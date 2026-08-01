@@ -1,9 +1,19 @@
 'use client';
 
+/**
+ * ============================================================================
+ * CONTEXT: CartContext (Keranjang Belanja & Perhitungan Promo)
+ * DESKRIPSI: Mengelola item keranjang belanja, penambahan/pengurangan produk,
+ *            serta klaim diskon promo voucher.
+ * GUIDELINES: Standardized clean code structure & Bahasa Indonesia.
+ * ============================================================================
+ */
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useData } from './DataContext';
 
+/** Interface Produk Keranjang */
 export interface CartItemProduct {
   id: string;
   name: string;
@@ -21,35 +31,51 @@ export interface CartLineItem extends CartItemProduct {
 export const MASTER_PRODUCTS: CartItemProduct[] = [
   {
     id: 'm1',
-    name: 'Special Wagyu Bowl',
-    category: 'Makanan',
-    price: 85000,
-    image: '/images/wagyu_bowl.png',
-    description: 'Nasi hangat dengan irisan daging wagyu premium.'
+    name: 'Ayam Bakar',
+    category: 'Makanan Berat',
+    price: 35000,
+    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    description: 'Ayam pejantan pilihan dibakar dengan lumuran bumbu kecap rempah.'
   },
   {
     id: 'm2',
-    name: 'Creamy Truffle Pasta',
-    category: 'Makanan',
-    price: 72000,
-    image: '/images/truffle_pasta.png',
-    description: 'Pasta artisanal dengan saus truffle putih.'
+    name: 'Nasi Bakar',
+    category: 'Makanan Berat',
+    price: 28000,
+    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+    description: 'Nasi gurih rempah dibungkus daun pisang dengan isian cumi pedas.'
   },
   {
     id: 'm3',
-    name: 'Sate Ayam Madura',
-    category: 'Makanan',
-    price: 45000,
-    image: '/images/sate_ayam.png',
-    description: 'Authentic grilled chicken with rich Madurese peanut sauce and lontong.'
+    name: 'Krecek',
+    category: 'Menu Hemat',
+    price: 22000,
+    image: '/images/hero_rendang.png',
+    description: 'Olahan krecek kulit sapi lembut dimasak dengan santan kental gurih.'
   },
   {
     id: 'm4',
-    name: 'Rendang Daging Premium',
-    category: 'Makanan',
-    price: 75000,
-    image: '/images/hero_rendang.png',
-    description: 'Slow-cooked beef for 12 hours in traditional Padang spices.'
+    name: 'Gudeg',
+    category: 'Makanan Berat',
+    price: 40000,
+    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    description: 'Nangka muda dimasak perlahan disajikan dengan telur bacem & krecek.'
+  },
+  {
+    id: 'm5',
+    name: 'Garang Asam',
+    category: 'Menu Hemat',
+    price: 32000,
+    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80',
+    description: 'Ayam kampung segar dikukus dalam daun pisang dengan kuah santan asam.'
+  },
+  {
+    id: 'm6',
+    name: 'Jus (Jambu, Sirsak, Mangga)',
+    category: 'Minuman',
+    price: 15000,
+    image: '/images/jus_mangga.jpg',
+    description: 'Aneka pilihan jus buah segar alami: Jambu Biji, Sirsak, atau Mangga.'
   }
 ];
 

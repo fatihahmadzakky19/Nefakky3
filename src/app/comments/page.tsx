@@ -1,23 +1,34 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+/**
+ * ============================================================================
+ * MODULE: Halaman Komentar & Ulasan Pelanggan (Comments Page)
+ * DESKRIPSI: Memungkinkan pelanggan melihat serta menuliskan ulasan rasa
+ *            untuk menu hidangan Nefakky.
+ * GUIDELINES: Sesuai standar Clean Code, modular, dan Bahasa Indonesia 100%.
+ * ============================================================================
+ */
+
+import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import { useData } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
 import { 
   Star, 
-  ShoppingBag, 
-  User, 
   Send, 
   CheckCircle2, 
   MessageSquare,
   ThumbsUp
 } from 'lucide-react';
 
-interface CommentReview {
+/**
+ * Tipe data lokal untuk struktur ulasan di halaman komentar
+ */
+export interface CommentReviewItem {
   id: string;
   author: string;
   avatar: string;
@@ -29,81 +40,57 @@ interface CommentReview {
   likes: number;
 }
 
-const INITIAL_COMMENTS: CommentReview[] = [
-  {
-    id: 'c1',
-    author: 'Amanda Rizky',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-    rating: 5,
-    date: 'Kemarin, 14:20',
-    text: '"The most authentic rendang I\'ve ever ordered online. The spice profile is complex and the meat literally melts in your mouth. Porsi cukup banyak dan kemasan super aman!"',
-    dishName: 'Rendang Daging Premium',
-    dishImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=500&q=80',
-    likes: 24
-  },
-  {
-    id: 'c2',
-    author: 'Dimas Pratama',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-    rating: 5,
-    date: '2 hari lalu',
-    text: '"Incredible value for the price. You can really taste the 12-hour slow cooking process. Will definitely buy again. Sate Ayam nya bumbu kacangnya gurih medok banget!"',
-    dishName: 'Sate Ayam Madura',
-    likes: 18
-  },
-  {
-    id: 'c3',
-    author: 'Budi Hartono',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-    rating: 4,
-    date: '3 hari lalu',
-    text: '"Packaging is very premium. Arrived fast and still fresh. Spices are spot on. Es Cendol Durian rasa duriannya asli melimpah."',
-    dishName: 'Es Cendol Durian',
-    likes: 12
-  }
-];
-
-import { useData } from '@/context/DataContext';
-
+/**
+ * Komponen Utama: CommentsPage
+ * Menampilkan daftar ulasan serta formulir tambah ulasan baru.
+ */
 export default function CommentsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { totalCartCount } = useCart();
   const { products, reviews, addReview } = useData();
 
-  const [newComment, setNewComment] = useState('');
-  const [newRating, setNewRating] = useState(5);
-  const [selectedDish, setSelectedDish] = useState(products[0]?.name || 'Special Wagyu Bowl');
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  // State Lokal Formulir Komentar
+  const [newComment, setNewComment] = useState<string>('');
+  const [newRating, setNewRating] = useState<number>(5);
+  const [selectedDish, setSelectedDish] = useState<string>(products[0]?.name || 'Ayam Bakar');
+  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
 
-  // Auth Guard
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
+  /**
+   * Mengirimkan ulasan baru ke DataContext
+   * @param e Form Event
+   */
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Auth Guard: Minta login jika tamu mencoba menulis ulasan
+    if (!user) {
+      alert('Silakan Masuk (Login) terlebih dahulu untuk menulis ulasan.');
+      router.push('/login');
+      return;
+    }
+
     if (!newComment.trim()) return;
 
-    const authorName = user?.displayName || user?.email?.split('@')[0] || 'Pengguna Nefakky';
+    const authorName = user.displayName || user.email?.split('@')[0] || 'Pengguna Nefakky';
+    
     addReview({
       authorName,
-      authorEmail: user?.email || undefined,
+      authorEmail: user.email || undefined,
       authorBadge: 'MEMBER',
-      avatar: user?.photoURL || undefined,
+      avatar: user.photoURL || undefined,
       rating: newRating,
       productName: selectedDish,
       comment: newComment
     });
 
+    // Reset Form & Tampilkan Notifikasi Sukses
     setNewComment('');
     setSubmitSuccess(true);
     setTimeout(() => setSubmitSuccess(false), 3000);
   };
 
-  if (loading || !user) {
+  // Indikator Loading Data
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-3 border-stone-300 border-t-[#5C3D28] rounded-full animate-spin mb-4" />
@@ -115,39 +102,43 @@ export default function CommentsPage() {
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-stone-800 font-sans selection:bg-[#5C3D28]/10 selection:text-[#5C3D28]">
       
-      {/* 1. TOP NAVBAR HEADER */}
+      {/* 1. BILAH NAVIGASI UTAMA */}
       <Navbar />
 
-      {/* 2. MAIN COMMENTS CONTAINER */}
+      {/* 2. KONTEN UTAMA HALAMAN */}
       <main className="max-w-7xl mx-auto px-6 sm:px-12 py-10 space-y-10">
         
-        {/* Title */}
+        {/* Header Judul Halaman */}
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-[#2D231C] tracking-tight">
-            What Our Foodies Say
+            Ulasan Pelanggan Nefakky
           </h1>
           <p className="text-xs sm:text-sm text-stone-500 font-light leading-relaxed">
             Komunitas pecinta kuliner rumahan Nefakky. Bagikan ulasan, cerita rasa, dan pengalaman Anda bersama kami.
           </p>
         </div>
 
+        {/* Grid 2 Kolom: Form Komentar (Kiri) & Daftar Ulasan (Kanan) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* LEFT: Write a Review / Comment Form */}
+          {/* KOLOM KIRI: FORMULIR TAMBAH ULASAN */}
           <div className="lg:col-span-4 bg-white border border-stone-200/60 rounded-3xl p-6 shadow-sm space-y-4 sticky top-28">
             <h2 className="font-serif text-xl font-semibold text-stone-900 flex items-center gap-2 border-b border-stone-100 pb-3">
               <MessageSquare className="w-5 h-5 text-[#5C3D28]" />
-              <span>Tulis Komentar Anda</span>
+              <span>Tulis Ulasan Anda</span>
             </h2>
 
+            {/* Pesan Berhasil Terbit */}
             {submitSuccess && (
               <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Komentar ulasan Anda berhasil diterbitkan!</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Ulasan Anda berhasil diterbitkan!</span>
               </div>
             )}
 
             <form onSubmit={handleSubmitComment} className="space-y-4">
+              
+              {/* Pilihan Hidangan */}
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">Pilih Menu Hidangan</label>
                 <select
@@ -163,6 +154,7 @@ export default function CommentsPage() {
                 </select>
               </div>
 
+              {/* Pilihan Bintang Rating */}
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">Bintang Penilaian</label>
                 <div className="flex items-center gap-1">
@@ -180,6 +172,7 @@ export default function CommentsPage() {
                 </div>
               </div>
 
+              {/* Input Teks Komentar */}
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">Komentar / Ulasan Rasa</label>
                 <textarea
@@ -192,20 +185,22 @@ export default function CommentsPage() {
                 />
               </div>
 
+              {/* Tombol Submit */}
               <button
                 type="submit"
-                className="w-full py-3 bg-[#5C3D28] hover:bg-[#472E1E] text-white text-xs font-semibold rounded-full shadow transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#5C3D28] hover:bg-[#472E1E] text-white text-xs font-semibold rounded-full shadow transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Kirim Komentar</span>
+                <span>Kirim Ulasan</span>
               </button>
             </form>
           </div>
 
-          {/* RIGHT: Comments List */}
+          {/* KOLOM KANAN: DAFTAR ULASAN PELANGGAN */}
           <div className="lg:col-span-8 space-y-6">
             {reviews.map((item) => {
               const avatarUrl = item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.authorName)}&background=5C3D28&color=ffffff&bold=true`;
+              
               return (
                 <div 
                   key={item.id}
@@ -238,7 +233,7 @@ export default function CommentsPage() {
                       </div>
                     </div>
 
-                    {/* Stars */}
+                    {/* Bintang Penilaian */}
                     <div className="flex items-center gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star 
