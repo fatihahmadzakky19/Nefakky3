@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import { useData } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
 import { 
   ShoppingBag, 
@@ -15,8 +16,7 @@ import {
   Star, 
   Ticket, 
   Bell, 
-  ArrowLeft,
-  ChevronRight
+  ArrowLeft
 } from 'lucide-react';
 
 interface NotificationItem {
@@ -29,71 +29,122 @@ interface NotificationItem {
   hasAccentBar?: boolean;
 }
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'n1',
-    type: 'promo',
-    title: 'Exclusive Weekend Treat',
-    time: '2 mins ago',
-    content: 'Enjoy 20% off on all artisanal breads and home-cooked meals this weekend.',
-    read: false,
-    hasAccentBar: true
-  },
-  {
-    id: 'n2',
-    type: 'order',
-    title: 'Your Order is on the Way',
-    time: '1 hour ago',
-    content: 'Chef Julian has dispatched your order #NF-2024. Expect it by 2:00 PM.',
-    read: false
-  },
-  {
-    id: 'n3',
-    type: 'payment',
-    title: 'Payment Confirmed',
-    time: '3 hours ago',
-    content: 'Transaction for Rp 185.000 was successful. Thank you for supporting our artisans.',
-    read: true
-  },
-  {
-    id: 'n4',
-    type: 'kitchen',
-    title: 'New in the Kitchen',
-    time: '5 hours ago',
-    content: 'Organic Truffle Honey & Special Lamb Shank Tongseng is now available in our kitchen.',
-    read: false,
-    hasAccentBar: true
-  },
-  {
-    id: 'n5',
-    type: 'voucher',
-    title: 'A Gift for You',
-    time: 'Yesterday',
-    content: 'You\'ve received a Rp 15.000 voucher for your loyalty. Use code NEFAKKY10.',
-    read: true
-  }
-];
-
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { orders, vouchers, chatMessages } = useData();
   const { totalCartCount } = useCart();
 
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Unread' | 'Promos' | 'Orders'>('All');
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [activeFilter, setActiveFilter] = useState<'Semua' | 'Belum Dibaca' | 'Promo' | 'Pesanan'>('Semua');
   const [pageLimit, setPageLimit] = useState<number>(5);
+  const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
 
-  // Auth Guard: handled via UI prompt when !user
+  // Dynamically generate real notifications based on actual user and admin activities
+  const dynamicNotifications: NotificationItem[] = React.useMemo(() => {
+    if (!user) return [];
 
-  const filteredNotifications = notifications.filter(item => {
-    if (activeFilter === 'Unread') return !item.read;
-    if (activeFilter === 'Promos') return item.type === 'promo' || item.type === 'voucher';
-    if (activeFilter === 'Orders') return item.type === 'order' || item.type === 'payment';
-    return true; // All
+    const items: NotificationItem[] = [];
+    const userEmail = user.email?.toLowerCase();
+
+    // 1. Generate real notifications from user's orders & Admin status updates
+    const userOrders = (orders || []).filter(o => 
+      (userEmail && o.customerEmail?.toLowerCase() === userEmail) || 
+      o.customerName?.toLowerCase() === (user.displayName?.toLowerCase() || '')
+    );
+
+    userOrders.forEach(ord => {
+      // Base creation notification
+      const isCreateRead = readNotifIds.includes(`notif-ord-${ord.id}-create`);
+      items.push({
+        id: `notif-ord-${ord.id}-create`,
+        type: 'order',
+        title: 'Pesanan Dikonfirmasi',
+        time: ord.date || 'Baru saja',
+        content: `Pesanan #${ord.id} (${ord.items.map(i => i.name).join(', ')}) sebesar Rp ${ord.total.toLocaleString('id-ID')} telah berhasil dibuat (${ord.paymentMethod}).`,
+        read: isCreateRead || ord.status !== 'PENDING',
+        hasAccentBar: !isCreateRead
+      });
+
+      // Status updates dynamically driven by Admin status changes
+      if (ord.status === 'COOKING') {
+        const isCookRead = readNotifIds.includes(`notif-ord-${ord.id}-cooking`);
+        items.push({
+          id: `notif-ord-${ord.id}-cooking`,
+          type: 'kitchen',
+          title: 'Pesanan Sedang Dimasak',
+          time: 'Proses Dapur',
+          content: `Tim dapur Nefakky sedang memasak dan menyiapkan porsi segar pesanan #${ord.id}.`,
+          read: isCookRead,
+          hasAccentBar: !isCookRead
+        });
+      } else if (ord.status === 'SHIPPING') {
+        const isShipRead = readNotifIds.includes(`notif-ord-${ord.id}-shipping`);
+        items.push({
+          id: `notif-ord-${ord.id}-shipping`,
+          type: 'order',
+          title: 'Pesanan Dalam Pengiriman',
+          time: 'Dalam Pengiriman',
+          content: `Kurir ${ord.deliveryType} sedang mengantarkan pesanan #${ord.id} ke lokasi Anda.`,
+          read: isShipRead,
+          hasAccentBar: !isShipRead
+        });
+      } else if (ord.status === 'COMPLETED') {
+        const isCompRead = readNotifIds.includes(`notif-ord-${ord.id}-completed`);
+        items.push({
+          id: `notif-ord-${ord.id}-completed`,
+          type: 'payment',
+          title: 'Pesanan Selesai & Diterima',
+          time: 'Selesai',
+          content: `Pesanan #${ord.id} telah diterima. Terima kasih telah menikmati sajian kuliner Nefakky!`,
+          read: isCompRead || true,
+          hasAccentBar: false
+        });
+      }
+    });
+
+    // 2. Generate real notifications from CS Admin Chat replies
+    const adminReplies = (chatMessages || []).filter(m => 
+      userEmail && m.userEmail?.toLowerCase() === userEmail && m.sender === 'admin'
+    );
+    adminReplies.forEach(msg => {
+      const isChatRead = readNotifIds.includes(`notif-chat-${msg.id}`) || msg.readByUser;
+      items.push({
+        id: `notif-chat-${msg.id}`,
+        type: 'promo',
+        title: 'Pesan Balasan dari Admin CS',
+        time: msg.timestamp || 'Baru saja',
+        content: `Admin CS: "${msg.text}"`,
+        read: isChatRead ?? false,
+        hasAccentBar: !isChatRead
+      });
+    });
+
+    // 3. Generate real notifications from active Vouchers created by Admin
+    (vouchers || []).filter(v => v.status === 'Active' && v.isActive !== false).forEach(v => {
+      const isVouchRead = readNotifIds.includes(`notif-vouch-${v.id}`);
+      items.push({
+        id: `notif-vouch-${v.id}`,
+        type: 'voucher',
+        title: `Voucher Promo: ${v.name}`,
+        time: `Berlaku s/d ${v.expiry}`,
+        content: `Gunakan kode promo ${v.code} untuk mendapatkan diskon ${v.discountPercent}% dengan minimal belanja Rp ${v.minSpend.toLocaleString('id-ID')}!`,
+        read: isVouchRead
+      });
+    });
+
+    return items;
+  }, [user, orders, vouchers, chatMessages, readNotifIds]);
+
+  const filteredNotifications = dynamicNotifications.filter(item => {
+    if (activeFilter === 'Belum Dibaca') return !item.read;
+    if (activeFilter === 'Promo') return item.type === 'promo' || item.type === 'voucher';
+    if (activeFilter === 'Pesanan') return item.type === 'order' || item.type === 'payment' || item.type === 'kitchen';
+    return true; // Semua
   });
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    const allIds = dynamicNotifications.map(n => n.id);
+    setReadNotifIds(allIds);
   };
 
   const getIconForType = (type: NotificationItem['type']) => {
@@ -172,21 +223,23 @@ export default function NotificationsPage() {
           </Link>
           <div className="flex items-center justify-between">
             <h1 className="font-serif text-4xl sm:text-5xl font-normal text-[#2D231C] tracking-tight">
-              Notifications
+              Notifikasi
             </h1>
 
-            <button
-              onClick={markAllAsRead}
-              className="text-xs font-medium text-[#7A4B29] hover:underline"
-            >
-              Tandai semua dibaca
-            </button>
+            {filteredNotifications.length > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="text-xs font-medium text-[#7A4B29] hover:underline"
+              >
+                Tandai semua dibaca
+              </button>
+            )}
           </div>
         </div>
 
         {/* Filter Pills Row */}
         <div className="flex items-center gap-3">
-          {(['All', 'Unread', 'Promos', 'Orders'] as const).map((filter) => {
+          {(['Semua', 'Belum Dibaca', 'Promo', 'Pesanan'] as const).map((filter) => {
             const isActive = activeFilter === filter;
             return (
               <button
@@ -204,60 +257,86 @@ export default function NotificationsPage() {
           })}
         </div>
 
-        {/* Notifications List Cards */}
-        <div className="space-y-4">
-          {filteredNotifications.slice(0, pageLimit).map((item) => (
-            <div
-              key={item.id}
-              onClick={() => {
-                setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, read: true } : n));
-              }}
-              className={`bg-white rounded-2xl p-5 border border-stone-200/60 shadow-sm hover:shadow-md transition-all flex items-start justify-between gap-4 relative overflow-hidden cursor-pointer ${
-                !item.read ? 'bg-[#FAF7F2]' : ''
-              }`}
-            >
-              {/* Optional Brown Left Accent Bar */}
-              {item.hasAccentBar && (
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#7A4B29]" />
-              )}
-
-              {/* Left Circle Icon + Text Content */}
-              <div className="flex items-start gap-4 pl-1">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                  item.type === 'promo' || item.type === 'kitchen' || item.type === 'voucher'
-                    ? 'bg-[#F7EFE5]'
-                    : 'bg-stone-100'
-                }`}>
-                  {getIconForType(item.type)}
-                </div>
-
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-stone-900 leading-snug">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs text-stone-500 font-light max-w-xl leading-relaxed">
-                    {item.content}
-                  </p>
-                </div>
-              </div>
-
-              {/* Timestamp Right */}
-              <div className="text-[11px] text-stone-400 font-light shrink-0 pt-0.5">
-                {item.time}
-              </div>
-
+        {/* Dynamic Notifications List Cards or Empty State */}
+        {filteredNotifications.length === 0 ? (
+          <div className="bg-white rounded-3xl p-10 sm:p-14 border border-stone-200/80 text-center space-y-5 shadow-xs animate-fade-in my-6">
+            <div className="w-16 h-16 bg-[#FAF6F0] text-[#5C3D28] rounded-full flex items-center justify-center mx-auto text-3xl border border-[#8A6337]/20 shadow-xs">
+              🔔
             </div>
-          ))}
-        </div>
+            <div className="space-y-2 max-w-sm mx-auto">
+              <h3 className="font-serif text-xl sm:text-2xl font-semibold text-stone-900">Belum Ada Notifikasi</h3>
+              <p className="text-xs text-stone-500 font-light leading-relaxed">
+                {activeFilter === 'Belum Dibaca' 
+                  ? 'Semua notifikasi Anda telah dibaca.' 
+                  : 'Notifikasi pembaruan status pesanan, pengiriman, balasan pesan CS, dan promo baru dari Admin akan muncul di sini setelah ada aktivitas.'}
+              </p>
+            </div>
+            <div className="pt-2">
+              <Link 
+                href="/menu" 
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#5C3D28] hover:bg-[#472E1E] text-white font-medium text-xs rounded-full shadow-md transition-all uppercase tracking-wider"
+              >
+                <span>Jelajahi Menu Nefakky</span>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredNotifications.slice(0, pageLimit).map((item) => (
+              <div
+                key={item.id}
+                onClick={() => {
+                  if (!readNotifIds.includes(item.id)) {
+                    setReadNotifIds(prev => [...prev, item.id]);
+                  }
+                }}
+                className={`bg-white rounded-2xl p-5 border border-stone-200/60 shadow-sm hover:shadow-md transition-all flex items-start justify-between gap-4 relative overflow-hidden cursor-pointer ${
+                  !item.read ? 'bg-[#FAF7F2]' : ''
+                }`}
+              >
+                {/* Optional Brown Left Accent Bar */}
+                {item.hasAccentBar && !item.read && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#7A4B29]" />
+                )}
+
+                {/* Left Circle Icon + Text Content */}
+                <div className="flex items-start gap-4 pl-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                    item.type === 'promo' || item.type === 'kitchen' || item.type === 'voucher'
+                      ? 'bg-[#F7EFE5]'
+                      : 'bg-stone-100'
+                  }`}>
+                    {getIconForType(item.type)}
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-stone-900 leading-snug">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-stone-500 font-light max-w-xl leading-relaxed">
+                      {item.content}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Timestamp Right */}
+                <div className="text-[11px] text-stone-400 font-light shrink-0 pt-0.5">
+                  {item.time}
+                </div>
+
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Bottom Load Older Notifications Button */}
         {filteredNotifications.length > pageLimit && (
           <div className="pt-4 text-center">
             <button
               onClick={() => setPageLimit(prev => prev + 5)}
-              className="px-8 py-3 bg-[#FAF8F5] border border-stone-300 hover:bg-stone-100 text-stone-700 font-medium text-xs rounded-full transition-colors shadow-sm"
+              className="px-8 py-3 bg-[#FAF8F5] border border-[#8A6337]/30 hover:bg-stone-100 text-stone-700 font-medium text-xs rounded-full transition-colors shadow-sm"
             >
-              Load older notifications
+              Muat notifikasi sebelumnya
             </button>
           </div>
         )}

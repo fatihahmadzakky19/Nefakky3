@@ -193,6 +193,20 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
+    // Weekend Promo restriction check (WEEKENDSERU is active ONLY on Saturday & Sunday)
+    if (upper === 'WEEKENDSERU') {
+      const day = new Date().getDay(); // 0 = Minggu, 6 = Sabtu
+      const isWeekend = day === 0 || day === 6;
+      if (!isWeekend) {
+        removePromo();
+        return {
+          success: false,
+          message: `Maaf, kode promo "WEEKENDSERU" hanya dapat digunakan pada hari libur / akhir pekan (Sabtu & Minggu)! Pada hari biasa promo ini otomatis non-aktif.`,
+          percent: 0
+        };
+      }
+    }
+
     const percent = foundVoucher.discountPercent || 20;
 
     setAppliedPromo(upper);

@@ -407,20 +407,23 @@ export default function UserHomePage() {
       <section id="promo-section" className="px-4 sm:px-8 py-6 max-w-6xl mx-auto">
         {(() => {
           const weekendVoucher = (vouchers || []).find((v: any) => v.code === 'WEEKENDSERU');
-          const isWeekendActive = weekendVoucher ? (weekendVoucher.status === 'Active' && weekendVoucher.isActive !== false) : true;
+          const dayOfWeek = new Date().getDay(); // 0 = Minggu (Sunday), 6 = Sabtu (Saturday)
+          const isTodayWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+          const isVoucherActiveInAdmin = weekendVoucher ? (weekendVoucher.status === 'Active' && weekendVoucher.isActive !== false) : true;
+          const isWeekendActive = isTodayWeekend && isVoucherActiveInAdmin;
 
           return (
             <div className={`rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl transition-all ${
-              isWeekendActive ? 'bg-[#7D4A2B]' : 'bg-stone-800'
+              isWeekendActive ? 'bg-[#7D4A2B]' : 'bg-stone-800/90'
             }`}>
               
               {/* Left Text */}
               <div className="space-y-4 max-w-md text-left relative z-10">
                 <div className="flex items-center gap-2">
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    isWeekendActive ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40' : 'bg-rose-500/30 text-rose-200 border border-rose-400/40'
+                    isWeekendActive ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40' : 'bg-amber-500/30 text-amber-200 border border-amber-400/40'
                   }`}>
-                    {isWeekendActive ? '● Promo Aktif' : '● Promo Non-Aktif'}
+                    {isWeekendActive ? '● Promo Aktif (Akhir Pekan)' : !isTodayWeekend ? '● Non-Aktif (Hanya Hari Libur)' : '● Promo Non-Aktif'}
                   </span>
                 </div>
 
@@ -430,6 +433,8 @@ export default function UserHomePage() {
                 <p className="text-xs sm:text-sm text-stone-200 font-light leading-relaxed">
                   {isWeekendActive ? (
                     <>Meriahkan akhir pekanmu dengan sajian istimewa dari Nefakky. Gunakan kode promo <strong className="underline text-amber-200">WEEKENDSERU</strong>.</>
+                  ) : !isTodayWeekend ? (
+                    <>Promo diskon <strong className="text-amber-200">WEEKENDSERU</strong> ini khusus berlaku pada hari libur / akhir pekan (Sabtu &amp; Minggu). Pada hari biasa promo ini otomatis non-aktif.</>
                   ) : (
                     <>Maaf, promosi diskon akhir pekan saat ini sedang dinonaktifkan oleh Admin.</>
                   )}
@@ -456,9 +461,9 @@ export default function UserHomePage() {
                   ) : (
                     <button 
                       disabled
-                      className="px-6 py-3 bg-stone-700 text-stone-400 font-medium text-xs rounded-full cursor-not-allowed flex items-center gap-2 border border-stone-600"
+                      className="px-6 py-3 bg-stone-700/80 text-stone-300 font-medium text-xs rounded-full cursor-not-allowed flex items-center gap-2 border border-stone-600"
                     >
-                      <span>Promo Sedang Non-Aktif</span>
+                      <span>{!isTodayWeekend ? 'Khusus Hari Libur (Sabtu & Minggu)' : 'Promo Sedang Non-Aktif'}</span>
                     </button>
                   )}
                 </div>
@@ -472,7 +477,7 @@ export default function UserHomePage() {
                     WEEKENDSERU
                   </span>
                   <span className="text-[10px] text-stone-200">
-                    {isWeekendActive ? 'Diskon 30% All Items' : 'Tidak Dapat Digunakan'}
+                    {isWeekendActive ? 'Diskon 30% All Items' : !isTodayWeekend ? 'Khusus Sabtu & Minggu' : 'Non-Aktif'}
                   </span>
                 </div>
               </div>

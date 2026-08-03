@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Mail, Lock, Eye, EyeOff, LockKeyhole, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, LockKeyhole } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMessage('');
     if (!email || !password) {
-      setErrorMessage('Silakan isi email dan password Anda.');
+      setErrorMessage('Silakan isi email dan kata sandi Anda.');
       return;
     }
 
@@ -48,7 +48,7 @@ export default function LoginPage() {
         }
         router.refresh();
       } else {
-        setErrorMessage(res.error || 'Login gagal. Periksa kembali email dan password Anda.');
+        setErrorMessage(res.error || 'Login gagal. Periksa kembali email dan kata sandi Anda.');
       }
     } catch (err: any) {
       setErrorMessage('Terjadi kesalahan saat melakukan login.');
@@ -81,16 +81,16 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen w-full bg-[#1e1e1e] p-3 sm:p-6 md:p-10 flex items-center justify-center font-sans">
-      {/* Outer Card Container matching screenshot aspect & rounded style */}
+      {/* Outer Card Container */}
       <div className="w-full max-w-[1080px] bg-[#FAF8F5] rounded-2xl sm:rounded-[28px] overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-2 border border-stone-200/40 my-auto">
         
-        {/* LEFT PANEL: High End Dark Culinary Photography */}
-        <div className="relative min-h-[200px] sm:min-h-[260px] lg:min-h-[620px] w-full bg-stone-900 overflow-hidden flex flex-col justify-end p-6 sm:p-8 md:p-12 text-white">
+        {/* LEFT PANEL: Authentic Ayam Bakar Photo */}
+        <div className="relative min-h-[220px] sm:min-h-[260px] lg:min-h-[620px] w-full bg-stone-900 overflow-hidden flex flex-col justify-end p-6 sm:p-8 md:p-12 text-white">
           <Image
-            src="/images/login_food.png"
-            alt="Artisanal sourdough bread, tomatoes, olives and cheese on dark slate"
+            src="/images/ayam_bakar_hero.png"
+            alt="Artisanal Ayam Bakar khas Nefakky disajikan di tampah bambu tradisional dengan sambal dan lalapan segar"
             fill
-            className="object-cover object-center brightness-[0.75] contrast-[1.05]"
+            className="object-cover object-center brightness-[0.85] contrast-[1.05]"
             priority
           />
           {/* Subtle Gradient Overlay */}
@@ -98,18 +98,18 @@ export default function LoginPage() {
           
           <div className="relative z-10 space-y-2 sm:space-y-3">
             <span className="text-[9px] sm:text-[10px] tracking-[0.25em] font-semibold text-stone-300 uppercase block">
-              THE ART OF DINING
+              SENI KULINER OTENTIK
             </span>
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-[40px] leading-[1.15] font-normal text-stone-100 tracking-tight">
-              A palette of pure provenance.
+              Cita Rasa Asli Khas Nusantara.
             </h2>
             <p className="text-xs text-stone-300 font-light max-w-md leading-relaxed hidden sm:block">
-              Curated ingredients from heritage growers, delivered with digital precision.
+              Sajikan hidangan kuliner terbaik dengan bahan berkualitas tinggi, diproses secara otentik dan siap diantar cepat ke rumah Anda.
             </p>
           </div>
         </div>
 
-        {/* RIGHT PANEL: Clean Off-White Elegant Form */}
+        {/* RIGHT PANEL: Form Card Panel */}
         <div className="flex flex-col justify-between p-5 sm:p-10 md:p-12 bg-[#FAF8F5] relative">
           <div>
             {/* Header Brand */}
@@ -122,10 +122,10 @@ export default function LoginPage() {
             {/* Title & Subtitle */}
             <div className="mb-8">
               <h1 className="font-serif text-3xl font-semibold text-stone-900 tracking-tight">
-                Welcome Back
+                Selamat Datang Kembali
               </h1>
               <p className="text-xs text-stone-500 font-normal mt-1.5">
-                Sign in to continue your culinary journey.
+                Silakan masuk ke akun Anda untuk melanjutkan pemesanan.
               </p>
             </div>
 
@@ -142,7 +142,7 @@ export default function LoginPage() {
               {/* Email Address */}
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1.5">
-                  Email Address
+                  Alamat Email
                 </label>
                 <div className="relative flex items-center">
                   <Mail className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none" />
@@ -153,7 +153,7 @@ export default function LoginPage() {
                       setEmail(e.target.value);
                       if (errorMessage) setErrorMessage('');
                     }}
-                    placeholder="gourmet@nefakky.com"
+                    placeholder="budi@example.com"
                     className="input-field pl-10"
                     required
                   />
@@ -163,7 +163,7 @@ export default function LoginPage() {
               {/* Password */}
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1.5">
-                  Password
+                  Kata Sandi
                 </label>
                 <div className="relative flex items-center">
                   <Lock className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none" />
@@ -197,13 +197,13 @@ export default function LoginPage() {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="rounded border-stone-300 text-stone-800 focus:ring-[#8A6337] w-3.5 h-3.5"
                   />
-                  <span>Remember Me</span>
+                  <span>Ingat Saya</span>
                 </label>
                 <Link
                   href="/forgot-password"
                   className="font-medium text-[#8A6337] hover:text-[#735129] transition-colors"
                 >
-                  Forgot Password?
+                  Lupa Kata Sandi?
                 </Link>
               </div>
 
@@ -216,7 +216,7 @@ export default function LoginPage() {
                 {isSubmitting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  'Login'
+                  'Masuk'
                 )}
               </button>
             </form>
@@ -227,7 +227,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-stone-200"></div>
               </div>
               <span className="relative px-3 bg-[#FAF8F5] text-[10px] tracking-wider text-stone-400 font-medium uppercase">
-                OR CONTINUE WITH
+                ATAU MASUK DENGAN
               </span>
             </div>
 
@@ -239,7 +239,6 @@ export default function LoginPage() {
                 disabled={isSubmitting}
                 className="btn-google w-full"
               >
-                {/* Google Colored Icon */}
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
@@ -258,28 +257,26 @@ export default function LoginPage() {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.58l3.99 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>Sign in with Google</span>
+                <span>Masuk dengan Google</span>
               </button>
-
-
             </div>
           </div>
 
           {/* Footer Navigation & Security */}
           <div className="pt-6 text-center space-y-3">
             <p className="text-xs text-stone-600">
-              Don't have an account?{' '}
+              Belum punya akun?{' '}
               <Link
                 href="/register"
                 className="font-medium text-[#8A6337] hover:underline"
               >
-                Register
+                Daftar Sekarang
               </Link>
             </p>
 
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-stone-400">
               <LockKeyhole className="w-3 h-3" />
-              <span>Secure connection active</span>
+              <span>Koneksi terenkripsi & aman</span>
             </div>
           </div>
         </div>

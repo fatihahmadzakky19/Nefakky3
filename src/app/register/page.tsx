@@ -31,7 +31,7 @@ export default function RegisterPage() {
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage('Konfirmasi password tidak cocok.');
+      setErrorMessage('Konfirmasi kata sandi tidak cocok.');
       return;
     }
 
@@ -76,16 +76,16 @@ export default function RegisterPage() {
 
   return (
     <main className="min-h-screen w-full bg-[#1e1e1e] p-3 sm:p-6 md:p-10 flex items-center justify-center font-sans">
-      {/* Outer Card Container matching screenshot layout */}
+      {/* Outer Card Container */}
       <div className="w-full max-w-[1080px] bg-[#FAF8F5] rounded-2xl sm:rounded-[28px] overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-2 border border-stone-200/40 my-auto">
         
-        {/* LEFT PANEL: Marble & Olive Oil Bright Culinary Photo */}
-        <div className="relative min-h-[180px] sm:min-h-[240px] lg:min-h-[640px] w-full bg-stone-100 overflow-hidden flex flex-col justify-between p-6 sm:p-8 md:p-12 text-white">
+        {/* LEFT PANEL: Fresh Mango Juice (Jus Mangga) Photo */}
+        <div className="relative min-h-[220px] sm:min-h-[260px] lg:min-h-[640px] w-full bg-stone-100 overflow-hidden flex flex-col justify-between p-6 sm:p-8 md:p-12 text-white">
           <Image
-            src="/images/register_food.png"
-            alt="Olive oil bottle, vine tomatoes and basil on white marble surface"
+            src="/images/jus_mangga.jpg"
+            alt="Jus Mangga Segar Alami khas Nefakky"
             fill
-            className="object-cover object-center brightness-[0.95]"
+            className="object-cover object-center brightness-[0.92]"
             priority
           />
           {/* Subtle top/bottom Gradient Overlay */}
@@ -101,15 +101,15 @@ export default function RegisterPage() {
           {/* Bottom Heading & Subtitle */}
           <div className="relative z-10 space-y-2 sm:space-y-3">
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-[40px] leading-[1.15] font-normal text-white tracking-tight">
-              Artisanship in every bite.
+              Kesegaran Alami di Setiap Tegukan.
             </h2>
             <p className="text-xs text-stone-100 font-light max-w-md leading-relaxed hidden sm:block">
-              Join our community of epicureans and discover ingredients sourced from the world's most dedicated producers.
+              Bergabunglah dengan komunitas pencinta kuliner Nefakky dan nikmati kesegaran Jus Mangga segar alami serta sajian spesial lainnya.
             </p>
           </div>
         </div>
 
-        {/* RIGHT PANEL: Centered Form Card Panel */}
+        {/* RIGHT PANEL: Form Card Panel */}
         <div className="flex flex-col justify-center items-center p-4 sm:p-8 md:p-12 bg-[#FAF8F5] relative">
           
           {/* Form Card Overlay */}
@@ -118,10 +118,10 @@ export default function RegisterPage() {
             {/* Header */}
             <div className="text-center mb-6">
               <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-stone-900 tracking-tight">
-                Join the Marketplace
+                Daftar Akun Nefakky
               </h1>
               <p className="text-xs text-stone-500 font-normal mt-1">
-                Experience the finest artisanal flavors.
+                Nikmati kelezatan kuliner otentik Indonesia.
               </p>
             </div>
 
@@ -139,13 +139,13 @@ export default function RegisterPage() {
               {/* Full Name */}
               <div>
                 <label className="block text-[11px] font-medium text-stone-600 mb-1">
-                  Full Name
+                  Nama Lengkap
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Alexander Dupont"
+                  placeholder="Budi Santoso"
                   className="input-field"
                   required
                 />
@@ -161,20 +161,20 @@ export default function RegisterPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="alexander@example.com"
+                    placeholder="budi@example.com"
                     className="input-field"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-stone-600 mb-1">
-                    Phone Number
+                    Nomor Telepon
                   </label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+62 812-3456-7890"
+                    placeholder="081234567890"
                     className="input-field"
                   />
                 </div>
@@ -183,7 +183,7 @@ export default function RegisterPage() {
               {/* Password */}
               <div>
                 <label className="block text-[11px] font-medium text-stone-600 mb-1">
-                  Password
+                  Kata Sandi
                 </label>
                 <div className="relative flex items-center">
                   <input
@@ -207,7 +207,7 @@ export default function RegisterPage() {
               {/* Confirm Password */}
               <div>
                 <label className="block text-[11px] font-medium text-stone-600 mb-1">
-                  Confirm Password
+                  Konfirmasi Kata Sandi
                 </label>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -230,13 +230,13 @@ export default function RegisterPage() {
                     required
                   />
                   <span>
-                    I agree to the{' '}
+                    Saya menyetujui{' '}
                     <a href="#" className="font-semibold text-[#8A6337] hover:underline">
-                      Terms of Service
+                      Syarat & Ketentuan
                     </a>{' '}
-                    and{' '}
+                    serta{' '}
                     <a href="#" className="font-semibold text-[#8A6337] hover:underline">
-                      Privacy Policy
+                      Kebijakan Privasi
                     </a>.
                   </span>
                 </label>
@@ -251,7 +251,7 @@ export default function RegisterPage() {
                 {isSubmitting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  'Create Account'
+                  'Buat Akun Baru'
                 )}
               </button>
             </form>
@@ -262,7 +262,7 @@ export default function RegisterPage() {
                 <div className="w-full border-t border-stone-200"></div>
               </div>
               <span className="relative px-3 bg-white text-[10px] tracking-wider text-stone-400 font-medium uppercase">
-                OR REGISTER WITH
+                ATAU DAFTAR DENGAN
               </span>
             </div>
 
@@ -291,24 +291,24 @@ export default function RegisterPage() {
                   d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.58l3.99 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                 />
               </svg>
-              <span>Register with Google</span>
+              <span>Daftar dengan Google</span>
             </button>
 
             {/* Footer Navigation */}
             <div className="mt-5 text-center">
               <p className="text-xs text-stone-600">
-                Already have an account?{' '}
+                Sudah punya akun?{' '}
                 <Link
                   href="/login"
                   className="font-medium text-[#8A6337] hover:underline"
                 >
-                  Login
+                  Masuk
                 </Link>
               </p>
             </div>
           </div>
 
-          {/* Bottom Feature Badges matching icons row in reference */}
+          {/* Bottom Feature Badges */}
           <div className="mt-6 flex items-center justify-center gap-6 text-stone-400">
             <span title="Jaminan Kualitas"><ShieldCheck className="w-4 h-4 hover:text-[#8A6337] transition-colors" /></span>
             <span title="Pengiriman Cepat"><Truck className="w-4 h-4 hover:text-[#8A6337] transition-colors" /></span>

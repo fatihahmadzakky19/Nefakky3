@@ -10,9 +10,9 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  auth, 
-  googleProvider, 
+import {
+  auth,
+  googleProvider,
   signInWithEmailAndPassword as firebaseSignIn,
   createUserWithEmailAndPassword as firebaseSignUp,
   signInWithPopup,
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
       if (fbUser && typeof window !== 'undefined') {
         const role = fbUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'customer';
-        
+
         // Retrieve local displayName if Firebase user does not have it set
         let name = fbUser.displayName;
         if (!name && fbUser.email) {
@@ -233,12 +233,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           error: 'Terlalu banyak percobaan login yang gagal. Silakan coba lagi beberapa saat lagi.'
         };
       }
-      
+
       // Fallback check local registered users database in localStorage for offline/demo support
       if (typeof window !== 'undefined') {
         const storedUsersStr = localStorage.getItem('nefakky_registered_users');
         const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
-        
+
         const matchedUser = registeredUsers.find(
           (u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail
         );
@@ -268,8 +268,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       setLoading(false);
-      return { 
-        success: false, 
+      return {
+        success: false,
         role: 'customer' as const,
         error: `Akun dengan email "${email}" belum terdaftar atau email/password salah. Silakan periksa ejaan email Anda.`
       };
@@ -286,7 +286,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (typeof window !== 'undefined') {
       const storedUsersStr = localStorage.getItem('nefakky_registered_users');
       const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
-      
+
       const existingIndex = registeredUsers.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail);
       const userObj = {
         uid: existingIndex >= 0 ? registeredUsers[existingIndex].uid : 'user-reg-' + Date.now(),
