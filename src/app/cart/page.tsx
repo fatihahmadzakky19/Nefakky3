@@ -110,9 +110,9 @@ export default function BasketCartPage() {
     }
   }, [user]);
 
-  // Options state
-  const [deliveryMethod, setDeliveryMethod] = useState<'standard' | 'express' | 'sameday'>('standard');
-  const [paymentMethod, setPaymentMethod] = useState<'midtrans' | 'qris' | 'bank' | 'cod'>('midtrans');
+  // Options state (Metode Pembayaran Eksklusif MIDTRANS saja)
+  const [deliveryMethod, setDeliveryMethod] = useState<'standard'>('standard');
+  const [paymentMethod, setPaymentMethod] = useState<'midtrans'>('midtrans');
   const [selectedBank, setSelectedBank] = useState<string>('bca');
 
   // Load Midtrans Snap Script dynamically in Sandbox (Demo) mode
@@ -142,8 +142,6 @@ export default function BasketCartPage() {
   const [midtransChannel, setMidtransChannel] = useState<'gopay' | 'va' | 'shopeepay' | 'cc'>('gopay');
   const [midtransOrderData, setMidtransOrderData] = useState<{ generatedId: string; snapshot: PlacedOrder } | null>(null);
 
-  // Authentication guard handled via UI prompt when !user
-
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!promoCode.trim()) return;
@@ -154,17 +152,12 @@ export default function BasketCartPage() {
     }
   };
 
-  const getShippingCost = () => {
-    if (cartItems.length === 0 && !placedOrder) return 0;
-    if (deliveryMethod === 'express') return 25000;
-    if (deliveryMethod === 'sameday') return 40000;
-    return 12000; // standard
-  };
-
-  const serviceFee = (cartItems.length > 0 || placedOrder) ? 5000 : 0;
-  const shippingCost = getShippingCost();
+  // Pajak Pengiriman & Resto 10% (PB1 Resto) Pengganti Ongkir Delivery Method
+  const tax10Percent = Math.round(subtotal * 0.10);
+  const shippingCost = tax10Percent;
+  const serviceFee = 0;
   const calculatedDiscount = discountAmount || Math.round(subtotal * (discountPercent / 100));
-  const totalPayment = Math.max(0, subtotal + shippingCost + serviceFee - calculatedDiscount);
+  const totalPayment = Math.max(0, subtotal + tax10Percent - calculatedDiscount);
 
   // Save address edit
   const handleSaveAddress = (e: React.FormEvent) => {
@@ -172,51 +165,6 @@ export default function BasketCartPage() {
     setShippingAddress(tempAddress);
     setIsEditingAddress(false);
   };
-
-  // 24-Hour (23:59:59) Interactive Payment Countdown Timer
-  const [paymentTimeLeft, setPaymentTimeLeft] = useState<number>(86399); // 23:59:59 (86399 seconds)
-  const [paymentDeadline, setPaymentDeadline] = useState<number | null>(null);
-
-  useEffect(() => {
-    let interval: any;
-    if (currentStep === 3) {
-      // Establish 24-hour target deadline when entering Payment step
-      let deadline = paymentDeadline;
-      if (!deadline) {
-        deadline = Date.now() + 24 * 60 * 60 * 1000;
-        setPaymentDeadline(deadline);
-      }
-
-      const updateTimer = () => {
-        const remaining = Math.max(0, Math.floor((deadline! - Date.now()) / 1000));
-        setPaymentTimeLeft(remaining);
-        if (remaining <= 0) {
-          if (interval) clearInterval(interval);
-          alert('Waktu batas pembayaran (24 Jam) telah berakhir! Pesanan dibatalkan secara otomatis.');
-          setCurrentStep(1);
-          setPaymentDeadline(null);
-        }
-      };
-
-      updateTimer();
-      interval = setInterval(updateTimer, 1000);
-    } else {
-      setPaymentDeadline(null);
-      setPaymentTimeLeft(86399);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [currentStep, paymentDeadline]);
-
-  const formatCountdown = (totalSec: number) => {
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  // Proceed from Checkout (Step 2) to Payment (Step 3)
   const handleProceedToPayment = () => {
     if (cartItems.length === 0) return;
     if (!shippingAddress.address || shippingAddress.address.trim() === '' || shippingAddress.address === 'Belum diisi') {
@@ -251,10 +199,10 @@ export default function BasketCartPage() {
       itemCount: totalCartCount,
       paymentMethod: orderSummarySnapshot.paymentMethod,
       paymentBadge: 'PAID',
-      deliveryType: deliveryMethod === 'express' ? 'EXPRESS' : deliveryMethod === 'sameday' ? 'SAME DAY' : 'STANDARD',
+      deliveryType: 'PB1 (10%)',
       status: 'COOKING',
       subtotal,
-      shippingCost,
+      shippingCost: tax10Percent,
       discount: calculatedDiscount,
       total: totalPayment
     });
@@ -286,11 +234,7 @@ export default function BasketCartPage() {
     setIsProcessingPayment(true);
     const generatedId = `NFK-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const formattedPaymentMethod = 
-      paymentMethod === 'midtrans' ? 'Midtrans Demo (Sandbox)' :
-      paymentMethod === 'qris' ? 'QRIS Instant' :
-      paymentMethod === 'bank' ? 'BCA Virtual Account' :
-      'COD (Bayar di Tempat)';
+    const formattedPaymentMethod = 'Midtrans Payment Gateway';
 
     const orderSummarySnapshot: PlacedOrder = {
       orderId: generatedId,
@@ -910,257 +854,78 @@ export default function BasketCartPage() {
                   )}
                 </div>
 
-                {/* 2. DELIVERY METHOD CARD */}
-                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-sm space-y-4">
-                  <div className="flex items-center gap-2.5 text-stone-900">
-                    <Truck className="w-5 h-5 text-[#8A6337]" />
-                    <h2 className="font-serif text-xl font-semibold">Delivery Method</h2>
+                {/* 2. PAJAK PENGIRIMAN & RESTO (PB1 10%) CARD */}
+                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 text-stone-900">
+                      <Truck className="w-5 h-5 text-[#8A6337]" />
+                      <h2 className="font-serif text-xl font-semibold">Pajak Pengiriman &amp; Resto (PB1 10%)</h2>
+                    </div>
+                    <span className="px-3 py-1 bg-amber-100 text-orange-800 text-xs font-bold rounded-full border border-amber-300">
+                      ~25 - 40 Menit Tiba
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                    {/* Standard */}
-                    <div 
-                      onClick={() => setDeliveryMethod('standard')}
-                      className={`cursor-pointer rounded-2xl p-4 border transition-all relative ${
-                        deliveryMethod === 'standard' 
-                          ? 'border-[#8A6337] bg-[#FAF6F0] ring-1 ring-[#8A6337]' 
-                          : 'border-stone-200 bg-white hover:border-stone-300'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-semibold text-xs text-stone-900 block">Standard</span>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          deliveryMethod === 'standard' ? 'border-[#8A6337] bg-[#8A6337]' : 'border-stone-300'
-                        }`}>
-                          {deliveryMethod === 'standard' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-stone-500 mb-3">3–5 Business Days</p>
-                      <p className="font-semibold text-xs text-stone-800">Rp 12.000</p>
+                  <div className="p-4 bg-[#FAF6F0] rounded-2xl border border-[#8A6337]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-slate-900">
+                        Pajak Pengantaran Segar Resto Nefakky (10%)
+                      </p>
+                      <p className="text-slate-600 font-medium">
+                        Biaya pengiriman dihitung secara efisien sebesar 10% pajak dari total belanjaan Anda. Makanan langsung dimasak segar oleh Tim Dapur Nefakky.
+                      </p>
                     </div>
-
-                    {/* Express */}
-                    <div 
-                      onClick={() => setDeliveryMethod('express')}
-                      className={`cursor-pointer rounded-2xl p-4 border transition-all relative ${
-                        deliveryMethod === 'express' 
-                          ? 'border-[#8A6337] bg-[#FAF6F0] ring-1 ring-[#8A6337]' 
-                          : 'border-stone-200 bg-white hover:border-stone-300'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-semibold text-xs text-stone-900 block">Express</span>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          deliveryMethod === 'express' ? 'border-[#8A6337] bg-[#8A6337]' : 'border-stone-300'
-                        }`}>
-                          {deliveryMethod === 'express' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-stone-500 mb-3">1–2 Business Days</p>
-                      <p className="font-semibold text-xs text-stone-800">Rp 25.000</p>
-                    </div>
-
-                    {/* Same Day */}
-                    <div 
-                      onClick={() => setDeliveryMethod('sameday')}
-                      className={`cursor-pointer rounded-2xl p-4 border transition-all relative ${
-                        deliveryMethod === 'sameday' 
-                          ? 'border-[#8A6337] bg-[#FAF6F0] ring-1 ring-[#8A6337]' 
-                          : 'border-stone-200 bg-white hover:border-stone-300'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-semibold text-xs text-stone-900 block">Same Day</span>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          deliveryMethod === 'sameday' ? 'border-[#8A6337] bg-[#8A6337]' : 'border-stone-300'
-                        }`}>
-                          {deliveryMethod === 'sameday' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-stone-500 mb-3">Delivery by 8 PM</p>
-                      <p className="font-semibold text-xs text-stone-800">Rp 40.000</p>
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Pajak (10%)</span>
+                      <span className="font-serif text-lg font-black text-orange-600">
+                        Rp {tax10Percent.toLocaleString('id-ID')}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* 3. PAYMENT METHOD CARD */}
+                {/* 3. PAYMENT METHOD CARD (MIDTRANS GATEWAY ONLY) */}
                 <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-sm space-y-5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                     <div className="flex items-center gap-2.5 text-stone-900">
                       <CreditCard className="w-5 h-5 text-[#8A6337]" />
-                      <h2 className="font-serif text-xl font-semibold">Payment Method</h2>
+                      <h2 className="font-serif text-xl font-semibold">Metode Pembayaran (Midtrans Gateway)</h2>
                     </div>
-                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-800 text-[11px] font-bold rounded-full border border-emerald-200">
-                      Midtrans Demo Mode Active
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full border border-emerald-300">
+                      🟢 Active Midtrans Payment Gateway
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                    {/* Midtrans Demo Sandbox */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('midtrans')}
-                      className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
-                        paymentMethod === 'midtrans' 
-                          ? 'border-[#8A6337] bg-[#FAF6F0] ring-2 ring-[#8A6337]' 
-                          : 'border-stone-200 bg-white hover:border-stone-300'
-                      }`}
-                    >
-                      <CreditCard className="w-5 h-5 text-[#8A6337]" />
-                      <span className="text-xs font-semibold text-stone-800">Midtrans Demo</span>
-                      <span className="text-[9px] px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">Sandbox</span>
-                    </button>
+                  <div className="p-5 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 rounded-2xl border border-amber-300 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white flex items-center justify-center text-xl font-bold shadow-md shrink-0">
+                        💳
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm">
+                          Midtrans Official Payment Gateway
+                        </h3>
+                        <p className="text-xs text-slate-600 font-medium">
+                          Satu-satunya sistem pembayaran resmi yang aman, instan, &amp; otomatis terverifikasi.
+                        </p>
+                      </div>
+                    </div>
 
-                    {/* QRIS */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('qris')}
-                      className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
-                        paymentMethod === 'qris' 
-                          ? 'border-[#8A6337] bg-[#FAF6F0] ring-2 ring-[#8A6337]' 
-                          : 'border-stone-200 bg-white hover:border-stone-300'
-                      }`}
-                    >
-                      <QrCode className="w-5 h-5 text-[#8A6337]" />
-                      <span className="text-xs font-semibold text-stone-800">QRIS</span>
-                    </button>
-
-                    {/* Bank Transfer */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('bank')}
-                      className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
-                        paymentMethod === 'bank' 
-                          ? 'border-[#8A6337] bg-[#FAF6F0] ring-2 ring-[#8A6337]' 
-                          : 'border-stone-200 bg-white hover:border-stone-300'
-                      }`}
-                    >
-                      <Building2 className="w-5 h-5 text-[#8A6337]" />
-                      <span className="text-xs font-semibold text-stone-800">Bank Transfer</span>
-                    </button>
-
-                    {/* COD */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('cod')}
-                      className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
-                        paymentMethod === 'cod' 
-                          ? 'border-[#8A6337] bg-[#FAF6F0] ring-2 ring-[#8A6337]' 
-                          : 'border-stone-200 bg-white hover:border-stone-300'
-                      }`}
-                    >
-                      <Coins className="w-5 h-5 text-[#8A6337]" />
-                      <span className="text-xs font-semibold text-stone-800">COD</span>
-                    </button>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center text-xs">
+                      <div className="p-3 bg-white rounded-xl border border-stone-200 font-bold text-slate-800 shadow-2xs">
+                        📱 GoPay / QRIS
+                      </div>
+                      <div className="p-3 bg-white rounded-xl border border-stone-200 font-bold text-slate-800 shadow-2xs">
+                        🛍️ ShopeePay
+                      </div>
+                      <div className="p-3 bg-white rounded-xl border border-stone-200 font-bold text-slate-800 shadow-2xs">
+                        🏦 BCA / Mandiri VA
+                      </div>
+                      <div className="p-3 bg-white rounded-xl border border-stone-200 font-bold text-slate-800 shadow-2xs">
+                        💳 Kartu Kredit / Debit
+                      </div>
+                    </div>
                   </div>
-
-                  {/* MIDTRANS DEMO SANDBOX INFO CARD */}
-                  {paymentMethod === 'midtrans' && (
-                    <div className="p-5 bg-[#FAF6F0] rounded-2xl border border-[#8A6337]/30 space-y-4 animate-fade-in">
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200/60 pb-3">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[11px] font-bold">
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>Midtrans Sandbox Mode</span>
-                        </div>
-                        <span className="text-[11px] font-mono font-medium text-stone-600">
-                          Merchant ID: <strong className="text-stone-900">M664001757</strong>
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 bg-white p-4 rounded-xl border border-stone-200 text-xs text-stone-700 shadow-xs">
-                        <p className="font-semibold text-stone-900 flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-[#8A6337]" />
-                          <span>Simulasi Gateway Pembayaran Midtrans Demo</span>
-                        </p>
-                        <p className="text-stone-500 leading-relaxed text-[11px]">
-                          Metode pembayaran ini khusus disiapkan untuk pengujian transaksi tanpa KTP / Rekening Pribadi. Mendukung semua kanal simulasi resmi:
-                        </p>
-                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-[11px] font-medium text-stone-800">
-                          <li className="flex items-center gap-1.5">⚡ <span>GoPay & QRIS Simulator</span></li>
-                          <li className="flex items-center gap-1.5">⚡ <span>ShopeePay Simulator</span></li>
-                          <li className="flex items-center gap-1.5">⚡ <span>BCA / Mandiri / BRI VA Demo</span></li>
-                          <li className="flex items-center gap-1.5">⚡ <span>Kartu Kredit Test Sandbox</span></li>
-                        </ul>
-                      </div>
-
-                      <div className="p-3 bg-stone-100 rounded-xl border border-stone-200 text-[11px] text-stone-600 flex flex-wrap items-center justify-between gap-2">
-                        <span>Client Key Active: <code className="font-mono text-stone-800 bg-white px-2 py-0.5 rounded border">Mid-client-8T4q9uw1fIGB...</code></span>
-                        <a 
-                          href="https://simulator.sandbox.midtrans.com/" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-[#8A6337] font-semibold underline hover:text-[#5C3D28]"
-                        >
-                          Midtrans Simulator Resmi ↗
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  {/* NON-MIDTRANS 1-HOUR EXPIRY COUNTDOWN TIMER */}
-                  {paymentMethod !== 'midtrans' && (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4 animate-fade-in">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-amber-900">
-                        <Clock className="w-4 h-4 text-amber-700 animate-pulse" />
-                        <span>Selesaikan Pembayaran Dalam (Batas 1 Jam):</span>
-                      </div>
-                      <span className="font-mono text-xs font-bold text-amber-800 bg-amber-200/80 px-3 py-1 rounded-full shadow-xs">
-                        ⏱️ {formatCountdown(paymentTimeLeft)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* DIRECT PAYMENT DETAILS IN STEP 2 (LIVE REVISION FROM TEACHER) */}
-                  {paymentMethod === 'qris' && (
-                    <div className="p-5 bg-[#FAF6F0] rounded-2xl border border-[#8A6337]/30 text-center space-y-4 animate-fade-in">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-[11px] font-semibold text-[#5C3D28] shadow-xs">
-                        <Sparkles className="w-3.5 h-3.5 text-[#8A6337]" />
-                        <span>Scan QRIS Resmi Fatih Ahmad Zakky</span>
-                      </div>
-
-                      <div className="w-52 h-52 mx-auto bg-white p-2.5 rounded-2xl border border-stone-200 shadow-md relative overflow-hidden flex items-center justify-center">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src="/images/qris_user.png" 
-                          alt="QRIS Code Fatih Ahmad Zakky" 
-                          className="w-full h-full object-contain rounded-xl"
-                        />
-                      </div>
-
-                      <p className="text-[11px] text-stone-600 max-w-xs mx-auto leading-relaxed">
-                        Pindai QRIS di atas melalui GoPay, OVO, DANA, ShopeePay, BCA Mobile, atau Livin' Mandiri.
-                      </p>
-                    </div>
-                  )}
-
-                  {paymentMethod === 'bank' && (
-                    <div className="p-5 bg-[#FAF6F0] rounded-2xl border border-[#8A6337]/30 space-y-3 animate-fade-in">
-                      <div className="flex items-center justify-between text-xs text-stone-600 font-medium">
-                        <span>Nomor Rekening Bank ({selectedBank.toUpperCase()})</span>
-                        <span className="text-emerald-700 font-semibold">a/n Fatih Ahmad Zakky</span>
-                      </div>
-                      <div className="flex items-center justify-between bg-white p-3.5 rounded-xl border border-stone-200 shadow-xs">
-                        <span className="font-mono text-lg font-bold tracking-wider text-stone-900">
-                          1350021595952
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard('1350021595952')}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#8A6337] hover:bg-[#5C3D28] text-white rounded-lg text-xs font-medium transition-colors shadow-xs"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>{copiedVA ? 'Tersalin!' : 'Salin No. Rek'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {paymentMethod === 'cod' && (
-                    <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 text-center space-y-1 animate-fade-in">
-                      <p className="text-xs text-stone-600 font-medium">
-                        Bayar tunai langsung saat kurir mengantarkan pesanan ke rumah Anda.
-                      </p>
-                    </div>
-                  )}
                 </div>
 
               </div>
@@ -1224,32 +989,27 @@ export default function BasketCartPage() {
                     {/* Summary Numbers */}
                     <div className="space-y-2.5 text-xs text-stone-600 font-normal">
                       <div className="flex items-center justify-between">
-                        <span>Subtotal</span>
+                        <span>Subtotal Makanan</span>
                         <span className="font-mono">Rp {subtotal.toLocaleString('id-ID')}</span>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <span>Shipping</span>
-                        <span className="font-mono">Rp {shippingCost.toLocaleString('id-ID')}</span>
+                      <div className="flex items-center justify-between text-amber-900 font-medium">
+                        <span>Pajak Pengiriman &amp; Resto (10%)</span>
+                        <span className="font-mono">Rp {tax10Percent.toLocaleString('id-ID')}</span>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <span>Service Fee</span>
-                        <span className="font-mono">Rp {serviceFee.toLocaleString('id-ID')}</span>
-                      </div>
-
-                      {discountAmount > 0 && (
-                        <div className="flex items-center justify-between text-[#8A6337] font-medium">
-                          <span>Promo Discount</span>
-                          <span className="font-mono">- Rp {discountAmount.toLocaleString('id-ID')}</span>
+                      {calculatedDiscount > 0 && (
+                        <div className="flex items-center justify-between text-emerald-700 font-bold">
+                          <span>Diskon Promo</span>
+                          <span className="font-mono">- Rp {calculatedDiscount.toLocaleString('id-ID')}</span>
                         </div>
                       )}
 
                       <div className="border-t border-stone-300/70 pt-3" />
 
                       <div className="flex items-center justify-between text-stone-900 font-serif text-lg font-bold">
-                        <span>Total</span>
-                        <span>Rp {totalPayment.toLocaleString('id-ID')}</span>
+                        <span>Total Pembayaran</span>
+                        <span className="text-[#613A1F]">Rp {totalPayment.toLocaleString('id-ID')}</span>
                       </div>
                     </div>
                   </div>
@@ -1308,89 +1068,41 @@ export default function BasketCartPage() {
                     Rp {totalPayment.toLocaleString('id-ID')}
                   </span>
                 </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100/80 text-amber-900 rounded-full text-xs font-semibold">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Batas waktu: {formatCountdown(paymentTimeLeft)}</span>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-300">
+                  <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                  <span>Pembayaran Instan via Midtrans Gateway</span>
                 </div>
               </div>
 
-              {/* PAYMENT METHOD SPECIFIC CONTROLS */}
-              {paymentMethod === 'qris' && (
-                <div className="text-center space-y-5 bg-[#FAF6F0] p-6 rounded-3xl border border-[#8A6337]/30">
-                  <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white rounded-full text-xs font-semibold text-[#5C3D28] shadow-xs">
-                    <QrCode className="w-4 h-4 text-[#8A6337]" />
-                    <span>Pembayaran Instan via QRIS (Semua e-Wallet & M-Banking)</span>
+              {/* MIDTRANS GATEWAY EXCLUSIVE CARD */}
+              <div className="space-y-4 bg-[#FAF6F0] p-6 rounded-3xl border border-[#8A6337]/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-orange-500 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                    💳
                   </div>
-
-                  <div className="w-64 h-64 mx-auto bg-white p-3 rounded-2xl border-2 border-stone-200 shadow-md relative overflow-hidden flex items-center justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src="/images/qris_user.png" 
-                      alt="QRIS Pembayaran Fatih Ahmad Zakky" 
-                      className="w-full h-full object-contain rounded-xl"
-                    />
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">
+                      Midtrans Official Payment Gateway
+                    </h3>
+                    <p className="text-xs text-slate-600 font-medium">
+                      Proses verifikasi otomatis secara real-time. Klik tombol di bawah untuk membuka popup Midtrans Snap.
+                    </p>
                   </div>
+                </div>
 
-                  <p className="text-xs text-stone-600 max-w-sm mx-auto leading-relaxed font-medium">
-                    Buka aplikasi e-Wallet (GoPay, OVO, ShopeePay, DANA) atau m-Banking Anda (BCA Mobile, Livin' Mandiri), lalu pindaikan QRIS di atas untuk membayar.
+                <div className="p-4 bg-white rounded-2xl border border-stone-200 text-xs text-slate-700 space-y-2">
+                  <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-orange-600" />
+                    <span>Dukungan Metode Pembayaran Lengkap:</span>
                   </p>
-                </div>
-              )}
-
-              {paymentMethod === 'bank' && (
-                <div className="space-y-6 bg-[#FAF6F0] p-6 rounded-3xl border border-[#8A6337]/30">
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-stone-700">Pilih Bank Transfer</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {['mandiri', 'bca', 'bni'].map(bank => (
-                        <button
-                          key={bank}
-                          type="button"
-                          onClick={() => setSelectedBank(bank)}
-                          className={`p-3 rounded-xl border text-xs font-bold uppercase transition-all ${
-                            selectedBank === bank 
-                              ? 'border-[#8A6337] bg-white text-[#5C3D28] ring-2 ring-[#8A6337]' 
-                              : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                          }`}
-                        >
-                          Bank {bank}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Bank Account Info Box */}
-                  <div className="bg-white rounded-2xl p-5 border border-stone-200 space-y-3 shadow-xs">
-                    <div className="flex items-center justify-between text-xs text-stone-500">
-                      <span>Nomor Rekening Bank ({selectedBank.toUpperCase()})</span>
-                      <span className="font-semibold text-emerald-600">a/n Fatih Ahmad Zakky</span>
-                    </div>
-                    <div className="flex items-center justify-between bg-[#FAF8F5] p-3.5 rounded-xl border border-stone-200">
-                      <span className="font-mono text-xl font-bold tracking-wider text-stone-900">
-                        1350021595952
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard('1350021595952')}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#8A6337] hover:bg-[#5C3D28] text-white rounded-lg text-xs font-medium transition-colors shadow-xs"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>{copiedVA ? 'Tersalin!' : 'Salin No. Rek'}</span>
-                      </button>
-                    </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-medium text-[11px]">
+                    <span className="p-2 bg-stone-50 rounded-xl border text-center">📱 GoPay &amp; QRIS</span>
+                    <span className="p-2 bg-stone-50 rounded-xl border text-center">🛍️ ShopeePay</span>
+                    <span className="p-2 bg-stone-50 rounded-xl border text-center">🏦 Transfer VA Bank</span>
+                    <span className="p-2 bg-stone-50 rounded-xl border text-center">💳 Kartu Kredit / Debit</span>
                   </div>
                 </div>
-              )}
-
-              {paymentMethod === 'cod' && (
-                <div className="bg-stone-50 rounded-2xl p-6 border border-stone-200 text-center space-y-2">
-                  <Coins className="w-8 h-8 text-[#8A6337] mx-auto" />
-                  <h3 className="font-serif text-lg font-semibold text-stone-800">Cash on Delivery (COD)</h3>
-                  <p className="text-xs text-stone-500 max-w-md mx-auto leading-relaxed">
-                    Anda dapat melakukan pembayaran secara tunai langsung kepada kurir saat pesanan hidangan hangat Nefakky sampai di lokasi Anda.
-                  </p>
-                </div>
-              )}
+              </div>
 
               {/* Action Submit Payment */}
               <div className="pt-4 space-y-3">

@@ -9,26 +9,47 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        amber: {
+          50: '#FFFBEB',
+          100: '#FEF3C7',
+          500: '#F59E0B',
+          600: '#D97706',
+          700: '#B45309',
+        },
+        orange: {
+          500: '#F97316',
+          600: '#EA580C',
+          700: '#C2410C',
+        },
+        emerald: {
+          500: '#10B981',
+          600: '#059669',
+          700: '#047857',
+        },
+        coral: {
+          500: '#F43F5E',
+          600: '#E11D48',
+        },
         cream: {
-          50: '#FAF8F5',
-          100: '#F5F1EA',
-          200: '#EDE6DA',
-          300: '#DFD5C5',
+          50: '#FAF9F6',
+          100: '#F4F1EA',
+          200: '#EAE5D9',
+          300: '#DDD5C4',
           400: '#CBBBA7',
         },
         charcoal: {
-          700: '#4A4A4A',
-          800: '#333333',
-          900: '#222222',
+          700: '#334155',
+          800: '#1E293B',
+          900: '#0F172A',
         },
         bronze: {
-          500: '#9E7444',
-          600: '#8A6337',
-          700: '#75522C',
+          500: '#D97706',
+          600: '#B45309',
+          700: '#92400E',
         },
         surface: {
-          input: '#F0EEEA',
-          border: '#E3DFD7',
+          input: '#F8F6F0',
+          border: '#E2E8F0',
         }
       },
       fontFamily: {
@@ -36,8 +57,9 @@ const config: Config = {
         sans: ['var(--font-sans)', 'Inter', 'sans-serif'],
       },
       boxShadow: {
-        'soft-card': '0 20px 40px -15px rgba(0, 0, 0, 0.07), 0 0 15px rgba(0, 0, 0, 0.03)',
-        'floating': '0 30px 60px -20px rgba(0, 0, 0, 0.12)',
+        'soft-card': '0 10px 30px -5px rgba(249, 115, 22, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03)',
+        'vibrant': '0 12px 35px -8px rgba(234, 88, 12, 0.25)',
+        'floating': '0 25px 50px -12px rgba(15, 23, 42, 0.2)',
       }
     },
   },

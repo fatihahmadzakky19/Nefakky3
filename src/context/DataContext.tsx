@@ -85,14 +85,16 @@ export interface AdminOrder {
   }[];
   itemCount: number;
   paymentMethod: string;
-  paymentBadge: 'PAID' | 'AWAITING' | 'REFUNDED';
-  deliveryType: 'EXPRESS' | 'STANDARD' | 'SAME DAY';
-  status: 'SHIPPING' | 'COOKING' | 'COMPLETED' | 'PENDING' | 'EXPIRED' | 'CANCELLED';
+  paymentBadge: 'PAID' | 'AWAITING' | 'REFUNDED' | 'FAILED';
+  deliveryType: 'EXPRESS' | 'STANDARD' | 'SAME DAY' | 'PB1 (10%)' | string;
+  status: 'RECEIVED' | 'COOKING' | 'READY' | 'DELIVERING' | 'COMPLETED' | 'PENDING' | 'SHIPPING' | 'EXPIRED' | 'CANCELLED';
   subtotal: number;
   shippingCost: number;
   discount: number;
   total: number;
   date: string;
+  customerConfirmed?: boolean;
+  confirmedAt?: string;
 }
 
 /** Interface Data Ulasan (Reviews) */
@@ -427,7 +429,123 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
   }
 ];
 
-export const DEFAULT_ORDERS: AdminOrder[] = [];
+export const DEFAULT_ORDERS: AdminOrder[] = [
+  {
+    id: 'ORD-88219',
+    customerName: 'Nizar Azzuhra',
+    customerEmail: 'nizarazzuhra@gmail.com',
+    avatar: 'https://ui-avatars.com/api/?name=Nizar+Azzuhra&background=F97316&color=ffffff',
+    address: 'Jl. Kebon Jeruk No. 12, Jakarta Barat',
+    phone: '081234567890',
+    items: [
+      { id: 'm1', name: 'Ayam Bakar Rempah', price: 35000, quantity: 2, image: '/images/ayam_bakar.jpg' },
+      { id: 'm6', name: 'Jus Segar (Jambu, Sirsak, Mangga)', price: 15000, quantity: 2, image: '/images/jus_mangga.jpg' }
+    ],
+    itemCount: 4,
+    paymentMethod: 'QRIS / GoPay',
+    paymentBadge: 'PAID',
+    deliveryType: 'EXPRESS',
+    status: 'DELIVERING', // Status: Pesanan Diantar / Di Jalan
+    subtotal: 100000,
+    shippingCost: 12000,
+    discount: 10000,
+    total: 102000,
+    date: 'Hari ini, 12:45',
+    customerConfirmed: false
+  },
+  {
+    id: 'ORD-88218',
+    customerName: 'Siti Rahmawati',
+    customerEmail: 'siti@example.com',
+    avatar: 'https://ui-avatars.com/api/?name=Siti+Rahma&background=10B981&color=ffffff',
+    address: 'Jl. Sudirman No. 105, Jakarta Selatan',
+    phone: '089876543210',
+    items: [
+      { id: 'm1', name: 'Ayam Bakar Rempah', price: 35000, quantity: 3, image: '/images/ayam_bakar.jpg' },
+      { id: 'm2', name: 'Nasi Bakar Cumi', price: 28000, quantity: 2, image: '/images/nasi_bakar.jpg' }
+    ],
+    itemCount: 5,
+    paymentMethod: 'Midtrans Credit Card',
+    paymentBadge: 'PAID',
+    deliveryType: 'SAME DAY',
+    status: 'COMPLETED',
+    subtotal: 161000,
+    shippingCost: 15000,
+    discount: 15000,
+    total: 161000,
+    date: 'Hari ini, 10:15',
+    customerConfirmed: true,
+    confirmedAt: 'Hari ini, 11:30'
+  },
+  {
+    id: 'ORD-88217',
+    customerName: 'Budi Santoso',
+    customerEmail: 'budi@example.com',
+    avatar: 'https://ui-avatars.com/api/?name=Budi+Santoso&background=8B5CF6&color=ffffff',
+    address: 'Gedung Cyber 2 Lt. 5, Kuningan, Jakarta',
+    phone: '085512344321',
+    items: [
+      { id: 'm4', name: 'Gudeg Komplit Jogja', price: 32000, quantity: 2, image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80' },
+      { id: 'm6', name: 'Jus Segar (Jambu, Sirsak, Mangga)', price: 15000, quantity: 2, image: '/images/jus_mangga.jpg' }
+    ],
+    itemCount: 4,
+    paymentMethod: 'Transfer Bank BCA',
+    paymentBadge: 'PAID',
+    deliveryType: 'STANDARD',
+    status: 'COOKING',
+    subtotal: 94000,
+    shippingCost: 10000,
+    discount: 0,
+    total: 104000,
+    date: 'Hari ini, 13:10',
+    customerConfirmed: false
+  },
+  {
+    id: 'ORD-88216',
+    customerName: 'Dewi Lestari',
+    customerEmail: 'dewi@example.com',
+    avatar: 'https://ui-avatars.com/api/?name=Dewi+Lestari&background=EC4899&color=ffffff',
+    address: 'Jl. Gatot Subroto Kav 22, Jakarta',
+    phone: '087788990011',
+    items: [
+      { id: 'm1', name: 'Ayam Bakar Rempah', price: 35000, quantity: 1, image: '/images/ayam_bakar.jpg' },
+      { id: 'm3', name: 'Krecek Pedas Gurih', price: 22000, quantity: 1, image: '/images/krecek.jpg' }
+    ],
+    itemCount: 2,
+    paymentMethod: 'ShopeePay',
+    paymentBadge: 'PAID',
+    deliveryType: 'EXPRESS',
+    status: 'READY',
+    subtotal: 57000,
+    shippingCost: 10000,
+    discount: 5000,
+    total: 62000,
+    date: 'Hari ini, 13:20',
+    customerConfirmed: false
+  },
+  {
+    id: 'ORD-88215',
+    customerName: 'Rian Pratama',
+    customerEmail: 'rian@example.com',
+    avatar: 'https://ui-avatars.com/api/?name=Rian+Pratama&background=3B82F6&color=ffffff',
+    address: 'Apartemen Taman Rasuna Tower 8, Jakarta',
+    phone: '081399887766',
+    items: [
+      { id: 'm5', name: 'Garang Asam Ayam Kampung', price: 38000, quantity: 1, image: '/images/garang_asam.jpg' }
+    ],
+    itemCount: 1,
+    paymentMethod: 'COD (Bayar di Tempat)',
+    paymentBadge: 'AWAITING',
+    deliveryType: 'STANDARD',
+    status: 'RECEIVED',
+    subtotal: 38000,
+    shippingCost: 10000,
+    discount: 0,
+    total: 48000,
+    date: 'Hari ini, 13:30',
+    customerConfirmed: false
+  }
+];
 
 export const DEFAULT_REVIEWS: UserReview[] = [
   {
@@ -488,6 +606,7 @@ interface DataContextType {
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
+  confirmOrderReceived: (id: string) => void;
   deleteOrder: (id: string) => void;
   cancelOrder: (id: string, reason?: string) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
@@ -903,6 +1022,22 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }));
   };
 
+  const confirmOrderReceived = (id: string) => {
+    const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = `Hari ini, ${timeStr}`;
+    setOrders(prev => prev.map(o => {
+      if (o.id === id) {
+        return {
+          ...o,
+          status: 'COMPLETED',
+          customerConfirmed: true,
+          confirmedAt: dateStr
+        };
+      }
+      return o;
+    }));
+  };
+
   return (
     <DataContext.Provider value={{
       products,
@@ -930,6 +1065,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       addOrder,
       updateOrderStatus,
       updatePaymentStatus,
+      confirmOrderReceived,
       deleteOrder,
       cancelOrder,
       addReview,

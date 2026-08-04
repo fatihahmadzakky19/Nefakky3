@@ -145,7 +145,7 @@ export default function LoginPage() {
                   Alamat Email
                 </label>
                 <div className="relative flex items-center">
-                  <Mail className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none" />
+                  <Mail className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none z-10" />
                   <input
                     type="email"
                     value={email}
@@ -154,7 +154,7 @@ export default function LoginPage() {
                       if (errorMessage) setErrorMessage('');
                     }}
                     placeholder="budi@example.com"
-                    className="input-field pl-10"
+                    className="input-field !pl-11 !pr-4"
                     required
                   />
                 </div>
@@ -166,7 +166,7 @@ export default function LoginPage() {
                   Kata Sandi
                 </label>
                 <div className="relative flex items-center">
-                  <Lock className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none" />
+                  <Lock className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none z-10" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
@@ -175,13 +175,13 @@ export default function LoginPage() {
                       if (errorMessage) setErrorMessage('');
                     }}
                     placeholder="••••••••"
-                    className="input-field pl-10 pr-10"
+                    className="input-field !pl-11 !pr-10"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-stone-400 hover:text-stone-600 transition-colors"
+                    className="absolute right-3.5 text-stone-400 hover:text-stone-600 transition-colors z-10"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>

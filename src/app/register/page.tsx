@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Eye, EyeOff, ShieldCheck, Truck, Leaf } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Truck, Leaf, User, Mail, Phone, Lock } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -79,32 +79,27 @@ export default function RegisterPage() {
       {/* Outer Card Container */}
       <div className="w-full max-w-[1080px] bg-[#FAF8F5] rounded-2xl sm:rounded-[28px] overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-2 border border-stone-200/40 my-auto">
         
-        {/* LEFT PANEL: Fresh Mango Juice (Jus Mangga) Photo */}
-        <div className="relative min-h-[220px] sm:min-h-[260px] lg:min-h-[640px] w-full bg-stone-100 overflow-hidden flex flex-col justify-between p-6 sm:p-8 md:p-12 text-white">
+        {/* LEFT PANEL: Authentic Food Photo */}
+        <div className="relative min-h-[220px] sm:min-h-[260px] lg:min-h-[640px] w-full bg-stone-900 overflow-hidden flex flex-col justify-end p-6 sm:p-8 md:p-12 text-white">
           <Image
-            src="/images/jus_mangga.jpg"
-            alt="Jus Mangga Segar Alami khas Nefakky"
+            src="/images/register_food.png"
+            alt="Sajian Kuliner Nusantara khas Nefakky"
             fill
-            className="object-cover object-center brightness-[0.92]"
+            className="object-cover object-center brightness-[0.85] contrast-[1.05]"
             priority
           />
-          {/* Subtle top/bottom Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/75" />
+          {/* Subtle Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
-          {/* Top Logo */}
-          <div className="relative z-10">
-            <span className="font-serif text-xl sm:text-2xl font-semibold tracking-tight text-white/90">
-              Nefakky
-            </span>
-          </div>
-          
-          {/* Bottom Heading & Subtitle */}
           <div className="relative z-10 space-y-2 sm:space-y-3">
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-[40px] leading-[1.15] font-normal text-white tracking-tight">
-              Kesegaran Alami di Setiap Tegukan.
+            <span className="text-[9px] sm:text-[10px] tracking-[0.25em] font-semibold text-stone-300 uppercase block">
+              BERGABUNG DENGAN NEFAKKY
+            </span>
+            <h2 className="font-serif text-2xl sm:text-3xl lg:text-[40px] leading-[1.15] font-normal text-stone-100 tracking-tight">
+              Nikmati Sajian Kuliner Terbaik.
             </h2>
-            <p className="text-xs text-stone-100 font-light max-w-md leading-relaxed hidden sm:block">
-              Bergabunglah dengan komunitas pencinta kuliner Nefakky dan nikmati kesegaran Jus Mangga segar alami serta sajian spesial lainnya.
+            <p className="text-xs text-stone-300 font-light max-w-md leading-relaxed hidden sm:block">
+              Daftar akun sekarang untuk kemudahan pemesanan hidangan favorit khas nusantara dan dapatkan penawaran promo eksklusif.
             </p>
           </div>
         </div>
@@ -141,14 +136,17 @@ export default function RegisterPage() {
                 <label className="block text-[11px] font-medium text-stone-600 mb-1">
                   Nama Lengkap
                 </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Budi Santoso"
-                  className="input-field"
-                  required
-                />
+                <div className="relative flex items-center">
+                  <User className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none z-10" />
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Budi Santoso"
+                    className="input-field !pl-11 !pr-4"
+                    required
+                  />
+                </div>
               </div>
 
               {/* Grid: Email & Phone Number */}
@@ -157,26 +155,32 @@ export default function RegisterPage() {
                   <label className="block text-[11px] font-medium text-stone-600 mb-1">
                     Email
                   </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="budi@example.com"
-                    className="input-field"
-                    required
-                  />
+                  <div className="relative flex items-center">
+                    <Mail className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none z-10" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="budi@example.com"
+                      className="input-field !pl-11 !pr-4"
+                      required
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-stone-600 mb-1">
                     Nomor Telepon
                   </label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="081234567890"
-                    className="input-field"
-                  />
+                  <div className="relative flex items-center">
+                    <Phone className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none z-10" />
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="081234567890"
+                      className="input-field !pl-11 !pr-4"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -186,18 +190,19 @@ export default function RegisterPage() {
                   Kata Sandi
                 </label>
                 <div className="relative flex items-center">
+                  <Lock className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none z-10" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="input-field pr-10"
+                    className="input-field !pl-11 !pr-10"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-stone-400 hover:text-stone-600 transition-colors"
+                    className="absolute right-3.5 text-stone-400 hover:text-stone-600 transition-colors z-10"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -209,14 +214,17 @@ export default function RegisterPage() {
                 <label className="block text-[11px] font-medium text-stone-600 mb-1">
                   Konfirmasi Kata Sandi
                 </label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="input-field"
-                  required
-                />
+                <div className="relative flex items-center">
+                  <Lock className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none z-10" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="input-field !pl-11 !pr-4"
+                    required
+                  />
+                </div>
               </div>
 
               {/* Terms Checkbox */}

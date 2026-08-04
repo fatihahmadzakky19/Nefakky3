@@ -126,6 +126,49 @@ export default function UserHomePage() {
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
+  // Hero Animated Showcase Slides & Timer
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+
+  const HERO_SLIDES = [
+    {
+      id: 'ayam_bakar_hero',
+      name: 'Ayam Bakar Kecap Rempah',
+      tagline: 'Ayam Pejantan Dibakar Bumbu Rempah • 100% Halal',
+      rating: '4.9/5',
+      reviews: '2.500+ Ulasan',
+      price: 'Rp 35.000',
+      image: '/images/ayam_bakar_hero.png',
+      badgeText: '🔥 TERLARIS HARI INI'
+    },
+    {
+      id: 'nasi_bakar_hero',
+      name: 'Nasi Bakar Cumi Pedas',
+      tagline: 'Nasi Gurih Bungkus Daun Pisang Harum',
+      rating: '4.8/5',
+      reviews: '1.800+ Ulasan',
+      price: 'Rp 28.000',
+      image: '/images/nasi_bakar.jpg',
+      badgeText: '👨‍🍳 REKOMENDASI KOKI'
+    },
+    {
+      id: 'gudeg_hero',
+      name: 'Gudeg Jogja Komplit',
+      tagline: 'Gurih Manis Bacem Telur & Suwiran Ayam',
+      rating: '5.0/5',
+      reviews: '3.100+ Ulasan',
+      price: 'Rp 40.000',
+      image: '/images/gudeg.jpg',
+      badgeText: '🌟 BESTSELLER TRADISIONAL'
+    }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroSlideIndex((prev) => (prev + 1) % 3);
+    }, 3800);
+    return () => clearInterval(timer);
+  }, []);
+
   // Filter visible products from DataContext
   const visibleProducts = products.filter(p => p.visibility !== false);
 
@@ -208,30 +251,83 @@ export default function UserHomePage() {
 
           </div>
 
-          {/* Hero Right Image Card */}
+          {/* Hero Right Animated Culinary Showcase */}
           <div className="lg:col-span-6">
-            <div className="relative w-full h-[340px] sm:h-[400px] md:h-[440px] rounded-[32px] overflow-hidden shadow-xl border border-stone-200/60 bg-stone-100">
-              <Image
-                src="/images/hero_rendang.png"
-                alt="Gourmet Rendang Sapi Rumahan dengan Sambal & Nasi Warm"
-                fill
-                className="object-cover object-center"
-                priority
-              />
+            <div className="relative w-full h-[360px] sm:h-[420px] md:h-[460px] rounded-[36px] overflow-hidden shadow-2xl border border-amber-200/80 bg-slate-950 flex items-center justify-center p-6 group">
+              
+              {/* Animated Rotating Ambient Glow Ring */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/30 via-orange-500/20 to-emerald-500/20 animate-spin-slow opacity-80 blur-xl pointer-events-none" />
 
-              {/* Rating Overlay Floating Badge */}
-              <div className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-md rounded-2xl p-3 sm:p-3.5 shadow-lg border border-stone-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold shrink-0">
-                  <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+              {/* Steaming SVG Motion Lines */}
+              <div className="absolute top-10 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-none z-20">
+                <div className="w-1.5 h-12 bg-gradient-to-t from-white/60 to-transparent rounded-full animate-steam" />
+                <div className="w-1.5 h-16 bg-gradient-to-t from-amber-200/70 to-transparent rounded-full animate-steam [animation-delay:0.8s]" />
+                <div className="w-1.5 h-10 bg-gradient-to-t from-orange-200/60 to-transparent rounded-full animate-steam [animation-delay:1.5s]" />
+              </div>
+
+              {/* Animated Active Slide Image Container */}
+              {HERO_SLIDES.map((slide, index) => {
+                const isActive = index === heroSlideIndex;
+                return (
+                  <div
+                    key={slide.id}
+                    className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                      isActive ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-95 pointer-events-none z-0'
+                    }`}
+                  >
+                    <Image
+                      src={slide.image}
+                      alt={slide.name}
+                      fill
+                      className="object-cover object-center transform group-hover:scale-105 transition-transform duration-700"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+                  </div>
+                );
+              })}
+
+              {/* Floating Top Badge (Fresh Cooking Live) */}
+              <div className="absolute top-5 left-5 z-20 bg-slate-900/90 backdrop-blur-md rounded-full px-4 py-1.5 border border-amber-400/40 shadow-lg flex items-center gap-2 animate-float-slow">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider">
+                  {HERO_SLIDES[heroSlideIndex].badgeText}
+                </span>
+              </div>
+
+              {/* Floating Live Customer Rating Toast (Bottom Left) */}
+              <div className="absolute bottom-6 left-6 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-3.5 shadow-xl border border-amber-200 flex items-center gap-3 animate-fade-in max-w-[250px]">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center font-bold text-sm shadow-md shrink-0">
+                  <Star className="w-5 h-5 fill-white text-white" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-stone-900 leading-tight">
-                    Penilaian 4.8/5
+                  <div className="text-xs font-bold text-slate-900 leading-tight">
+                    {HERO_SLIDES[heroSlideIndex].name}
                   </div>
-                  <div className="text-[10px] text-stone-400 font-normal">
-                    Dari 2.000+ Pelanggan
+                  <div className="text-[10px] text-orange-600 font-bold mt-0.5">
+                    ⭐ {HERO_SLIDES[heroSlideIndex].rating} ({HERO_SLIDES[heroSlideIndex].reviews})
                   </div>
                 </div>
+              </div>
+
+              {/* Floating Price Pill (Bottom Right) */}
+              <div className="absolute bottom-6 right-6 z-20 bg-slate-900/90 backdrop-blur-md border border-amber-300/40 rounded-2xl px-4 py-2 text-right shadow-xl">
+                <span className="text-[9px] text-amber-300 font-bold tracking-widest uppercase block">Harga Special</span>
+                <span className="font-serif text-lg font-black text-white">{HERO_SLIDES[heroSlideIndex].price}</span>
+              </div>
+
+              {/* Interactive Carousel Navigation Indicators */}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-slate-900/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                {HERO_SLIDES.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setHeroSlideIndex(idx)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      idx === heroSlideIndex ? 'w-6 bg-orange-500' : 'w-2 bg-white/40 hover:bg-white/70'
+                    }`}
+                    title={`Lihat Slide ${idx + 1}`}
+                  />
+                ))}
               </div>
 
             </div>

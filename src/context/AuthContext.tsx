@@ -60,6 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
+        setLoading(false);
       } catch (e) {
         console.error("Error parsing saved session", e);
       }
@@ -67,7 +68,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
     }
 
+    // Safety fallback: ensure loading never hangs stuck indefinitely
+    const fallbackTimer = setTimeout(() => {
+      setLoading(false);
+    }, 600);
+
     const unsubscribe = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
+      clearTimeout(fallbackTimer);
       if (fbUser && typeof window !== 'undefined') {
         const role = fbUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'customer';
 
@@ -389,39 +396,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { success: false, role: 'customer' as const, error: 'Proses login Google dibatalkan.' };
       }
 
-      // Demo/Local Google User Fallback when Firebase popup is blocked or unconfigured domain
-      const demoEmail = 'user.google@gmail.com';
-      const demoUser: UserProfile = {
-        uid: 'google-user-' + Date.now(),
-        email: demoEmail,
-        displayName: 'Pengguna Google',
-        photoURL: 'https://ui-avatars.com/api/?name=Google+User&background=4285F4&color=ffffff&bold=true',
-        role: 'customer'
-      };
-
-      if (typeof window !== 'undefined') {
-        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
-        const existingIdx = registeredUsers.findIndex(
-          (u: any) => u.email && u.email.trim().toLowerCase() === demoEmail
-        );
-        if (existingIdx < 0) {
-          registeredUsers.push({
-            uid: demoUser.uid,
-            name: demoUser.displayName,
-            displayName: demoUser.displayName,
-            email: demoEmail,
-            photoURL: demoUser.photoURL,
-            role: 'customer'
-          });
-          localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
-        }
-        localStorage.setItem('nefakky_user', JSON.stringify(demoUser));
+      if (err?.code === 'auth/unauthorized-domain') {
+        setLoading(false);
+        return { 
+          success: false, 
+          role: 'customer' as const, 
+          error: 'Domain hosting Anda belum terdaftar di Firebase Console (Authentication > Settings > Authorized domains). Tambahkan domain hosting Anda agar Login Google asli berfungsi.' 
+        };
       }
 
-      setUser(demoUser);
+      if (err?.code === 'auth/operation-not-allowed') {
+        setLoading(false);
+        return { 
+          success: false, 
+          role: 'customer' as const, 
+          error: 'Metode Login Google belum diaktifkan di Firebase Console (Authentication > Sign-in method > Google).' 
+        };
+      }
+
+      // Offline / Localhost development fallback only
+      const isLocalhost = typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' || 
+        window.location.hostname === '127.0.0.1'
+      );
+
+      if (isLocalhost) {
+        const demoEmail = 'user.google@gmail.com';
+        const demoUser: UserProfile = {
+          uid: 'google-user-' + Date.now(),
+          email: demoEmail,
+          displayName: 'Pengguna Google',
+          photoURL: 'https://ui-avatars.com/api/?name=Google+User&background=4285F4&color=ffffff&bold=true',
+          role: 'customer'
+        };
+
+        if (typeof window !== 'undefined') {
+          const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+          const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+          const existingIdx = registeredUsers.findIndex(
+            (u: any) => u.email && u.email.trim().toLowerCase() === demoEmail
+          );
+          if (existingIdx < 0) {
+            registeredUsers.push({
+              uid: demoUser.uid,
+              name: demoUser.displayName,
+              displayName: demoUser.displayName,
+              email: demoEmail,
+              photoURL: demoUser.photoURL,
+              role: 'customer'
+            });
+            localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
+          }
+          localStorage.setItem('nefakky_user', JSON.stringify(demoUser));
+        }
+
+        setUser(demoUser);
+        setLoading(false);
+        return { success: true, role: 'customer' as const };
+      }
+
       setLoading(false);
-      return { success: true, role: 'customer' as const };
+      return { 
+        success: false, 
+        role: 'customer' as const, 
+        error: err?.message || 'Gagal login dengan Google. Pastikan domain hosting sudah terdaftar di Firebase Console.' 
+      };
     }
   };
 
