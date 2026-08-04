@@ -34,7 +34,7 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
     name: 'Ayam Bakar',
     category: 'Makanan Berat',
     price: 35000,
-    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    image: '/images/ayam_bakar.jpg',
     description: 'Ayam pejantan pilihan dibakar dengan lumuran bumbu kecap rempah.'
   },
   {
@@ -42,7 +42,7 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
     name: 'Nasi Bakar',
     category: 'Makanan Berat',
     price: 28000,
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+    image: '/images/nasi_bakar.jpg',
     description: 'Nasi gurih rempah dibungkus daun pisang dengan isian cumi pedas.'
   },
   {
@@ -50,7 +50,7 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
     name: 'Krecek',
     category: 'Menu Hemat',
     price: 22000,
-    image: '/images/hero_rendang.png',
+    image: '/images/krecek.jpg',
     description: 'Olahan krecek kulit sapi lembut dimasak dengan santan kental gurih.'
   },
   {
@@ -58,7 +58,7 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
     name: 'Gudeg',
     category: 'Makanan Berat',
     price: 40000,
-    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    image: '/images/gudeg.jpg',
     description: 'Nangka muda dimasak perlahan disajikan dengan telur bacem & krecek.'
   },
   {
@@ -66,7 +66,7 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
     name: 'Garang Asam',
     category: 'Menu Hemat',
     price: 32000,
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80',
+    image: '/images/garang_asam.jpg',
     description: 'Ayam kampung segar dikukus dalam daun pisang dengan kuah santan asam.'
   },
   {

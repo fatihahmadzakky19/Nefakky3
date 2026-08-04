@@ -197,8 +197,8 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     rating: 4.9,
     reviewsCount: 156,
     soldCount: '1.5k+ Terjual',
-    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80'],
+    image: '/images/ayam_bakar.jpg',
+    gallery: ['/images/ayam_bakar.jpg'],
     description: 'Ayam pejantan pilihan dibakar dengan lumuran bumbu kecap rempah tradisional yang meresap hingga ke tulang.',
     badge: 'TERPOPULER',
     ingredients: 'Ayam Pejantan Segar, Kecap Rempah Bango, Bawang Merah, Bawang Putih, Ketumbar, Serai, Lengkuas.',
@@ -222,8 +222,8 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     rating: 4.8,
     reviewsCount: 98,
     soldCount: '920 Terjual',
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'],
+    image: '/images/nasi_bakar.jpg',
+    gallery: ['/images/nasi_bakar.jpg'],
     description: 'Nasi gurih rempah dibungkus daun pisang dengan isian cumi pedas manis yang dibakar harum khas nusantara.',
     badge: 'BARU',
     ingredients: 'Beras Pulen, Santan, Cumi Segar, Cabai Rawit, Daun Kemangi, Daun Salam, Daun Pisang.',
@@ -247,8 +247,8 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     rating: 4.9,
     reviewsCount: 210,
     soldCount: '2.1k Terjual',
-    image: '/images/hero_rendang.png',
-    gallery: ['/images/hero_rendang.png'],
+    image: '/images/krecek.jpg',
+    gallery: ['/images/krecek.jpg'],
     description: 'Olahan krecek kulit sapi lembut dimasak dengan santan kental gurih, cabai rawit pedas, dan kacang tolo.',
     badge: 'TERPOPULER',
     ingredients: 'Krecek Kulit Sapi, Kacang Tolo, Santan Kelapa, Cabai Rawit Merah, Lengkuas, Daun Salam.',
@@ -272,8 +272,8 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     rating: 5.0,
     reviewsCount: 312,
     soldCount: '3.5k Terjual',
-    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80'],
+    image: '/images/gudeg.jpg',
+    gallery: ['/images/gudeg.jpg'],
     description: 'Nangka muda dimasak perlahan dengan santan dan gula jawa disajikan dengan telur bacem, suwiran ayam, dan krecek.',
     badge: 'BEST SELLER',
     ingredients: 'Nangka Muda (Gori), Gula Jawa Asli, Santan Kelapa, Telur Bebek Bacem, Ayam Suwir, Daun Jati.',
@@ -297,8 +297,8 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     rating: 4.8,
     reviewsCount: 88,
     soldCount: '750 Terjual',
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80'],
+    image: '/images/garang_asam.jpg',
+    gallery: ['/images/garang_asam.jpg'],
     description: 'Potongan ayam kampung segar dikukus dalam bungkus daun pisang dengan kuah santan asam segar, belimbing wulung, dan cabai rawit.',
     ingredients: 'Ayam Kampung Segar, Belimbing Wulung, Tomat Hijau, Cabai Rawit Utuh, Santan Encuk, Daun Pisang.',
     usageAdvice: 'Kuah asam pedas gurih terasa nikmat disajikan hangat',
@@ -341,7 +341,7 @@ export const DEFAULT_PROMOTIONS: PromotionItem[] = [
     subtitle: 'Ayam bakar pejantan pilihan dengan kecap rempah pilihan.',
     tag: '30% OFF',
     badge: 'Active',
-    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    image: '/images/ayam_bakar.jpg',
     duration: '01 Mei - 31 Des',
     type: 'Percentage',
     usedCount: 142,
@@ -440,7 +440,7 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     rating: 5,
     date: 'Kemarin',
     productName: 'Ayam Bakar Rempah Bango',
-    productImage: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    productImage: '/images/ayam_bakar.jpg',
     comment: 'Ayam bakarnya sangat empuk dan bumbu kecap rempahnya meresap sempurna sampai ke dalam. Pengiriman super cepat!',
     likesCount: 12,
     status: 'PUBLISHED'
@@ -514,7 +514,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       if (savedProd) {
         try {
           const parsed = JSON.parse(savedProd);
-          const hasOldNames = parsed.some((p: any) => 
+          const hasOldNamesOrImages = parsed.some((p: any) => 
             p.name.includes('Wagyu') || 
             p.name.includes('Truffle') || 
             p.name.includes('Sate') || 
@@ -527,9 +527,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             p.name.includes('Spesial') ||
             p.name.includes('Jogja') ||
             p.name.includes('Kampung') ||
-            p.name.includes('Jus Segar')
+            p.name.includes('Jus Segar') ||
+            p.image?.includes('unsplash') ||
+            p.image?.includes('hero_rendang')
           );
-          if (hasOldNames || !Array.isArray(parsed) || parsed.length === 0) {
+          if (hasOldNamesOrImages || !Array.isArray(parsed) || parsed.length === 0) {
             localStorage.setItem('nefakky_products', JSON.stringify(DEFAULT_PRODUCTS));
             setProductsState(DEFAULT_PRODUCTS);
           } else {

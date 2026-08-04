@@ -57,7 +57,7 @@ const MENU_PRODUCTS: MenuProduct[] = [
     rating: 4.9,
     description: 'Ayam pejantan pilihan dibakar dengan lumuran bumbu kecap rempah tradisional yang meresap hingga ke tulang.',
     soldCount: '1.5k+ Terjual',
-    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    image: '/images/ayam_bakar.jpg',
     badge: 'BEST SELLER'
   },
   {
@@ -68,7 +68,7 @@ const MENU_PRODUCTS: MenuProduct[] = [
     rating: 4.8,
     description: 'Nasi gurih rempah dibungkus daun pisang dengan isian cumi pedas manis yang dibakar harum khas nusantara.',
     soldCount: '920 Terjual',
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+    image: '/images/nasi_bakar.jpg',
     badge: 'NEW'
   },
   {
@@ -79,7 +79,7 @@ const MENU_PRODUCTS: MenuProduct[] = [
     rating: 4.9,
     description: 'Olahan krecek kulit sapi lembut dimasak dengan santan kental gurih, cabai rawit pedas, dan kacang tolo.',
     soldCount: '2.1k Terjual',
-    image: '/images/hero_rendang.png'
+    image: '/images/krecek.jpg'
   },
   {
     id: 'm4',
@@ -89,7 +89,7 @@ const MENU_PRODUCTS: MenuProduct[] = [
     rating: 5.0,
     description: 'Nangka muda dimasak perlahan dengan santan dan gula jawa disajikan dengan telur bacem, suwiran ayam, dan krecek.',
     soldCount: '3.5k Terjual',
-    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    image: '/images/gudeg.jpg',
     badge: 'BEST SELLER'
   },
   {
@@ -100,7 +100,7 @@ const MENU_PRODUCTS: MenuProduct[] = [
     rating: 4.8,
     description: 'Potongan ayam kampung segar dikukus dalam bungkus daun pisang dengan kuah santan asam segar, belimbing wulung, dan cabai rawit.',
     soldCount: '750 Terjual',
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80'
+    image: '/images/garang_asam.jpg'
   },
   {
     id: 'm6',

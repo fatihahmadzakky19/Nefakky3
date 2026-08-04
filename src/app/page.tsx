@@ -58,7 +58,7 @@ const ALL_MENUS: MenuItem[] = [
     category: 'Makanan Berat',
     price: 35000,
     rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=600&q=80',
+    image: '/images/ayam_bakar.jpg',
     description: 'Ayam pejantan pilihan dibakar dengan lumuran bumbu kecap rempah tradisional yang meresap hingga ke tulang.',
     badge: 'TERPOPULER'
   },
@@ -68,7 +68,7 @@ const ALL_MENUS: MenuItem[] = [
     category: 'Makanan Berat',
     price: 28000,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+    image: '/images/nasi_bakar.jpg',
     description: 'Nasi gurih rempah dibungkus daun pisang dengan isian cumi pedas manis yang dibakar harum khas nusantara.',
     badge: 'BARU'
   },
@@ -78,7 +78,7 @@ const ALL_MENUS: MenuItem[] = [
     category: 'Menu Hemat',
     price: 22000,
     rating: 4.9,
-    image: '/images/hero_rendang.png',
+    image: '/images/krecek.jpg',
     description: 'Olahan krecek kulit sapi lembut dimasak dengan santan kental gurih, cabai rawit pedas, dan kacang tolo.',
     badge: 'TERPOPULER'
   },
@@ -88,7 +88,7 @@ const ALL_MENUS: MenuItem[] = [
     category: 'Makanan Berat',
     price: 40000,
     rating: 5.0,
-    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    image: '/images/gudeg.jpg',
     description: 'Nangka muda dimasak perlahan dengan santan dan gula jawa disajikan dengan telur bacem, suwiran ayam, dan krecek.'
   },
   {
@@ -97,7 +97,7 @@ const ALL_MENUS: MenuItem[] = [
     category: 'Menu Hemat',
     price: 32000,
     rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80',
+    image: '/images/garang_asam.jpg',
     description: 'Potongan ayam kampung segar dikukus dalam bungkus daun pisang dengan kuah santan asam segar, belimbing wulung, dan cabai rawit.'
   },
   {

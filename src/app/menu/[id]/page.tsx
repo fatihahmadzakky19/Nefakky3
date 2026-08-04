@@ -37,9 +37,8 @@ export default function MenuDetailPage() {
 
   const currentMainImage = selectedImage || product.image;
   const productThumbnails = [
-    product.image,
-    'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80'
-  ].slice(0, 2);
+    product.image
+  ];
 
   const handleAddToCart = () => {
     if (!user) {
