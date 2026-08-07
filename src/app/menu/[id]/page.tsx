@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart, MASTER_PRODUCTS } from '@/context/CartContext';
+import { getProductSpecificReviews } from '@/lib/reviews';
 import { 
   Search, 
   ShoppingBag, 
@@ -306,59 +307,36 @@ export default function MenuDetailPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 bg-stone-100">
-                  <Image src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80" alt="Amanda Rizky" fill className="object-cover" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-stone-900">Amanda Rizky</h4>
-                  <div className="flex items-center gap-0.5 text-amber-500 text-xs">
-                    <Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" />
+            {getProductSpecificReviews(product.name, product.image).map((rev) => (
+              <div key={rev.id} className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 bg-stone-100">
+                      <Image src={rev.avatar} alt={rev.author} fill className="object-cover" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-stone-900">{rev.author}</h4>
+                      <div className="flex items-center gap-0.5 text-amber-500 text-xs">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star 
+                            key={i} 
+                            className={`w-3 h-3 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200 fill-stone-200'}`} 
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
+                  <p className="text-xs text-stone-600 font-light italic leading-relaxed">
+                    {rev.text}
+                  </p>
                 </div>
-              </div>
-              <p className="text-xs text-stone-600 font-light italic leading-relaxed">
-                "The most authentic rendang I've ever ordered online. The spice profile is complex and the meat literally melts in your mouth."
-              </p>
-              <div className="relative w-full h-32 rounded-2xl overflow-hidden mt-2 border border-stone-100">
-                <Image src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=500&q=80" alt="Dish photo" fill className="object-cover" />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 bg-stone-100">
-                  <Image src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80" alt="Dimas Pratama" fill className="object-cover" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-stone-900">Dimas Pratama</h4>
-                  <div className="flex items-center gap-0.5 text-amber-500 text-xs">
-                    <Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" />
+                {rev.image && (
+                  <div className="relative w-full h-32 rounded-2xl overflow-hidden mt-2 border border-stone-100">
+                    <Image src={rev.image} alt={product.name} fill className="object-cover" />
                   </div>
-                </div>
+                )}
               </div>
-              <p className="text-xs text-stone-600 font-light italic leading-relaxed">
-                "Incredible value for the price. You can really taste the 12-hour slow cooking process. Will definitely buy again."
-              </p>
-            </div>
-
-            <div className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 bg-stone-100">
-                  <Image src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80" alt="Budi Hartono" fill className="object-cover" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-stone-900">Budi Hartono</h4>
-                  <div className="flex items-center gap-0.5 text-amber-500 text-xs">
-                    <Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" /><Star className="w-3 h-3 fill-amber-400" />
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-stone-600 font-light italic leading-relaxed">
-                "Packaging is very premium. Arrived fast and still fresh. Spices are spot on."
-              </p>
-            </div>
+            ))}
           </div>
         </div>
 

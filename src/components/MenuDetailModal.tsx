@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { getProductSpecificReviews } from '@/lib/reviews';
 import { 
   X, 
   Star, 
@@ -66,30 +67,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
     ? product.thumbnails
     : [product.image];
 
-  const defaultReviews = product.reviews || [
-    {
-      id: 'r1',
-      author: 'Amanda Rizky',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      rating: 5,
-      text: '"The most authentic rendang I\'ve ever ordered online. The spice profile is complex and the meat literally melts in your mouth."',
-      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=500&q=80'
-    },
-    {
-      id: 'r2',
-      author: 'Dimas Pratama',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-      rating: 5,
-      text: '"Incredible value for the price. You can really taste the 12-hour slow cooking process. Will definitely buy again."'
-    },
-    {
-      id: 'r3',
-      author: 'Budi Hartono',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-      rating: 4,
-      text: '"Packaging is very premium. Arrived fast and still fresh. Spices are spot on."'
-    }
-  ];
+  const defaultReviews = product.reviews || getProductSpecificReviews(product.name, product.image);
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {

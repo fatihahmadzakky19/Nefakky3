@@ -10,6 +10,17 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  collection, 
+  doc, 
+  onSnapshot, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  writeBatch 
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
 
 /** Interface Data Produk Utama */
 export interface ProductItem {
@@ -102,7 +113,7 @@ export interface UserReview {
   id: string;
   authorName: string;
   authorEmail?: string;
-  authorBadge: 'PLATINUM' | 'GOLD' | 'MEMBER';
+  authorBadge?: string;
   authorAvatar?: string;
   avatar?: string;
   rating: number;
@@ -557,25 +568,85 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     authorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
     rating: 5,
     date: 'Kemarin',
-    productName: 'Ayam Bakar Rempah Bango',
+    productName: 'Ayam Bakar',
     productImage: '/images/ayam_bakar.jpg',
-    comment: 'Ayam bakarnya sangat empuk dan bumbu kecap rempahnya meresap sempurna sampai ke dalam. Pengiriman super cepat!',
+    comment: 'Ayam bakarnya sangat empuk dan bumbu kecap rempahnya meresap sempurna sampai ke dalam tulang. Pengiriman super cepat!',
     likesCount: 12,
     status: 'PUBLISHED'
   },
   {
     id: 'rev-2',
-    authorName: 'Siti Rahma',
+    authorName: 'Siti Rahmawati',
     authorEmail: 'siti@example.com',
     authorBadge: 'GOLD',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
     authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
     rating: 5,
     date: '2 hari lalu',
-    productName: 'Gudeg Komplit Jogja',
-    productImage: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+    productName: 'Gudeg',
+    productImage: '/images/gudeg.jpg',
     comment: 'Gudeg paling otentik yang pernah saya pesan online. Bumbu kreceknya gurih pedas manis beraroma harum.',
     likesCount: 8,
+    status: 'PUBLISHED'
+  },
+  {
+    id: 'rev-3',
+    authorName: 'Dimas Pratama',
+    authorEmail: 'dimas@example.com',
+    authorBadge: 'MEMBER',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '3 hari lalu',
+    productName: 'Nasi Bakar',
+    productImage: '/images/nasi_bakar.jpg',
+    comment: 'Nasi bakar daun pisang harum wangi bumbu cumi pedas manisnya melimpah! Mengenyangkan sekali.',
+    likesCount: 15,
+    status: 'PUBLISHED'
+  },
+  {
+    id: 'rev-4',
+    authorName: 'Dewi Lestari',
+    authorEmail: 'dewi@example.com',
+    authorBadge: 'MEMBER',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '4 hari lalu',
+    productName: 'Garang Asam',
+    productImage: '/images/garang_asam.jpg',
+    comment: 'Kuah garang asamnya menyegarkan dada, ayam kampung empuk dikukus rapi dengan daun pisang.',
+    likesCount: 6,
+    status: 'PUBLISHED'
+  },
+  {
+    id: 'rev-5',
+    authorName: 'Budi Hartono',
+    authorEmail: 'budi@example.com',
+    authorBadge: 'GOLD',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '5 hari lalu',
+    productName: 'Krecek',
+    productImage: '/images/krecek.jpg',
+    comment: 'Krecek kulit sapinya sangat lembut dan gurih pedas. Kacang tolonya menambah cita rasa tradisional.',
+    likesCount: 9,
+    status: 'PUBLISHED'
+  },
+  {
+    id: 'rev-6',
+    authorName: 'Amanda Rizky',
+    authorEmail: 'amanda@example.com',
+    authorBadge: 'PLATINUM',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '6 hari lalu',
+    productName: 'Jus (Jambu, Sirsak, Mangga)',
+    productImage: '/images/jus_mangga.jpg',
+    comment: 'Jus buahnya murni kental dari buah asli segar tanpa banyak pemanis buatan. Sangat segar!',
+    likesCount: 10,
     status: 'PUBLISHED'
   }
 ];
@@ -626,102 +697,127 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [reviews, setReviewsState] = useState<UserReview[]>(DEFAULT_REVIEWS);
   const [chatMessages, setChatMessagesState] = useState<ChatMessage[]>(DEFAULT_CHAT_MESSAGES);
 
-  // Load from localStorage on mount & listen to storage events for cross-tab live updates
+  // Firestore Realtime Listeners & Auto-Seeding
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedProd = localStorage.getItem('nefakky_products');
-      if (savedProd) {
-        try {
-          const parsed = JSON.parse(savedProd);
-          const hasOldNamesOrImages = parsed.some((p: any) => 
-            p.name.includes('Wagyu') || 
-            p.name.includes('Truffle') || 
-            p.name.includes('Sate') || 
-            p.name.includes('Rendang') ||
-            p.name.includes('Olive') ||
-            p.name.includes('Sourdough') ||
-            p.name.includes('Honey') ||
-            p.name.includes('Spice') ||
-            p.name.includes('Bango') ||
-            p.name.includes('Spesial') ||
-            p.name.includes('Jogja') ||
-            p.name.includes('Kampung') ||
-            p.name.includes('Jus Segar') ||
-            p.image?.includes('unsplash') ||
-            p.image?.includes('hero_rendang')
-          );
-          if (hasOldNamesOrImages || !Array.isArray(parsed) || parsed.length === 0) {
-            localStorage.setItem('nefakky_products', JSON.stringify(DEFAULT_PRODUCTS));
-            setProductsState(DEFAULT_PRODUCTS);
-          } else {
-            setProductsState(parsed);
-          }
-        } catch (e) {
-          setProductsState(DEFAULT_PRODUCTS);
-        }
+    // 1. Products Listener
+    const unsubProd = onSnapshot(collection(db, 'products'), (snapshot) => {
+      if (snapshot.empty) {
+        const batch = writeBatch(db);
+        DEFAULT_PRODUCTS.forEach(p => {
+          batch.set(doc(db, 'products', p.id), p);
+        });
+        batch.commit().catch(err => console.error('Error seeding products:', err));
+        setProductsState(DEFAULT_PRODUCTS);
       } else {
-        localStorage.setItem('nefakky_products', JSON.stringify(DEFAULT_PRODUCTS));
-      }
+        const prods = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as ProductItem);
+        
+        // Auto-seed missing default products (e.g. Garang Asam m5 & Jus m6) without altering user-edited items
+        const existingIds = new Set(prods.map(p => p.id));
+        const missingProducts = DEFAULT_PRODUCTS.filter(p => !existingIds.has(p.id));
+        if (missingProducts.length > 0) {
+          const batch = writeBatch(db);
+          missingProducts.forEach(p => {
+            batch.set(doc(db, 'products', p.id), p);
+          });
+          batch.commit().catch(err => console.error('Error seeding missing products:', err));
+        }
 
-      const savedPromo = localStorage.getItem('nefakky_promotions');
-      if (savedPromo) {
-        try { setPromotionsState(JSON.parse(savedPromo)); } catch (e) {}
+        setProductsState(prods);
+      }
+    }, (err) => console.error('Products Firestore error:', err));
+
+    // 2. Promotions Listener
+    const unsubPromo = onSnapshot(collection(db, 'promotions'), (snapshot) => {
+      if (snapshot.empty) {
+        const batch = writeBatch(db);
+        DEFAULT_PROMOTIONS.forEach(p => {
+          batch.set(doc(db, 'promotions', p.id), p);
+        });
+        batch.commit().catch(err => console.error('Error seeding promotions:', err));
+        setPromotionsState(DEFAULT_PROMOTIONS);
       } else {
-        localStorage.setItem('nefakky_promotions', JSON.stringify(DEFAULT_PROMOTIONS));
+        const promos = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as PromotionItem);
+        setPromotionsState(promos);
       }
+    }, (err) => console.error('Promotions Firestore error:', err));
 
-      const savedVouch = localStorage.getItem('nefakky_vouchers');
-      if (savedVouch) {
-        try { setVouchersState(JSON.parse(savedVouch)); } catch (e) {}
+    // 3. Vouchers Listener
+    const unsubVouch = onSnapshot(collection(db, 'vouchers'), (snapshot) => {
+      if (snapshot.empty) {
+        const batch = writeBatch(db);
+        DEFAULT_VOUCHERS.forEach(v => {
+          batch.set(doc(db, 'vouchers', v.id), v);
+        });
+        batch.commit().catch(err => console.error('Error seeding vouchers:', err));
+        setVouchersState(DEFAULT_VOUCHERS);
+      } else {
+        const vouches = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminVoucher);
+        setVouchersState(vouches);
       }
+    }, (err) => console.error('Vouchers Firestore error:', err));
 
-      const savedOrd = localStorage.getItem('nefakky_orders');
-      if (savedOrd) {
-        try { setOrdersState(JSON.parse(savedOrd)); } catch (e) {}
+    // 4. Orders Listener
+    const unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
+      if (snapshot.empty) {
+        const batch = writeBatch(db);
+        DEFAULT_ORDERS.forEach(o => {
+          batch.set(doc(db, 'orders', o.id), o);
+        });
+        batch.commit().catch(err => console.error('Error seeding orders:', err));
+        setOrdersState(DEFAULT_ORDERS);
+      } else {
+        const ords = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminOrder);
+        setOrdersState(ords);
       }
+    }, (err) => console.error('Orders Firestore error:', err));
 
-      const savedRev = localStorage.getItem('nefakky_reviews');
-      if (savedRev) {
-        try { setReviewsState(JSON.parse(savedRev)); } catch (e) {}
+    // 5. Reviews Listener
+    const unsubRev = onSnapshot(collection(db, 'reviews'), (snapshot) => {
+      if (snapshot.empty) {
+        const batch = writeBatch(db);
+        DEFAULT_REVIEWS.forEach(r => {
+          batch.set(doc(db, 'reviews', r.id), r);
+        });
+        batch.commit().catch(err => console.error('Error seeding reviews:', err));
+        setReviewsState(DEFAULT_REVIEWS);
+      } else {
+        const revs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as UserReview);
+        setReviewsState(revs);
       }
+    }, (err) => console.error('Reviews Firestore error:', err));
 
-      const savedChat = localStorage.getItem('nefakky_chat_messages');
-      if (savedChat) {
-        try { setChatMessagesState(JSON.parse(savedChat)); } catch (e) {}
+    // 6. Chat Messages Listener
+    const unsubChat = onSnapshot(collection(db, 'chat_messages'), (snapshot) => {
+      if (snapshot.empty) {
+        const batch = writeBatch(db);
+        DEFAULT_CHAT_MESSAGES.forEach(c => {
+          batch.set(doc(db, 'chat_messages', c.id), c);
+        });
+        batch.commit().catch(err => console.error('Error seeding chat_messages:', err));
+        setChatMessagesState(DEFAULT_CHAT_MESSAGES);
+      } else {
+        const msgs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as ChatMessage);
+        setChatMessagesState(msgs);
       }
+    }, (err) => console.error('Chat Messages Firestore error:', err));
 
-      const handleStorage = (e: StorageEvent) => {
-        if (e.key === 'nefakky_promotions' && e.newValue) {
-          try { setPromotionsState(JSON.parse(e.newValue)); } catch (err) {}
-        }
-        if (e.key === 'nefakky_orders' && e.newValue) {
-          try { setOrdersState(JSON.parse(e.newValue)); } catch (err) {}
-        }
-        if (e.key === 'nefakky_products' && e.newValue) {
-          try { setProductsState(JSON.parse(e.newValue)); } catch (err) {}
-        }
-        if (e.key === 'nefakky_vouchers' && e.newValue) {
-          try { setVouchersState(JSON.parse(e.newValue)); } catch (err) {}
-        }
-        if (e.key === 'nefakky_reviews' && e.newValue) {
-          try { setReviewsState(JSON.parse(e.newValue)); } catch (err) {}
-        }
-        if (e.key === 'nefakky_chat_messages' && e.newValue) {
-          try { setChatMessagesState(JSON.parse(e.newValue)); } catch (err) {}
-        }
-      };
-
-      window.addEventListener('storage', handleStorage);
-      return () => window.removeEventListener('storage', handleStorage);
-    }
+    return () => {
+      unsubProd();
+      unsubPromo();
+      unsubVouch();
+      unsubOrders();
+      unsubRev();
+      unsubChat();
+    };
   }, []);
 
   const setProducts: React.Dispatch<React.SetStateAction<ProductItem[]>> = (action) => {
     setProductsState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('nefakky_products', JSON.stringify(next));
-      }
+      // Sync each item to Firestore doc
+      next.forEach(p => {
+        setDoc(doc(db, 'products', p.id), p, { merge: true }).catch(console.error);
+      });
       return next;
     });
   };
@@ -729,9 +825,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const setPromotions: React.Dispatch<React.SetStateAction<PromotionItem[]>> = (action) => {
     setPromotionsState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('nefakky_promotions', JSON.stringify(next));
-      }
+      next.forEach(p => {
+        setDoc(doc(db, 'promotions', p.id), p, { merge: true }).catch(console.error);
+      });
       return next;
     });
   };
@@ -739,9 +835,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const setVouchers: React.Dispatch<React.SetStateAction<AdminVoucher[]>> = (action) => {
     setVouchersState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('nefakky_vouchers', JSON.stringify(next));
-      }
+      next.forEach(v => {
+        setDoc(doc(db, 'vouchers', v.id), v, { merge: true }).catch(console.error);
+      });
       return next;
     });
   };
@@ -749,9 +845,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const setOrders: React.Dispatch<React.SetStateAction<AdminOrder[]>> = (action) => {
     setOrdersState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('nefakky_orders', JSON.stringify(next));
-      }
+      next.forEach(o => {
+        setDoc(doc(db, 'orders', o.id), o, { merge: true }).catch(console.error);
+      });
       return next;
     });
   };
@@ -759,9 +855,19 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const setReviews: React.Dispatch<React.SetStateAction<UserReview[]>> = (action) => {
     setReviewsState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('nefakky_reviews', JSON.stringify(next));
-      }
+      next.forEach(r => {
+        setDoc(doc(db, 'reviews', r.id), r, { merge: true }).catch(console.error);
+      });
+      return next;
+    });
+  };
+
+  const setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>> = (action) => {
+    setChatMessagesState(prev => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      next.forEach(c => {
+        setDoc(doc(db, 'chat_messages', c.id), c, { merge: true }).catch(console.error);
+      });
       return next;
     });
   };
@@ -774,30 +880,27 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       visibility: productData.visibility ?? true,
       status: productData.status ?? 'Active'
     };
-    setProducts(prev => [newProduct, ...prev]);
+    setDoc(doc(db, 'products', newId), newProduct).catch(console.error);
     return newProduct;
   };
 
   const updateProduct = (id: string, updated: Partial<ProductItem>) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p));
+    updateDoc(doc(db, 'products', id), updated).catch(console.error);
   };
 
   const deleteProduct = (id: string) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
+    deleteDoc(doc(db, 'products', id)).catch(console.error);
   };
 
   const toggleProductVisibility = (id: string) => {
-    setProducts(prev => prev.map(p => {
-      if (p.id === id) {
-        const nextVis = !p.visibility;
-        return {
-          ...p,
-          visibility: nextVis,
-          status: (nextVis ? 'Active' : 'Inactive') as ProductItem['status']
-        };
-      }
-      return p;
-    }));
+    const target = products.find(p => p.id === id);
+    if (target) {
+      const nextVis = !target.visibility;
+      updateDoc(doc(db, 'products', id), {
+        visibility: nextVis,
+        status: nextVis ? 'Active' : 'Inactive'
+      }).catch(console.error);
+    }
   };
 
   const addPromotion = (promoData: Omit<PromotionItem, 'id'>): PromotionItem => {
@@ -808,27 +911,24 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       badge: promoData.badge || 'Active',
       isActive: promoData.isActive ?? true
     };
-    setPromotions(prev => [newPromo, ...prev]);
+    setDoc(doc(db, 'promotions', newId), newPromo).catch(console.error);
     return newPromo;
   };
 
   const deletePromotion = (id: string) => {
-    setPromotions(prev => prev.filter(p => p.id !== id));
-    setVouchers(prev => prev.filter(v => v.id !== id));
+    deleteDoc(doc(db, 'promotions', id)).catch(console.error);
+    deleteDoc(doc(db, 'vouchers', id)).catch(console.error);
   };
 
   const togglePromotionActive = (id: string) => {
-    setPromotions(prev => prev.map(p => {
-      if (p.id === id) {
-        const nextActive = !p.isActive;
-        return {
-          ...p,
-          isActive: nextActive,
-          badge: (nextActive ? 'Active' : 'Ended') as PromotionItem['badge']
-        };
-      }
-      return p;
-    }));
+    const target = promotions.find(p => p.id === id);
+    if (target) {
+      const nextActive = !target.isActive;
+      updateDoc(doc(db, 'promotions', id), {
+        isActive: nextActive,
+        badge: nextActive ? 'Active' : 'Ended'
+      }).catch(console.error);
+    }
   };
 
   const addVoucher = (voucherData: Omit<AdminVoucher, 'id'>): AdminVoucher => {
@@ -839,13 +939,24 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       code: voucherData.code.toUpperCase(),
       status: voucherData.status || 'Active'
     };
-    setVouchers(prev => [newVoucher, ...prev]);
+    setDoc(doc(db, 'vouchers', newId), newVoucher).catch(console.error);
     return newVoucher;
   };
 
   const deleteVoucher = (id: string) => {
-    setVouchers(prev => prev.filter(v => v.id !== id));
-    setPromotions(prev => prev.filter(p => p.id !== id));
+    deleteDoc(doc(db, 'vouchers', id)).catch(console.error);
+    deleteDoc(doc(db, 'promotions', id)).catch(console.error);
+  };
+
+  const toggleVoucherStatus = (id: string) => {
+    const target = vouchers.find(v => v.id === id || v.code.toUpperCase() === id.toUpperCase());
+    if (target) {
+      const nextActive = !(target.status === 'Active' && target.isActive !== false);
+      updateDoc(doc(db, 'vouchers', target.id), {
+        status: nextActive ? 'Active' : 'Expired',
+        isActive: nextActive
+      }).catch(console.error);
+    }
   };
 
   const addOrder = (orderData: Omit<AdminOrder, 'id' | 'date'>): AdminOrder => {
@@ -857,16 +968,40 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       id: newId,
       date: nowStr
     };
-    setOrders(prev => [newOrder, ...prev]);
+    setDoc(doc(db, 'orders', newId), newOrder).catch(console.error);
     return newOrder;
   };
 
   const updateOrderStatus = (id: string, status: AdminOrder['status']) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+    updateDoc(doc(db, 'orders', id), { status }).catch(console.error);
   };
 
   const updatePaymentStatus = (id: string, badge: AdminOrder['paymentBadge']) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, paymentBadge: badge } : o));
+    updateDoc(doc(db, 'orders', id), { paymentBadge: badge }).catch(console.error);
+  };
+
+  const deleteOrder = (id: string) => {
+    deleteDoc(doc(db, 'orders', id)).catch(console.error);
+  };
+
+  const cancelOrder = (id: string, reason?: string) => {
+    const target = orders.find(o => o.id === id);
+    if (target) {
+      updateDoc(doc(db, 'orders', id), {
+        status: 'CANCELLED',
+        paymentBadge: target.paymentBadge === 'PAID' ? 'REFUNDED' : target.paymentBadge
+      }).catch(console.error);
+    }
+  };
+
+  const confirmOrderReceived = (id: string) => {
+    const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = `Hari ini, ${timeStr}`;
+    updateDoc(doc(db, 'orders', id), {
+      status: 'COMPLETED',
+      customerConfirmed: true,
+      confirmedAt: dateStr
+    }).catch(console.error);
   };
 
   const addReview = (reviewData: Omit<UserReview, 'id' | 'date' | 'likesCount'>): UserReview => {
@@ -884,29 +1019,24 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       status: 'PUBLISHED'
     };
 
-    setReviews(prev => [newReview, ...prev]);
+    setDoc(doc(db, 'reviews', newId), newReview).catch(console.error);
 
     // Recalculate Product Average Rating automatically
     if (reviewData.productName) {
       const targetName = reviewData.productName.toLowerCase();
-      setProducts(prevProducts => prevProducts.map(prod => {
-        if (prod.name.toLowerCase() === targetName || prod.id === reviewData.productName) {
-          const currentRating = prod.rating || 5.0;
-          const currentCount = prod.reviewsCount || 10;
-          
-          // Formula Rata-rata Tertimbang (Weighted Average)
-          const totalPoints = (currentRating * currentCount) + reviewData.rating;
-          const newCount = currentCount + 1;
-          const newAvgRating = Math.max(1.0, Math.min(5.0, Number((totalPoints / newCount).toFixed(1))));
+      const prod = products.find(p => p.name.toLowerCase() === targetName || p.id === reviewData.productName);
+      if (prod) {
+        const currentRating = prod.rating || 5.0;
+        const currentCount = prod.reviewsCount || 10;
+        const totalPoints = (currentRating * currentCount) + reviewData.rating;
+        const newCount = currentCount + 1;
+        const newAvgRating = Math.max(1.0, Math.min(5.0, Number((totalPoints / newCount).toFixed(1))));
 
-          return {
-            ...prod,
-            rating: newAvgRating,
-            reviewsCount: newCount
-          };
-        }
-        return prod;
-      }));
+        updateDoc(doc(db, 'products', prod.id), {
+          rating: newAvgRating,
+          reviewsCount: newCount
+        }).catch(console.error);
+      }
     }
 
     return newReview;
@@ -914,39 +1044,26 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   const deleteReview = (id: string) => {
     const reviewToDelete = reviews.find(r => r.id === id);
-    setReviews(prev => prev.filter(r => r.id !== id));
+    deleteDoc(doc(db, 'reviews', id)).catch(console.error);
 
     if (reviewToDelete && reviewToDelete.productName) {
       const targetName = reviewToDelete.productName.toLowerCase();
-      setProducts(prevProducts => prevProducts.map(prod => {
-        if (prod.name.toLowerCase() === targetName || prod.id === reviewToDelete.productName) {
-          const currentRating = prod.rating || 5.0;
-          const currentCount = prod.reviewsCount || 10;
-          if (currentCount > 1) {
-            const totalPoints = (currentRating * currentCount) - reviewToDelete.rating;
-            const newCount = currentCount - 1;
-            const newAvgRating = Math.max(1.0, Math.min(5.0, Number((totalPoints / newCount).toFixed(1))));
+      const prod = products.find(p => p.name.toLowerCase() === targetName || p.id === reviewToDelete.productName);
+      if (prod) {
+        const currentRating = prod.rating || 5.0;
+        const currentCount = prod.reviewsCount || 10;
+        if (currentCount > 1) {
+          const totalPoints = (currentRating * currentCount) - reviewToDelete.rating;
+          const newCount = currentCount - 1;
+          const newAvgRating = Math.max(1.0, Math.min(5.0, Number((totalPoints / newCount).toFixed(1))));
 
-            return {
-              ...prod,
-              rating: newAvgRating,
-              reviewsCount: newCount
-            };
-          }
+          updateDoc(doc(db, 'products', prod.id), {
+            rating: newAvgRating,
+            reviewsCount: newCount
+          }).catch(console.error);
         }
-        return prod;
-      }));
-    }
-  };
-
-  const setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>> = (action) => {
-    setChatMessagesState(prev => {
-      const next = typeof action === 'function' ? action(prev) : action;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('nefakky_chat_messages', JSON.stringify(next));
       }
-      return next;
-    });
+    }
   };
 
   const sendChatMessage = (userEmail: string, userName: string, text: string, userAvatar?: string) => {
@@ -962,7 +1079,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       readByAdmin: false,
       readByUser: true
     };
-    setChatMessages(prev => [...prev, newMsg]);
+    setDoc(doc(db, 'chat_messages', newMsg.id), newMsg).catch(console.error);
   };
 
   const replyChatMessage = (userEmail: string, text: string) => {
@@ -977,65 +1094,20 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       readByAdmin: true,
       readByUser: false
     };
-    setChatMessages(prev => [...prev, newMsg]);
+    setDoc(doc(db, 'chat_messages', newMsg.id), newMsg).catch(console.error);
   };
 
   const markChatAsRead = (userEmail: string, role: 'admin' | 'user') => {
     const emailNorm = userEmail.trim().toLowerCase();
-    setChatMessages(prev => prev.map(m => {
+    chatMessages.forEach(m => {
       if (m.userEmail.toLowerCase() === emailNorm) {
-        if (role === 'admin') return { ...m, readByAdmin: true };
-        if (role === 'user') return { ...m, readByUser: true };
+        if (role === 'admin' && !m.readByAdmin) {
+          updateDoc(doc(db, 'chat_messages', m.id), { readByAdmin: true }).catch(console.error);
+        } else if (role === 'user' && !m.readByUser) {
+          updateDoc(doc(db, 'chat_messages', m.id), { readByUser: true }).catch(console.error);
+        }
       }
-      return m;
-    }));
-  };
-
-  const toggleVoucherStatus = (id: string) => {
-    setVouchers(prev => prev.map(v => {
-      if (v.id === id || v.code.toUpperCase() === id.toUpperCase()) {
-        const nextActive = !(v.status === 'Active' && v.isActive !== false);
-        return {
-          ...v,
-          status: nextActive ? 'Active' : 'Expired',
-          isActive: nextActive
-        };
-      }
-      return v;
-    }));
-  };
-
-  const deleteOrder = (id: string) => {
-    setOrders(prev => prev.filter(o => o.id !== id));
-  };
-
-  const cancelOrder = (id: string, reason?: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id === id) {
-        return {
-          ...o,
-          status: 'CANCELLED',
-          paymentBadge: o.paymentBadge === 'PAID' ? 'REFUNDED' : o.paymentBadge
-        };
-      }
-      return o;
-    }));
-  };
-
-  const confirmOrderReceived = (id: string) => {
-    const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = `Hari ini, ${timeStr}`;
-    setOrders(prev => prev.map(o => {
-      if (o.id === id) {
-        return {
-          ...o,
-          status: 'COMPLETED',
-          customerConfirmed: true,
-          confirmedAt: dateStr
-        };
-      }
-      return o;
-    }));
+    });
   };
 
   return (

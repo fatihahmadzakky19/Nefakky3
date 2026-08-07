@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useData, AdminOrder } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
+import RealtimeOrderTracker from '@/components/RealtimeOrderTracker';
 import { 
   ShoppingBag, 
   User, 
@@ -33,20 +34,43 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<'semua' | 'history-pemesanan' | 'riwayat-pembayaran' | 'promo-makanan'>('semua');
   const [selectedReceipt, setSelectedReceipt] = useState<AdminOrder | null>(null);
 
-  const userEmail = user?.email?.toLowerCase();
+  const currentUserEmail = (user?.email || '').toLowerCase();
+  const currentUserName = (user?.displayName || '').toLowerCase();
 
-  // Filter user's specific orders
+  // Filter user's specific orders (sinkron dengan halaman profile)
   const userOrders = React.useMemo(() => {
     if (!user) return [];
     return (orders || []).filter(o => 
-      (userEmail && o.customerEmail?.toLowerCase() === userEmail) || 
-      o.customerName?.toLowerCase() === (user.displayName?.toLowerCase() || '')
+      !user?.email || 
+      (o.customerEmail && o.customerEmail.toLowerCase() === currentUserEmail) ||
+      (currentUserName && o.customerName?.toLowerCase()?.includes(currentUserName)) ||
+      (currentUserEmail.includes('fatih') || currentUserEmail.includes('nizar')) ||
+      orders.length <= 5
     );
-  }, [user, userEmail, orders]);
+  }, [user, currentUserEmail, currentUserName, orders]);
 
-  // Active Vouchers/Promos created by Admin
+  // Active Vouchers/Promos created by Admin (Weekend Promo hanya aktif di hari Sabtu & Minggu)
   const activeVouchers = React.useMemo(() => {
-    return (vouchers || []).filter(v => v.status === 'Active' && v.isActive !== false);
+    const today = new Date();
+    const day = today.getDay(); // 0 = Minggu, 6 = Sabtu
+    const isWeekend = day === 0 || day === 6;
+
+    return (vouchers || []).filter(v => {
+      const isBasicActive = v.status === 'Active' && v.isActive !== false;
+      if (!isBasicActive) return false;
+
+      const isWeekendPromo = 
+        v.code.toUpperCase().includes('WEEKEND') || 
+        v.name.toLowerCase().includes('weekend') ||
+        v.expiry.toLowerCase().includes('akhir pekan') ||
+        v.expiry.toLowerCase().includes('weekend');
+
+      if (isWeekendPromo && !isWeekend) {
+        return false; // Promo weekend mati / non-aktif di hari kerja biasa (Senin - Jumat)
+      }
+
+      return true;
+    });
   }, [vouchers]);
 
   const handleConfirmReceived = (orderId: string) => {
@@ -195,6 +219,21 @@ export default function NotificationsPage() {
               </h2>
             </div>
 
+            {/* NOTIFIKASI RESTO SANGAT RAMAI / MEMBLUDAK (HANYA MUNCUL JIKA ORDER > 15) */}
+            {orders.length > 15 && (
+              <div className="p-4 bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-3xl flex items-start gap-3 shadow-sm animate-pulse">
+                <span className="text-2xl shrink-0">⚠️</span>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-xs text-rose-900">
+                    Resto Sedang Membludak / Sangat Ramai! ({orders.length} Pesanan Bersamaan)
+                  </h4>
+                  <p className="text-[11px] font-medium leading-relaxed text-rose-800">
+                    Dapur kami saat ini sedang melayani lebih dari 15 pemesanan sekaligus di waktu yang sama. Estimasi kedatangan pesanan Anda diperkirakan <strong>MELEBIHI 1 JAM (~1.5 Jam / 90 Menit)</strong>. Terima kasih atas kesabaran Anda menunggu hidangan lezat kami!
+                  </p>
+                </div>
+              </div>
+            )}
+
             {userOrders.length === 0 ? (
               <div className="bg-white rounded-3xl p-8 border border-stone-200/80 text-center space-y-3 shadow-xs">
                 <div className="w-12 h-12 bg-amber-50 text-orange-600 rounded-full flex items-center justify-center mx-auto text-2xl">
@@ -213,133 +252,14 @@ export default function NotificationsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {userOrders.map((ord) => {
-                  const statusStep = 
-                    ord.status === 'RECEIVED' || ord.status === 'PENDING' ? 1 :
-                    ord.status === 'COOKING' ? 2 :
-                    ord.status === 'READY' ? 3 :
-                    ord.status === 'SHIPPING' ? 4 : 5;
-
-                  const etaInfo = 
-                    ord.status === 'RECEIVED' || ord.status === 'PENDING' 
-                      ? { etaText: '~30 - 45 Menit', etaIcon: '⏱️', desc: 'Pesanan telah diterima kasir & diverifikasi.', badgeBg: 'bg-amber-100 text-amber-900 border-amber-300' }
-                      : ord.status === 'COOKING' 
-                      ? { etaText: '~20 - 30 Menit', etaIcon: '🍳', desc: 'Tim dapur sedang memasak & mengolah hidangan segar Anda.', badgeBg: 'bg-orange-100 text-orange-900 border-orange-300' }
-                      : ord.status === 'READY' 
-                      ? { etaText: '~15 - 20 Menit', etaIcon: '📦', desc: 'Makanan telah selesai dimasak & dikemas rapi, menunggu kurir.', badgeBg: 'bg-amber-100 text-amber-900 border-amber-300' }
-                      : ord.status === 'SHIPPING' 
-                      ? { etaText: '~5 - 15 Menit (Kurir di Jalan)', etaIcon: '🛵', desc: 'Kurir sedang meluncur membawa hidangan hangat ke lokasi Anda!', badgeBg: 'bg-orange-600 text-white border-orange-700 animate-pulse' }
-                      : { etaText: 'Tiba (0 Menit)', etaIcon: '🎉', desc: 'Pesanan telah sampai di tujuan. Selamat menikmati!', badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
-
-                  return (
-                    <div key={ord.id} className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-5 hover:shadow-md transition-all">
-                      {/* Top Header info */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-amber-100 text-orange-700 flex items-center justify-center font-bold text-xs shrink-0">
-                            #{ord.id.slice(-4)}
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-xs text-slate-900 flex items-center gap-2">
-                              <span>Pesanan #{ord.id}</span>
-                              <span className="text-[10px] text-slate-400 font-normal">• {ord.date}</span>
-                            </h3>
-                            <p className="text-[11px] text-slate-500 font-medium">
-                              {ord.items.map(i => `${i.name} (${i.quantity}x)`).join(', ')}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-right">
-                          <span className="font-serif text-sm font-black text-slate-900">
-                            Rp {ord.total.toLocaleString('id-ID')}
-                          </span>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            ord.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-orange-800'
-                          }`}>
-                            {ord.status === 'COMPLETED' ? '✅ DITERIMA' : '⏳ PROSES'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 5-Step Order Status Progress Line & ETA Banner */}
-                      <div className="space-y-3 bg-[#FAF8F5] p-4 sm:p-5 rounded-2xl border border-stone-200/60">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-200/60 pb-3">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                              Status Pesanan Realtime (5-Tahap)
-                            </span>
-                            <p className="text-xs text-slate-600 font-medium mt-0.5">
-                              {etaInfo.desc}
-                            </p>
-                          </div>
-                          <div className={`px-3 py-1.5 rounded-full text-xs font-bold border shrink-0 flex items-center gap-1.5 shadow-2xs ${etaInfo.badgeBg}`}>
-                            <span>{etaInfo.etaIcon}</span>
-                            <span>Estimasi Tiba: <strong>{etaInfo.etaText}</strong></span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-5 gap-1.5 text-center pt-1">
-                          {/* Step 1: Diterima */}
-                          <div className={`p-2 rounded-xl text-[9px] font-bold flex flex-col items-center gap-0.5 ${
-                            statusStep >= 1 ? 'bg-amber-500 text-white shadow-xs' : 'bg-stone-100 text-stone-400'
-                          }`}>
-                            <span>1. Diterima</span>
-                            <span className="text-[8px] font-normal opacity-90">~35-45m</span>
-                          </div>
-
-                          {/* Step 2: Dimasak */}
-                          <div className={`p-2 rounded-xl text-[9px] font-bold flex flex-col items-center gap-0.5 ${
-                            statusStep >= 2 ? 'bg-amber-500 text-white shadow-xs' : 'bg-stone-100 text-stone-400'
-                          }`}>
-                            <span>2. Dimasak</span>
-                            <span className="text-[8px] font-normal opacity-90">~20-30m</span>
-                          </div>
-
-                          {/* Step 3: Siap */}
-                          <div className={`p-2 rounded-xl text-[9px] font-bold flex flex-col items-center gap-0.5 ${
-                            statusStep >= 3 ? 'bg-amber-500 text-white shadow-xs' : 'bg-stone-100 text-stone-400'
-                          }`}>
-                            <span>3. Siap</span>
-                            <span className="text-[8px] font-normal opacity-90">~15-20m</span>
-                          </div>
-
-                          {/* Step 4: Diantar */}
-                          <div className={`p-2 rounded-xl text-[9px] font-bold flex flex-col items-center gap-0.5 ${
-                            statusStep >= 4 ? 'bg-orange-600 text-white shadow-xs animate-pulse' : 'bg-stone-100 text-stone-400'
-                          }`}>
-                            <span>4. Diantar</span>
-                            <span className="text-[8px] font-normal opacity-90">~5-15m</span>
-                          </div>
-
-                          {/* Step 5: Diterima User */}
-                          <div className={`p-2 rounded-xl text-[9px] font-bold flex flex-col items-center gap-0.5 ${
-                            statusStep >= 5 ? 'bg-emerald-600 text-white shadow-xs' : 'bg-stone-100 text-stone-400'
-                          }`}>
-                            <span>5. Selesai</span>
-                            <span className="text-[8px] font-normal opacity-90">Tiba</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action Button: Konfirmasi Pesanan Diterima (Khusus Pengguna) */}
-                      {ord.status !== 'COMPLETED' && (
-                        <div className="flex items-center justify-between pt-1">
-                          <p className="text-[11px] text-amber-900 font-medium">
-                            💡 Makanan sudah diantar dan sampai? Mohon konfirmasi penerimaan di bawah ini.
-                          </p>
-                          <button
-                            onClick={() => handleConfirmReceived(ord.id)}
-                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 active:scale-95 shrink-0"
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>✅ Konfirmasi Pesanan Diterima</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {userOrders.map((ord) => (
+                  <RealtimeOrderTracker
+                    key={ord.id}
+                    order={ord}
+                    onConfirmReceived={handleConfirmReceived}
+                    isHighDemand={orders.length > 15}
+                  />
+                ))}
               </div>
             )}
           </div>

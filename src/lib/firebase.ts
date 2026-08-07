@@ -7,6 +7,7 @@ import {
   signOut,
   signInWithPopup
 } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCP1_JAH-yhHXWPH6EeTK-TnnYzTl59S0E",
@@ -21,14 +22,17 @@ const firebaseConfig = {
 // Initialize Firebase App
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
 export { 
   app, 
   auth, 
+  db,
   googleProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   signInWithPopup
 };
+

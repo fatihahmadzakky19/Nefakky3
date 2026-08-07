@@ -10,28 +10,28 @@
 }
 
 body {
-  color: #0F172A;
-  background: linear-gradient(135deg, #FAF9F5 0%, #FFFBEB 50%, #F4F1EA 100%);
+  color: #2D231C;
+  background: #FAF8F5;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
 
-/* Custom styled inputs for login & register */
+/* Custom styled inputs */
 .input-field {
-  @apply w-full px-4 py-3 bg-white/90 border border-amber-200/80 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all duration-200 text-sm shadow-sm;
+  @apply w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#5C3D28]/30 focus:border-[#5C3D28] transition-all duration-200 text-sm shadow-sm;
 }
 
 .btn-primary {
-  @apply w-full py-3.5 bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 hover:from-amber-700 hover:to-orange-600 active:scale-[0.99] text-white font-semibold rounded-full shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all duration-300 text-sm tracking-wide flex items-center justify-center gap-2;
+  @apply w-full py-3.5 bg-[#5C3D28] hover:bg-[#4A2B16] active:scale-[0.99] text-white font-semibold rounded-full shadow-md transition-all duration-200 text-sm tracking-wide flex items-center justify-center gap-2;
 }
 
 .btn-google {
-  @apply w-full py-3.5 bg-white border border-slate-200 hover:bg-amber-50/50 active:scale-[0.99] text-slate-700 font-medium rounded-full shadow-sm hover:shadow transition-all duration-200 text-sm flex items-center justify-center gap-3;
+  @apply w-full py-3.5 bg-white border border-stone-200 hover:bg-stone-50 active:scale-[0.99] text-stone-700 font-medium rounded-full shadow-sm transition-all duration-200 text-sm flex items-center justify-center gap-3;
 }
 
 .glass-card {
-  @apply bg-white/80 backdrop-blur-md border border-amber-100/60 shadow-soft-card rounded-2xl;
+  @apply bg-white/90 backdrop-blur-md border border-stone-200/80 shadow-sm rounded-2xl;
 }
 
 /* Custom Scrollbar */

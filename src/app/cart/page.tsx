@@ -152,12 +152,11 @@ export default function BasketCartPage() {
     }
   };
 
-  // Pajak Pengiriman & Resto 10% (PB1 Resto) Pengganti Ongkir Delivery Method
-  const tax10Percent = Math.round(subtotal * 0.10);
-  const shippingCost = tax10Percent;
+  // Biaya Pengiriman & Kurir Delivery Method
+  const shippingCost = Math.round(subtotal * 0.10);
   const serviceFee = 0;
   const calculatedDiscount = discountAmount || Math.round(subtotal * (discountPercent / 100));
-  const totalPayment = Math.max(0, subtotal + tax10Percent - calculatedDiscount);
+  const totalPayment = Math.max(0, subtotal + shippingCost - calculatedDiscount);
 
   // Save address edit
   const handleSaveAddress = (e: React.FormEvent) => {
@@ -199,10 +198,10 @@ export default function BasketCartPage() {
       itemCount: totalCartCount,
       paymentMethod: orderSummarySnapshot.paymentMethod,
       paymentBadge: 'PAID',
-      deliveryType: 'PB1 (10%)',
+      deliveryType: 'Ongkir Standar (Nefakky Delivery)',
       status: 'COOKING',
       subtotal,
-      shippingCost: tax10Percent,
+      shippingCost: shippingCost,
       discount: calculatedDiscount,
       total: totalPayment
     });
@@ -651,7 +650,23 @@ export default function BasketCartPage() {
                           </span>
                           <div className="flex flex-wrap gap-2">
                             {(vouchers || []).map((v: any) => {
-                              const isActive = v.status === 'Active' && (v.isActive !== false);
+                              const today = new Date();
+                              const day = today.getDay(); // 0 = Minggu, 6 = Sabtu
+                              const isWeekend = day === 0 || day === 6;
+
+                              const isWeekendPromo = 
+                                v.code.toUpperCase().includes('WEEKEND') || 
+                                v.name.toLowerCase().includes('weekend') ||
+                                v.expiry.toLowerCase().includes('akhir pekan') ||
+                                v.expiry.toLowerCase().includes('weekend');
+
+                              const isActive = v.status === 'Active' && (v.isActive !== false) && (!isWeekendPromo || isWeekend);
+                              const disabledReason = !isActive
+                                ? isWeekendPromo && !isWeekend
+                                  ? `Promo ${v.code} khusus akhir pekan (Sabtu & Minggu)`
+                                  : `Promo ${v.code} sedang tidak aktif`
+                                : `Gunakan promo ${v.code}`;
+
                               return (
                                 <button
                                   key={v.id}
@@ -661,11 +676,7 @@ export default function BasketCartPage() {
                                     if (isActive) {
                                       setPromoCode(v.code);
                                       const res = claimPromo(v.code);
-                                      if (res.success) {
-                                        alert(res.message);
-                                      } else {
-                                        alert(res.message);
-                                      }
+                                      alert(res.message);
                                     }
                                   }}
                                   className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 border ${
@@ -673,9 +684,9 @@ export default function BasketCartPage() {
                                       ? 'bg-amber-50 text-[#7A4B29] border-amber-200 hover:bg-amber-100 cursor-pointer shadow-xs'
                                       : 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-65'
                                   }`}
-                                  title={isActive ? `Gunakan promo ${v.code}` : `Promo ${v.code} sedang tidak aktif`}
+                                  title={disabledReason}
                                 >
-                                  <span>{v.code} ({v.discountPercent}%)</span>
+                                  <span>{v.code} ({v.discountPercent}%) {isWeekendPromo && !isWeekend && '(Khusus Sabtu-Minggu)'}</span>
                                   <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-rose-400'}`} />
                                 </button>
                               );
@@ -854,12 +865,12 @@ export default function BasketCartPage() {
                   )}
                 </div>
 
-                {/* 2. PAJAK PENGIRIMAN & RESTO (PB1 10%) CARD */}
+                {/* 2. BIAYA PENGIRIMAN CARD */}
                 <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5 text-stone-900">
                       <Truck className="w-5 h-5 text-[#8A6337]" />
-                      <h2 className="font-serif text-xl font-semibold">Pajak Pengiriman &amp; Resto (PB1 10%)</h2>
+                      <h2 className="font-serif text-xl font-semibold">Biaya Pengiriman</h2>
                     </div>
                     <span className="px-3 py-1 bg-amber-100 text-orange-800 text-xs font-bold rounded-full border border-amber-300">
                       ~25 - 40 Menit Tiba
@@ -869,16 +880,16 @@ export default function BasketCartPage() {
                   <div className="p-4 bg-[#FAF6F0] rounded-2xl border border-[#8A6337]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div className="space-y-0.5">
                       <p className="font-bold text-slate-900">
-                        Pajak Pengantaran Segar Resto Nefakky (10%)
+                        Biaya Pengantaran Segar Resto Nefakky
                       </p>
                       <p className="text-slate-600 font-medium">
-                        Biaya pengiriman dihitung secara efisien sebesar 10% pajak dari total belanjaan Anda. Makanan langsung dimasak segar oleh Tim Dapur Nefakky.
+                        Biaya pengiriman dihitung secara efisien berdasarkan jarak dan pengantaran langsung oleh Tim Dapur Nefakky.
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Pajak (10%)</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Biaya Pengiriman</span>
                       <span className="font-serif text-lg font-black text-orange-600">
-                        Rp {tax10Percent.toLocaleString('id-ID')}
+                        Rp {shippingCost.toLocaleString('id-ID')}
                       </span>
                     </div>
                   </div>
@@ -993,9 +1004,9 @@ export default function BasketCartPage() {
                         <span className="font-mono">Rp {subtotal.toLocaleString('id-ID')}</span>
                       </div>
 
-                      <div className="flex items-center justify-between text-amber-900 font-medium">
-                        <span>Pajak Pengiriman &amp; Resto (10%)</span>
-                        <span className="font-mono">Rp {tax10Percent.toLocaleString('id-ID')}</span>
+                      <div className="flex items-center justify-between text-stone-700 font-medium">
+                        <span>Biaya Pengiriman</span>
+                        <span className="font-mono">Rp {shippingCost.toLocaleString('id-ID')}</span>
                       </div>
 
                       {calculatedDiscount > 0 && (

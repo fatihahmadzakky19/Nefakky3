@@ -126,51 +126,44 @@ export default function UserHomePage() {
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
+  // Filter visible products from DataContext
+  const visibleProducts = products.filter(p => p.visibility !== false);
+
+  // Dynamic Hero Slides mapped directly from real products sold by user
+  const heroSlides = visibleProducts.length > 0 
+    ? visibleProducts.slice(0, 5).map((p, idx) => ({
+        id: p.id,
+        name: p.name,
+        tagline: p.description,
+        rating: `${p.rating.toFixed(1)}/5`,
+        reviews: `${p.reviewsCount || 100}+ Ulasan`,
+        price: `Rp ${p.price.toLocaleString('id-ID')}`,
+        image: p.image || '/images/ayam_bakar.jpg',
+        badgeText: p.badge ? `🔥 ${p.badge}` : idx === 0 ? '🔥 TERLARIS HARI INI' : idx === 1 ? '👨‍🍳 REKOMENDASI KOKI' : '🌟 BEST SELLER'
+      }))
+    : [
+        {
+          id: 'm1',
+          name: 'Ayam Bakar',
+          tagline: 'Ayam Pejantan Dibakar Bumbu Rempah • 100% Halal',
+          rating: '4.9/5',
+          reviews: '2.500+ Ulasan',
+          price: 'Rp 35.000',
+          image: '/images/ayam_bakar.jpg',
+          badgeText: '🔥 TERLARIS HARI INI'
+        }
+      ];
+
   // Hero Animated Showcase Slides & Timer
   const [heroSlideIndex, setHeroSlideIndex] = useState(0);
 
-  const HERO_SLIDES = [
-    {
-      id: 'ayam_bakar_hero',
-      name: 'Ayam Bakar Kecap Rempah',
-      tagline: 'Ayam Pejantan Dibakar Bumbu Rempah • 100% Halal',
-      rating: '4.9/5',
-      reviews: '2.500+ Ulasan',
-      price: 'Rp 35.000',
-      image: '/images/ayam_bakar_hero.png',
-      badgeText: '🔥 TERLARIS HARI INI'
-    },
-    {
-      id: 'nasi_bakar_hero',
-      name: 'Nasi Bakar Cumi Pedas',
-      tagline: 'Nasi Gurih Bungkus Daun Pisang Harum',
-      rating: '4.8/5',
-      reviews: '1.800+ Ulasan',
-      price: 'Rp 28.000',
-      image: '/images/nasi_bakar.jpg',
-      badgeText: '👨‍🍳 REKOMENDASI KOKI'
-    },
-    {
-      id: 'gudeg_hero',
-      name: 'Gudeg Jogja Komplit',
-      tagline: 'Gurih Manis Bacem Telur & Suwiran Ayam',
-      rating: '5.0/5',
-      reviews: '3.100+ Ulasan',
-      price: 'Rp 40.000',
-      image: '/images/gudeg.jpg',
-      badgeText: '🌟 BESTSELLER TRADISIONAL'
-    }
-  ];
-
   useEffect(() => {
+    if (heroSlides.length === 0) return;
     const timer = setInterval(() => {
-      setHeroSlideIndex((prev) => (prev + 1) % 3);
+      setHeroSlideIndex((prev) => (prev + 1) % heroSlides.length);
     }, 3800);
     return () => clearInterval(timer);
-  }, []);
-
-  // Filter visible products from DataContext
-  const visibleProducts = products.filter(p => p.visibility !== false);
+  }, [heroSlides.length]);
 
   // Loading state handler
   if (loading) {
@@ -232,21 +225,18 @@ export default function UserHomePage() {
 
             {/* CTA Buttons */}
             <div className="flex items-center gap-3 pt-2">
-              <button 
-                onClick={() => {
-                  const el = document.getElementById('menu-terlaris');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-6 py-3 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow-md transition-all active:scale-[0.98]"
+              <Link 
+                href="/menu"
+                className="px-6 py-3 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow-md transition-all active:scale-[0.98] inline-block text-center"
               >
                 Pesan Sekarang
-              </button>
-              <button 
-                onClick={() => setActiveCategory('Semua')}
-                className="px-6 py-3 border border-[#7A4B29] text-[#7A4B29] hover:bg-[#7A4B29]/5 font-medium text-xs rounded-full transition-all"
+              </Link>
+              <Link 
+                href="/menu"
+                className="px-6 py-3 border border-[#7A4B29] text-[#7A4B29] hover:bg-[#7A4B29]/5 font-medium text-xs rounded-full transition-all inline-block text-center"
               >
                 Lihat Menu
-              </button>
+              </Link>
             </div>
 
           </div>
@@ -266,7 +256,7 @@ export default function UserHomePage() {
               </div>
 
               {/* Animated Active Slide Image Container */}
-              {HERO_SLIDES.map((slide, index) => {
+              {heroSlides.map((slide, index) => {
                 const isActive = index === heroSlideIndex;
                 return (
                   <div
@@ -282,48 +272,48 @@ export default function UserHomePage() {
                       className="object-cover object-center transform group-hover:scale-105 transition-transform duration-700"
                       priority
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/20 to-transparent" />
                   </div>
                 );
               })}
 
               {/* Floating Top Badge (Fresh Cooking Live) */}
-              <div className="absolute top-5 left-5 z-20 bg-slate-900/90 backdrop-blur-md rounded-full px-4 py-1.5 border border-amber-400/40 shadow-lg flex items-center gap-2 animate-float-slow">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span className="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider">
-                  {HERO_SLIDES[heroSlideIndex].badgeText}
+              <div className="absolute top-5 left-5 z-20 bg-stone-900/90 backdrop-blur-md rounded-full px-4 py-1.5 border border-stone-700/60 shadow-md flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#8A6337]" />
+                <span className="text-[11px] font-bold text-stone-200 uppercase tracking-wider">
+                  {heroSlides[heroSlideIndex]?.badgeText}
                 </span>
               </div>
 
               {/* Floating Live Customer Rating Toast (Bottom Left) */}
-              <div className="absolute bottom-6 left-6 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-3.5 shadow-xl border border-amber-200 flex items-center gap-3 animate-fade-in max-w-[250px]">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center font-bold text-sm shadow-md shrink-0">
+              <div className="absolute bottom-6 left-6 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-3.5 shadow-md border border-stone-200 flex items-center gap-3 animate-fade-in max-w-[250px]">
+                <div className="w-10 h-10 rounded-xl bg-[#5C3D28] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
                   <Star className="w-5 h-5 fill-white text-white" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900 leading-tight">
-                    {HERO_SLIDES[heroSlideIndex].name}
+                  <div className="text-xs font-bold text-stone-900 leading-tight">
+                    {heroSlides[heroSlideIndex]?.name}
                   </div>
-                  <div className="text-[10px] text-orange-600 font-bold mt-0.5">
-                    ⭐ {HERO_SLIDES[heroSlideIndex].rating} ({HERO_SLIDES[heroSlideIndex].reviews})
+                  <div className="text-[10px] text-[#8A6337] font-bold mt-0.5">
+                    ⭐ {heroSlides[heroSlideIndex]?.rating} ({heroSlides[heroSlideIndex]?.reviews})
                   </div>
                 </div>
               </div>
 
               {/* Floating Price Pill (Bottom Right) */}
-              <div className="absolute bottom-6 right-6 z-20 bg-slate-900/90 backdrop-blur-md border border-amber-300/40 rounded-2xl px-4 py-2 text-right shadow-xl">
-                <span className="text-[9px] text-amber-300 font-bold tracking-widest uppercase block">Harga Special</span>
-                <span className="font-serif text-lg font-black text-white">{HERO_SLIDES[heroSlideIndex].price}</span>
+              <div className="absolute bottom-6 right-6 z-20 bg-stone-900/90 backdrop-blur-md border border-stone-700/60 rounded-2xl px-4 py-2 text-right shadow-md">
+                <span className="text-[9px] text-stone-300 font-bold tracking-widest uppercase block">Harga Special</span>
+                <span className="font-serif text-lg font-bold text-white">{heroSlides[heroSlideIndex]?.price}</span>
               </div>
 
               {/* Interactive Carousel Navigation Indicators */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-slate-900/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                {HERO_SLIDES.map((_, idx) => (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-stone-900/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                {heroSlides.map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setHeroSlideIndex(idx)}
                     className={`h-2 rounded-full transition-all duration-300 ${
-                      idx === heroSlideIndex ? 'w-6 bg-orange-500' : 'w-2 bg-white/40 hover:bg-white/70'
+                      idx === heroSlideIndex ? 'w-6 bg-[#5C3D28]' : 'w-2 bg-white/40 hover:bg-white/70'
                     }`}
                     title={`Lihat Slide ${idx + 1}`}
                   />
@@ -357,7 +347,11 @@ export default function UserHomePage() {
               return (
                 <div
                   key={cat.name}
-                  onClick={() => setActiveCategory(isActive ? 'Semua' : cat.name)}
+                  onClick={() => {
+                    setActiveCategory(isActive ? 'Semua' : cat.name);
+                    const el = document.getElementById('menu-terlaris');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}
                   className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-3.5 group ${
                     isActive 
                       ? 'bg-[#7A4B29] border-[#7A4B29] text-white shadow-md' 
@@ -395,13 +389,13 @@ export default function UserHomePage() {
               Pilihan pelanggan yang paling dicintai minggu ini.
             </p>
           </div>
-          <button 
-            onClick={() => setActiveCategory('Semua')}
+          <Link 
+            href="/menu"
             className="text-xs font-medium text-[#7A4B29] hover:underline flex items-center gap-1 shrink-0"
           >
-            <span>Lihat Semua</span>
+            <span>Lihat Semua Katalog</span>
             <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          </Link>
         </div>
 
         {/* 4 Cards Grid */}

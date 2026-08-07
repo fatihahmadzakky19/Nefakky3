@@ -57,6 +57,8 @@ const config: Config = {
         sans: ['var(--font-sans)', 'Inter', 'sans-serif'],
       },
       boxShadow: {
+        'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        '2xs': '0 1px 1px 0 rgba(0, 0, 0, 0.03)',
         'soft-card': '0 10px 30px -5px rgba(249, 115, 22, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03)',
         'vibrant': '0 12px 35px -8px rgba(234, 88, 12, 0.25)',
         'floating': '0 25px 50px -12px rgba(15, 23, 42, 0.2)',

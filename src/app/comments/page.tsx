@@ -215,11 +215,6 @@ export default function CommentsPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-semibold text-stone-900">{item.authorName}</h3>
-                          {item.authorBadge && (
-                            <span className="px-2 py-0.5 bg-amber-100 text-[#7A4B29] text-[9px] font-bold rounded-full">
-                              {item.authorBadge}
-                            </span>
-                          )}
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-stone-400">
                           <span>{item.date}</span>

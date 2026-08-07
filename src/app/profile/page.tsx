@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import { useData, AdminOrder } from '@/context/DataContext';
+import RealtimeOrderTracker from '@/components/RealtimeOrderTracker';
 import { 
   ShoppingBag, 
   Bell, 
@@ -461,6 +462,21 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
+              {/* NOTIFIKASI RESTO MEMBLUDAK (>15 ORDER) */}
+              {orders.length > 15 && (
+                <div className="p-4 bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-2xl flex items-start gap-3 shadow-sm animate-pulse mt-3">
+                  <span className="text-2xl shrink-0">⚠️</span>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-xs text-rose-900">
+                      Resto Sedang Membludak / Sangat Ramai! ({orders.length} Pesanan Bersamaan)
+                    </h4>
+                    <p className="text-[11px] font-medium leading-relaxed text-rose-800">
+                      Dapur kami saat ini sedang melayani lebih dari 15 pemesanan sekaligus di waktu yang sama. Estimasi kedatangan pesanan Anda diperkirakan <strong>MELEBIHI 1 JAM (~1.5 Jam / 90 Menit)</strong>. Terima kasih atas kesabaran Anda menunggu hidangan lezat kami!
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Status Filters */}
               <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-100">
                 <button
@@ -522,145 +538,14 @@ export default function UserProfilePage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {filteredOrders.map((order) => {
-                  const stepNum = getOrderStepNumber(order.status);
-                  const isDelivering = order.status === 'DELIVERING' || order.status === 'SHIPPING';
-                  const isCompleted = order.status === 'COMPLETED';
-
-                  return (
-                    <div 
-                      key={order.id}
-                      className="bg-white border border-amber-100/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all space-y-5"
-                    >
-                      {/* Top Order Card Header */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                        <div className="flex items-center gap-3">
-                          <span className="px-3 py-1 bg-amber-100 text-orange-800 text-xs font-bold rounded-xl border border-amber-200">
-                            #{order.id}
-                          </span>
-                          <span className="text-xs text-slate-500 font-medium">{order.date}</span>
-                        </div>
-
-                        {/* Payment Badge */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
-                            <CreditCard className="w-3.5 h-3.5 text-slate-400" />
-                            {order.paymentMethod}
-                          </span>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            order.paymentBadge === 'PAID' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                            order.paymentBadge === 'AWAITING' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                            'bg-slate-100 text-slate-700'
-                          }`}>
-                            {order.paymentBadge === 'PAID' ? 'LUNAS (PAID)' : order.paymentBadge}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Items Preview */}
-                      <div className="space-y-3">
-                        {order.items.map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                                <Image src={item.image || '/images/ayam_bakar.jpg'} alt={item.name} fill className="object-cover" />
-                              </div>
-                              <div>
-                                <h4 className="text-xs font-bold text-slate-900">{item.name}</h4>
-                                <p className="text-[11px] text-slate-500">{item.quantity}x @ Rp {item.price.toLocaleString('id-ID')}</p>
-                              </div>
-                            </div>
-                            <span className="text-xs font-bold text-slate-800">
-                              Rp {(item.price * item.quantity).toLocaleString('id-ID')}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* VISUAL STEPPER STATUS PESANAN 5-TAHAP */}
-                      <div className="bg-amber-50/60 border border-amber-200/60 rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <Clock className="w-4 h-4 text-orange-500" />
-                            <span>Status Pesanan:</span>
-                          </span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            isCompleted ? 'bg-emerald-500 text-white' :
-                            isDelivering ? 'bg-orange-500 text-white animate-pulse' :
-                            'bg-amber-500 text-white'
-                          }`}>
-                            {stepNum === 1 && '📥 1. Pesanan Diterima'}
-                            {stepNum === 2 && '🍳 2. Sedang Dimasak'}
-                            {stepNum === 3 && '📦 3. Pesanan Siap'}
-                            {stepNum === 4 && '🛵 4. Pesanan Diantar / Di Jalan'}
-                            {stepNum === 5 && '🥳 5. Pesanan Diterima (Selesai)'}
-                          </span>
-                        </div>
-
-                        {/* Stepper Graphic */}
-                        <div className="relative pt-2">
-                          <div className="h-2 bg-amber-200/80 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 transition-all duration-500"
-                              style={{ width: `${(stepNum / 5) * 100}%` }}
-                            />
-                          </div>
-                          
-                          {/* Step Nodes */}
-                          <div className="grid grid-cols-5 gap-1 text-center pt-2">
-                            <div className={`text-[10px] font-bold ${stepNum >= 1 ? 'text-orange-600' : 'text-slate-400'}`}>
-                              📥 Diterima
-                            </div>
-                            <div className={`text-[10px] font-bold ${stepNum >= 2 ? 'text-orange-600' : 'text-slate-400'}`}>
-                              🍳 Dimasak
-                            </div>
-                            <div className={`text-[10px] font-bold ${stepNum >= 3 ? 'text-orange-600' : 'text-slate-400'}`}>
-                              📦 Siap
-                            </div>
-                            <div className={`text-[10px] font-bold ${stepNum >= 4 ? 'text-orange-600' : 'text-slate-400'}`}>
-                              🛵 Diantar
-                            </div>
-                            <div className={`text-[10px] font-bold ${stepNum >= 5 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                              🥳 Diterima
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* MANDATORY REQUIREMENT #5: KONFIRMASI PESANAN DITERIMA OLEH PENGGUNA */}
-                        {isDelivering && (
-                          <div className="pt-3 border-t border-amber-200/80 space-y-2">
-                            <div className="p-3 bg-orange-100/80 border border-orange-300 rounded-xl text-xs text-orange-900 font-medium leading-relaxed">
-                              ⚠️ Resto/Kurir telah mengantar makanan Anda. Silakan klik tombol di bawah untuk mengonfirmasi setelah pesanan Anda tiba:
-                            </div>
-                            <button
-                              onClick={() => handleConfirmReceived(order.id)}
-                              className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all flex items-center justify-center gap-2 active:scale-98 animate-pulse-glow"
-                            >
-                              <CheckCircle2 className="w-5 h-5 text-white" />
-                              <span>✅ KONFIRMASI PESANAN DITERIMA</span>
-                            </button>
-                          </div>
-                        )}
-
-                        {isCompleted && (
-                          <div className="pt-2 text-xs text-emerald-700 font-bold flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                            <span>Dikonfirmasi Diterima oleh Anda {order.confirmedAt ? `(${order.confirmedAt})` : ''}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Total Cost Breakdown */}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <span className="text-xs text-slate-500 font-medium">Total Pembayaran ({order.itemCount} Item):</span>
-                        <span className="font-serif font-black text-xl text-slate-900">
-                          Rp {order.total.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-
-                    </div>
-                  );
-                })}
+                {filteredOrders.map((order) => (
+                  <RealtimeOrderTracker
+                    key={order.id}
+                    order={order}
+                    onConfirmReceived={handleConfirmReceived}
+                    isHighDemand={orders.length > 15}
+                  />
+                ))}
               </div>
             )}
 

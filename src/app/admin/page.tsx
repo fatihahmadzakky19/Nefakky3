@@ -539,6 +539,67 @@ export default function AdminDashboardPage() {
   const [eventLimit, setEventLimit] = useState<string>('50');
   const [eventSubtitle, setEventSubtitle] = useState<string>('');
 
+  // CALCULATE REAL PRODUCT SALES DIRECTLY FROM ACTUAL WEB ORDERS
+  const realProductSalesMap = React.useMemo(() => {
+    const map: Record<string, { id: string; name: string; category: string; image: string; price: number; stock: number; rating: number; unitsSold: number; totalRevenue: number }> = {};
+
+    (productList || []).forEach((p) => {
+      map[p.id || p.name] = {
+        id: p.id,
+        name: p.name,
+        category: p.category || 'Hidangan Utama',
+        image: p.image || '/images/ayam_bakar.jpg',
+        price: p.price || 0,
+        stock: p.stock ?? 25,
+        rating: p.rating || 4.9,
+        unitsSold: 0,
+        totalRevenue: 0
+      };
+    });
+
+    (orderList || []).forEach((ord) => {
+      if (ord.status !== 'CANCELLED') {
+        (ord.items || []).forEach((item) => {
+          const matchedKey = Object.keys(map).find(
+            k => k === item.id || map[k].name.toLowerCase() === item.name.toLowerCase()
+          );
+
+          const qty = item.quantity || 1;
+          const price = item.price || 0;
+
+          if (matchedKey) {
+            map[matchedKey].unitsSold += qty;
+            map[matchedKey].totalRevenue += price * qty;
+          } else {
+            map[item.name] = {
+              id: item.id || item.name,
+              name: item.name,
+              category: 'Menu Utama',
+              image: item.image || '/images/ayam_bakar.jpg',
+              price: price,
+              stock: 20,
+              rating: 4.9,
+              unitsSold: qty,
+              totalRevenue: price * qty
+            };
+          }
+        });
+      }
+    });
+
+    return Object.values(map);
+  }, [productList, orderList]);
+
+  // Menu Paling Laris (Real data sorted by unitsSold descending)
+  const sortedBestSellers = React.useMemo(() => {
+    return [...realProductSalesMap].sort((a, b) => b.unitsSold - a.unitsSold);
+  }, [realProductSalesMap]);
+
+  // Menu Kurang Laris / Slow Moving (Real data sorted by unitsSold ascending)
+  const sortedLeastSellers = React.useMemo(() => {
+    return [...realProductSalesMap].sort((a, b) => a.unitsSold - b.unitsSold);
+  }, [realProductSalesMap]);
+
   // Perhitungan Efektif (Real-time + Penyesuaian Manual + Periode Waktu)
   const effectiveRevenueIDR = totalRevenueIDR > 0 ? totalRevenueIDR : (manualOmsetData ? manualOmsetData.revenue : 0);
   const effectiveOrdersCount = ordersCount > 0 ? ordersCount : (manualOmsetData ? manualOmsetData.ordersCount : 0);
@@ -557,26 +618,15 @@ export default function AdminDashboardPage() {
     const data = {
       revenue: rev,
       ordersCount: ord,
-      bestSeller: inputBestSeller.trim() || 'Rendang Sapi Warisan',
-      leastSeller: inputLeastSeller.trim() || 'Soto Ayam Kampoeng'
+      bestSeller: inputBestSeller.trim() || 'Ayam Bakar',
+      leastSeller: inputLeastSeller.trim() || 'Garang Asam'
     };
     setManualOmsetData(data);
     if (typeof window !== 'undefined') {
       localStorage.setItem('nefakky_manual_omset', JSON.stringify(data));
     }
     setShowInputOmsetModal(false);
-    alert('✅ Data Omset & Penjualan berhasil disimpan! Grafik omset dan rekap performa menu kini telah aktif.');
-  };
-
-  // Handler Reset / Atur Ulang Periode Bulan Baru
-  const handleResetMonthPeriod = () => {
-    if (confirm('Apakah Anda yakin ingin menyetel ulang (reset) rekap omset dan penjualan untuk memasuki periode bulan baru? Semua grafik dan data rekap akan siap menerima catatan bulan baru.')) {
-      setManualOmsetData(null);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('nefakky_manual_omset');
-      }
-      alert('🔄 Dashboard berhasil disetel ulang! Siap untuk rekapitulasi awal bulan baru.');
-    }
+    alert('✅ Data Omset & Penjualan berhasil disimpan!');
   };
 
   // Handler Tambah Event & Langsung Alihkan ke Tab Promotions
@@ -762,6 +812,36 @@ export default function AdminDashboardPage() {
   const [manualDelivery, setManualDelivery] = useState<'EXPRESS' | 'STANDARD'>('EXPRESS');
   const [manualTotal, setManualTotal] = useState('');
 
+  // Group chatMessages by user email for Customer Service module
+  const userChatMap: { [email: string]: { userName: string; userAvatar?: string; messages: typeof chatMessages; unreadCount: number; lastTimestamp: string } } = {};
+  (chatMessages || []).forEach(msg => {
+    const emailNorm = (msg.userEmail || '').toLowerCase();
+    if (!emailNorm) return;
+    if (!userChatMap[emailNorm]) {
+      userChatMap[emailNorm] = {
+        userName: msg.userName || emailNorm.split('@')[0],
+        userAvatar: msg.userAvatar,
+        messages: [],
+        unreadCount: 0,
+        lastTimestamp: msg.timestamp
+      };
+    }
+    userChatMap[emailNorm].messages.push(msg);
+    userChatMap[emailNorm].lastTimestamp = msg.timestamp;
+    if (msg.sender === 'user' && !msg.readByAdmin) {
+      userChatMap[emailNorm].unreadCount += 1;
+    }
+  });
+
+  const chatUserEmails = Object.keys(userChatMap);
+  const totalUnreadCSCount = (chatMessages || []).filter(m => m.sender === 'user' && !m.readByAdmin).length;
+
+  useEffect(() => {
+    if (!selectedChatUserEmail && chatUserEmails.length > 0) {
+      setSelectedChatUserEmail(chatUserEmails[0]);
+    }
+  }, [chatUserEmails.length, selectedChatUserEmail]);
+
   // Check if current user is Admin
   const isUserAdmin = user && (user.role === 'admin' || user.email?.toLowerCase() === 'fatihahmadzakky19@gmail.com');
 
@@ -804,36 +884,6 @@ export default function AdminDashboardPage() {
       </div>
     );
   }
-
-  // Group chatMessages by user email for Customer Service module
-  const userChatMap: { [email: string]: { userName: string; userAvatar?: string; messages: typeof chatMessages; unreadCount: number; lastTimestamp: string } } = {};
-  (chatMessages || []).forEach(msg => {
-    const emailNorm = (msg.userEmail || '').toLowerCase();
-    if (!emailNorm) return;
-    if (!userChatMap[emailNorm]) {
-      userChatMap[emailNorm] = {
-        userName: msg.userName || emailNorm.split('@')[0],
-        userAvatar: msg.userAvatar,
-        messages: [],
-        unreadCount: 0,
-        lastTimestamp: msg.timestamp
-      };
-    }
-    userChatMap[emailNorm].messages.push(msg);
-    userChatMap[emailNorm].lastTimestamp = msg.timestamp;
-    if (msg.sender === 'user' && !msg.readByAdmin) {
-      userChatMap[emailNorm].unreadCount += 1;
-    }
-  });
-
-  const chatUserEmails = Object.keys(userChatMap);
-  const totalUnreadCSCount = (chatMessages || []).filter(m => m.sender === 'user' && !m.readByAdmin).length;
-
-  useEffect(() => {
-    if (!selectedChatUserEmail && chatUserEmails.length > 0) {
-      setSelectedChatUserEmail(chatUserEmails[0]);
-    }
-  }, [chatUserEmails.length, selectedChatUserEmail]);
 
   // Review Actions
   const handleTogglePinReview = (id: string) => {
@@ -2814,36 +2864,27 @@ export default function AdminDashboardPage() {
           <main className="p-6 lg:p-10 space-y-8 max-w-7xl animate-fade-in">
             
             {/* TOP HEADER TITLE & UTILITY BUTTONS */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-emerald-500/10 p-6 sm:p-8 rounded-3xl border border-amber-200/80 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/80 shadow-xs">
               <div>
-                <h1 className="font-serif text-3xl sm:text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3 flex-wrap">
+                <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 tracking-tight flex items-center gap-3 flex-wrap">
                   <span>Dashboard &amp; Analitik Penjualan</span>
-                  <span className="px-3 py-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-full shadow-sm">
-                    LIVE REKAP REALTIME
+                  <span className="px-3 py-1 bg-[#5C3D28] text-white text-xs font-semibold rounded-full shadow-xs">
+                    Penjualan Asli Web
                   </span>
                 </h1>
-                <p className="text-xs text-slate-600 font-medium mt-1">
-                  Analisis Omset, Makanan Paling Laris &amp; Tidak Laris, Status Event Promo, serta Rekap Transaksi Terpadu.
+                <p className="text-xs text-stone-500 font-medium mt-1">
+                  Analisis Omset Real-time, Performa Makanan Terlaris &amp; Kurang Laris berdasarkan data transaksi pelanggan.
                 </p>
               </div>
 
-              {/* ACTION BUTTONS (RESET BULAN BARU & EXCEL EXPORT) */}
+              {/* ACTION BUTTONS (EXCEL EXPORT ONLY, NO RESET BUTTON) */}
               <div className="flex items-center gap-3 shrink-0 flex-wrap">
                 <button
-                  onClick={handleResetMonthPeriod}
-                  className="px-4 py-3 bg-slate-800 hover:bg-slate-900 text-amber-300 font-bold text-xs rounded-2xl shadow-md transition-all flex items-center gap-2 active:scale-95 border border-slate-700"
-                  title="Setel ulang rekapitulasi penjualan untuk memasuki awal bulan selanjutnya"
-                >
-                  <RotateCcw className="w-4 h-4 text-amber-300" />
-                  <span>🔄 Reset Periode Bulan Baru</span>
-                </button>
-
-                <button
                   onClick={exportToExcel}
-                  className="px-5 py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all flex items-center gap-2 active:scale-95"
+                  className="px-5 py-3 bg-[#5C3D28] hover:bg-[#4A2B16] text-white font-semibold text-xs sm:text-sm rounded-2xl shadow-xs transition-all flex items-center gap-2 active:scale-95"
                 >
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
-                  <span>📊 Export Rekap to Excel (.xlsx/.csv)</span>
+                  <FileSpreadsheet className="w-4 h-4 text-amber-200" />
+                  <span>Export Rekap Penjualan (.xlsx/.csv)</span>
                 </button>
               </div>
             </div>
@@ -2852,72 +2893,72 @@ export default function AdminDashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               
               {/* Card 1: Omset Kotor (Gross Revenue) */}
-              <div className="glass-card p-6 border border-emerald-200/80 shadow-sm space-y-3 relative overflow-hidden">
+              <div className="glass-card p-6 border border-stone-200/80 shadow-xs space-y-3 relative overflow-hidden">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-sm shadow-inner">
+                  <div className="w-10 h-10 rounded-2xl bg-stone-100 text-stone-700 font-bold flex items-center justify-center text-sm">
                     💰
                   </div>
-                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-300">
+                  <span className="px-2.5 py-0.5 bg-stone-100 text-stone-800 text-[10px] font-semibold rounded-full border border-stone-200">
                     Gross Revenue (Bruto)
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Total Omset Kotor</span>
-                  <p className="font-serif text-2xl font-black text-slate-900 mt-1 leading-none">
+                  <span className="text-[11px] text-stone-500 font-medium uppercase tracking-wider block">Total Omset Kotor</span>
+                  <p className="font-serif text-2xl font-bold text-stone-900 mt-1 leading-none">
                     Rp {grossRevenueIDR.toLocaleString('id-ID')}
                   </p>
                 </div>
               </div>
 
               {/* Card 2: Omset Bersih (Net Profit ~40%) */}
-              <div className="glass-card p-6 border border-teal-200/80 shadow-sm space-y-3 relative overflow-hidden bg-gradient-to-br from-white to-teal-50/40">
+              <div className="glass-card p-6 border border-stone-200/80 shadow-xs space-y-3 relative overflow-hidden bg-stone-50/50">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-2xl bg-teal-100 text-teal-700 font-bold flex items-center justify-center text-sm shadow-inner">
+                  <div className="w-10 h-10 rounded-2xl bg-[#5C3D28]/10 text-[#5C3D28] font-bold flex items-center justify-center text-sm">
                     📈
                   </div>
-                  <span className="px-2.5 py-0.5 bg-teal-100 text-teal-900 text-[10px] font-bold rounded-full border border-teal-300">
-                    Laba Bersih (~40%)
+                  <span className="px-2.5 py-0.5 bg-[#5C3D28]/10 text-[#5C3D28] text-[10px] font-semibold rounded-full border border-[#5C3D28]/20">
+                    Estimasi Margin (~40%)
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Total Omset Bersih</span>
-                  <p className="font-serif text-2xl font-black text-emerald-800 mt-1 leading-none">
+                  <span className="text-[11px] text-stone-500 font-medium uppercase tracking-wider block">Total Omset Bersih</span>
+                  <p className="font-serif text-2xl font-bold text-[#5C3D28] mt-1 leading-none">
                     Rp {netRevenueIDR.toLocaleString('id-ID')}
                   </p>
                 </div>
               </div>
 
               {/* Card 3: Total Pesanan Masuk */}
-              <div className="glass-card p-6 border border-amber-200/80 shadow-sm space-y-3">
+              <div className="glass-card p-6 border border-stone-200/80 shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-100 text-orange-600 font-bold flex items-center justify-center text-sm shadow-inner">
+                  <div className="w-10 h-10 rounded-2xl bg-stone-100 text-stone-700 font-bold flex items-center justify-center text-sm">
                     <ShoppingBag className="w-5 h-5" />
                   </div>
-                  <span className="px-2.5 py-0.5 bg-orange-100 text-orange-800 text-[10px] font-bold rounded-full border border-orange-300">
+                  <span className="px-2.5 py-0.5 bg-stone-100 text-stone-800 text-[10px] font-semibold rounded-full border border-stone-200">
                     {periodOrdersCount} Transaksi
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Total Pesanan Masuk</span>
-                  <p className="font-serif text-2xl font-black text-slate-900 mt-1 leading-none">
+                  <span className="text-[11px] text-stone-500 font-medium uppercase tracking-wider block">Total Pesanan Masuk</span>
+                  <p className="font-serif text-2xl font-bold text-stone-900 mt-1 leading-none">
                     {periodOrdersCount} Pesanan
                   </p>
                 </div>
               </div>
 
               {/* Card 4: Rata-rata Transaksi (AOV) */}
-              <div className="glass-card p-6 border border-orange-200/80 shadow-sm space-y-3">
+              <div className="glass-card p-6 border border-stone-200/80 shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 font-bold flex items-center justify-center text-sm shadow-inner">
+                  <div className="w-10 h-10 rounded-2xl bg-stone-100 text-stone-700 font-bold flex items-center justify-center text-sm">
                     <TrendingUp className="w-5 h-5" />
                   </div>
-                  <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full border border-amber-300">
+                  <span className="px-2.5 py-0.5 bg-stone-100 text-stone-800 text-[10px] font-semibold rounded-full border border-stone-200">
                     AOV
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">Rata-rata Transaksi</span>
-                  <p className="font-serif text-2xl font-black text-slate-900 mt-1 leading-none">
+                  <span className="text-[11px] text-stone-500 font-medium uppercase tracking-wider block">Rata-rata Transaksi</span>
+                  <p className="font-serif text-2xl font-bold text-stone-900 mt-1 leading-none">
                     Rp {effectiveAOV.toLocaleString('id-ID')}
                   </p>
                 </div>
@@ -2927,16 +2968,16 @@ export default function AdminDashboardPage() {
 
             {/* CONDITIONAL: BANNER DATA OMSET BELUM DIINPUT VS GRAFIK OMSET REKAP REALTIME */}
             {effectiveRevenueIDR === 0 ? (
-              <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/60 border-2 border-dashed border-amber-300 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-xs">
-                <div className="w-14 h-14 bg-amber-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
+              <div className="bg-stone-50 border border-stone-200/80 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-xs">
+                <div className="w-14 h-14 bg-stone-200/60 text-stone-700 rounded-2xl flex items-center justify-center mx-auto text-2xl">
                   📊
                 </div>
                 <div className="max-w-xl mx-auto space-y-1">
-                  <h3 className="font-serif text-xl font-bold text-slate-900">
-                    Data Omset Penjualan Bulan Lalu Belum Diinput
+                  <h3 className="font-serif text-xl font-bold text-stone-900">
+                    Data Grafik Omset Menunggu Pesanan
                   </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                    Mama / Owner belum memberikan data omset bulan lalu? Anda bisa menginput data jumlah omset &amp; produk laris secara manual di bawah ini, atau biarkan kosong dan grafik omset akan otomatis terisi secara <span className="font-bold text-orange-600">real-time</span> saat pesanan pelanggan pertama masuk!
+                  <p className="text-xs text-stone-600 leading-relaxed font-medium">
+                    Grafik penjualan akan otomatis terisi secara <span className="font-bold text-[#5C3D28]">real-time</span> dari pesanan pelanggan web, atau Anda dapat menginput histori penjualan manual di bawah ini.
                   </p>
                 </div>
                 <div className="pt-2 flex items-center justify-center gap-3 flex-wrap">
@@ -2944,41 +2985,41 @@ export default function AdminDashboardPage() {
                     onClick={() => {
                       setInputRevenue(manualOmsetData ? String(manualOmsetData.revenue) : '15000000');
                       setInputOrdersCount(manualOmsetData ? String(manualOmsetData.ordersCount) : '245');
-                      setInputBestSeller(manualOmsetData ? manualOmsetData.bestSeller : 'Rendang Sapi Warisan');
-                      setInputLeastSeller(manualOmsetData ? manualOmsetData.leastSeller : 'Soto Ayam Kampoeng');
+                      setInputBestSeller(manualOmsetData ? manualOmsetData.bestSeller : 'Ayam Bakar');
+                      setInputLeastSeller(manualOmsetData ? manualOmsetData.leastSeller : 'Garang Asam');
                       setShowInputOmsetModal(true);
                     }}
-                    className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 active:scale-95"
+                    className="px-6 py-3 bg-[#5C3D28] hover:bg-[#4A2B16] text-white font-semibold text-xs rounded-2xl shadow-xs transition-all flex items-center gap-2 active:scale-95"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>➕ Input Data Omset &amp; Penjualan Manual</span>
+                    <span>Input Data Histori Penjualan</span>
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-3xl p-6 lg:p-8 border border-amber-200/80 shadow-sm space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="bg-white rounded-3xl p-6 lg:p-8 border border-stone-200/80 shadow-xs space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-100 pb-4">
                   <div>
-                    <h3 className="font-serif text-xl font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                    <h3 className="font-serif text-xl font-bold text-stone-900 flex items-center gap-2 flex-wrap">
                       <span>📈 Grafik Omset Penjualan Realtime ({revenuePeriodFilter === '1year' ? '1 Tahun' : revenuePeriodFilter === '6month' ? '6 Bulan' : '1 Bulan'})</span>
                       {manualOmsetData && (
-                        <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 text-[10px] font-bold rounded-full">
-                          Data Manual Tersimpan
+                        <span className="px-2.5 py-0.5 bg-stone-100 text-stone-800 text-[10px] font-semibold rounded-full border border-stone-200">
+                          Data Histori Tersimpan
                         </span>
                       )}
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Visualisasi lonjakan omset kotor &amp; omset bersih resto Nefakky.</p>
+                    <p className="text-xs text-stone-500 mt-0.5">Visualisasi omset kotor &amp; omset bersih resto Nefakky.</p>
                   </div>
 
                   {/* FILTER PERIODE WAKTU: 1 BULAN | 6 BULAN | 1 TAHUN */}
                   <div className="flex items-center gap-3 shrink-0 flex-wrap">
-                    <div className="bg-[#FAF6F0] p-1 rounded-2xl border border-amber-200/80 flex items-center gap-1 text-xs font-bold shadow-xs">
+                    <div className="bg-stone-100 p-1 rounded-2xl border border-stone-200/80 flex items-center gap-1 text-xs font-semibold shadow-xs">
                       <button
                         type="button"
                         onClick={() => setRevenuePeriodFilter('1month')}
                         className={`px-3.5 py-1.5 rounded-xl transition-all ${
                           revenuePeriodFilter === '1month' 
-                            ? 'bg-[#7A4B29] text-white shadow-xs' 
+                            ? 'bg-[#5C3D28] text-white shadow-xs' 
                             : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                         }`}
                       >
@@ -2989,7 +3030,7 @@ export default function AdminDashboardPage() {
                         onClick={() => setRevenuePeriodFilter('6month')}
                         className={`px-3.5 py-1.5 rounded-xl transition-all ${
                           revenuePeriodFilter === '6month' 
-                            ? 'bg-[#7A4B29] text-white shadow-xs' 
+                            ? 'bg-[#5C3D28] text-white shadow-xs' 
                             : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                         }`}
                       >
@@ -3000,7 +3041,7 @@ export default function AdminDashboardPage() {
                         onClick={() => setRevenuePeriodFilter('1year')}
                         className={`px-3.5 py-1.5 rounded-xl transition-all ${
                           revenuePeriodFilter === '1year' 
-                            ? 'bg-[#7A4B29] text-white shadow-xs' 
+                            ? 'bg-[#5C3D28] text-white shadow-xs' 
                             : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                         }`}
                       >
@@ -3014,7 +3055,7 @@ export default function AdminDashboardPage() {
                         setInputOrdersCount(String(effectiveOrdersCount));
                         setShowInputOmsetModal(true);
                       }}
-                      className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-xl border border-amber-200 transition-all active:scale-95"
+                      className="px-3.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded-xl border border-stone-200 transition-all active:scale-95"
                     >
                       ✏️ Edit Omset
                     </button>
@@ -3022,7 +3063,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* GRAPH BARS BASED ON SELECTED PERIOD */}
-                <div className="h-56 flex items-end justify-between gap-2 pt-6 border-b border-slate-100 pb-4 px-2">
+                <div className="h-56 flex items-end justify-between gap-2 pt-6 border-b border-stone-100 pb-4 px-2">
                   {revenuePeriodFilter === '6month' ? (
                     [
                       { label: 'Feb', pct: 45 },
@@ -3034,15 +3075,15 @@ export default function AdminDashboardPage() {
                     ].map((item, idx) => (
                       <div key={idx} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
                         <div
-                          className="w-full bg-amber-200 group-hover:bg-orange-500 rounded-t-xl transition-all duration-300 relative shadow-xs"
+                          className="w-full bg-stone-200 group-hover:bg-[#5C3D28] rounded-t-xl transition-all duration-300 relative shadow-xs"
                           style={{ height: `${item.pct}%` }}
                         >
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-bold px-2 py-1 rounded shadow whitespace-nowrap z-10 pointer-events-none text-center">
-                            <span className="block text-amber-300">Bruto: Rp {Math.round((grossRevenueIDR / 6) * (item.pct / 80)).toLocaleString('id-ID')}</span>
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-10 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-[9px] font-medium px-2 py-1 rounded shadow whitespace-nowrap z-10 pointer-events-none text-center">
+                            <span className="block text-amber-200">Bruto: Rp {Math.round((grossRevenueIDR / 6) * (item.pct / 80)).toLocaleString('id-ID')}</span>
                             <span className="block text-emerald-300">Bersih: Rp {Math.round((netRevenueIDR / 6) * (item.pct / 80)).toLocaleString('id-ID')}</span>
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-500">{item.label}</span>
+                        <span className="text-[10px] font-semibold text-stone-500">{item.label}</span>
                       </div>
                     ))
                   ) : revenuePeriodFilter === '1year' ? (
@@ -3062,30 +3103,30 @@ export default function AdminDashboardPage() {
                     ].map((item, idx) => (
                       <div key={idx} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
                         <div
-                          className="w-full bg-amber-200 group-hover:bg-orange-500 rounded-t-xl transition-all duration-300 relative shadow-xs"
+                          className="w-full bg-stone-200 group-hover:bg-[#5C3D28] rounded-t-xl transition-all duration-300 relative shadow-xs"
                           style={{ height: `${item.pct}%` }}
                         >
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-bold px-2 py-1 rounded shadow whitespace-nowrap z-10 pointer-events-none text-center">
-                            <span className="block text-amber-300">Bruto: Rp {Math.round((grossRevenueIDR / 12) * (item.pct / 90)).toLocaleString('id-ID')}</span>
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-10 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-[9px] font-medium px-2 py-1 rounded shadow whitespace-nowrap z-10 pointer-events-none text-center">
+                            <span className="block text-amber-200">Bruto: Rp {Math.round((grossRevenueIDR / 12) * (item.pct / 90)).toLocaleString('id-ID')}</span>
                             <span className="block text-emerald-300">Bersih: Rp {Math.round((netRevenueIDR / 12) * (item.pct / 90)).toLocaleString('id-ID')}</span>
                           </div>
                         </div>
-                        <span className="text-[9px] font-bold text-slate-500">{item.label}</span>
+                        <span className="text-[9px] font-semibold text-stone-500">{item.label}</span>
                       </div>
                     ))
                   ) : (
                     [35, 55, 40, 70, 60, 85, 95, 75, 90, 110, 80, 120].map((heightPct, idx) => (
                       <div key={idx} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
                         <div
-                          className="w-full bg-amber-200 group-hover:bg-orange-500 rounded-t-xl transition-all duration-300 relative shadow-xs"
+                          className="w-full bg-stone-200 group-hover:bg-[#5C3D28] rounded-t-xl transition-all duration-300 relative shadow-xs"
                           style={{ height: `${heightPct}%` }}
                         >
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-bold px-2 py-1 rounded shadow whitespace-nowrap z-10 pointer-events-none text-center">
-                            <span className="block text-amber-300">Bruto: Rp {Math.round((grossRevenueIDR / 12) * (heightPct / 60)).toLocaleString('id-ID')}</span>
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-10 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-[9px] font-medium px-2 py-1 rounded shadow whitespace-nowrap z-10 pointer-events-none text-center">
+                            <span className="block text-amber-200">Bruto: Rp {Math.round((grossRevenueIDR / 12) * (heightPct / 60)).toLocaleString('id-ID')}</span>
                             <span className="block text-emerald-300">Bersih: Rp {Math.round((netRevenueIDR / 12) * (heightPct / 60)).toLocaleString('id-ID')}</span>
                           </div>
                         </div>
-                        <span className="text-[9px] font-bold text-slate-400">Tgl {idx * 2 + 1}</span>
+                        <span className="text-[9px] font-semibold text-stone-400">Tgl {idx * 2 + 1}</span>
                       </div>
                     ))
                   )}
@@ -3093,133 +3134,93 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            {/* ANALISIS MAKANAN: MAKANAN PALING LARIS & MAKANAN TIDAK LARIS (TEPAT DI BAWAH GRAFIK OMSET) */}
+            {/* ANALISIS MAKANAN: MAKANAN PALING LARIS & MAKANAN TIDAK LARIS (DATA ASLI DARI TRANSAKSI WEB) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
               
-              {/* MAKANAN PALING LARIS (BEST SELLERS) */}
-              <div className="bg-white border border-amber-100 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              {/* MAKANAN PALING LARIS (BEST SELLERS - DATA ASLI PENJUALAN WEB) */}
+              <div className="bg-white border border-stone-200/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+                <div className="flex items-center justify-between border-b border-stone-100 pb-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-2xl bg-amber-100 text-orange-600 font-bold flex items-center justify-center text-lg shadow-inner">
+                    <div className="w-10 h-10 rounded-2xl bg-stone-100 text-stone-700 font-bold flex items-center justify-center text-lg">
                       🥇
                     </div>
                     <div>
-                      <h3 className="font-serif text-xl font-bold text-slate-900">Makanan Paling Laris</h3>
-                      <p className="text-xs text-slate-500">Peringkat hidangan paling diminati pelanggan</p>
+                      <h3 className="font-serif text-xl font-bold text-stone-900">Makanan Paling Laris</h3>
+                      <p className="text-xs text-stone-500">Peringkat teratas dihitung otomatis dari total porsi terjual di pesanan web</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  {effectiveRevenueIDR === 0 ? (
-                    <div className="py-10 text-center space-y-3 bg-amber-50/50 rounded-2xl border border-dashed border-amber-200 p-4">
-                      <div className="w-10 h-10 bg-amber-100 text-orange-600 rounded-full flex items-center justify-center mx-auto font-bold text-lg">
-                        🍽️
+                  {sortedBestSellers.slice(0, 4).map((prod, idx) => (
+                    <div key={prod.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50 border border-stone-200/60 hover:bg-stone-100/80 transition-colors">
+                      <div className="flex items-center gap-3.5">
+                        <span className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
+                          idx === 0 ? 'bg-[#5C3D28] text-white' : 
+                          idx === 1 ? 'bg-stone-700 text-white' : 
+                          'bg-stone-500 text-white'
+                        }`}>
+                          #{idx + 1}
+                        </span>
+                        <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-stone-100 border border-stone-200">
+                          <Image src={prod.image} alt={prod.name} fill unoptimized className="object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-stone-900 text-xs">{prod.name}</h4>
+                          <p className="text-[11px] text-stone-500">{prod.category} • Rp {prod.price.toLocaleString('id-ID')}</p>
+                        </div>
                       </div>
-                      <div className="space-y-1 max-w-xs mx-auto">
-                        <p className="text-xs font-bold text-slate-800">Daftar Makanan Laris Belum Muncul</p>
-                        <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                          Daftar menu terlaris akan otomatis tampil setelah Anda menginput data omset manual atau ketika transaksi realtime pertama masuk.
-                        </p>
+                      <div className="text-right">
+                        <span className="font-bold text-xs text-stone-900 block">{prod.unitsSold} Porsi Terjual</span>
+                        <span className="text-[10px] text-[#5C3D28] font-medium block mt-0.5">Total: Rp {prod.totalRevenue.toLocaleString('id-ID')}</span>
                       </div>
-                      <button
-                        onClick={() => {
-                          setInputRevenue(manualOmsetData ? String(manualOmsetData.revenue) : '15000000');
-                          setInputOrdersCount(manualOmsetData ? String(manualOmsetData.ordersCount) : '245');
-                          setInputBestSeller(manualOmsetData ? manualOmsetData.bestSeller : 'Rendang Sapi Warisan');
-                          setInputLeastSeller(manualOmsetData ? manualOmsetData.leastSeller : 'Soto Ayam Kampoeng');
-                          setShowInputOmsetModal(true);
-                        }}
-                        className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95"
-                      >
-                        ➕ Input Data Omset &amp; Menu
-                      </button>
                     </div>
-                  ) : (
-                    (productList || []).slice(0, 4).map((prod: any, idx: number) => (
-                      <div key={prod.id} className="flex items-center justify-between p-3 rounded-2xl bg-amber-50/40 border border-amber-200/60 hover:bg-amber-100/40 transition-colors">
-                        <div className="flex items-center gap-3.5">
-                          <span className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-xs ${
-                            idx === 0 ? 'bg-amber-500 text-white' : 
-                            idx === 1 ? 'bg-slate-400 text-white' : 
-                            'bg-amber-700 text-white'
-                          }`}>
-                            #{idx + 1}
-                          </span>
-                          <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
-                            <Image src={prod.image} alt={prod.name} fill unoptimized className="object-cover" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-slate-900 text-xs">{prod.name}</h4>
-                            <p className="text-[11px] text-slate-500">{prod.category} • ⭐ {prod.rating || 4.9}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-bold text-xs text-slate-900 block">Rp {(prod.price || 0).toLocaleString('id-ID')}</span>
-                          <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">🔥 {prod.soldCount || '1.5k+ Terjual'}</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                  ))}
                 </div>
               </div>
 
-              {/* MAKANAN TIDAK LARIS / SLOW MOVING (PERLU PROMO) */}
-              <div className="bg-white border border-amber-100 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              {/* MAKANAN TIDAK LARIS / SLOW MOVING (DATA ASLI PENJUALAN WEB) */}
+              <div className="bg-white border border-stone-200/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+                <div className="flex items-center justify-between border-b border-stone-100 pb-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 font-bold flex items-center justify-center text-lg shadow-inner">
+                    <div className="w-10 h-10 rounded-2xl bg-stone-100 text-stone-700 font-bold flex items-center justify-center text-lg">
                       📉
                     </div>
                     <div>
-                      <h3 className="font-serif text-xl font-bold text-slate-900">Makanan Tidak Laris (Kurang Laris)</h3>
-                      <p className="text-xs text-slate-500">Perlu dorongan promo &amp; strategi diskon khusus</p>
+                      <h3 className="font-serif text-xl font-bold text-stone-900">Makanan Tidak Laris (Kurang Laris)</h3>
+                      <p className="text-xs text-stone-500">Menu dengan porsi terjual paling rendah di web, disarankan diberi promo</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  {effectiveRevenueIDR === 0 ? (
-                    <div className="py-10 text-center space-y-3 bg-rose-50/50 rounded-2xl border border-dashed border-rose-200 p-4">
-                      <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto font-bold text-lg">
-                        📉
+                  {sortedLeastSellers.slice(0, 4).map((prod) => (
+                    <div key={prod.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50 border border-stone-200/60 hover:bg-stone-100/80 transition-colors">
+                      <div className="flex items-center gap-3.5">
+                        <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-stone-100 border border-stone-200">
+                          <Image src={prod.image} alt={prod.name} fill unoptimized className="object-cover" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-stone-900 text-xs">{prod.name}</h4>
+                          <p className="text-[11px] text-stone-500">Terjual: <span className="font-bold text-stone-800">{prod.unitsSold} Porsi</span></p>
+                        </div>
                       </div>
-                      <div className="space-y-1 max-w-xs mx-auto">
-                        <p className="text-xs font-bold text-slate-800">Daftar Makanan Kurang Laris Belum Muncul</p>
-                        <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                          Data analisis menu kurang laris akan otomatis terdeteksi setelah rekap penjualan atau data omset tersedia.
-                        </p>
+                      <div className="text-right flex flex-col items-end gap-1">
+                        <span className="text-[10px] bg-stone-200 text-stone-800 font-medium px-2.5 py-0.5 rounded-full">Perlu Promo</span>
+                        <button
+                          onClick={() => {
+                            setEventTitle(`Promo Spesial ${prod.name}`);
+                            setEventDiscount('20');
+                            setEventCode(`PROMO${prod.name.slice(0, 3).toUpperCase()}`);
+                            setShowCreateEventModal(true);
+                          }}
+                          className="text-[10px] text-[#5C3D28] font-bold hover:underline"
+                        >
+                          + Buat Promo
+                        </button>
                       </div>
                     </div>
-                  ) : (
-                    (productList || []).slice(-3).map((prod: any) => (
-                      <div key={prod.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-orange-50/50 transition-colors">
-                        <div className="flex items-center gap-3.5">
-                          <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
-                            <Image src={prod.image} alt={prod.name} fill unoptimized className="object-cover" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-slate-900 text-xs">{prod.name}</h4>
-                            <p className="text-[11px] text-slate-500">Stok: <span className="font-bold text-slate-700">{prod.stock} Porsi</span></p>
-                          </div>
-                        </div>
-                        <div className="text-right flex flex-col items-end gap-1">
-                          <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-full">Perlu Promo</span>
-                          <button
-                            onClick={() => {
-                              setEventTitle(`Promo Spesial ${prod.name}`);
-                              setEventDiscount('20');
-                              setEventCode(`PROMO${prod.name.slice(0, 3).toUpperCase()}`);
-                              setShowCreateEventModal(true);
-                            }}
-                            className="text-[10px] text-orange-600 font-bold hover:underline"
-                          >
-                            + Buat Promo
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                  ))}
                 </div>
               </div>
 

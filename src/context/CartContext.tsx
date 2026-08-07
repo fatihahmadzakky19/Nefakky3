@@ -153,13 +153,29 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Real-time effect: Auto-revoke applied promo if Admin deactivates it
+  // Real-time effect: Auto-revoke applied promo if Admin deactivates it or if it's a Weekend promo used on weekdays
   useEffect(() => {
     if (appliedPromo && vouchers.length > 0) {
       const foundVoucher = vouchers.find(
         v => (v.code.toUpperCase() === appliedPromo.toUpperCase() || v.id.toUpperCase() === appliedPromo.toUpperCase())
       );
-      const isStillActive = foundVoucher && foundVoucher.status === 'Active' && (foundVoucher.isActive !== false);
+      
+      const today = new Date();
+      const day = today.getDay(); // 0 = Minggu, 6 = Sabtu
+      const isWeekend = day === 0 || day === 6;
+
+      const isWeekendPromo = foundVoucher && (
+        foundVoucher.code.toUpperCase().includes('WEEKEND') || 
+        foundVoucher.name.toLowerCase().includes('weekend') ||
+        foundVoucher.expiry.toLowerCase().includes('akhir pekan') ||
+        foundVoucher.expiry.toLowerCase().includes('weekend')
+      );
+
+      const isStillActive = foundVoucher && 
+        foundVoucher.status === 'Active' && 
+        (foundVoucher.isActive !== false) &&
+        (!isWeekendPromo || isWeekend);
+
       if (!isStillActive) {
         removePromo();
       }
@@ -193,18 +209,23 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
-    // Weekend Promo restriction check (WEEKENDSERU is active ONLY on Saturday & Sunday)
-    if (upper === 'WEEKENDSERU') {
-      const day = new Date().getDay(); // 0 = Minggu, 6 = Sabtu
-      const isWeekend = day === 0 || day === 6;
-      if (!isWeekend) {
-        removePromo();
-        return {
-          success: false,
-          message: `Maaf, kode promo "WEEKENDSERU" hanya dapat digunakan pada hari libur / akhir pekan (Sabtu & Minggu)! Pada hari biasa promo ini otomatis non-aktif.`,
-          percent: 0
-        };
-      }
+    // Weekend Promo restriction check (Active ONLY on Saturday & Sunday)
+    const isWeekendPromo = 
+      foundVoucher.code.toUpperCase().includes('WEEKEND') || 
+      foundVoucher.name.toLowerCase().includes('weekend') ||
+      foundVoucher.expiry.toLowerCase().includes('akhir pekan') ||
+      foundVoucher.expiry.toLowerCase().includes('weekend');
+
+    const day = new Date().getDay(); // 0 = Minggu, 6 = Sabtu
+    const isWeekend = day === 0 || day === 6;
+
+    if (isWeekendPromo && !isWeekend) {
+      removePromo();
+      return {
+        success: false,
+        message: `Maaf, kode promo "${foundVoucher.code}" (${foundVoucher.name}) hanya dapat digunakan pada hari libur / akhir pekan (Sabtu & Minggu)! Pada hari kerja biasa promo ini otomatis NON-AKTIF / MATI.`,
+        percent: 0
+      };
     }
 
     const percent = foundVoucher.discountPercent || 20;
