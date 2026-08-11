@@ -3,9 +3,10 @@
 /**
  * ============================================================================
  * HALAMAN: Profil Pengguna & Riwayat Pembelian (src/app/profile/page.tsx)
- * DESKRIPSI: Dashboard pribadi pelanggan untuk mengelola profil, melacak status pesanan
- *            realtime 5-tahap (Diterima, Dimasak, Siap, Diantar/Di Jalan, Diterima Pelanggan),
- *            melakukan Konfirmasi Pesanan Diterima, serta obrolan CS Live Chat.
+ * DESKRIPSI: Dashboard pribadi pelanggan berbasis Google Stitch AI Design System
+ *            (Espresso #25160E, Terracotta #934B19, Warm Cream #FBF9F5).
+ * FITUR: Kelola profil, lacak status pesanan realtime 5-tahap, konfirmasi terima
+ *        pesanan, dan obrolan CS Live Chat.
  * ============================================================================
  */
 
@@ -38,7 +39,9 @@ import {
   Receipt,
   Check,
   Sparkles,
-  CreditCard
+  CreditCard,
+  User,
+  Crown
 } from 'lucide-react';
 
 export default function UserProfilePage() {
@@ -60,7 +63,7 @@ export default function UserProfilePage() {
 
   // Generate dynamic initial avatar per user email/name
   const nameForAvatar = user?.displayName || user?.email || 'User';
-  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForAvatar)}&background=F97316&color=ffffff&bold=true&size=256`;
+  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForAvatar)}&background=3C2A21&color=ffffff&bold=true&size=256`;
   const userAvatar = user?.photoURL || defaultAvatar;
 
   const currentUserEmail = (user?.email || '').toLowerCase();
@@ -153,59 +156,39 @@ export default function UserProfilePage() {
     }, 5000);
   };
 
-  // 5-Stage Step helper logic
-  const getOrderStepNumber = (status: AdminOrder['status']) => {
-    switch (status) {
-      case 'RECEIVED':
-      case 'PENDING':
-        return 1;
-      case 'COOKING':
-        return 2;
-      case 'READY':
-        return 3;
-      case 'DELIVERING':
-      case 'SHIPPING':
-        return 4;
-      case 'COMPLETED':
-        return 5;
-      default:
-        return 1;
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FCEEE2] flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-3 border-stone-300 border-t-[#6E3E13] rounded-full animate-spin mb-4" />
-        <p className="text-xs text-stone-500 font-medium">Memuat Profil Pelanggan...</p>
+      <div className="min-h-screen bg-[#FBF9F5] flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 border-3 border-stone-300 border-t-[#25160E] rounded-full animate-spin mb-4" />
+        <p className="text-xs text-[#4F4540] font-medium tracking-wide">Memuat Profil Pelanggan...</p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#FCEEE2] text-stone-800 font-sans">
+      <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans">
         <Navbar />
         <div className="max-w-md mx-auto py-20 px-4 text-center space-y-6">
-          <div className="w-20 h-20 bg-[#F59E3D] text-[#2D1B0E] rounded-full flex items-center justify-center mx-auto text-4xl shadow-sm border border-[#DE8B32]">
-            👤
+          <div className="w-20 h-20 bg-[#3C2A21] text-amber-300 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-xl shadow-amber-950/10 border border-amber-900/20">
+            <User className="w-10 h-10 text-amber-200" />
           </div>
           <div className="space-y-2">
-            <h2 className="font-serif text-3xl font-bold text-[#2D1B0E]">Profil Pelanggan</h2>
-            <p className="text-xs text-[#7A5B43] font-medium leading-relaxed">
-              Silakan masuk atau mendaftar akun terlebih dahulu untuk melihat profil, riwayat pesanan, konfirmasi pesanan, dan dukungan pelanggan.
+            <h2 className="font-serif text-3xl font-bold text-[#25160E]">Profil Pelanggan</h2>
+            <p className="text-xs text-[#4F4540] font-medium leading-relaxed">
+              Silakan masuk atau mendaftar akun terlebih dahulu untuk mengakses profil pribadi, melacak pengiriman 5-tahap, serta layanan CS Live Chat.
             </p>
           </div>
           <div className="flex flex-col gap-3 pt-2">
             <Link
               href="/login"
-              className="w-full py-3.5 bg-[#6E3E13] hover:bg-[#58310E] text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-md transition-all block text-center"
+              className="w-full py-3.5 bg-[#25160E] hover:bg-[#3C2A21] text-white font-bold text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all block text-center"
             >
               Masuk ke Akun Saya
             </Link>
             <Link
               href="/register"
-              className="w-full py-3.5 bg-white text-[#2D1B0E] hover:bg-stone-50 font-bold text-xs rounded-full border border-stone-200 shadow-xs transition-all block text-center"
+              className="w-full py-3.5 bg-white text-[#25160E] hover:bg-stone-50 font-bold text-xs rounded-2xl border border-amber-900/15 shadow-sm transition-all block text-center"
             >
               Daftar Akun Baru
             </Link>
@@ -216,7 +199,7 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FCEEE2] text-stone-800 font-sans selection:bg-[#6E3E13]/10 selection:text-[#6E3E13]">
+    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19]">
       
       {/* Hidden input for gallery photo upload */}
       <input 
@@ -233,7 +216,7 @@ export default function UserProfilePage() {
       {/* SUCCESS CONFIRMATION BANNER */}
       {confirmedSuccessMessage && (
         <div className="max-w-7xl mx-auto px-6 sm:px-12 pt-6">
-          <div className="bg-emerald-500 text-white px-6 py-4 rounded-2xl shadow-lg flex items-center justify-between gap-4 animate-bounce">
+          <div className="bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-xl flex items-center justify-between gap-4 animate-bounce border border-emerald-500">
             <div className="flex items-center gap-3">
               <Sparkles className="w-6 h-6 text-amber-200 shrink-0" />
               <p className="text-xs sm:text-sm font-semibold">{confirmedSuccessMessage}</p>
@@ -248,25 +231,31 @@ export default function UserProfilePage() {
       {/* 2. MAIN PROFILE CONTAINER */}
       <main className="max-w-7xl mx-auto px-6 sm:px-12 py-8 space-y-8">
         
-        {/* TOP PROFILE BANNER CARD */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden border border-stone-100 shadow-sm">
+        {/* TOP PROFILE BANNER CARD (Google Stitch Design Token) */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden border border-amber-900/10 shadow-xl shadow-amber-950/5">
           
+          {/* Subtle Ambient Background Gradient */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-amber-500/5 via-amber-700/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+
           {/* Avatar & Main User Details */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left w-full md:w-auto relative z-10">
             
             {/* Avatar with Edit Pencil Overlay */}
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white shadow-md shrink-0 bg-stone-100 group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+            <div 
+              className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden border-2 border-amber-900/10 shadow-lg shrink-0 bg-[#3C2A21] group cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={userAvatar}
                 alt={displayName}
-                className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
               <button 
                 type="button"
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                className="absolute bottom-1 right-1 p-2 bg-[#6E3E13] hover:bg-[#58310E] text-white rounded-full shadow transition-all"
-                title="Ambil Foto dari Galeri"
+                className="absolute bottom-2 right-2 p-2 bg-[#25160E] hover:bg-[#3C2A21] text-amber-300 rounded-xl shadow-md transition-all border border-amber-900/20"
+                title="Ganti Foto Profil dari Galeri"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
@@ -274,31 +263,28 @@ export default function UserProfilePage() {
 
             {/* Name, Email, Edit Profile Button */}
             <div className="space-y-2">
-              <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <h1 className="font-serif text-3xl font-bold text-[#2D1B0E]">
+              <div className="flex items-center gap-2.5 justify-center sm:justify-start">
+                <h1 className="font-serif text-3xl font-bold text-[#25160E]">
                   {displayName}
                 </h1>
-                <span className="px-2.5 py-0.5 bg-[#F59E3D] text-[#2D1B0E] text-[10px] font-bold rounded-full border border-[#DE8B32]">
-                  VIP Pelanggan
-                </span>
               </div>
-              <p className="text-xs text-[#7A5B43] font-mono">
+              <p className="text-xs text-[#4F4540] font-mono">
                 {user.email || 'pelanggan@nefakky.com'}
               </p>
 
               <div className="pt-2 flex items-center gap-3 flex-wrap justify-center sm:justify-start">
                 <button
                   onClick={() => setIsEditingModal(true)}
-                  className="px-5 py-2 bg-[#6E3E13] hover:bg-[#58310E] text-white text-xs font-bold rounded-full shadow-sm transition-all uppercase tracking-wider"
+                  className="px-5 py-2.5 bg-[#25160E] hover:bg-[#3C2A21] text-white text-xs font-bold rounded-2xl shadow-md transition-all uppercase tracking-wider"
                 >
-                  Edit Profile
+                  Edit Profil
                 </button>
                 {(user.role === 'admin' || user.email === 'fatihahmadzakky19@gmail.com') && (
                   <Link
                     href="/admin"
-                    className="px-5 py-2 bg-[#F59E3D] hover:bg-[#E58F2E] text-[#2D1B0E] text-xs font-bold rounded-full shadow-md transition-all flex items-center gap-2"
+                    className="px-5 py-2.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow-md transition-all flex items-center gap-2"
                   >
-                    <ShieldCheck className="w-4 h-4 text-[#6E3E13]" />
+                    <ShieldCheck className="w-4 h-4 text-amber-200" />
                     <span>Panel Administrator</span>
                   </Link>
                 )}
@@ -308,30 +294,30 @@ export default function UserProfilePage() {
           </div>
 
           {/* Details Grid (Phone & Address) */}
-          <div className="flex flex-col sm:flex-row items-start gap-6 border-t md:border-t-0 md:border-l border-amber-200/60 pt-6 md:pt-0 md:pl-8 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row items-start gap-6 border-t md:border-t-0 md:border-l border-amber-900/10 pt-6 md:pt-0 md:pl-8 w-full md:w-auto relative z-10">
             
             {/* Phone */}
             <div className="flex items-start gap-3">
-              <div className="p-2.5 bg-orange-100/70 text-orange-600 rounded-2xl shrink-0">
+              <div className="p-3 bg-[#FFA26A]/20 text-[#934B19] rounded-2xl shrink-0 border border-[#FFA26A]/30">
                 <Phone className="w-4 h-4" />
               </div>
               <div className="space-y-0.5">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">No. Telepon</span>
-                <span className="text-xs font-bold text-slate-800">
-                  {phone || <span className="text-slate-400 font-normal italic">Belum diisi</span>}
+                <span className="text-[10px] text-[#4F4540] font-bold uppercase tracking-wider block">No. Telepon</span>
+                <span className="text-xs font-bold text-[#1B1C1A]">
+                  {phone || <span className="text-stone-400 font-normal italic">Belum diisi</span>}
                 </span>
               </div>
             </div>
 
             {/* Address */}
             <div className="flex items-start gap-3 max-w-xs">
-              <div className="p-2.5 bg-amber-100/70 text-amber-700 rounded-2xl shrink-0">
+              <div className="p-3 bg-[#3C2A21]/10 text-[#3C2A21] rounded-2xl shrink-0 border border-[#3C2A21]/15">
                 <MapPin className="w-4 h-4" />
               </div>
               <div className="space-y-0.5">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Alamat Pengiriman</span>
-                <span className="text-xs font-semibold text-slate-800 leading-snug">
-                  {address || <span className="text-slate-400 font-normal italic">Belum diisi</span>}
+                <span className="text-[10px] text-[#4F4540] font-bold uppercase tracking-wider block">Alamat Pengiriman</span>
+                <span className="text-xs font-semibold text-[#1B1C1A] leading-snug">
+                  {address || <span className="text-stone-400 font-normal italic">Belum diisi</span>}
                 </span>
               </div>
             </div>
@@ -343,23 +329,24 @@ export default function UserProfilePage() {
         {/* TWO COLUMN CONTENT LAYOUT */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* LEFT SIDEBAR: Account & Live Chat */}
+          {/* LEFT SIDEBAR: Account & Live Chat CS Desk */}
           <div className="lg:col-span-4 space-y-6">
             
             {/* LIVE CHAT CUSTOMER SERVICE CARD */}
-            <div className="bg-white border border-amber-100 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="bg-white border border-amber-900/10 rounded-3xl p-6 shadow-xl shadow-amber-950/5 space-y-4">
+              
               {/* CS Header */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-                    <Headphones className="w-4 h-4" />
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#25160E] text-amber-300 flex items-center justify-center shrink-0 shadow-md">
+                    <Headphones className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-serif text-base font-bold text-slate-900">CS & Support</h3>
-                    <p className="text-[10px] text-slate-500">Live chat bantuan resto</p>
+                    <h3 className="font-serif text-base font-bold text-[#25160E]">CS & Support Desk</h3>
+                    <p className="text-[10px] text-[#4F4540]">Live chat bantuan pelanggan</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-700 text-[10px] font-bold">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-700 text-[10px] font-bold">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <span>Online</span>
                 </div>
@@ -370,26 +357,26 @@ export default function UserProfilePage() {
                 <button
                   type="button"
                   onClick={() => handleChipClick('Halo Min, pesanan saya belum sampai nih, tolong dicek ya.')}
-                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-slate-700 rounded-lg border border-amber-200/80 transition-colors text-[10px] font-medium"
+                  className="px-3 py-1 bg-[#FBF9F5] hover:bg-amber-100/60 text-[#4F4540] rounded-xl border border-amber-900/10 transition-colors text-[10px] font-medium"
                 >
-                  🚚 Pesanan Belum Sampai
+                  🚚 Belum Sampai
                 </button>
                 <button
                   type="button"
                   onClick={() => handleChipClick('Halo Min, saya ada kendala saat pembayaran.')}
-                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-slate-700 rounded-lg border border-amber-200/80 transition-colors text-[10px] font-medium"
+                  className="px-3 py-1 bg-[#FBF9F5] hover:bg-amber-100/60 text-[#4F4540] rounded-xl border border-amber-900/10 transition-colors text-[10px] font-medium"
                 >
                   💳 Kendala Bayar
                 </button>
               </div>
 
               {/* Chat History Container */}
-              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 max-h-[260px] overflow-y-auto space-y-2.5">
+              <div className="bg-[#FBF9F5] rounded-2xl p-4 border border-amber-900/10 max-h-[280px] overflow-y-auto space-y-3">
                 {userChatHistory.length === 0 ? (
-                  <div className="py-6 text-center space-y-1.5">
-                    <MessageSquare className="w-6 h-6 text-slate-300 mx-auto" />
-                    <p className="text-xs font-semibold text-slate-600">Belum Ada Pesan Chat</p>
-                    <p className="text-[10px] text-slate-400">Ketik pesan di bawah untuk menghubungi CS.</p>
+                  <div className="py-8 text-center space-y-2">
+                    <MessageSquare className="w-7 h-7 text-stone-300 mx-auto" />
+                    <p className="text-xs font-semibold text-[#25160E]">Belum Ada Pesan Chat</p>
+                    <p className="text-[10px] text-[#4F4540]">Ketik pesan Anda di bawah untuk terhubung ke CS Admin.</p>
                   </div>
                 ) : (
                   userChatHistory.map((msg) => (
@@ -397,19 +384,19 @@ export default function UserProfilePage() {
                       key={msg.id}
                       className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'} space-y-1`}
                     >
-                      <div className="flex items-center gap-1 text-[9px] text-slate-400">
-                        <span className="font-bold text-slate-600">
-                          {msg.sender === 'user' ? 'Anda' : 'Admin CS'}
+                      <div className="flex items-center gap-1.5 text-[9px] text-[#4F4540]">
+                        <span className="font-bold text-[#25160E]">
+                          {msg.sender === 'user' ? 'Anda' : 'CS Admin'}
                         </span>
                         <span>•</span>
                         <span>{msg.timestamp}</span>
                       </div>
 
                       <div
-                        className={`max-w-[88%] px-3 py-2 rounded-xl text-xs leading-relaxed shadow-xs ${
+                        className={`max-w-[88%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
                           msg.sender === 'user'
-                            ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white rounded-br-none font-medium'
-                            : 'bg-white border border-slate-200 text-slate-900 rounded-bl-none font-normal'
+                            ? 'bg-[#25160E] text-white rounded-br-none font-medium'
+                            : 'bg-white border border-amber-900/10 text-[#1B1C1A] rounded-bl-none font-normal'
                         }`}
                       >
                         {msg.text}
@@ -427,12 +414,12 @@ export default function UserProfilePage() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Ketik pesan Anda..."
-                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                  className="flex-1 px-3.5 py-2.5 bg-[#FBF9F5] border border-amber-900/15 rounded-xl text-xs text-[#1B1C1A] focus:outline-none focus:ring-2 focus:ring-[#934B19]/30"
                 />
                 <button
                   type="submit"
                   disabled={!chatInput.trim()}
-                  className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow transition-all flex items-center justify-center shrink-0"
+                  className="px-4 py-2.5 bg-[#934B19] hover:bg-[#783603] disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow transition-all flex items-center justify-center shrink-0"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>
@@ -440,10 +427,10 @@ export default function UserProfilePage() {
             </div>
 
             {/* Logout Card */}
-            <div className="bg-white border border-amber-100 rounded-3xl p-5 shadow-sm">
+            <div className="bg-white border border-amber-900/10 rounded-3xl p-5 shadow-xl shadow-amber-950/5">
               <button 
                 onClick={logout}
-                className="w-full flex items-center justify-between p-3 hover:bg-red-50 rounded-2xl text-xs font-bold text-red-600 transition-colors"
+                className="w-full flex items-center justify-between p-3.5 hover:bg-rose-50 rounded-2xl text-xs font-bold text-rose-700 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <LogOut className="w-4 h-4" />
@@ -458,50 +445,50 @@ export default function UserProfilePage() {
           <div className="lg:col-span-8 space-y-6">
             
             {/* Header & Filter Tabs */}
-            <div className="bg-white border border-amber-100 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="bg-white border border-amber-900/10 rounded-3xl p-6 shadow-xl shadow-amber-950/5 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-serif text-2xl font-bold text-slate-900 flex items-center gap-2">
-                    <Receipt className="w-6 h-6 text-orange-500" />
-                    <span>Riwayat Pembelian & Pembayaran</span>
+                  <h2 className="font-serif text-2xl font-bold text-[#25160E] flex items-center gap-2">
+                    <Receipt className="w-6 h-6 text-[#934B19]" />
+                    <span>Riwayat Pesanan & Pelacakan Live</span>
                   </h2>
-                  <p className="text-xs text-slate-500">Lacak status pesanan 5-tahap & lakukan konfirmasi pesanan diterima.</p>
+                  <p className="text-xs text-[#4F4540]">Lacak progress 5-tahap real-time & konfirmasi pesanan telah diterima.</p>
                 </div>
               </div>
 
               {/* NOTIFIKASI RESTO MEMBLUDAK (>15 ORDER) */}
               {orders.length > 15 && (
-                <div className="p-4 bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-2xl flex items-start gap-3 shadow-sm animate-pulse mt-3">
+                <div className="p-4 bg-amber-50 border-2 border-amber-300 text-amber-950 rounded-2xl flex items-start gap-3 shadow-sm animate-pulse mt-3">
                   <span className="text-2xl shrink-0">⚠️</span>
                   <div className="space-y-1">
-                    <h4 className="font-bold text-xs text-rose-900">
-                      Resto Sedang Membludak / Sangat Ramai! ({orders.length} Pesanan Bersamaan)
+                    <h4 className="font-bold text-xs text-amber-900">
+                      Resto Sedang Membludak! ({orders.length} Pesanan Bersamaan)
                     </h4>
-                    <p className="text-[11px] font-medium leading-relaxed text-rose-800">
-                      Dapur kami saat ini sedang melayani lebih dari 15 pemesanan sekaligus di waktu yang sama. Estimasi kedatangan pesanan Anda diperkirakan <strong>MELEBIHI 1 JAM (~1.5 Jam / 90 Menit)</strong>. Terima kasih atas kesabaran Anda menunggu hidangan lezat kami!
+                    <p className="text-[11px] font-medium leading-relaxed text-amber-800">
+                      Dapur kami saat ini sedang melayani pemesanan ramai sekaligus. Estimasi pengantaran diperkirakan <strong>MELEBIHI 1 JAM (~90 Menit)</strong>. Terima kasih atas kesabaran Anda!
                     </p>
                   </div>
                 </div>
               )}
 
               {/* Status Filters */}
-              <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-stone-100">
                 <button
                   onClick={() => setOrderFilter('ALL')}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
                     orderFilter === 'ALL'
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-amber-100/60'
+                      ? 'bg-[#25160E] text-white shadow-md'
+                      : 'bg-[#FBF9F5] text-[#4F4540] hover:bg-amber-100/60 border border-amber-900/10'
                   }`}
                 >
                   Semua Pesanan ({myOrders.length})
                 </button>
                 <button
                   onClick={() => setOrderFilter('DELIVERING')}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                     orderFilter === 'DELIVERING'
-                      ? 'bg-orange-600 text-white shadow-md shadow-orange-500/25'
-                      : 'bg-orange-50 text-orange-700 hover:bg-orange-100'
+                      ? 'bg-[#934B19] text-white shadow-md'
+                      : 'bg-amber-50 text-[#934B19] hover:bg-amber-100 border border-amber-200'
                   }`}
                 >
                   <Truck className="w-3.5 h-3.5" />
@@ -509,34 +496,34 @@ export default function UserProfilePage() {
                 </button>
                 <button
                   onClick={() => setOrderFilter('COMPLETED')}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                     orderFilter === 'COMPLETED'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
                   }`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Selesai / Diterima ({myOrders.filter(o => o.status === 'COMPLETED').length})</span>
+                  <span>Selesai ({myOrders.filter(o => o.status === 'COMPLETED').length})</span>
                 </button>
               </div>
             </div>
 
             {/* Orders List / Empty State */}
             {filteredOrders.length === 0 ? (
-              <div className="bg-white border border-amber-100 rounded-3xl p-10 text-center space-y-4 shadow-sm">
-                <div className="w-16 h-16 bg-amber-100 text-orange-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+              <div className="bg-white border border-amber-900/10 rounded-3xl p-10 text-center space-y-4 shadow-xl shadow-amber-950/5">
+                <div className="w-16 h-16 bg-[#FBF9F5] text-[#934B19] border border-amber-900/10 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
                   <ShoppingBag className="w-8 h-8 stroke-[1.5]" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="font-serif text-xl font-bold text-slate-900">Tidak Ada Pesanan</h3>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto font-light leading-relaxed">
-                    Belum ada riwayat transaksi pada kategori ini. Jelajahi sajian kuliner kami dan nikmati diskon menarik!
+                  <h3 className="font-serif text-xl font-bold text-[#25160E]">Tidak Ada Pesanan</h3>
+                  <p className="text-xs text-[#4F4540] max-w-sm mx-auto font-light leading-relaxed">
+                    Belum ada riwayat transaksi pada kategori ini. Jelajahi sajian kuliner artisanal kami!
                   </p>
                 </div>
                 <div className="pt-2">
                   <Link 
                     href="/menu"
-                    className="btn-primary inline-flex max-w-xs mx-auto"
+                    className="px-6 py-3 bg-[#25160E] hover:bg-[#3C2A21] text-white text-xs font-bold uppercase tracking-wider rounded-2xl shadow-lg transition-all inline-flex items-center gap-2"
                   >
                     <span>Jelajahi Menu Sekarang</span>
                     <ArrowRight className="w-4 h-4" />
@@ -564,12 +551,12 @@ export default function UserProfilePage() {
 
       {/* 3. EDIT PROFILE MODAL */}
       {isEditingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#25160E]/60 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4 border border-amber-900/15">
             
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-serif text-xl font-bold text-slate-900">Edit Profil Pengguna</h3>
-              <button onClick={() => setIsEditingModal(false)} className="text-slate-400 hover:text-slate-600">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+              <h3 className="font-serif text-xl font-bold text-[#25160E]">Edit Profil Pengguna</h3>
+              <button onClick={() => setIsEditingModal(false)} className="text-stone-400 hover:text-[#25160E]">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -582,8 +569,8 @@ export default function UserProfilePage() {
             ) : (
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 {/* Photo Upload Section in Modal */}
-                <div className="flex items-center gap-4 p-3 bg-amber-50/60 rounded-2xl border border-amber-200/80">
-                  <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0 bg-slate-200">
+                <div className="flex items-center gap-4 p-3 bg-[#FBF9F5] rounded-2xl border border-amber-900/10">
+                  <div className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-white shadow-sm shrink-0 bg-[#3C2A21]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={userAvatar}
@@ -592,11 +579,11 @@ export default function UserProfilePage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-bold text-slate-800">Foto Profil</p>
+                    <p className="text-xs font-bold text-[#25160E]">Foto Profil</p>
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-xs font-semibold text-orange-600 hover:underline flex items-center gap-1"
+                      className="text-xs font-semibold text-[#934B19] hover:underline flex items-center gap-1"
                     >
                       <Pencil className="w-3 h-3" />
                       <span>Ganti Foto dari Galeri</span>
@@ -605,35 +592,35 @@ export default function UserProfilePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                  <label className="block text-xs font-bold text-[#25160E] mb-1">Nama Lengkap</label>
                   <input
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="input-field"
+                    className="w-full px-4 py-3 bg-[#FBF9F5] border border-amber-900/15 rounded-2xl text-xs text-[#1B1C1A] focus:outline-none focus:ring-2 focus:ring-[#934B19]/30"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Nomor Telepon</label>
+                  <label className="block text-xs font-bold text-[#25160E] mb-1">Nomor Telepon</label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+62 812-xxxx-xxxx"
-                    className="input-field"
+                    className="w-full px-4 py-3 bg-[#FBF9F5] border border-amber-900/15 rounded-2xl text-xs text-[#1B1C1A] focus:outline-none focus:ring-2 focus:ring-[#934B19]/30"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Alamat Pengiriman</label>
+                  <label className="block text-xs font-bold text-[#25160E] mb-1">Alamat Pengiriman</label>
                   <textarea
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Masukkan alamat rumah / pengiriman lengkap Anda..."
                     rows={3}
-                    className="w-full px-4 py-3 bg-amber-50/30 border border-amber-200/80 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                    className="w-full px-4 py-3 bg-[#FBF9F5] border border-amber-900/15 rounded-2xl text-xs text-[#1B1C1A] focus:outline-none focus:ring-2 focus:ring-[#934B19]/30"
                   />
                 </div>
 
@@ -641,13 +628,13 @@ export default function UserProfilePage() {
                   <button
                     type="button"
                     onClick={() => setIsEditingModal(false)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-full"
+                    className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-[#4F4540] text-xs font-semibold rounded-2xl"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-full shadow-md shadow-orange-500/20"
+                    className="px-6 py-2.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow-md"
                   >
                     Simpan Perubahan
                   </button>

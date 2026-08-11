@@ -192,7 +192,6 @@ export interface UserReview {
   id: string;
   authorName: string;
   authorEmail?: string;
-  authorBadge?: string;
   authorAvatar?: string;
   avatar?: string;
   rating: number;
@@ -528,8 +527,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     address: 'Jl. Kebon Jeruk No. 12, Jakarta Barat',
     phone: '081234567890',
     items: [
-      { id: 'm1', name: 'Ayam Bakar Rempah', price: 35000, quantity: 2, image: '/images/ayam_bakar.jpg' },
-      { id: 'm6', name: 'Jus Segar (Jambu, Sirsak, Mangga)', price: 15000, quantity: 2, image: '/images/jus_mangga.jpg' }
+      { id: 'm1', name: 'Ayam Bakar', price: 35000, quantity: 2, image: '/images/ayam_bakar.jpg' },
+      { id: 'm6', name: 'Jus (Jambu, Sirsak, Mangga)', price: 15000, quantity: 2, image: '/images/jus_mangga.jpg' }
     ],
     itemCount: 4,
     paymentMethod: 'QRIS / GoPay',
@@ -551,8 +550,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     address: 'Jl. Sudirman No. 105, Jakarta Selatan',
     phone: '089876543210',
     items: [
-      { id: 'm1', name: 'Ayam Bakar Rempah', price: 35000, quantity: 3, image: '/images/ayam_bakar.jpg' },
-      { id: 'm2', name: 'Nasi Bakar Cumi', price: 28000, quantity: 2, image: '/images/nasi_bakar.jpg' }
+      { id: 'm1', name: 'Ayam Bakar', price: 35000, quantity: 3, image: '/images/ayam_bakar.jpg' },
+      { id: 'm2', name: 'Nasi Bakar', price: 28000, quantity: 2, image: '/images/nasi_bakar.jpg' }
     ],
     itemCount: 5,
     paymentMethod: 'Midtrans Credit Card',
@@ -575,8 +574,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     address: 'Gedung Cyber 2 Lt. 5, Kuningan, Jakarta',
     phone: '085512344321',
     items: [
-      { id: 'm4', name: 'Gudeg Komplit Jogja', price: 32000, quantity: 2, image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80' },
-      { id: 'm6', name: 'Jus Segar (Jambu, Sirsak, Mangga)', price: 15000, quantity: 2, image: '/images/jus_mangga.jpg' }
+      { id: 'm4', name: 'Gudeg', price: 32000, quantity: 2, image: '/images/gudeg.jpg' },
+      { id: 'm6', name: 'Jus (Jambu, Sirsak, Mangga)', price: 15000, quantity: 2, image: '/images/jus_mangga.jpg' }
     ],
     itemCount: 4,
     paymentMethod: 'Transfer Bank BCA',
@@ -598,8 +597,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     address: 'Jl. Gatot Subroto Kav 22, Jakarta',
     phone: '087788990011',
     items: [
-      { id: 'm1', name: 'Ayam Bakar Rempah', price: 35000, quantity: 1, image: '/images/ayam_bakar.jpg' },
-      { id: 'm3', name: 'Krecek Pedas Gurih', price: 22000, quantity: 1, image: '/images/krecek.jpg' }
+      { id: 'm1', name: 'Ayam Bakar', price: 35000, quantity: 1, image: '/images/ayam_bakar.jpg' },
+      { id: 'm3', name: 'Krecek', price: 22000, quantity: 1, image: '/images/krecek.jpg' }
     ],
     itemCount: 2,
     paymentMethod: 'ShopeePay',
@@ -642,7 +641,6 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     id: 'rev-1',
     authorName: 'Ahmad Zakky',
     authorEmail: 'ahmad@example.com',
-    authorBadge: 'PLATINUM',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
     authorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
     rating: 5,
@@ -657,7 +655,6 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     id: 'rev-2',
     authorName: 'Siti Rahmawati',
     authorEmail: 'siti@example.com',
-    authorBadge: 'GOLD',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
     authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
     rating: 5,
@@ -672,7 +669,6 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     id: 'rev-3',
     authorName: 'Dimas Pratama',
     authorEmail: 'dimas@example.com',
-    authorBadge: 'MEMBER',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
     authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
     rating: 5,
@@ -687,7 +683,6 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     id: 'rev-4',
     authorName: 'Dewi Lestari',
     authorEmail: 'dewi@example.com',
-    authorBadge: 'MEMBER',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
     authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
     rating: 5,
@@ -702,7 +697,6 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     id: 'rev-5',
     authorName: 'Budi Hartono',
     authorEmail: 'budi@example.com',
-    authorBadge: 'GOLD',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
     authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
     rating: 5,
@@ -717,7 +711,6 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     id: 'rev-6',
     authorName: 'Amanda Rizky',
     authorEmail: 'amanda@example.com',
-    authorBadge: 'PLATINUM',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
     authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
     rating: 5,
@@ -1185,7 +1178,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const newReview: UserReview = {
       ...reviewData,
       id: newId,
-      authorBadge: reviewData.authorBadge || 'MEMBER',
       avatar,
       authorAvatar: avatar,
       date: 'Baru saja',

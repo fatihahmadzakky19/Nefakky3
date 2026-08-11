@@ -1,5 +1,15 @@
 'use client';
 
+/**
+ * ============================================================================
+ * HALAMAN: Realtime Lacak Status Pesanan 5-Tahap (src/app/notifications/page.tsx)
+ * DESKRIPSI: Presisi 100% sesuai Google Stitch AI Design System & HTML Layout
+ *            (Espresso #25160E, Terracotta #934B19, Warm Cream #FBF9F5).
+ * FITUR: Stepper Alur 5-Tahap (Diterima -> Dimasak -> Siap -> Diantar -> Selesai),
+ *        Penghitung Waktu Estimasi Live, & Informasi Kurir Pengantar.
+ * ============================================================================
+ */
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,26 +25,29 @@ import {
   Bell, 
   ArrowLeft,
   X,
-  FileText
+  FileText,
+  Clock,
+  CheckCircle2,
+  Phone,
+  MessageSquare,
+  MapPin,
+  Utensils,
+  Check
 } from 'lucide-react';
 
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { orders, vouchers, updateOrderStatus } = useData();
+  const { orders, vouchers, updateOrderStatus, confirmOrderReceived } = useData();
   const { totalCartCount } = useCart();
 
-  const [activeTab, setActiveTab] = useState<'semua' | 'history-pemesanan' | 'riwayat-pembayaran' | 'promo-makanan'>('semua');
   const [selectedReceipt, setSelectedReceipt] = useState<AdminOrder | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [secondsLeft, setSecondsLeft] = useState<number>(1499);
 
   const currentUserEmail = (user?.email || '').toLowerCase();
   const currentUserName = (user?.displayName || '').toLowerCase();
 
-  // Dynamic user avatar or default
-  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || user?.email || 'User')}&background=F59E3D&color=ffffff&bold=true`;
-  const userAvatar = user?.photoURL || defaultAvatar;
-
-  // Filter & sort user's specific orders in real-time (sinkron dengan halaman profile, terbaru di atas)
   const userOrders = React.useMemo(() => {
     if (!user?.email) return [];
     return (orders || [])
@@ -46,43 +59,65 @@ export default function NotificationsPage() {
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   }, [user, currentUserEmail, currentUserName, orders]);
 
-  // Fallback demo order for preview if user has no placed orders yet
-  const displayOrders: AdminOrder[] = userOrders.length > 0 ? userOrders : [
-    {
-      id: 'ORD-12',
-      customerName: user?.displayName || user?.email?.split('@')[0] || 'Nefakky Gourmet User',
-      customerEmail: currentUserEmail,
-      avatar: userAvatar,
-      address: 'Jl. Kebon Jeruk No. 12, Jakarta Barat',
-      items: [
-        { id: 'm6', name: 'Jus Segar (Jambu, Sirsak, Mangga)', price: 5100, quantity: 1, image: '/images/jus_mangga.jpg' }
-      ],
-      itemCount: 1,
-      paymentMethod: 'Midtrans Payment Gateway',
-      paymentBadge: 'PAID',
-      deliveryType: 'Standard Delivery',
-      status: 'COOKING',
-      subtotal: 5100,
-      shippingCost: 0,
-      discount: 0,
-      total: 5100,
-      date: 'Hari ini, 19.30'
-    }
-  ];
-
-  // Active Vouchers/Promos created by Admin
-  const activeVouchers = React.useMemo(() => {
-    return (vouchers || []).filter(v => isVoucherValidNow(v).active);
-  }, [vouchers]);
-
-  const handleConfirmReceived = (orderId: string) => {
-    if (confirm(`Apakah Anda mengonfirmasi bahwa pesanan ${orderId} telah Anda terima dengan baik?`)) {
-      updateOrderStatus(orderId, 'COMPLETED');
-      alert(`🎉 Terima kasih! Pesanan ${orderId} telah dikonfirmasi diterima.`);
-    }
+  const fallbackOrder: AdminOrder = {
+    id: 'ORD-4837',
+    customerName: user?.displayName || user?.email?.split('@')[0] || 'Fatih Ahmad Zakky',
+    customerEmail: currentUserEmail,
+    avatar: user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || 'User')}&background=25160E&color=ffffff`,
+    address: 'Jl. Sudirman Kav 52-53, Jakarta Selatan, 12190',
+    items: [
+      { id: 'm1', name: 'Ayam Bakar', price: 35000, quantity: 1, image: '/images/ayam_bakar.jpg' },
+      { id: 'm4', name: 'Gudeg', price: 40000, quantity: 1, image: '/images/gudeg.jpg' }
+    ],
+    itemCount: 2,
+    paymentMethod: 'Midtrans Payment Gateway Engine',
+    paymentBadge: 'PAID',
+    deliveryType: 'Express Delivery (30 Mins)',
+    status: 'COOKING',
+    subtotal: 150000,
+    shippingCost: 15000,
+    discount: 0,
+    total: 165000,
+    date: 'Hari ini, 14:12 WIB',
+    createdAt: Date.now() - 1000 * 60 * 5
   };
 
-  // Helper step index (1..5)
+  const displayOrdersList = userOrders.length > 0 ? userOrders : [fallbackOrder];
+
+  const activeOrder: AdminOrder = displayOrdersList.find(o => o.id === selectedOrderId) || displayOrdersList[0];
+
+  // Real-time Countdown Timer Logic
+  React.useEffect(() => {
+    if (activeOrder.status === 'COMPLETED') return;
+
+    const createdTime = activeOrder.createdAt || Date.now();
+    const now = Date.now();
+    const elapsedSec = Math.floor((now - createdTime) / 1000);
+    const totalSec = 1500; // 25 minutes target
+    const remainingSec = Math.max(0, totalSec - (elapsedSec % totalSec));
+
+    setSecondsLeft(remainingSec);
+
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeOrder.id, activeOrder.status, activeOrder.createdAt]);
+
+  const formatCountdown = (totalSec: number) => {
+    if (activeOrder.status === 'COMPLETED') return 'PESANAN TIBA';
+    if (totalSec <= 0) return '00:00 Mins';
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    const mm = String(mins).padStart(2, '0');
+    const ss = String(secs).padStart(2, '0');
+    return `${mm}:${ss} Mins`;
+  };
+
   const getStepIndex = (status: string) => {
     switch (status) {
       case 'RECEIVED':
@@ -102,447 +137,493 @@ export default function NotificationsPage() {
     }
   };
 
+  const activeStepIndex = getStepIndex(activeOrder.status);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8E9DE] flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-3 border-stone-300 border-t-[#6A3B12] rounded-full animate-spin mb-4" />
-        <p className="text-xs text-stone-600 font-medium">Memuat Notifikasi &amp; History...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#F8E9DE] text-stone-800 font-sans">
-        <Navbar />
-        <div className="max-w-md mx-auto py-20 px-4 text-center space-y-6">
-          <div className="w-20 h-20 bg-[#F2AE72] text-[#6A3B12] rounded-full flex items-center justify-center mx-auto text-4xl shadow-sm">
-            🔔
-          </div>
-          <div className="space-y-2">
-            <h2 className="font-serif text-2xl font-bold text-stone-900">Notifikasi Akun</h2>
-            <p className="text-xs text-stone-600 font-medium leading-relaxed">
-              Silakan masuk atau mendaftar akun terlebih dahulu untuk melihat history pemesanan, riwayat pembayaran, dan notifikasi promo makanan.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 pt-2">
-            <Link
-              href="/login"
-              className="w-full py-3.5 bg-[#6A3B12] hover:bg-[#522D0D] text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-md transition-all block text-center"
-            >
-              Masuk ke Akun Saya
-            </Link>
-            <Link
-              href="/register"
-              className="w-full py-3.5 bg-white text-stone-800 hover:bg-stone-50 font-bold text-xs rounded-full border border-stone-200 shadow-xs transition-all block text-center"
-            >
-              Daftar Akun Baru
-            </Link>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#FBF9F5] flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 border-3 border-stone-300 border-t-[#25160E] rounded-full animate-spin mb-4" />
+        <p className="text-xs text-[#4F4540] font-medium">Memuat Status Lacak Pesanan...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8E9DE] text-stone-900 font-sans selection:bg-[#6A3B12]/10 selection:text-[#6A3B12]">
+    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19]">
       
-      {/* 1. TOP NAVBAR HEADER */}
+      {/* 1. BILAH NAVIGASI UTAMA */}
       <Navbar />
 
-      {/* 2. MAIN CONTAINER */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+      {/* 2. KONTEN UTAMA LACAK PESANAN (Google Stitch Exact Specification) */}
+      <main className="max-w-[1280px] mx-auto px-6 lg:px-16 py-10 space-y-8">
         
-        {/* Title Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 w-full border-b border-amber-900/10 pb-6">
           <div className="space-y-1">
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 tracking-tight">
-              Pusat Notifikasi &amp; History Pelanggan
-            </h1>
-            <p className="text-xs sm:text-sm text-stone-700 font-medium">
-              Pantau History Pemesanan, Riwayat Pembelian &amp; Pembayaran, serta Promo Spesial Makanan.
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#934B19]">LIVE TRACKING STATUS</span>
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#25160E]">Pesanan Kuliner Anda</h1>
+            <p className="text-xs text-[#4F4540] font-medium flex items-center gap-1.5 pt-1">
+              <Receipt className="w-4 h-4 text-[#934B19]" />
+              <span>Order ID: <strong className="font-mono text-[#25160E]">#{activeOrder.id}</strong></span>
             </p>
           </div>
 
-          <Link
-            href="/menu"
-            className="px-6 py-3 bg-[#824B1B] hover:bg-[#6A3B12] text-white font-medium text-xs rounded-full shadow-md transition-all shrink-0 flex items-center gap-2.5 w-fit"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            <span>Pesan Makanan Lagi</span>
-          </Link>
+          {/* Countdown & Live Pulse */}
+          <div className="flex items-center gap-4 bg-white px-6 py-3.5 rounded-2xl border border-amber-900/10 shadow-xl">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-[#4F4540] font-medium">
+                {activeOrder.status === 'COMPLETED' ? 'Status Pengiriman' : 'Estimasi Waktu Tiba'}
+              </span>
+              <span className={`font-mono text-xl font-bold ${activeOrder.status === 'COMPLETED' ? 'text-emerald-600' : 'text-[#25160E]'}`}>
+                {formatCountdown(secondsLeft)}
+              </span>
+            </div>
+            <div className="relative flex h-3.5 w-3.5">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${activeOrder.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-[#934B19]'}`}></span>
+              <span className={`relative inline-flex rounded-full h-3.5 w-3.5 ${activeOrder.status === 'COMPLETED' ? 'bg-emerald-600' : 'bg-[#934B19]'}`}></span>
+            </div>
+          </div>
         </div>
 
-        {/* Tab Filter Pills Bar */}
-        <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
-          <button
-            onClick={() => setActiveTab('semua')}
-            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
-              activeTab === 'semua'
-                ? 'bg-[#824B1B] text-white shadow-md'
-                : 'bg-white text-stone-900 border border-stone-200/80 hover:bg-stone-50'
-            }`}
-          >
-            <Bell className="w-3.5 h-3.5" />
-            <span>Semua Notifikasi</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('history-pemesanan')}
-            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
-              activeTab === 'history-pemesanan'
-                ? 'bg-[#824B1B] text-white shadow-md'
-                : 'bg-white text-stone-900 border border-stone-200/80 hover:bg-stone-50'
-            }`}
-          >
-            <Truck className="w-3.5 h-3.5" />
-            <span>History Pemesanan</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('riwayat-pembayaran')}
-            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
-              activeTab === 'riwayat-pembayaran'
-                ? 'bg-[#824B1B] text-white shadow-md'
-                : 'bg-white text-stone-900 border border-stone-200/80 hover:bg-stone-50'
-            }`}
-          >
-            <Receipt className="w-3.5 h-3.5" />
-            <span>Riwayat Pembelian &amp; Pembayaran</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('promo-makanan')}
-            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-2 ${
-              activeTab === 'promo-makanan'
-                ? 'bg-[#824B1B] text-white shadow-md'
-                : 'bg-white text-stone-900 border border-stone-200/80 hover:bg-stone-50'
-            }`}
-          >
-            <Tag className="w-3.5 h-3.5" />
-            <span>Notifikasi Promo Product</span>
-          </button>
-        </div>
-
-        {/* SECTION 1: HISTORY PEMESANAN MAKANAN */}
-        {(activeTab === 'semua' || activeTab === 'history-pemesanan') && (
-          <div className="space-y-4">
-            <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">
-              History Pemesanan Makanan
-            </h2>
-
-            <div className="space-y-6">
-              {displayOrders.map((ord, idx) => {
-                const stepIdx = getStepIndex(ord.status);
-                const isCompleted = ord.status === 'COMPLETED';
-
+        {/* MULTI-ORDER SELECTOR PILL TABS */}
+        {displayOrdersList.length > 1 && (
+          <div className="bg-white p-5 rounded-3xl border border-amber-900/10 shadow-lg space-y-3 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#25160E] uppercase tracking-wider flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-[#934B19]" />
+                <span>Daftar Pesanan Aktif Anda ({displayOrdersList.length} Transaksi):</span>
+              </span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+              {displayOrdersList.map((ord) => {
+                const isActive = ord.id === activeOrder.id;
                 return (
-                  <div key={ord.id} className="bg-white rounded-[28px] p-6 shadow-sm border border-stone-100 space-y-4">
-                    {/* Top Order Summary Row */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={ord.avatar || userAvatar}
-                          alt="User Avatar"
-                          className="w-10 h-10 rounded-full object-cover border border-stone-200"
-                        />
-                        <div>
-                          <h3 className="font-bold text-sm text-stone-900 flex items-center gap-2">
-                            <span>Orderan Ke {idx + 12}</span>
-                            <span className="text-xs text-stone-400 font-normal">• {ord.date}</span>
-                          </h3>
-                          <p className="text-xs text-stone-500 font-medium">
-                            {ord.items && ord.items.length > 0 
-                              ? ord.items.map(i => `${i.name} (${i.quantity}x)`).join(', ')
-                              : 'Jus Segar (Jambu, Sirsak, Mangga) (1x)'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between sm:justify-end gap-4">
-                        <div className="sm:text-right">
-                          <span className="font-bold text-stone-900 text-sm block">
-                            Rp {ord.total.toLocaleString('id-ID')}
-                          </span>
-                          <span className="text-[11px] text-stone-500 font-medium">
-                            {ord.paymentMethod || 'Midtrans Payment Gateway'} • LUNAS
-                          </span>
-                        </div>
-
-                        <span className={`px-4 py-1.5 rounded-full text-xs font-bold text-white shrink-0 ${
-                          isCompleted ? 'bg-[#2ECC71]' : 'bg-[#E5A83B]'
-                        }`}>
-                          {isCompleted ? 'Selesai' : 'Proses Dahulu'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Inner Live-Tracking RealTime Card */}
-                    <div className="bg-[#DCDCDC] rounded-[20px] p-5 space-y-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h4 className="font-bold text-sm text-stone-900">Live-Tracking RealTime</h4>
-                          <p className="font-semibold text-xs text-stone-800 mt-0.5">
-                            {isCompleted ? 'Di Terima (Selesai)' : ord.status === 'COOKING' ? 'Di Masak' : ord.status === 'READY' ? 'Siap' : ord.status === 'DELIVERING' ? 'Diantar' : 'Di Terima'}
-                          </p>
-                          <p className="text-xs text-stone-600 mt-0.5">
-                            {isCompleted 
-                              ? 'Pesanan telah selesai diterima dan siap dinikmati.' 
-                              : 'Pesanan di terima sekarang sedang menunggu antrian'}
-                          </p>
-                        </div>
-
-                        <span className="px-4 py-1.5 bg-[#2ECC71] text-white text-xs font-bold rounded-full shrink-0 shadow-xs">
-                          Estimasi : Tiba ({isCompleted ? '0' : '15'} Menit)
-                        </span>
-                      </div>
-
-                      {/* 5-Step Green Timeline Bar */}
-                      <div className="grid grid-cols-5 gap-2 sm:gap-3 text-center">
-                        <div className={`p-2.5 sm:p-3 rounded-xl text-white font-bold text-xs transition-colors ${
-                          stepIdx >= 1 ? 'bg-[#2ECC71]' : 'bg-stone-400'
-                        }`}>
-                          <div>1. DiTerima</div>
-                          <div className="text-[10px] font-normal opacity-90">.45m</div>
-                        </div>
-
-                        <div className={`p-2.5 sm:p-3 rounded-xl text-white font-bold text-xs transition-colors ${
-                          stepIdx >= 2 ? 'bg-[#2ECC71]' : 'bg-stone-400'
-                        }`}>
-                          <div>2. DiMasak</div>
-                          <div className="text-[10px] font-normal opacity-90">.30m</div>
-                        </div>
-
-                        <div className={`p-2.5 sm:p-3 rounded-xl text-white font-bold text-xs transition-colors ${
-                          stepIdx >= 3 ? 'bg-[#2ECC71]' : 'bg-stone-400'
-                        }`}>
-                          <div>3. Siap</div>
-                          <div className="text-[10px] font-normal opacity-90">.40m</div>
-                        </div>
-
-                        <div className={`p-2.5 sm:p-3 rounded-xl text-white font-bold text-xs transition-colors ${
-                          stepIdx >= 4 ? 'bg-[#2ECC71]' : 'bg-stone-400'
-                        }`}>
-                          <div>4. Diantar</div>
-                          <div className="text-[10px] font-normal opacity-90">.40m</div>
-                        </div>
-
-                        <div className={`p-2.5 sm:p-3 rounded-xl text-white font-bold text-xs transition-colors ${
-                          stepIdx >= 5 ? 'bg-[#2ECC71]' : 'bg-stone-400'
-                        }`}>
-                          <div>5. Selesai</div>
-                          <div className="text-[10px] font-normal opacity-90">.5m</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Action Row */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                      <p className="text-xs text-stone-500">
-                        Makanan sudah diantar dan Anda terima? Mohon tekan tombol konfirmasi di samping.
-                      </p>
-
-                      <button
-                        onClick={() => handleConfirmReceived(ord.id)}
-                        className={`px-5 py-2.5 text-white font-bold text-xs rounded-full transition-all shrink-0 ${
-                          isCompleted ? 'bg-[#2ECC71] opacity-80 cursor-default' : 'bg-[#2ECC71] hover:bg-[#27ae60] active:scale-95 shadow-sm'
-                        }`}
-                      >
-                        {isCompleted ? 'Pesanan Sudah Diterima ✓' : 'Konfirmasi Pesanan Di Terima'}
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    key={ord.id}
+                    onClick={() => {
+                      setSelectedOrderId(ord.id);
+                      window.scrollTo({ top: 120, behavior: 'smooth' });
+                    }}
+                    className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 border cursor-pointer ${
+                      isActive
+                        ? 'bg-[#25160E] text-white border-[#25160E] shadow-md ring-2 ring-[#934B19]/30'
+                        : 'bg-[#FBF9F5] text-[#1B1C1A] border-amber-900/15 hover:border-[#934B19]'
+                    }`}
+                  >
+                    <span>#{ord.id}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-semibold ${
+                      ord.status === 'COMPLETED'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : ord.status === 'COOKING'
+                        ? 'bg-amber-100 text-[#934B19]'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {ord.status === 'COOKING' ? 'Dimasak' : ord.status === 'COMPLETED' ? 'Selesai' : ord.status}
+                    </span>
+                  </button>
                 );
               })}
             </div>
           </div>
         )}
 
-        {/* SECTION 2: RIWAYAT PEMBELIAN & PEMBAYARAN */}
-        {(activeTab === 'semua' || activeTab === 'riwayat-pembayaran') && (
-          <div className="space-y-4">
-            <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">
-              Riwayat Pembelian &amp; Pembayaran
-            </h2>
+        {/* Stepper & Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* KOLOM KIRI: STATUS STEPPER 5-TAHAP */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            {/* Main Status Card */}
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-900/10 shadow-xl space-y-6 relative overflow-hidden">
+              <div className="space-y-1">
+                <h2 className="font-serif text-2xl font-bold text-[#25160E]">
+                  {activeStepIndex === 1 && 'Pesanan Diterima'}
+                  {activeStepIndex === 2 && 'Sedang Dimasak Dapur'}
+                  {activeStepIndex === 3 && 'Siap Diambil Kurir'}
+                  {activeStepIndex === 4 && 'Dalam Perjalanan Pengiriman'}
+                  {activeStepIndex === 5 && 'Pesanan Selesai Terkirim'}
+                </h2>
+                <p className="text-xs text-[#4F4540] font-light leading-relaxed">
+                  Chef dan tim kurir kami memastikan rasa otentik sampai hangat di tempat Anda.
+                </p>
+              </div>
 
-            <div className="space-y-3">
-              {displayOrders.map((ord, idx) => (
-                <div key={`pembayaran-${ord.id}`} className="bg-white rounded-[20px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm border border-stone-100">
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-xs sm:text-sm text-stone-900">
-                      Orderan Ke {idx + 12} <span className="font-normal text-stone-400">• {ord.date}</span>
+              {/* Vertical Stepper 5-Tahap (Google Stitch Design Specification) */}
+              <div className="space-y-0 relative z-10 pt-2">
+                
+                {/* Stage 1: Diterima */}
+                <div className="flex gap-4 group">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold shadow-sm ${
+                      activeStepIndex >= 1 ? 'bg-[#25160E]' : 'bg-stone-200 text-stone-500'
+                    }`}>
+                      <Receipt className="w-4 h-4" />
+                    </div>
+                    <div className={`w-0.5 h-10 ${activeStepIndex > 1 ? 'bg-[#25160E]' : 'bg-stone-200'} my-1`} />
+                  </div>
+                  <div className="pt-1 pb-4">
+                    <h3 className="text-xs font-bold text-[#25160E]">1. Pesanan Diterima</h3>
+                    <p className="text-[11px] text-[#4F4540] font-light">Pembayaran terverifikasi via Midtrans Snap</p>
+                  </div>
+                </div>
+
+                {/* Stage 2: Dimasak */}
+                <div className="flex gap-4 group">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold shadow-sm ${
+                      activeStepIndex >= 2 ? 'bg-[#934B19] ring-4 ring-[#934B19]/20' : 'bg-stone-200 text-stone-500'
+                    }`}>
+                      <Utensils className="w-4 h-4" />
+                    </div>
+                    <div className={`w-0.5 h-10 ${activeStepIndex > 2 ? 'bg-[#25160E]' : 'bg-stone-200'} my-1`} />
+                  </div>
+                  <div className="pt-1 pb-4">
+                    <h3 className="text-xs font-bold text-[#934B19] flex items-center gap-2">
+                      <span>2. Sedang Dimasak</span>
+                      {activeStepIndex === 2 && <span className="w-2 h-2 rounded-full bg-[#934B19] animate-pulse" />}
                     </h3>
-                    <p className="text-xs text-stone-600 font-medium">
-                      Metode Pembayaran : {ord.paymentMethod || 'Midtrans Payment Gateway'} • LUNAS
-                    </p>
-                    <p className="text-xs text-stone-500 font-normal">
-                      Item : {ord.items && ord.items.length > 0 
-                        ? ord.items.map(i => `${i.name} (${i.quantity}x)`).join(', ')
-                        : 'Jus Segar (Jambu, Sirsak, Mangga) (1x)'}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
-                    <div className="sm:text-right">
-                      <span className="text-[10px] text-stone-500 uppercase block font-medium">Total Bayar</span>
-                      <span className="font-bold text-stone-900 text-sm">
-                        Rp {ord.total.toLocaleString('id-ID')}
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => setSelectedReceipt(ord)}
-                      className="px-4 py-2 bg-[#4A4A4A] hover:bg-stone-800 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>Struck</span>
-                    </button>
+                    <p className="text-[11px] text-[#4F4540] font-light">Chef racik bahan alami pilihan di kuali tradisional</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* SECTION 3: NOTIFIKASI PROMO SPESIAL */}
-        {(activeTab === 'semua' || activeTab === 'promo-makanan') && (
-          <div className="space-y-4">
-            <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">
-              Notifikasi Promo Spesial
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {activeVouchers.length > 0 ? (
-                activeVouchers.map((v) => (
-                  <div key={v.id} className="bg-[#F2AE72] rounded-[20px] p-5 shadow-sm space-y-2 border border-amber-300/40 text-stone-900">
-                    <div>
-                      <h3 className="font-serif text-lg font-bold text-[#6A3B12]">
-                        {v.name || 'Ada Promo yang Tersedia'}
-                      </h3>
-                      <p className="text-xs text-stone-800 font-medium mt-0.5">
-                        di dasboard utama • {v.expiry || 'Hari ini, 19.30'}
-                      </p>
+                {/* Stage 3: Siap */}
+                <div className="flex gap-4 group">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold shadow-sm ${
+                      activeStepIndex >= 3 ? 'bg-[#25160E]' : 'bg-stone-200 text-stone-500'
+                    }`}>
+                      <ShoppingBag className="w-4 h-4" />
                     </div>
+                    <div className={`w-0.5 h-10 ${activeStepIndex > 3 ? 'bg-[#25160E]' : 'bg-stone-200'} my-1`} />
+                  </div>
+                  <div className="pt-1 pb-4">
+                    <h3 className="text-xs font-bold text-[#25160E]">3. Siap Diambil Kurir</h3>
+                    <p className="text-[11px] text-[#4F4540] font-light">Dikemas rapi dalam kemasan eco-friendly</p>
+                  </div>
+                </div>
 
-                    <p className="text-[11px] font-bold text-[#824B1B] uppercase tracking-wide">
-                      SEGERA DI AMBIL KESURU HABIS!! (Kode: {v.code})
-                    </p>
+                {/* Stage 4: Diantar */}
+                <div className="flex gap-4 group">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold shadow-sm ${
+                      activeStepIndex >= 4 ? 'bg-[#25160E]' : 'bg-stone-200 text-stone-500'
+                    }`}>
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <div className={`w-0.5 h-10 ${activeStepIndex > 4 ? 'bg-[#25160E]' : 'bg-stone-200'} my-1`} />
+                  </div>
+                  <div className="pt-1 pb-4">
+                    <h3 className="text-xs font-bold text-[#25160E]">4. Dalam Perjalanan</h3>
+                    <p className="text-[11px] text-[#4F4540] font-light">Kurir menuju lokasi pengiriman Anda</p>
+                  </div>
+                </div>
 
-                    <div className="pt-2 flex items-center justify-between">
-                      <span className="text-xs font-mono font-bold px-3 py-1 bg-white/70 rounded-lg text-stone-900">
-                        Diskon {v.discountPercent}%
-                      </span>
-                      <Link
-                        href="/cart"
-                        className="px-4 py-1.5 bg-[#6A3B12] hover:bg-[#522D0D] text-white text-xs font-bold rounded-full transition-all"
-                      >
-                        Gunakan Promo →
-                      </Link>
+                {/* Stage 5: Selesai */}
+                <div className="flex gap-4 group">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold shadow-sm ${
+                      activeStepIndex >= 5 ? 'bg-emerald-600' : 'bg-stone-200 text-stone-500'
+                    }`}>
+                      <CheckCircle2 className="w-4 h-4" />
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="bg-[#F2AE72] rounded-[20px] p-5 shadow-sm space-y-1.5 border border-amber-300/40 text-stone-900">
-                  <h3 className="font-serif text-lg font-bold text-[#6A3B12]">
-                    Ada Promo yang Tersedia
+                  <div className="pt-1">
+                    <h3 className="text-xs font-bold text-[#25160E]">5. Pesanan Selesai</h3>
+                    <p className="text-[11px] text-[#4F4540] font-light">Diserahterimakan kepada penerima</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Order Summary Detail Box */}
+            <div className="bg-white rounded-3xl p-6 border border-amber-900/10 shadow-xl space-y-4">
+              <h3 className="font-serif text-lg font-bold text-[#25160E]">Item Makanan Yang Dipesan</h3>
+              <div className="divide-y divide-stone-100">
+                {activeOrder.items.map((it, idx) => (
+                  <div key={idx} className="py-3 flex items-center justify-between gap-3 first:pt-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-[#25160E] overflow-hidden shrink-0 relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={it.image} alt={it.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-xs text-[#25160E]">{it.name}</h4>
+                        <span className="text-[10px] text-[#4F4540]">{it.quantity} Porsi</span>
+                      </div>
+                    </div>
+                    <span className="font-bold text-xs text-[#25160E]">Rp {(it.price * it.quantity).toLocaleString('id-ID')}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-3 border-t border-stone-100 flex justify-between items-center text-xs">
+                <span className="text-[#4F4540]">Total Bayar:</span>
+                <span className="font-serif text-lg font-bold text-[#25160E]">Rp {activeOrder.total.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* KOLOM KANAN: KURIR PENGANTAR & DETAIL ALAMAT */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Driver Profile Card (Google Stitch Specification) */}
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-900/10 shadow-xl space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-[#25160E] text-amber-200 flex items-center justify-center font-bold text-xl shadow-md">
+                    👨‍✈️
+                  </div>
+                  <div>
+                    <h4 className="font-serif text-lg font-bold text-[#25160E]">Budi Santoso</h4>
+                    <div className="flex items-center gap-2 text-xs text-[#4F4540] font-medium">
+                      <span className="text-amber-500 font-bold flex items-center gap-1">★ 4.9</span>
+                      <span>• Honda Vario (B 1234 NKL)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Link
+                    href="/profile"
+                    className="w-10 h-10 rounded-2xl bg-[#FBF9F5] border border-amber-900/15 text-[#25160E] flex items-center justify-center hover:bg-[#25160E] hover:text-white transition-all shadow-xs"
+                    title="Chat CS & Kurir"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-stone-100">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#934B19]">Lokasi Alamat Antar</span>
+                <p className="text-xs font-bold text-[#25160E]">{activeOrder.customerName}</p>
+                <p className="text-xs text-[#4F4540] font-light leading-relaxed">{activeOrder.address}</p>
+              </div>
+            </div>
+
+            {/* KONFIRMASI PENERIMAAN PESANAN OLEH PELANGGAN */}
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-900/10 shadow-xl space-y-4 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2 justify-center sm:justify-start">
+                    <CheckCircle2 className={`w-5 h-5 ${activeOrder.status === 'COMPLETED' ? 'text-emerald-600' : 'text-[#934B19]'}`} />
+                    <span>Konfirmasi Penerimaan Makanan</span>
                   </h3>
-                  <p className="text-xs text-stone-800 font-medium">
-                    di dasboard utama • Hari ini, 19.30
-                  </p>
-                  <p className="text-[11px] font-bold text-[#824B1B] uppercase tracking-wide">
-                    SEGERA DI AMBIL KESURU HABIS!!
+                  <p className="text-xs text-[#4F4540] font-light leading-relaxed">
+                    {activeOrder.status === 'COMPLETED'
+                      ? 'Pesanan telah resmi dikonfirmasi sampai di tangan Anda.'
+                      : 'Ketika makanan telah sampai di tangan Anda, silakan klik tombol konfirmasi berikut.'}
                   </p>
                 </div>
-              )}
+
+                {activeOrder.status === 'COMPLETED' ? (
+                  <div className="px-5 py-3 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-2xl border border-emerald-300 flex items-center gap-2 shrink-0">
+                    <Check className="w-4 h-4 text-emerald-700" />
+                    <span>Pesanan Diterima</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      confirmOrderReceived(activeOrder.id);
+                    }}
+                    className="px-6 py-3.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-amber-200" />
+                    <span>Konfirmasi Pesanan Diterima</span>
+                  </button>
+                )}
+              </div>
             </div>
+
           </div>
-        )}
+
+        </div>
+
+        {/* ================================================================= */}
+        {/* SEKSI: RIWAYAT PEMESANAN & STRUK PEMBAYARAN MIDTRANS */}
+        {/* ================================================================= */}
+        <section className="pt-8 border-t border-amber-900/10 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#934B19]">TRANSACTION HISTORY</span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#25160E]">Riwayat Pemesanan & Struk Transaksi</h2>
+            </div>
+            <p className="text-xs text-[#4F4540]">Seluruh transaksi tersimpan aman di database Firestore Real-time.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {displayOrdersList.map((ord) => (
+              <div 
+                key={ord.id}
+                className="bg-white rounded-3xl p-6 border border-amber-900/10 shadow-xl space-y-4 flex flex-col justify-between hover:shadow-2xl transition-all"
+              >
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start border-b border-stone-100 pb-3">
+                    <div>
+                      <span className="font-mono text-sm font-bold text-[#934B19]">#{ord.id}</span>
+                      <p className="text-[11px] text-[#4F4540]">{ord.date}</p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                      ord.status === 'COMPLETED'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : ord.status === 'COOKING'
+                        ? 'bg-amber-100 text-[#934B19] border border-amber-300'
+                        : 'bg-blue-100 text-blue-800 border border-blue-300'
+                    }`}>
+                      {ord.status === 'COOKING' ? 'Sedang Dimasak' : ord.status === 'COMPLETED' ? 'Selesai & Diterima' : ord.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {ord.items.map((it, idx) => (
+                      <div key={idx} className="flex justify-between text-xs text-[#25160E]">
+                        <span className="truncate max-w-[220px] font-medium">• {it.name} x{it.quantity}</span>
+                        <span className="font-bold">Rp {(it.price * it.quantity).toLocaleString('id-ID')}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 border-t border-stone-100 flex justify-between items-center text-xs">
+                    <span className="text-[#4F4540]">Total Pembayaran:</span>
+                    <span className="font-serif text-base font-bold text-[#25160E]">Rp {ord.total.toLocaleString('id-ID')}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      setSelectedOrderId(ord.id);
+                      window.scrollTo({ top: 120, behavior: 'smooth' });
+                    }}
+                    className="flex-1 py-2.5 bg-[#FBF9F5] border border-amber-900/15 hover:bg-[#25160E] hover:text-white text-[#25160E] text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>Lacak Pesanan Ini</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedReceipt(ord)}
+                    className="flex-1 py-2.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-amber-200" />
+                    <span>Lihat Struk PDF</span>
+                  </button>
+                </div>
+
+              </div>
+            ))}
+          </div>
+        </section>
 
       </main>
 
-      {/* RECEIPT STRUK MODAL */}
+      {/* MODAL STRUK PEMBAYARAN OFFICIAL RESMI */}
       {selectedReceipt && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-stone-200 space-y-6">
-            <div className="flex items-center justify-between border-b border-stone-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-100 text-[#6A3B12] rounded-full flex items-center justify-center text-xl font-bold">
-                  🧾
-                </div>
-                <div>
-                  <h3 className="font-serif text-xl font-bold text-stone-900">Struk Pembayaran</h3>
-                  <p className="text-xs text-stone-500 font-mono">No. #{selectedReceipt.id}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedReceipt(null)}
-                className="p-1 text-stone-400 hover:text-stone-700 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm p-4 flex items-center justify-center animate-fade-in">
+          <div className="bg-white max-w-lg w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-amber-900/10 space-y-6 relative max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal Close Button */}
+            <button
+              onClick={() => setSelectedReceipt(null)}
+              className="absolute top-5 right-5 p-2 bg-[#FBF9F5] hover:bg-stone-200 text-[#25160E] rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between text-stone-600">
-                <span>Tanggal</span>
-                <span className="font-medium text-stone-900">{selectedReceipt.date}</span>
-              </div>
-              <div className="flex justify-between text-stone-600">
-                <span>Nama Pelanggan</span>
-                <span className="font-medium text-stone-900">{selectedReceipt.customerName}</span>
-              </div>
-              <div className="flex justify-between text-stone-600">
-                <span>Metode Pembayaran</span>
-                <span className="font-bold text-[#6A3B12]">{selectedReceipt.paymentMethod}</span>
+            {/* Printable Receipt Content Area */}
+            <div id="printable-receipt" className="space-y-6 text-[#1B1C1A]">
+              
+              {/* Receipt Header */}
+              <div className="text-center border-b border-dashed border-stone-300 pb-4 space-y-1">
+                <div className="w-12 h-12 bg-[#25160E] text-white rounded-2xl flex items-center justify-center font-serif text-2xl font-bold mx-auto mb-2 shadow-md">
+                  N
+                </div>
+                <h2 className="font-serif text-2xl font-bold text-[#25160E]">Nefakky Artisanal Kitchen</h2>
+                <p className="text-[11px] text-[#4F4540]">Jl. Pemuda No. 45, Kebayoran, Jakarta Selatan</p>
+                <p className="text-[10px] text-stone-400 font-mono">STRUK RESMI BUKTI PEMBAYARAN MIDTRANS</p>
               </div>
 
-              <div className="border-t border-b border-stone-100 py-3 space-y-2">
-                <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block">Item Dipesan</span>
-                {selectedReceipt.items && selectedReceipt.items.length > 0 ? (
-                  selectedReceipt.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-stone-700 font-medium">
-                      <span>{item.name} ({item.quantity}x)</span>
-                      <span>Rp {(item.price * item.quantity).toLocaleString('id-ID')}</span>
+              {/* Order Meta */}
+              <div className="bg-[#FBF9F5] p-4 rounded-2xl border border-amber-900/10 text-xs space-y-1.5 font-mono">
+                <div className="flex justify-between">
+                  <span className="text-[#4F4540]">No. Transaksi:</span>
+                  <span className="font-bold text-[#934B19]">#{selectedReceipt.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#4F4540]">Tanggal & Waktu:</span>
+                  <span className="font-semibold">{selectedReceipt.date}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#4F4540]">Pelanggan:</span>
+                  <span className="font-semibold">{selectedReceipt.customerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#4F4540]">Metode Pembayaran:</span>
+                  <span className="font-bold text-emerald-700">{selectedReceipt.paymentMethod || 'Midtrans Snap Engine'}</span>
+                </div>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-2 border-b border-dashed border-stone-300 pb-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#934B19]">Rincian Item Makanan</span>
+                <div className="space-y-2">
+                  {selectedReceipt.items.map((it, idx) => (
+                    <div key={idx} className="flex justify-between text-xs">
+                      <div>
+                        <p className="font-bold text-[#25160E]">{it.name}</p>
+                        <p className="text-[10px] text-[#4F4540]">{it.quantity} Porsi x Rp {it.price.toLocaleString('id-ID')}</p>
+                      </div>
+                      <span className="font-bold text-[#25160E]">Rp {(it.price * it.quantity).toLocaleString('id-ID')}</span>
                     </div>
-                  ))
-                ) : (
-                  <div className="flex justify-between text-stone-700 font-medium">
-                    <span>Jus Segar (Jambu, Sirsak, Mangga) (1x)</span>
-                    <span>Rp 5.100</span>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
 
-              <div className="space-y-1.5 pt-1">
-                <div className="flex justify-between text-stone-600">
-                  <span>Subtotal Makanan</span>
-                  <span>Rp {(selectedReceipt.subtotal || selectedReceipt.total).toLocaleString('id-ID')}</span>
+              {/* Cost Calculations Breakdown */}
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between text-[#4F4540]">
+                  <span>Subtotal Makanan:</span>
+                  <span>Rp {(selectedReceipt.subtotal || selectedReceipt.total - (selectedReceipt.shippingCost || 15000)).toLocaleString('id-ID')}</span>
                 </div>
-                <div className="flex justify-between text-stone-600">
-                  <span>Ongkos Kirim</span>
-                  <span>Rp {(selectedReceipt.shippingCost || 0).toLocaleString('id-ID')}</span>
+                <div className="flex justify-between text-[#4F4540]">
+                  <span>Ongkos Kirim:</span>
+                  <span>Rp {(selectedReceipt.shippingCost || 15000).toLocaleString('id-ID')}</span>
                 </div>
-                {selectedReceipt.discount > 0 && (
-                  <div className="flex justify-between text-emerald-600 font-bold">
-                    <span>Diskon Promo</span>
+                {selectedReceipt.discount && selectedReceipt.discount > 0 ? (
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>Diskon Promo:</span>
                     <span>-Rp {selectedReceipt.discount.toLocaleString('id-ID')}</span>
                   </div>
-                )}
-                <div className="flex justify-between text-stone-900 font-black text-sm pt-2 border-t border-stone-200">
-                  <span>TOTAL PEMBAYARAN</span>
-                  <span className="text-[#6A3B12]">Rp {selectedReceipt.total.toLocaleString('id-ID')}</span>
+                ) : null}
+                <div className="pt-2 border-t border-stone-200 flex justify-between items-center text-sm">
+                  <span className="font-bold text-[#25160E]">TOTAL LUNAS:</span>
+                  <span className="font-serif text-xl font-bold text-[#934B19]">Rp {selectedReceipt.total.toLocaleString('id-ID')}</span>
                 </div>
               </div>
+
+              <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-center text-xs text-emerald-800 font-bold flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>TERVERIFIKASI LUNAS REAL-TIME</span>
+              </div>
+
             </div>
 
-            <div className="pt-2">
+            {/* Print Action Button */}
+            <div className="pt-2 flex gap-3">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 py-3 bg-[#25160E] hover:bg-[#3C2A21] text-white text-xs font-bold rounded-2xl shadow-md flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4 text-amber-300" />
+                <span>Cetak Struk (PDF)</span>
+              </button>
               <button
                 onClick={() => setSelectedReceipt(null)}
-                className="w-full py-3 bg-[#6A3B12] hover:bg-[#522D0D] text-white font-bold text-xs rounded-2xl transition-all shadow-md"
+                className="px-5 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-2xl"
               >
-                Tutup Struk
+                Tutup
               </button>
             </div>
+
           </div>
         </div>
       )}

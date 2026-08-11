@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { ShoppingBag, Bell, Search, ShieldCheck, UtensilsCrossed } from 'lucide-react';
+import { ShoppingBag, Search, ShieldCheck, User } from 'lucide-react';
 
 interface NavbarProps {
   showSearch?: boolean;
@@ -18,9 +18,8 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
   const { user, isAdmin } = useAuth();
   const { totalCartCount } = useCart();
 
-  const nameForAvatar = user?.displayName || user?.email || 'User';
-  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForAvatar)}&background=F97316&color=ffffff&bold=true&size=256`;
-  const userAvatar = user?.photoURL || defaultAvatar;
+  const nameForAvatar = user?.displayName || user?.email || 'Gourmet User';
+  const userAvatar = user?.photoURL;
 
   // Active route checkers
   const isHomeActive = pathname === '/';
@@ -31,128 +30,132 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
   const isProfileActive = pathname === '/profile';
 
   return (
-    <header className="sticky top-0 z-40 bg-[#F59E3D] border-b border-[#DE8B32]/40 px-4 sm:px-8 py-3.5 shadow-sm">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
+    <header className="sticky top-0 w-full z-50 bg-[#fbf9f5]/85 backdrop-blur-xl shadow-[0_4px_24px_rgba(69,26,3,0.05)] border-b border-amber-900/10 transition-all">
+      <div className="h-20 max-w-[1280px] mx-auto px-5 lg:px-16 flex items-center justify-between">
         
-        {/* Logo Brand */}
-        <Link href="/" className="font-serif text-2xl font-bold tracking-tight text-[#2D1B0E] group select-none">
-          <span className="hover:opacity-80 transition-opacity inline-block">
+        {/* Brand Logo (Google Stitch Specification) */}
+        <Link href="/" className="flex items-center gap-3 group select-none">
+          <div className="w-10 h-10 rounded-2xl bg-[#25160e] text-[#fbf9f5] flex items-center justify-center font-bold font-serif text-xl shadow-md group-hover:scale-105 transition-transform">
+            N
+          </div>
+          <span className="font-serif text-2xl font-bold tracking-tight text-[#25160e] group-hover:text-[#934b19] transition-colors">
             Nefakky
           </span>
         </Link>
 
-        {/* Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-[#2D1B0E] select-none">
+        {/* Navigation Links (Google Stitch Specification) */}
+        <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold select-none">
           <Link 
             href="/" 
-            className={`transition-all relative pb-0.5 ${
+            className={`transition-all py-2 font-medium ${
               isHomeActive 
-                ? 'font-bold border-b-2 border-[#2D1B0E]' 
-                : 'hover:opacity-80'
+                ? 'text-[#934b19] font-bold border-b-2 border-[#934b19]' 
+                : 'text-[#4f4540] hover:text-[#934b19]'
             }`}
           >
             Beranda
           </Link>
           <Link 
             href="/menu" 
-            className={`transition-all relative pb-0.5 ${
+            className={`transition-all py-2 font-medium ${
               isMenuActive 
-                ? 'font-bold border-b-2 border-[#2D1B0E]' 
-                : 'hover:opacity-80'
+                ? 'text-[#934b19] font-bold border-b-2 border-[#934b19]' 
+                : 'text-[#4f4540] hover:text-[#934b19]'
             }`}
           >
             Katalog Menu
           </Link>
           <Link 
             href="/comments" 
-            className={`transition-all relative pb-0.5 ${
+            className={`transition-all py-2 font-medium ${
               isCommentsActive 
-                ? 'font-bold border-b-2 border-[#2D1B0E]' 
-                : 'hover:opacity-80'
+                ? 'text-[#934b19] font-bold border-b-2 border-[#934b19]' 
+                : 'text-[#4f4540] hover:text-[#934b19]'
             }`}
           >
-            Ulasan Pelanggan
+            Ulasan Rasa
+          </Link>
+          <Link 
+            href="/cart" 
+            className={`transition-all py-2 font-medium ${
+              isCartActive 
+                ? 'text-[#934b19] font-bold border-b-2 border-[#934b19]' 
+                : 'text-[#4f4540] hover:text-[#934b19]'
+            }`}
+          >
+            Pemesanan & Keranjang
+          </Link>
+          <Link 
+            href="/notifications" 
+            className={`transition-all py-2 font-medium ${
+              isNotificationsActive 
+                ? 'text-[#934b19] font-bold border-b-2 border-[#934b19]' 
+                : 'text-[#4f4540] hover:text-[#934b19]'
+            }`}
+          >
+            Status Pesanan
           </Link>
         </nav>
 
-        {/* Icons & Actions Bar */}
-        <div className="flex items-center gap-4 text-[#2D1B0E]">
-          {showSearch && onSearchChange && (
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5C320A] pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery || ''}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Cari menu favoritmu..."
-                className="w-48 lg:w-64 pl-9 pr-4 py-2 bg-white/30 border border-[#DE8B32] rounded-full text-xs text-[#2D1B0E] placeholder-[#5C320A]/70 focus:outline-none focus:bg-white/50 transition-all"
-              />
-            </div>
-          )}
+        {/* Cart & Profile Avatar Bar */}
+        <div className="flex items-center gap-5">
 
           {isAdmin && (
             <Link
               href="/admin"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#6E3E13] hover:bg-[#58310E] text-white text-xs font-semibold rounded-full transition-all shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#934b19] hover:bg-[#783603] text-white text-xs font-semibold rounded-full transition-all shadow-md"
               title="Masuk ke Panel Admin"
             >
               <ShieldCheck className="w-4 h-4 text-amber-200" />
-              <span>Panel Admin</span>
+              <span className="hidden sm:inline">Panel Admin</span>
             </Link>
           )}
 
-          {/* Cart Icon */}
+          {/* Cart Icon (Google Stitch Specification) */}
           <Link 
             href="/cart"
-            className={`p-2 transition-colors relative rounded-full hover:bg-black/5 ${
-              isCartActive ? 'font-bold' : 'hover:opacity-80'
-            }`}
+            className="relative cursor-pointer group p-1.5 rounded-full hover:bg-[#25160e]/5 transition-colors"
             title="Keranjang Belanja"
           >
-            <ShoppingBag className="w-5 h-5 stroke-[2]" />
+            <ShoppingBag className="w-6 h-6 text-[#25160e] group-hover:text-[#934b19] transition-colors" />
             {totalCartCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 bg-[#6E3E13] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+              <span className="animate-pulse absolute -top-1 -right-1 bg-[#934b19] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md">
                 {totalCartCount}
               </span>
             )}
           </Link>
 
-          {/* Notifications Bell */}
-          <Link 
-            href="/notifications" 
-            className={`p-2 transition-colors relative rounded-full hover:bg-black/5 ${
-              isNotificationsActive ? 'font-bold' : 'hover:opacity-80'
-            }`} 
-            title="Lihat Notifikasi"
-          >
-            <Bell className="w-5 h-5 stroke-[2]" />
-          </Link>
-
-          {/* User Profile Avatar or Guest Login Button */}
+          {/* User Profile Avatar Pill (Google Stitch Specification) */}
           {user ? (
             <Link 
               href="/profile"
-              className={`relative w-8 h-8 rounded-full overflow-hidden border transition-all shrink-0 flex items-center justify-center bg-stone-100 ${
-                isProfileActive ? 'border-2 border-[#6E3E13] ring-2 ring-[#6E3E13]/30 scale-105' : 'border-stone-300 hover:border-[#6E3E13]'
-              }`}
+              className="flex items-center gap-3 pl-3 border-l border-[#d3c3bd] group cursor-pointer"
               title="Lihat Profil Akun"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={userAvatar}
-                alt="Foto Profil Pelanggan"
-                className="w-full h-full object-cover"
-              />
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-bold text-[#1b1c1a] leading-tight group-hover:text-[#934b19] transition-colors">
+                  {user.displayName || user.email?.split('@')[0] || 'Gourmet User'}
+                </p>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-[#25160e] flex items-center justify-center text-white shrink-0 overflow-hidden ring-2 ring-transparent group-hover:ring-[#934b19]/40 transition-all shadow-sm">
+                {userAvatar ? (
+                  <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5 text-white" />
+                )}
+              </div>
             </Link>
           ) : (
             <Link
               href="/login"
-              className="inline-flex items-center justify-center px-4 py-2 bg-[#6E3E13] hover:bg-[#58310E] text-white text-xs font-semibold rounded-full transition-all shadow-xs active:scale-95"
+              className="px-5 py-2.5 bg-[#25160e] hover:bg-[#3c2a21] text-white text-xs font-bold rounded-full transition-all shadow-md"
             >
               Masuk
             </Link>
           )}
+
         </div>
+
       </div>
     </header>
   );

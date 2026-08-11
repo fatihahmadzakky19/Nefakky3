@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,31 +7,46 @@
 :root {
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-sans: 'Inter', system-ui, sans-serif;
+  
+  /* Google Stitch Token System */
+  --primary-espresso: #25160E;
+  --primary-container: #3C2A21;
+  --secondary-terracotta: #934B19;
+  --secondary-container: #FFA26A;
+  --amber-gold: #D97706;
+  --surface-cream: #FBF9F5;
+  --surface-white: #FFFFFF;
+  --text-dark: #1B1C1A;
+  --text-muted: #4F4540;
 }
 
 body {
-  color: #2D231C;
-  background: #FAF8F5;
+  color: var(--text-dark);
+  background: var(--surface-cream);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
 
-/* Custom styled inputs */
+/* Google Stitch Styled Components */
 .input-field {
-  @apply w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#5C3D28]/30 focus:border-[#5C3D28] transition-all duration-200 text-sm shadow-sm;
+  @apply w-full px-4 py-3 bg-[#FBF9F5] border border-amber-900/15 rounded-2xl text-[#1B1C1A] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] transition-all duration-200 text-sm shadow-sm;
 }
 
 .btn-primary {
-  @apply w-full py-3.5 bg-[#5C3D28] hover:bg-[#4A2B16] active:scale-[0.99] text-white font-semibold rounded-full shadow-md transition-all duration-200 text-sm tracking-wide flex items-center justify-center gap-2;
+  @apply w-full py-3.5 bg-[#25160E] hover:bg-[#3C2A21] active:scale-[0.99] text-white font-bold rounded-2xl shadow-lg shadow-amber-950/10 transition-all duration-200 text-sm tracking-wide flex items-center justify-center gap-2;
+}
+
+.btn-terracotta {
+  @apply w-full py-3.5 bg-[#934B19] hover:bg-[#783603] active:scale-[0.99] text-white font-bold rounded-2xl shadow-lg transition-all duration-200 text-sm tracking-wide flex items-center justify-center gap-2;
 }
 
 .btn-google {
-  @apply w-full py-3.5 bg-white border border-stone-200 hover:bg-stone-50 active:scale-[0.99] text-stone-700 font-medium rounded-full shadow-sm transition-all duration-200 text-sm flex items-center justify-center gap-3;
+  @apply w-full py-3.5 bg-white border border-amber-900/15 hover:bg-stone-50 active:scale-[0.99] text-[#1B1C1A] font-bold rounded-2xl shadow-sm transition-all duration-200 text-sm flex items-center justify-center gap-3;
 }
 
 .glass-card {
-  @apply bg-white/90 backdrop-blur-md border border-stone-200/80 shadow-sm rounded-2xl;
+  @apply bg-white/90 backdrop-blur-md border border-amber-900/10 shadow-xl shadow-amber-950/5 rounded-3xl;
 }
 
 /* Custom Scrollbar */
@@ -40,17 +55,17 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #F4F1EA;
+  background: #FBF9F5;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #D3C3BD;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #F97316;
+  background: #934B19;
 }
 
-/* Smooth fade in animation */
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
