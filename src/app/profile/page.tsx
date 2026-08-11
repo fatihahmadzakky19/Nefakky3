@@ -66,13 +66,20 @@ export default function UserProfilePage() {
   const currentUserEmail = (user?.email || '').toLowerCase();
   const userChatHistory = chatMessages.filter(m => m.userEmail.toLowerCase() === currentUserEmail);
 
-  // Filter orders matching current user or show initial demo orders
-  const myOrders = orders.filter(o => 
-    !user?.email || 
-    (o.customerEmail && o.customerEmail.toLowerCase() === currentUserEmail) ||
-    (user.email.toLowerCase() === 'nizarazzuhra@gmail.com') ||
-    orders.length <= 5
-  );
+  // Filter & sort orders matching current user in real-time (newest first)
+  const myOrders = React.useMemo(() => {
+    if (!user?.email) return [];
+    const emailLower = user.email.toLowerCase();
+    const nameLower = (user.displayName || user.email.split('@')[0]).toLowerCase();
+
+    return (orders || [])
+      .filter(o => 
+        (o.customerEmail && o.customerEmail.toLowerCase() === emailLower) ||
+        (o.userId && user.uid && o.userId === user.uid) ||
+        (o.customerName && o.customerName.toLowerCase().includes(nameLower))
+      )
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }, [user, orders]);
 
   const filteredOrders = myOrders.filter(o => {
     if (orderFilter === 'ACTIVE') return o.status === 'RECEIVED' || o.status === 'COOKING' || o.status === 'READY' || o.status === 'PENDING';
@@ -168,37 +175,37 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-amber-50/50 flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-4 border-amber-200 border-t-orange-500 rounded-full animate-spin mb-4" />
-        <p className="text-xs text-slate-500 font-semibold">Memuat Profil Pelanggan...</p>
+      <div className="min-h-screen bg-[#FCEEE2] flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 border-3 border-stone-300 border-t-[#6E3E13] rounded-full animate-spin mb-4" />
+        <p className="text-xs text-stone-500 font-medium">Memuat Profil Pelanggan...</p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-amber-50/60 to-orange-50/30 text-slate-800 font-sans">
+      <div className="min-h-screen bg-[#FCEEE2] text-stone-800 font-sans">
         <Navbar />
         <div className="max-w-md mx-auto py-20 px-4 text-center space-y-6">
-          <div className="w-20 h-20 bg-gradient-to-tr from-amber-500 to-orange-500 text-white rounded-3xl flex items-center justify-center mx-auto text-4xl shadow-lg shadow-orange-500/20">
+          <div className="w-20 h-20 bg-[#F59E3D] text-[#2D1B0E] rounded-full flex items-center justify-center mx-auto text-4xl shadow-sm border border-[#DE8B32]">
             👤
           </div>
           <div className="space-y-2">
-            <h2 className="font-serif text-3xl font-bold text-slate-900">Profil Pelanggan</h2>
-            <p className="text-xs text-slate-600 font-light leading-relaxed">
+            <h2 className="font-serif text-3xl font-bold text-[#2D1B0E]">Profil Pelanggan</h2>
+            <p className="text-xs text-[#7A5B43] font-medium leading-relaxed">
               Silakan masuk atau mendaftar akun terlebih dahulu untuk melihat profil, riwayat pesanan, konfirmasi pesanan, dan dukungan pelanggan.
             </p>
           </div>
           <div className="flex flex-col gap-3 pt-2">
             <Link
               href="/login"
-              className="btn-primary"
+              className="w-full py-3.5 bg-[#6E3E13] hover:bg-[#58310E] text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-md transition-all block text-center"
             >
               Masuk ke Akun Saya
             </Link>
             <Link
               href="/register"
-              className="w-full py-3.5 border border-orange-500 text-orange-600 hover:bg-orange-50 font-semibold text-xs rounded-full transition-all block text-center shadow-sm"
+              className="w-full py-3.5 bg-white text-[#2D1B0E] hover:bg-stone-50 font-bold text-xs rounded-full border border-stone-200 shadow-xs transition-all block text-center"
             >
               Daftar Akun Baru
             </Link>
@@ -209,7 +216,7 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream-50 via-amber-50/40 to-orange-50/20 text-slate-800 font-sans">
+    <div className="min-h-screen bg-[#FCEEE2] text-stone-800 font-sans selection:bg-[#6E3E13]/10 selection:text-[#6E3E13]">
       
       {/* Hidden input for gallery photo upload */}
       <input 
@@ -242,13 +249,13 @@ export default function UserProfilePage() {
       <main className="max-w-7xl mx-auto px-6 sm:px-12 py-8 space-y-8">
         
         {/* TOP PROFILE BANNER CARD */}
-        <div className="glass-card p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden border border-stone-100 shadow-sm">
           
           {/* Avatar & Main User Details */}
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left w-full md:w-auto">
             
             {/* Avatar with Edit Pencil Overlay */}
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white shadow-md shrink-0 bg-slate-100 group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white shadow-md shrink-0 bg-stone-100 group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={userAvatar}
@@ -258,7 +265,7 @@ export default function UserProfilePage() {
               <button 
                 type="button"
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                className="absolute bottom-1 right-1 p-2 bg-orange-600 hover:bg-orange-700 text-white rounded-full shadow transition-all"
+                className="absolute bottom-1 right-1 p-2 bg-[#6E3E13] hover:bg-[#58310E] text-white rounded-full shadow transition-all"
                 title="Ambil Foto dari Galeri"
               >
                 <Pencil className="w-3.5 h-3.5" />
@@ -268,30 +275,30 @@ export default function UserProfilePage() {
             {/* Name, Email, Edit Profile Button */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <h1 className="font-serif text-3xl font-bold text-slate-900">
+                <h1 className="font-serif text-3xl font-bold text-[#2D1B0E]">
                   {displayName}
                 </h1>
-                <span className="px-2.5 py-0.5 bg-amber-100 text-orange-700 text-[10px] font-bold rounded-full border border-amber-300">
+                <span className="px-2.5 py-0.5 bg-[#F59E3D] text-[#2D1B0E] text-[10px] font-bold rounded-full border border-[#DE8B32]">
                   VIP Pelanggan
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-mono">
+              <p className="text-xs text-[#7A5B43] font-mono">
                 {user.email || 'pelanggan@nefakky.com'}
               </p>
 
               <div className="pt-2 flex items-center gap-3 flex-wrap justify-center sm:justify-start">
                 <button
                   onClick={() => setIsEditingModal(true)}
-                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-full shadow-sm transition-all"
+                  className="px-5 py-2 bg-[#6E3E13] hover:bg-[#58310E] text-white text-xs font-bold rounded-full shadow-sm transition-all uppercase tracking-wider"
                 >
                   Edit Profile
                 </button>
                 {(user.role === 'admin' || user.email === 'fatihahmadzakky19@gmail.com') && (
                   <Link
                     href="/admin"
-                    className="px-5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs font-semibold rounded-full shadow-md transition-all flex items-center gap-2"
+                    className="px-5 py-2 bg-[#F59E3D] hover:bg-[#E58F2E] text-[#2D1B0E] text-xs font-bold rounded-full shadow-md transition-all flex items-center gap-2"
                   >
-                    <ShieldCheck className="w-4 h-4 text-amber-200" />
+                    <ShieldCheck className="w-4 h-4 text-[#6E3E13]" />
                     <span>Panel Administrator</span>
                   </Link>
                 )}

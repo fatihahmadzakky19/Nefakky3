@@ -164,7 +164,7 @@ export default function MenuCatalogPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-stone-800 font-sans selection:bg-[#5E3A20]/10 selection:text-[#5E3A20]">
+    <div className="min-h-screen bg-[#FCEEE2] text-stone-800 font-sans selection:bg-[#6E3E13]/10 selection:text-[#6E3E13]">
       
       {/* 1. TOP NAVBAR */}
       <Navbar showSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} />
@@ -174,11 +174,11 @@ export default function MenuCatalogPage() {
         
         {/* HERO TITLE BANNER */}
         <div className="text-center max-w-2xl mx-auto space-y-2.5">
-          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-[#3D2512] tracking-tight">
+          <h1 className="font-serif text-4xl sm:text-5xl font-bold text-[#2D1B0E] tracking-tight">
             Temukan Menu Favoritmu
           </h1>
-          <p className="text-xs sm:text-sm text-stone-500 font-light leading-relaxed">
-            Explore our collection of artisanal homemade dishes, crafted with the finest local ingredients and generations of culinary wisdom.
+          <p className="text-xs sm:text-sm text-[#7A5B43] font-medium leading-relaxed">
+            Jelajahi koleksi hidangan buatan sendiri yang diracik dengan penuh keahlian, menggunakan bahan-bahan lokal terbaik serta warisan kearifan kuliner turun-temurun.
           </p>
         </div>
 
@@ -190,13 +190,13 @@ export default function MenuCatalogPage() {
             
             {/* Search Input Box */}
             <div className="relative flex-1 w-full">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7A5B43] pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari sate, rendang, atau cendol..."
-                className="w-full pl-11 pr-4 py-3 bg-white border border-stone-200/80 rounded-full text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#5E3A20]/20 focus:border-[#5E3A20] shadow-sm transition-all"
+                className="w-full pl-11 pr-4 py-3 bg-white border border-[#EACBB0] rounded-full text-xs text-[#2D1B0E] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#6E3E13]/20 focus:border-[#6E3E13] shadow-xs transition-all font-medium"
               />
             </div>
 
@@ -208,24 +208,24 @@ export default function MenuCatalogPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full sm:w-auto appearance-none bg-white border border-stone-200/80 rounded-full px-4 py-2.5 pr-8 text-xs font-medium text-stone-700 focus:outline-none cursor-pointer shadow-sm"
+                  className="w-full sm:w-auto appearance-none bg-white border border-[#EACBB0] rounded-full px-4 py-2.5 pr-8 text-xs font-semibold text-[#2D1B0E] focus:outline-none focus:border-[#6E3E13] cursor-pointer shadow-xs"
                 >
-                  <option value="bestseller">Sorting: Best Seller</option>
-                  <option value="rating">Sorting: Rating Tertinggi</option>
+                  <option value="bestseller">Sorting : Best Seller</option>
+                  <option value="rating">Sorting : Rating Tertinggi</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#2D1B0E] pointer-events-none" />
               </div>
 
               {/* Price Sort Dropdown */}
               <div className="relative flex-1 sm:flex-none">
                 <select
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full sm:w-auto appearance-none bg-white border border-stone-200/80 rounded-full px-4 py-2.5 pr-8 text-xs font-medium text-stone-700 focus:outline-none cursor-pointer shadow-sm"
+                  className="w-full sm:w-auto appearance-none bg-white border border-[#EACBB0] rounded-full px-4 py-2.5 pr-8 text-xs font-semibold text-[#2D1B0E] focus:outline-none focus:border-[#6E3E13] cursor-pointer shadow-xs"
                 >
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
+                  <option value="price-asc">Price : Low To High</option>
+                  <option value="price-desc">Price : High To Low</option>
                 </select>
-                <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400 pointer-events-none" />
+                <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#2D1B0E] pointer-events-none" />
               </div>
 
             </div>
@@ -240,10 +240,10 @@ export default function MenuCatalogPage() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-5 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                  className={`px-6 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
                     isActive
-                      ? 'bg-[#5E3A20] text-white shadow-md'
-                      : 'bg-white text-stone-600 border border-stone-200/70 hover:bg-stone-50'
+                      ? 'bg-[#6E3E13] text-white shadow-md'
+                      : 'bg-white text-[#2D1B0E] border border-[#EACBB0] hover:bg-[#F59E3D]/15'
                   }`}
                 >
                   {cat}
@@ -263,13 +263,13 @@ export default function MenuCatalogPage() {
             return (
               <div
                 key={item.id}
-                className="bg-white rounded-3xl overflow-hidden border border-stone-200/60 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                className="bg-white rounded-3xl overflow-hidden border border-stone-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group p-3.5"
               >
                 <div>
                   {/* Image & Wishlist Button */}
                   <div 
                     onClick={() => setDetailProduct(item as any)}
-                    className="relative h-48 w-full bg-stone-100 overflow-hidden cursor-pointer"
+                    className="relative h-48 w-full bg-stone-100 rounded-2xl overflow-hidden cursor-pointer"
                   >
                     <Image
                       src={item.image}
@@ -281,7 +281,7 @@ export default function MenuCatalogPage() {
                     {/* Badge Top Left */}
                     {item.badge && (
                       <span className={`absolute top-3 left-3 text-white text-[9px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider shadow ${
-                        item.badge === 'NEW' ? 'bg-red-600' : 'bg-[#4A3222]'
+                        item.badge === 'NEW' ? 'bg-red-600' : 'bg-[#6E3E13]'
                       }`}>
                         {item.badge}
                       </span>
@@ -290,37 +290,37 @@ export default function MenuCatalogPage() {
                     {/* Wishlist Heart Button */}
                     <button
                       onClick={() => toggleWishlist(item.id)}
-                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-stone-600 hover:text-red-500 transition-colors shadow-sm"
+                      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-stone-600 hover:text-red-500 transition-colors shadow-xs"
                     >
                       <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
                     </button>
                   </div>
 
                   {/* Content Info */}
-                  <div className="p-5 space-y-1.5">
+                  <div className="p-3 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-serif text-base font-semibold text-stone-900 line-clamp-1">
+                      <h3 className="font-bold text-sm text-[#2D1B0E] line-clamp-1">
                         {item.name}
                       </h3>
-                      <div className="flex items-center gap-1 text-xs font-bold text-stone-700 shrink-0">
-                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#2D1B0E] shrink-0 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                         <span>{item.rating}</span>
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-stone-400 line-clamp-2 leading-relaxed font-light">
+                    <p className="text-[11px] text-stone-500 line-clamp-2 leading-relaxed font-normal">
                       {item.description}
                     </p>
 
-                    <div className="pt-1 text-[11px] text-stone-400 font-medium">
+                    <div className="pt-1 text-[11px] text-[#7A5B43] font-semibold">
                       {item.soldCount}
                     </div>
                   </div>
                 </div>
 
                 {/* Price & Add Cart Action */}
-                <div className="px-5 pb-5 pt-1 flex items-center justify-between">
-                  <span className="font-serif font-bold text-base text-[#3D2512]">
+                <div className="px-3 pb-2 pt-1 flex items-center justify-between">
+                  <span className="font-serif font-bold text-base text-[#2D1B0E]">
                     Rp {item.price.toLocaleString('id-ID')}
                   </span>
 
@@ -328,22 +328,25 @@ export default function MenuCatalogPage() {
                     <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-full border border-stone-200">
                       <button
                         onClick={() => removeFromCart(item.id)}
-                        className="w-6 h-6 rounded-full bg-white text-stone-800 flex items-center justify-center shadow-sm"
+                        className="w-6 h-6 rounded-full bg-white text-stone-800 flex items-center justify-center shadow-xs"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
                       <span className="text-xs font-bold text-stone-800 px-1">{qty}</span>
                       <button
                         onClick={() => addToCart(item.id)}
-                        className="w-6 h-6 rounded-full bg-[#5E3A20] text-white flex items-center justify-center shadow-sm"
+                        className="w-6 h-6 rounded-full bg-[#6E3E13] text-white flex items-center justify-center shadow-xs"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
                     </div>
                   ) : (
                     <button
-                      onClick={() => addToCart(item.id)}
-                      className="w-9 h-9 rounded-full bg-[#5E3A20] hover:bg-[#472B17] text-white flex items-center justify-center transition-all shadow active:scale-95"
+                      onClick={() => {
+                        if (!user) { setShowAuthModal(true); return; }
+                        addToCart(item.id);
+                      }}
+                      className="w-9 h-9 rounded-full bg-[#6E3E13] hover:bg-[#58310E] text-white flex items-center justify-center transition-all shadow-md active:scale-95"
                       title="Tambah ke Keranjang"
                     >
                       <ShoppingBag className="w-4 h-4 stroke-[1.8]" />
@@ -359,20 +362,20 @@ export default function MenuCatalogPage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-[#4A3222] text-stone-300 py-12 px-6 sm:px-12 mt-16 border-t border-stone-800">
+      <footer className="bg-[#6E3E13] text-stone-300 py-12 px-6 sm:px-12 mt-16 border-t border-[#DE8B32]/40">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-xs font-light">
           <div>
             <span className="font-serif text-2xl font-bold text-white block mb-1">
               Nefakky
             </span>
-            <p className="text-stone-400 max-w-xs">
-              Temukan hidangan rumahan terbaik dengan cita rasa warisan Indonesia.
+            <p className="text-stone-300 max-w-xs">
+              Platform pemesanan makanan rumahan UMKM terpercaya dengan cita rasa istimewa.
             </p>
           </div>
 
-          <div className="text-center sm:text-right text-stone-400 space-y-1">
+          <div className="text-center sm:text-right text-stone-300 space-y-1">
             <p>&copy; 2026 Nefakky Marketplace. All rights reserved.</p>
-            <p className="text-[11px] text-amber-400/80">Nikmati Masakan Rumahan, Semudah Satu Sentuhan.</p>
+            <p className="text-[11px] text-amber-300 font-semibold">Nikmati Masakan Rumahan, Semudah Satu Sentuhan.</p>
           </div>
         </div>
       </footer>

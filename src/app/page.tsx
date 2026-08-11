@@ -15,7 +15,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { useData } from '@/context/DataContext';
+import { useData, isVoucherValidNow } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
 import { 
   Search, 
@@ -196,7 +196,7 @@ export default function UserHomePage() {
   const finalPrice = Math.max(0, subtotal - discount);
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-stone-800 font-sans selection:bg-[#7A4B29]/10 selection:text-[#7A4B29]">
+    <div className="min-h-screen bg-[#FCEEE2] text-stone-800 font-sans selection:bg-[#6E3E13]/10 selection:text-[#6E3E13]">
       
       {/* 1. HEADER / NAVBAR */}
       <Navbar showSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} />
@@ -208,18 +208,13 @@ export default function UserHomePage() {
           {/* Hero Left Content */}
           <div className="lg:col-span-6 space-y-5 text-left">
             
-            {/* Pill Tag */}
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-[#7A4B29]/5 border border-[#7A4B29]/20 rounded-full text-[11px] font-medium text-[#7A4B29]">
-              Pasar Kuliner Premium
-            </div>
-
             {/* Main Headline */}
-            <h1 className="font-serif text-4xl sm:text-5xl lg:text-[52px] leading-[1.12] font-normal text-[#4A3222] tracking-tight">
-              Nikmati Hidangan Rumahan dengan Rasa Istimewa
+            <h1 className="font-serif text-4xl sm:text-5xl lg:text-[50px] leading-[1.15] font-bold text-[#2D1B0E] tracking-tight">
+              Nikmati Hidangan Rumahan Rasa Nusantara Yang Otentik
             </h1>
 
             {/* Subtitle Paragraph */}
-            <p className="text-xs sm:text-sm text-stone-600 font-light max-w-lg leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#7A5B43] font-medium max-w-lg leading-relaxed">
               Kurasi makanan terbaik dari dapur pilihan, siap diantar ke meja makan Anda dengan kehangatan dan kemewahan yang tak terlupakan.
             </p>
 
@@ -227,13 +222,13 @@ export default function UserHomePage() {
             <div className="flex items-center gap-3 pt-2">
               <Link 
                 href="/menu"
-                className="px-6 py-3 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow-md transition-all active:scale-[0.98] inline-block text-center"
+                className="px-7 py-3.5 bg-[#6E3E13] hover:bg-[#58310E] text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-md transition-all active:scale-[0.98] inline-block text-center"
               >
                 Pesan Sekarang
               </Link>
               <Link 
                 href="/menu"
-                className="px-6 py-3 border border-[#7A4B29] text-[#7A4B29] hover:bg-[#7A4B29]/5 font-medium text-xs rounded-full transition-all inline-block text-center"
+                className="px-7 py-3.5 bg-white hover:bg-stone-50 text-[#2D1B0E] font-bold text-xs rounded-full shadow-sm border border-stone-200/60 transition-all inline-block text-center"
               >
                 Lihat Menu
               </Link>
@@ -243,18 +238,8 @@ export default function UserHomePage() {
 
           {/* Hero Right Animated Culinary Showcase */}
           <div className="lg:col-span-6">
-            <div className="relative w-full h-[360px] sm:h-[420px] md:h-[460px] rounded-[36px] overflow-hidden shadow-2xl border border-amber-200/80 bg-slate-950 flex items-center justify-center p-6 group">
+            <div className="relative w-full h-[340px] sm:h-[380px] md:h-[420px] rounded-3xl overflow-hidden shadow-2xl border border-[#EACBB0]/60 bg-stone-900 flex items-center justify-center p-6 group">
               
-              {/* Animated Rotating Ambient Glow Ring */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/30 via-orange-500/20 to-emerald-500/20 animate-spin-slow opacity-80 blur-xl pointer-events-none" />
-
-              {/* Steaming SVG Motion Lines */}
-              <div className="absolute top-10 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-none z-20">
-                <div className="w-1.5 h-12 bg-gradient-to-t from-white/60 to-transparent rounded-full animate-steam" />
-                <div className="w-1.5 h-16 bg-gradient-to-t from-amber-200/70 to-transparent rounded-full animate-steam [animation-delay:0.8s]" />
-                <div className="w-1.5 h-10 bg-gradient-to-t from-orange-200/60 to-transparent rounded-full animate-steam [animation-delay:1.5s]" />
-              </div>
-
               {/* Animated Active Slide Image Container */}
               {heroSlides.map((slide, index) => {
                 const isActive = index === heroSlideIndex;
@@ -269,51 +254,37 @@ export default function UserHomePage() {
                       src={slide.image}
                       alt={slide.name}
                       fill
-                      className="object-cover object-center transform group-hover:scale-105 transition-transform duration-700"
+                      className="object-cover object-center transform group-hover:scale-105 transition-transform duration-700 brightness-[0.95]"
                       priority
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   </div>
                 );
               })}
 
-              {/* Floating Top Badge (Fresh Cooking Live) */}
-              <div className="absolute top-5 left-5 z-20 bg-stone-900/90 backdrop-blur-md rounded-full px-4 py-1.5 border border-stone-700/60 shadow-md flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#8A6337]" />
-                <span className="text-[11px] font-bold text-stone-200 uppercase tracking-wider">
-                  {heroSlides[heroSlideIndex]?.badgeText}
-                </span>
-              </div>
-
-              {/* Floating Live Customer Rating Toast (Bottom Left) */}
-              <div className="absolute bottom-6 left-6 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-3.5 shadow-md border border-stone-200 flex items-center gap-3 animate-fade-in max-w-[250px]">
-                <div className="w-10 h-10 rounded-xl bg-[#5C3D28] text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
-                  <Star className="w-5 h-5 fill-white text-white" />
+              {/* Floating Live Customer Rating Toast (Bottom Left Overlay) */}
+              <div className="absolute bottom-5 left-5 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-3.5 shadow-lg border border-stone-200/80 flex items-center gap-3 animate-fade-in max-w-[260px]">
+                <div className="w-10 h-10 rounded-xl bg-[#6E3E13] text-amber-400 flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                  <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-stone-900 leading-tight">
+                  <div className="text-xs font-bold text-[#2D1B0E] leading-tight">
                     {heroSlides[heroSlideIndex]?.name}
                   </div>
-                  <div className="text-[10px] text-[#8A6337] font-bold mt-0.5">
+                  <div className="text-[10px] text-[#7A5B43] font-semibold mt-0.5">
                     ⭐ {heroSlides[heroSlideIndex]?.rating} ({heroSlides[heroSlideIndex]?.reviews})
                   </div>
                 </div>
               </div>
 
-              {/* Floating Price Pill (Bottom Right) */}
-              <div className="absolute bottom-6 right-6 z-20 bg-stone-900/90 backdrop-blur-md border border-stone-700/60 rounded-2xl px-4 py-2 text-right shadow-md">
-                <span className="text-[9px] text-stone-300 font-bold tracking-widest uppercase block">Harga Special</span>
-                <span className="font-serif text-lg font-bold text-white">{heroSlides[heroSlideIndex]?.price}</span>
-              </div>
-
               {/* Interactive Carousel Navigation Indicators */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-stone-900/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+              <div className="absolute bottom-3 right-5 z-20 flex items-center gap-1.5 bg-stone-900/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
                 {heroSlides.map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setHeroSlideIndex(idx)}
                     className={`h-2 rounded-full transition-all duration-300 ${
-                      idx === heroSlideIndex ? 'w-6 bg-[#5C3D28]' : 'w-2 bg-white/40 hover:bg-white/70'
+                      idx === heroSlideIndex ? 'w-5 bg-[#F59E3D]' : 'w-2 bg-white/40 hover:bg-white/70'
                     }`}
                     title={`Lihat Slide ${idx + 1}`}
                   />
@@ -327,19 +298,18 @@ export default function UserHomePage() {
       </section>
 
       {/* 3. CATEGORIES SECTION */}
-      <section id="kategori" className="px-4 sm:px-8 py-12 bg-[#F5F2EC]/60 border-y border-stone-200/40">
-        <div className="max-w-6xl mx-auto text-center space-y-6">
+      <section id="kategori" className="w-full py-12 bg-[#F59E3D] border-y border-[#DE8B32]/40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 text-center space-y-6">
           
-          {/* Title & Decorative Accent */}
+          {/* Title */}
           <div>
-            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-[#4A3222]">
-              Pilih Kategori Favoritmu
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D1B0E]">
+              Kategori Menu
             </h2>
-            <div className="w-12 h-0.5 bg-[#8A5A36] mx-auto rounded-full mt-2.5" />
           </div>
 
-          {/* 5 Category Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 pt-2">
+          {/* Category Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-3xl mx-auto pt-2">
             {categoriesList.map((cat) => {
               const IconComp = cat.icon;
               const isActive = activeCategory === cat.name;
@@ -352,20 +322,20 @@ export default function UserHomePage() {
                     const el = document.getElementById('menu-terlaris');
                     el?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-3.5 group ${
+                  className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-3.5 group shadow-sm hover:shadow-md ${
                     isActive 
-                      ? 'bg-[#7A4B29] border-[#7A4B29] text-white shadow-md' 
-                      : 'bg-white border-stone-100 text-stone-800 shadow-sm hover:shadow-md'
+                      ? 'bg-[#6E3E13] border-[#6E3E13] text-white shadow-md' 
+                      : 'bg-white border-stone-100 text-[#2D1B0E] hover:border-white'
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
                     isActive 
                       ? 'bg-white/20 text-white' 
-                      : 'bg-[#F7EFE5] text-[#7A4B29] group-hover:bg-[#7A4B29] group-hover:text-white'
+                      : 'bg-[#6E3E13] text-white group-hover:scale-105'
                   }`}>
-                    <IconComp className="w-5 h-5" />
+                    <IconComp className="w-6 h-6" />
                   </div>
-                  <span className="text-xs font-semibold tracking-tight text-center">
+                  <span className="text-xs font-bold tracking-tight text-center">
                     {cat.name}
                   </span>
                 </div>
@@ -380,39 +350,39 @@ export default function UserHomePage() {
       <section id="menu-terlaris" className="px-4 sm:px-8 py-14 max-w-6xl mx-auto space-y-8">
         
         {/* Section Header */}
-        <div className="flex items-end justify-between border-b border-stone-200/60 pb-4">
+        <div className="flex items-end justify-between border-b border-[#EACBB0]/60 pb-4">
           <div>
-            <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-[#4A3222]">
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D1B0E]">
               Menu Terlaris
             </h2>
-            <p className="text-xs text-stone-500 mt-1 font-light">
+            <p className="text-xs text-[#7A5B43] mt-1 font-medium">
               Pilihan pelanggan yang paling dicintai minggu ini.
             </p>
           </div>
           <Link 
             href="/menu"
-            className="text-xs font-medium text-[#7A4B29] hover:underline flex items-center gap-1 shrink-0"
+            className="text-xs font-semibold text-[#542C0A] hover:underline flex items-center gap-1 shrink-0"
           >
             <span>Lihat Semua Katalog</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        {/* 4 Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {bestsellers.map((item) => {
+        {/* Product Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {bestsellers.slice(0, 3).map((item) => {
             const qty = cart[item.id] || 0;
 
             return (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl overflow-hidden border border-stone-200/70 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                className="bg-white rounded-2xl overflow-hidden border border-stone-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group p-3.5"
               >
                 <div>
                   {/* Card Image */}
                   <div 
                     onClick={() => setDetailProduct(item as any)}
-                    className="relative h-44 w-full bg-stone-100 overflow-hidden cursor-pointer"
+                    className="relative h-48 w-full bg-stone-100 rounded-xl overflow-hidden cursor-pointer"
                   >
                     <Image
                       src={item.image}
@@ -420,36 +390,29 @@ export default function UserHomePage() {
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    {item.badge && (
-                      <span className={`absolute top-3 left-3 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                        item.badge === 'TERPOPULER' ? 'bg-[#D9A353]' : 'bg-[#7A4B29]'
-                      }`}>
-                        {item.badge}
-                      </span>
-                    )}
                   </div>
 
                   {/* Card Content */}
-                  <div className="p-4 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-sm text-stone-900 line-clamp-1">
+                  <div className="p-3 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-sm text-[#2D1B0E] line-clamp-1">
                         {item.name}
                       </h3>
-                      <div className="flex items-center gap-1 text-[11px] font-bold text-stone-700 shrink-0">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#2D1B0E] shrink-0 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
                         <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                         <span>{item.rating}</span>
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-stone-400 line-clamp-2 leading-relaxed font-light">
+                    <p className="text-[11px] text-stone-500 line-clamp-2 leading-relaxed font-normal">
                       {item.description}
                     </p>
                   </div>
                 </div>
 
                 {/* Card Price & Cart Action */}
-                <div className="px-4 pb-4 pt-2 flex items-center justify-between">
-                  <span className="font-serif font-bold text-base text-[#4A3222]">
+                <div className="px-3 pb-2 pt-2 flex items-center justify-between">
+                  <span className="font-serif font-bold text-base text-[#2D1B0E]">
                     Rp {item.price.toLocaleString('id-ID')}
                   </span>
 
@@ -467,7 +430,7 @@ export default function UserHomePage() {
                           if (!user) { setShowAuthModal(true); return; }
                           addToCart(item.id);
                         }}
-                        className="w-6 h-6 rounded-full bg-[#5E3A20] text-white flex items-center justify-center shadow-sm"
+                        className="w-6 h-6 rounded-full bg-[#6E3E13] text-white flex items-center justify-center shadow-sm"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
@@ -478,7 +441,7 @@ export default function UserHomePage() {
                         if (!user) { setShowAuthModal(true); return; }
                         addToCart(item.id);
                       }}
-                      className="w-9 h-9 rounded-full bg-[#5E3A20] hover:bg-[#472B17] text-white flex items-center justify-center transition-all shadow active:scale-95"
+                      className="w-10 h-10 rounded-full bg-[#6E3E13] hover:bg-[#58310E] text-white flex items-center justify-center transition-all shadow-md active:scale-95"
                       title="Tambah ke Keranjang"
                     >
                       <ShoppingBag className="w-4 h-4" />
@@ -497,77 +460,62 @@ export default function UserHomePage() {
       <section id="promo-section" className="px-4 sm:px-8 py-6 max-w-6xl mx-auto">
         {(() => {
           const weekendVoucher = (vouchers || []).find((v: any) => v.code === 'WEEKENDSERU');
-          const dayOfWeek = new Date().getDay(); // 0 = Minggu (Sunday), 6 = Sabtu (Saturday)
-          const isTodayWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-          const isVoucherActiveInAdmin = weekendVoucher ? (weekendVoucher.status === 'Active' && weekendVoucher.isActive !== false) : true;
-          const isWeekendActive = isTodayWeekend && isVoucherActiveInAdmin;
+          const { active: isWeekendActive } = isVoucherValidNow(weekendVoucher);
 
           return (
-            <div className={`rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl transition-all ${
-              isWeekendActive ? 'bg-[#7D4A2B]' : 'bg-stone-800/90'
-            }`}>
+            <div className="bg-[#6E3E13] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
               
               {/* Left Text */}
               <div className="space-y-4 max-w-md text-left relative z-10">
                 <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    isWeekendActive ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40' : 'bg-amber-500/30 text-amber-200 border border-amber-400/40'
-                  }`}>
-                    {isWeekendActive ? '● Promo Aktif (Akhir Pekan)' : !isTodayWeekend ? '● Non-Aktif (Hanya Hari Libur)' : '● Promo Non-Aktif'}
+                  <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full ${isWeekendActive ? 'bg-amber-400 text-amber-950' : 'bg-stone-700 text-stone-300'}`}>
+                    {isWeekendActive ? 'Promo Aktif Hari Ini' : 'Aktif Sabtu & Minggu'}
                   </span>
                 </div>
-
-                <h2 className="font-serif text-3xl sm:text-4xl font-semibold leading-tight text-stone-50">
-                  Weekend Promo: Diskon 30%
+                <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight text-white select-none tracking-tight">
+                  Weekend Promo : Diskon 15%
                 </h2>
-                <p className="text-xs sm:text-sm text-stone-200 font-light leading-relaxed">
-                  {isWeekendActive ? (
-                    <>Meriahkan akhir pekanmu dengan sajian istimewa dari Nefakky. Gunakan kode promo <strong className="underline text-amber-200">WEEKENDSERU</strong>.</>
-                  ) : !isTodayWeekend ? (
-                    <>Promo diskon <strong className="text-amber-200">WEEKENDSERU</strong> ini khusus berlaku pada hari libur / akhir pekan (Sabtu &amp; Minggu). Pada hari biasa promo ini otomatis non-aktif.</>
-                  ) : (
-                    <>Maaf, promosi diskon akhir pekan saat ini sedang dinonaktifkan oleh Admin.</>
-                  )}
+                <p className="text-xs sm:text-sm text-stone-200 font-light leading-relaxed select-none">
+                  Meriahkan akhir pekanmu dengan sajian istimewa dari Nefakky. Gunakan kode promo <strong className="underline font-semibold text-amber-200">WEEKENDSERU</strong> pada hari Sabtu &amp; Minggu.
                 </p>
                 <div>
-                  {isWeekendActive ? (
-                    <button 
-                      onClick={() => {
-                        const res = claimPromo('WEEKENDSERU');
-                        if (res.success) {
-                          if (totalCartCount === 0) {
-                            addToCart('m2');
-                          }
-                          router.push('/cart');
-                        } else {
-                          alert(res.message);
+                  <button 
+                    onClick={() => {
+                      const res = claimPromo('WEEKENDSERU');
+                      if (res.success) {
+                        if (totalCartCount === 0) {
+                          addToCart('m2');
                         }
-                      }}
-                      className="px-6 py-3 bg-[#D9A353] hover:bg-[#C28E42] text-[#3D2512] font-semibold text-xs rounded-full shadow-md transition-colors flex items-center gap-2"
-                    >
-                      <span>Ambil Promonya &amp; Checkout</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button 
-                      disabled
-                      className="px-6 py-3 bg-stone-700/80 text-stone-300 font-medium text-xs rounded-full cursor-not-allowed flex items-center gap-2 border border-stone-600"
-                    >
-                      <span>{!isTodayWeekend ? 'Khusus Hari Libur (Sabtu & Minggu)' : 'Promo Sedang Non-Aktif'}</span>
-                    </button>
-                  )}
+                        router.push('/cart');
+                      } else {
+                        alert(res.message);
+                      }
+                    }}
+                    className={`px-6 py-3.5 font-bold text-xs rounded-full shadow-md transition-colors flex items-center gap-2 ${
+                      isWeekendActive 
+                        ? 'bg-[#F59E3D] hover:bg-[#E58F2E] text-[#2D1B0E]' 
+                        : 'bg-stone-700 hover:bg-stone-600 text-stone-200'
+                    }`}
+                  >
+                    <span>{isWeekendActive ? 'Ambil Promonya & Check Out' : 'Cek Kode Promo'}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Right Ticket Illustration */}
+              {/* Right Ticket Graphic */}
               <div className="relative z-10 shrink-0">
-                <div className="w-48 h-32 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex flex-col items-center justify-center gap-2 shadow-2xl rotate-3 hover:rotate-0 transition-transform">
-                  <Ticket className={`w-10 h-10 ${isWeekendActive ? 'text-amber-300' : 'text-stone-400'}`} />
-                  <span className="font-mono text-xs font-bold tracking-wider text-amber-200">
+                <div className={`w-56 h-36 rounded-2xl border text-[#2D1B0E] flex flex-col items-center justify-center gap-1.5 shadow-2xl p-4 transition-all ${
+                  isWeekendActive 
+                    ? 'bg-[#F59E3D] border-[#DE8B32]' 
+                    : 'bg-stone-300 border-stone-400 opacity-80'
+                }`}>
+                  <Ticket className="w-10 h-10 text-[#6E3E13]" />
+                  <span className="font-mono text-xs font-extrabold tracking-wider uppercase">
                     WEEKENDSERU
                   </span>
-                  <span className="text-[10px] text-stone-200">
-                    {isWeekendActive ? 'Diskon 30% All Items' : !isTodayWeekend ? 'Khusus Sabtu & Minggu' : 'Non-Aktif'}
+                  <span className="text-[11px] font-semibold text-[#5C320A]">
+                    {isWeekendActive ? 'Diskon 15% All Items' : 'Hanya Hari Sabtu & Minggu'}
                   </span>
                 </div>
               </div>
@@ -587,7 +535,7 @@ export default function UserHomePage() {
             <div>
               <div className="flex items-center justify-between border-b border-stone-200 pb-4 mb-4">
                 <h3 className="font-serif text-lg font-semibold text-stone-900 flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-[#7A4B29]" />
+                  <ShoppingBag className="w-5 h-5 text-[#6E3E13]" />
                   <span>Keranjang Belanja</span>
                 </h3>
                 <button 
@@ -614,14 +562,14 @@ export default function UserHomePage() {
                       <div key={id} className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-200/60">
                         <div>
                           <h4 className="text-xs font-semibold text-stone-800">{item.name}</h4>
-                          <p className="text-[11px] text-[#7A4B29] font-serif font-bold">
+                          <p className="text-[11px] text-[#6E3E13] font-serif font-bold">
                             Rp {item.price.toLocaleString('id-ID')}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button onClick={() => removeFromCart(id)} className="w-5 h-5 rounded-full bg-stone-200 text-stone-700 flex items-center justify-center text-xs font-bold">-</button>
                           <span className="text-xs font-bold text-stone-800">{qty}</span>
-                          <button onClick={() => addToCart(id)} className="w-5 h-5 rounded-full bg-[#7A4B29] text-white flex items-center justify-center text-xs font-bold">+</button>
+                          <button onClick={() => addToCart(id)} className="w-5 h-5 rounded-full bg-[#6E3E13] text-white flex items-center justify-center text-xs font-bold">+</button>
                         </div>
                       </div>
                     );
@@ -640,7 +588,7 @@ export default function UserHomePage() {
                   </div>
                   {promoApplied && (
                     <div className="flex justify-between text-emerald-600 font-semibold">
-                      <span>Promo Diskon (30%):</span>
+                      <span>Promo Diskon (15%):</span>
                       <span>- Rp {discount.toLocaleString('id-ID')}</span>
                     </div>
                   )}
@@ -652,7 +600,7 @@ export default function UserHomePage() {
 
                 <button 
                   onClick={() => alert('Fitur Pembayaran QRIS / Bank Transfer siap diproses! Pesanan berhasil dikirim ke Dapur Nefakky.')}
-                  className="w-full py-3.5 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow transition-all"
+                  className="w-full py-3.5 bg-[#6E3E13] hover:bg-[#58310E] text-white font-bold text-xs uppercase rounded-full shadow transition-all"
                 >
                   Lanjut ke Checkout
                 </button>
@@ -664,20 +612,20 @@ export default function UserHomePage() {
       )}
 
       {/* 7. FOOTER */}
-      <footer id="footer-section" className="bg-[#4A3222] text-stone-300 py-12 px-4 sm:px-8 mt-16 border-t border-stone-800">
+      <footer id="footer-section" className="bg-[#6E3E13] text-stone-300 py-12 px-6 sm:px-12 mt-16 border-t border-[#58310E]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-xs font-light">
           <div>
             <span className="font-serif text-2xl font-bold text-white block mb-1">
               Nefakky
             </span>
-            <p className="text-stone-400 max-w-xs">
+            <p className="text-stone-300 max-w-xs">
               Platform pemesanan makanan rumahan UMKM terpercaya dengan cita rasa istimewa.
             </p>
           </div>
 
-          <div className="text-center sm:text-right text-stone-400 space-y-1">
+          <div className="text-center sm:text-right text-stone-300 space-y-1">
             <p>&copy; 2026 Nefakky Marketplace. All rights reserved.</p>
-            <p className="text-[11px] text-amber-400/80">Nikmati Masakan Rumahan, Semudah Satu Sentuhan.</p>
+            <p className="text-[11px] text-amber-200 font-medium">Nikmati Masakan Rumahan, Semudah Satu Sentuhan.</p>
           </div>
         </div>
       </footer>
@@ -688,32 +636,32 @@ export default function UserHomePage() {
       {/* Guest Auth Modal Overlay */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
-            <div className="w-14 h-14 bg-amber-100 text-[#5C3D28] rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+          <div className="bg-[#FCEEE2] rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95 border border-[#EACBB0]">
+            <div className="w-14 h-14 bg-[#F59E3D] text-[#2D1B0E] rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
               🔒
             </div>
             <div className="space-y-2">
-              <h3 className="font-serif text-xl font-bold text-stone-900">Silakan Masuk Terlebih Dahulu</h3>
-              <p className="text-xs text-stone-600 font-light leading-relaxed">
+              <h3 className="font-serif text-xl font-bold text-[#2D1B0E]">Silakan Masuk Terlebih Dahulu</h3>
+              <p className="text-xs text-[#7A5B43] font-medium leading-relaxed">
                 Anda perlu masuk atau mendaftar akun untuk membeli dan menambahkan makanan ini ke keranjang.
               </p>
             </div>
             <div className="flex flex-col gap-2 pt-2">
               <button
                 onClick={() => router.push('/login')}
-                className="w-full py-3 bg-[#7A4B29] hover:bg-[#613A1F] text-white font-medium text-xs rounded-full shadow transition-all"
+                className="w-full py-3.5 bg-[#6E3E13] hover:bg-[#58310E] text-white font-bold text-xs uppercase rounded-full shadow transition-all"
               >
                 Masuk ke Akun Saya
               </button>
               <button
                 onClick={() => router.push('/register')}
-                className="w-full py-3 border border-[#7A4B29] text-[#7A4B29] hover:bg-[#7A4B29]/5 font-medium text-xs rounded-full transition-all"
+                className="w-full py-3 border border-[#6E3E13] text-[#6E3E13] hover:bg-[#6E3E13]/5 font-bold text-xs uppercase rounded-full transition-all"
               >
                 Daftar Akun Baru
               </button>
               <button
                 onClick={() => setShowAuthModal(false)}
-                className="text-xs text-stone-400 hover:text-stone-600 font-light pt-1"
+                className="text-xs text-[#7A5B43] hover:underline font-medium pt-1"
               >
                 Lanjutkan Melihat Menu
               </button>

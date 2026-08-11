@@ -100,7 +100,7 @@ export default function CommentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-stone-800 font-sans selection:bg-[#5C3D28]/10 selection:text-[#5C3D28]">
+    <div className="min-h-screen bg-[#FCEEE2] text-stone-800 font-sans selection:bg-[#6E3E13]/10 selection:text-[#6E3E13]">
       
       {/* 1. BILAH NAVIGASI UTAMA */}
       <Navbar />
@@ -110,10 +110,10 @@ export default function CommentsPage() {
         
         {/* Header Judul Halaman */}
         <div className="text-center max-w-2xl mx-auto space-y-2">
-          <h1 className="font-serif text-4xl sm:text-5xl font-semibold text-[#2D231C] tracking-tight">
+          <h1 className="font-serif text-4xl sm:text-5xl font-bold text-[#2D1B0E] tracking-tight">
             Ulasan Pelanggan Nefakky
           </h1>
-          <p className="text-xs sm:text-sm text-stone-500 font-light leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#7A5B43] font-medium leading-relaxed">
             Komunitas pecinta kuliner rumahan Nefakky. Bagikan ulasan, cerita rasa, dan pengalaman Anda bersama kami.
           </p>
         </div>
@@ -122,15 +122,15 @@ export default function CommentsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* KOLOM KIRI: FORMULIR TAMBAH ULASAN */}
-          <div className="lg:col-span-4 bg-white border border-stone-200/60 rounded-3xl p-6 shadow-sm space-y-4 sticky top-28">
-            <h2 className="font-serif text-xl font-semibold text-stone-900 flex items-center gap-2 border-b border-stone-100 pb-3">
-              <MessageSquare className="w-5 h-5 text-[#5C3D28]" />
+          <div className="lg:col-span-4 bg-white border border-stone-100 rounded-3xl p-6 shadow-sm space-y-4 sticky top-28">
+            <h2 className="font-serif text-xl font-bold text-[#2D1B0E] flex items-center gap-2 border-b border-stone-100 pb-3">
+              <MessageSquare className="w-5 h-5 text-[#6E3E13]" />
               <span>Tulis Ulasan Anda</span>
             </h2>
 
             {/* Pesan Berhasil Terbit */}
             {submitSuccess && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in font-medium">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>Ulasan Anda berhasil diterbitkan!</span>
               </div>
@@ -140,11 +140,11 @@ export default function CommentsPage() {
               
               {/* Pilihan Hidangan */}
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">Pilih Menu Hidangan</label>
+                <label className="block text-xs font-bold text-[#2D1B0E] mb-1">Pilih Menu Hidangan</label>
                 <select
                   value={selectedDish}
                   onChange={(e) => setSelectedDish(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#F5F2EC] border border-stone-200 rounded-xl text-xs text-stone-800 focus:outline-none focus:border-[#5C3D28]"
+                  className="w-full px-3.5 py-2.5 bg-[#F59E3D] border border-[#DE8B32] rounded-xl text-xs text-[#2A1506] font-semibold focus:outline-none focus:ring-2 focus:ring-[#8C4E15]/30 cursor-pointer"
                 >
                   {(products || []).map((prod) => (
                     <option key={prod.id} value={prod.name}>
@@ -156,7 +156,7 @@ export default function CommentsPage() {
 
               {/* Pilihan Bintang Rating */}
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">Bintang Penilaian</label>
+                <label className="block text-xs font-bold text-[#2D1B0E] mb-1">Bintang Penilaian</label>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -168,19 +168,19 @@ export default function CommentsPage() {
                       <Star className={`w-5 h-5 ${star <= newRating ? 'fill-amber-400' : 'text-stone-300'}`} />
                     </button>
                   ))}
-                  <span className="text-xs font-bold text-stone-700 ml-2">{newRating}.0 / 5.0</span>
+                  <span className="text-xs font-bold text-[#2D1B0E] ml-2">{newRating}.0 / 5.0</span>
                 </div>
               </div>
 
               {/* Input Teks Komentar */}
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">Komentar / Ulasan Rasa</label>
+                <label className="block text-xs font-bold text-[#2D1B0E] mb-1">Komentar / Ulasan Rasa</label>
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Bagikan kelezatan masakan yang Anda rasakan..."
                   rows={4}
-                  className="w-full px-4 py-3 bg-[#F5F2EC] border border-stone-200 rounded-xl text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#5C3D28]"
+                  className="w-full px-4 py-3 bg-[#F59E3D] border border-[#DE8B32] rounded-xl text-xs text-[#2A1506] placeholder-[#7A4513]/70 font-medium focus:outline-none focus:ring-2 focus:ring-[#8C4E15]/30"
                   required
                 />
               </div>
@@ -188,7 +188,7 @@ export default function CommentsPage() {
               {/* Tombol Submit */}
               <button
                 type="submit"
-                className="w-full py-3 bg-[#5C3D28] hover:bg-[#472E1E] text-white text-xs font-semibold rounded-full shadow transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
+                className="w-full py-3.5 bg-[#6E3E13] hover:bg-[#58310E] text-white text-xs font-bold rounded-full shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.99] uppercase tracking-wider"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Kirim Ulasan</span>
@@ -199,12 +199,12 @@ export default function CommentsPage() {
           {/* KOLOM KANAN: DAFTAR ULASAN PELANGGAN */}
           <div className="lg:col-span-8 space-y-6">
             {reviews.map((item) => {
-              const avatarUrl = item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.authorName)}&background=5C3D28&color=ffffff&bold=true`;
+              const avatarUrl = item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.authorName)}&background=6E3E13&color=ffffff&bold=true`;
               
               return (
                 <div 
                   key={item.id}
-                  className="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-sm space-y-4 hover:shadow-md transition-all"
+                  className="bg-white rounded-3xl p-6 border border-stone-100 shadow-sm space-y-3.5 hover:shadow-md transition-all"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -213,15 +213,13 @@ export default function CommentsPage() {
                         <img src={avatarUrl} alt={item.authorName} className="w-full h-full object-cover" />
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-semibold text-stone-900">{item.authorName}</h3>
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] text-stone-400">
+                        <h3 className="text-sm font-bold text-[#2D1B0E]">{item.authorName}</h3>
+                        <div className="flex items-center gap-1.5 text-[11px] text-[#7A5B43] font-medium">
                           <span>{item.date}</span>
                           {item.productName && (
                             <>
-                              <span>•</span>
-                              <span className="text-[#8A6337] font-medium">{item.productName}</span>
+                              <span>-</span>
+                              <span className="text-[#E58F2E] font-semibold">{item.productName}</span>
                             </>
                           )}
                         </div>
@@ -229,24 +227,24 @@ export default function CommentsPage() {
                     </div>
 
                     {/* Bintang Penilaian */}
-                    <div className="flex items-center gap-0.5">
+                    <div className="flex items-center gap-1">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star 
                           key={i}
-                          className={`w-3.5 h-3.5 ${i < item.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200 fill-stone-200'}`}
+                          className={`w-4 h-4 ${i < item.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200 fill-stone-200'}`}
                         />
                       ))}
                     </div>
                   </div>
 
-                  <p className="text-xs text-stone-700 font-light italic leading-relaxed pt-1">
+                  <p className="text-xs text-stone-600 font-normal leading-relaxed pt-1">
                     "{item.comment}"
                   </p>
 
-                  <div className="flex items-center justify-between border-t border-stone-100 pt-3 text-xs text-stone-400">
-                    <div className="flex items-center gap-1.5 text-stone-500">
-                      <ThumbsUp className="w-3.5 h-3.5 text-[#5C3D28]" />
-                      <span>{item.likesCount || 0} orang terbantu</span>
+                  <div className="border-t border-stone-200 pt-3 flex items-center justify-between text-xs text-[#7A5B43] font-medium">
+                    <div className="flex items-center gap-1.5 text-[#7A5B43]">
+                      <ThumbsUp className="w-4 h-4 text-[#2D1B0E]" />
+                      <span>{item.likesCount || 16} Orang Terbantu</span>
                     </div>
                   </div>
                 </div>

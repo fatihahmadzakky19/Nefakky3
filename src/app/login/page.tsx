@@ -80,27 +80,27 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen w-full bg-[#1e1e1e] p-3 sm:p-6 md:p-10 flex items-center justify-center font-sans">
+    <main className="min-h-screen w-full bg-[#1A1A1A] p-3 sm:p-6 md:p-10 flex items-center justify-center font-sans">
       {/* Outer Card Container */}
-      <div className="w-full max-w-[1080px] bg-[#FAF8F5] rounded-2xl sm:rounded-[28px] overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-2 border border-stone-200/40 my-auto">
+      <div className="w-full max-w-[1020px] bg-[#FCEEE2] rounded-2xl sm:rounded-[32px] overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-2 border border-[#EACBB0]/40 my-auto">
         
         {/* LEFT PANEL: Authentic Ayam Bakar Photo */}
-        <div className="relative min-h-[220px] sm:min-h-[260px] lg:min-h-[620px] w-full bg-stone-900 overflow-hidden flex flex-col justify-end p-6 sm:p-8 md:p-12 text-white">
+        <div className="relative min-h-[240px] sm:min-h-[280px] lg:min-h-[620px] w-full bg-stone-900 overflow-hidden flex flex-col justify-end p-6 sm:p-8 md:p-12 text-white">
           <Image
-            src="/images/ayam_bakar_hero.png"
+            src="/images/ayam_bakar.jpg"
             alt="Artisanal Ayam Bakar khas Nefakky disajikan di tampah bambu tradisional dengan sambal dan lalapan segar"
             fill
             className="object-cover object-center brightness-[0.85] contrast-[1.05]"
             priority
           />
           {/* Subtle Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
           
           <div className="relative z-10 space-y-2 sm:space-y-3">
             <span className="text-[9px] sm:text-[10px] tracking-[0.25em] font-semibold text-stone-300 uppercase block">
               SENI KULINER OTENTIK
             </span>
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-[40px] leading-[1.15] font-normal text-stone-100 tracking-tight">
+            <h2 className="font-serif text-2xl sm:text-3xl lg:text-[38px] leading-[1.15] font-normal text-stone-100 tracking-tight">
               Cita Rasa Asli Khas Nusantara.
             </h2>
             <p className="text-xs text-stone-300 font-light max-w-md leading-relaxed hidden sm:block">
@@ -110,28 +110,28 @@ export default function LoginPage() {
         </div>
 
         {/* RIGHT PANEL: Form Card Panel */}
-        <div className="flex flex-col justify-between p-5 sm:p-10 md:p-12 bg-[#FAF8F5] relative">
+        <div className="flex flex-col justify-between p-6 sm:p-10 md:p-12 bg-[#FCEEE2] relative">
           <div>
             {/* Header Brand */}
-            <div className="flex items-center justify-between mb-8">
-              <span className="font-serif text-2xl font-semibold tracking-tight text-stone-900">
+            <div className="flex items-center justify-between mb-6">
+              <span className="font-serif text-2xl font-bold tracking-tight text-[#2D1B0E]">
                 Nefakky
               </span>
             </div>
 
             {/* Title & Subtitle */}
-            <div className="mb-8">
-              <h1 className="font-serif text-3xl font-semibold text-stone-900 tracking-tight">
+            <div className="mb-6">
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2D1B0E] tracking-tight">
                 Selamat Datang Kembali
               </h1>
-              <p className="text-xs text-stone-500 font-normal mt-1.5">
-                Silakan masuk ke akun Anda untuk melanjutkan pemesanan.
+              <p className="text-xs text-[#7A5B43] font-medium mt-1">
+                Silahkan masuk ke akun anda untuk melanjutkan pemesanan.
               </p>
             </div>
 
             {/* Error Banner */}
             {errorMessage && (
-              <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-fade-in">
+              <div className="mb-5 p-3 rounded-xl bg-red-100/90 border border-red-300 text-red-800 text-xs flex items-center gap-2 animate-fade-in">
                 <span className="shrink-0 font-bold">!</span>
                 <span>{errorMessage}</span>
               </div>
@@ -141,11 +141,11 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email Address */}
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                <label className="block text-xs font-semibold text-[#3D2514] mb-1.5">
                   Alamat Email
                 </label>
                 <div className="relative flex items-center">
-                  <Mail className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none z-10" />
+                  <Mail className="absolute left-3.5 w-4 h-4 text-[#5C320A] pointer-events-none z-10 opacity-80" />
                   <input
                     type="email"
                     value={email}
@@ -153,8 +153,8 @@ export default function LoginPage() {
                       setEmail(e.target.value);
                       if (errorMessage) setErrorMessage('');
                     }}
-                    placeholder="budi@example.com"
-                    className="input-field !pl-11 !pr-4"
+                    placeholder="fatihzakky@gmail.com"
+                    className="w-full px-4 py-3 pl-11 bg-[#F59E3D] hover:bg-[#F3952D] focus:bg-[#F59E3D] border border-[#DE8B32] text-[#2A1506] font-medium placeholder-[#7A4513]/70 rounded-xl outline-none focus:ring-2 focus:ring-[#8C4E15]/30 focus:border-[#C67215] transition-all duration-200 text-sm shadow-sm"
                     required
                   />
                 </div>
@@ -162,11 +162,11 @@ export default function LoginPage() {
 
               {/* Password */}
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1.5">
-                  Kata Sandi
+                <label className="block text-xs font-semibold text-[#3D2514] mb-1.5">
+                  Password
                 </label>
                 <div className="relative flex items-center">
-                  <Lock className="absolute left-3.5 w-4 h-4 text-stone-400 pointer-events-none z-10" />
+                  <Lock className="absolute left-3.5 w-4 h-4 text-[#5C320A] pointer-events-none z-10 opacity-80" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
@@ -175,13 +175,13 @@ export default function LoginPage() {
                       if (errorMessage) setErrorMessage('');
                     }}
                     placeholder="••••••••"
-                    className="input-field !pl-11 !pr-10"
+                    className="w-full px-4 py-3 pl-11 pr-10 bg-[#F59E3D] hover:bg-[#F3952D] focus:bg-[#F59E3D] border border-[#DE8B32] text-[#2A1506] font-medium placeholder-[#7A4513]/70 rounded-xl outline-none focus:ring-2 focus:ring-[#8C4E15]/30 focus:border-[#C67215] transition-all duration-200 text-sm shadow-sm"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-stone-400 hover:text-stone-600 transition-colors z-10"
+                    className="absolute right-3.5 text-[#5C320A] hover:text-[#2A1506] transition-colors z-10"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -190,20 +190,20 @@ export default function LoginPage() {
 
               {/* Options Row */}
               <div className="flex items-center justify-between pt-1 pb-1 text-xs">
-                <label className="flex items-center gap-2 cursor-pointer text-stone-600">
+                <label className="flex items-center gap-2 cursor-pointer text-[#3D2514]">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-stone-300 text-stone-800 focus:ring-[#8A6337] w-3.5 h-3.5"
+                    className="rounded border-[#D47E20] text-[#6E3E13] focus:ring-[#6E3E13] accent-[#6E3E13] w-3.5 h-3.5 cursor-pointer"
                   />
-                  <span>Ingat Saya</span>
+                  <span className="font-medium text-xs">Ingat Saya</span>
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="font-medium text-[#8A6337] hover:text-[#735129] transition-colors"
+                  className="font-semibold text-xs text-[#542C0A] hover:underline transition-colors"
                 >
-                  Lupa Kata Sandi?
+                  Lupa Kata Sandi ?
                 </Link>
               </div>
 
@@ -211,12 +211,12 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || loading}
-                className="btn-primary mt-2 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-[#6E3E13] hover:bg-[#58310E] active:scale-[0.99] text-white font-bold tracking-wider rounded-xl shadow-md transition-all duration-200 text-sm uppercase flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  'Masuk'
+                  'MASUK'
                 )}
               </button>
             </form>
@@ -224,10 +224,10 @@ export default function LoginPage() {
             {/* OR Divider */}
             <div className="relative my-6 flex items-center justify-center">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-stone-200"></div>
+                <div className="w-full border-t border-[#E8CBAF]"></div>
               </div>
-              <span className="relative px-3 bg-[#FAF8F5] text-[10px] tracking-wider text-stone-400 font-medium uppercase">
-                ATAU MASUK DENGAN
+              <span className="relative px-3 bg-[#FCEEE2] text-[10px] tracking-wider text-[#8A6B52] font-semibold uppercase">
+                Atau Masuk Dengan
               </span>
             </div>
 
@@ -237,9 +237,9 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isSubmitting}
-                className="btn-google w-full"
+                className="w-full py-3.5 bg-white hover:bg-stone-50 active:scale-[0.99] text-stone-700 font-semibold rounded-full shadow-sm border border-stone-200/80 transition-all duration-200 text-xs sm:text-sm flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
@@ -257,26 +257,25 @@ export default function LoginPage() {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.58l3.99 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>Masuk dengan Google</span>
+                <span>Masuk Dengan Google</span>
               </button>
             </div>
           </div>
 
-          {/* Footer Navigation & Security */}
-          <div className="pt-6 text-center space-y-3">
-            <p className="text-xs text-stone-600">
-              Belum punya akun?{' '}
+          {/* Footer Navigation */}
+          <div className="pt-6 text-center space-y-2">
+            <p className="text-xs text-[#7A5B43]">
+              Belum Punya Akun?{' '}
               <Link
                 href="/register"
-                className="font-medium text-[#8A6337] hover:underline"
+                className="font-semibold text-[#542C0A] hover:underline"
               >
                 Daftar Sekarang
               </Link>
             </p>
-
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-stone-400">
-              <LockKeyhole className="w-3 h-3" />
-              <span>Koneksi terenkripsi & aman</span>
+            <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#8A6B52]">
+              <LockKeyhole className="w-3.5 h-3.5" />
+              <span>Koneksi Terenkripsi &amp; Aman</span>
             </div>
           </div>
         </div>

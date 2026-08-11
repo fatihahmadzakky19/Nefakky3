@@ -17,7 +17,8 @@ import {
   setDoc, 
   updateDoc, 
   deleteDoc, 
-  writeBatch 
+  writeBatch,
+  getDocs
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -77,13 +78,91 @@ export interface AdminVoucher {
   expiry: string;
   status: 'Active' | 'Expired';
   isActive?: boolean;
+  usedCount?: number;
+  totalLimit?: number;
+  validUntil?: string;
+  validFrom?: string;
+  validDays?: string;
 }
+
+/** Helper function untuk mengecek apakah voucher valid & aktif saat ini (termasuk validasi kuota & hari/tanggal) */
+export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boolean; reason?: string } => {
+  if (!voucher) return { active: false, reason: 'Voucher tidak ditemukan' };
+
+  // 1. Basic status & Admin toggle check
+  const isBasicActive = voucher.status === 'Active' && voucher.isActive !== false;
+  if (!isBasicActive) {
+    return { active: false, reason: `Promo ${voucher.code || ''} sedang non-aktif atau dimatikan oleh Admin.` };
+  }
+
+  const codeUpper = (voucher.code || '').toUpperCase();
+  const nameLower = (voucher.name || '').toLowerCase();
+  const expiryLower = (voucher.expiry || '').toLowerCase();
+
+  // 2. Parse Usage Redemptions & Total Limit (Aturan Batas Pengguna)
+  let usedCount = voucher.usedCount;
+  let totalLimit = voucher.totalLimit;
+
+  if ((usedCount === undefined || totalLimit === undefined) && voucher.redemptions) {
+    const parts = String(voucher.redemptions).split('/');
+    if (parts.length === 2) {
+      usedCount = parseInt(parts[0].trim(), 10);
+      totalLimit = parseInt(parts[1].trim(), 10);
+    }
+  }
+
+  if (usedCount !== undefined && totalLimit !== undefined && !isNaN(usedCount) && !isNaN(totalLimit)) {
+    if (usedCount >= totalLimit) {
+      return { 
+        active: false, 
+        reason: `Maaf, batas kuota penggunaan promo ${voucher.code || ''} telah habis (${usedCount}/${totalLimit} terpakai).` 
+      };
+    }
+  }
+
+  // 3. Expiry Date Check (Aturan Batas Waktu / Tanggal Kedaluwarsa)
+  if (voucher.validUntil) {
+    const untilDate = new Date(voucher.validUntil);
+    if (!isNaN(untilDate.getTime())) {
+      untilDate.setHours(23, 59, 59, 999);
+      if (new Date() > untilDate) {
+        return {
+          active: false,
+          reason: `Maaf, masa berlaku promo ${voucher.code || ''} telah kedaluwarsa.`
+        };
+      }
+    }
+  }
+
+  // 4. Weekend / Day of Week Validation (Aturan Batas Hari)
+  const isWeekendPromo = 
+    codeUpper.includes('WEEKEND') || 
+    nameLower.includes('weekend') ||
+    expiryLower.includes('akhir pekan') ||
+    expiryLower.includes('weekend') ||
+    (voucher.validDays && String(voucher.validDays).toLowerCase().includes('weekend'));
+
+  if (isWeekendPromo) {
+    const day = new Date().getDay(); // 0 = Minggu, 6 = Sabtu
+    const isWeekend = day === 0 || day === 6;
+    if (!isWeekend) {
+      return { 
+        active: false, 
+        reason: `Promo ${voucher.code || ''} (${voucher.name || ''}) hanya berlaku pada hari Sabtu & Minggu (Weekend).` 
+      };
+    }
+  }
+
+  return { active: true };
+};
 
 /** Interface Data Pesanan (Orders) */
 export interface AdminOrder {
   id: string;
   customerName: string;
   customerEmail?: string;
+  userId?: string;
+  createdAt?: number;
   avatar: string;
   address: string;
   phone?: string;
@@ -350,9 +429,9 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
 export const DEFAULT_PROMOTIONS: PromotionItem[] = [
   {
     id: 'promo-1',
-    title: 'Promo Ayam Bakar 30%',
+    title: 'Weekend Promo 15%',
     subtitle: 'Ayam bakar pejantan pilihan dengan kecap rempah pilihan.',
-    tag: '30% OFF',
+    tag: '15% OFF',
     badge: 'Active',
     image: '/images/ayam_bakar.jpg',
     duration: '01 Mei - 31 Des',
@@ -393,9 +472,9 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
   {
     id: 'promo-1',
     code: 'WEEKENDSERU',
-    name: 'Promo Ayam Bakar Rempah 30%',
+    name: 'Weekend Promo Diskon 15%',
     type: 'Percentage',
-    discountPercent: 30,
+    discountPercent: 15,
     minSpend: 50000,
     redemptions: '142/500',
     expiry: '01 Mei - 31 Des',
@@ -674,6 +753,7 @@ interface DataContextType {
   addVoucher: (voucher: Omit<AdminVoucher, 'id'>) => AdminVoucher;
   deleteVoucher: (id: string) => void;
   toggleVoucherStatus: (id: string) => void;
+  claimVoucherRedemption: (code: string) => Promise<boolean>;
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
@@ -737,7 +817,15 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         setPromotionsState(DEFAULT_PROMOTIONS);
       } else {
         const promos = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as PromotionItem);
-        setPromotionsState(promos);
+        const updatedPromos = promos.map(p => {
+          if ((p.id === 'promo-1' || p.title.includes('Ayam Bakar')) && (p.tag === '30% OFF' || p.title.includes('30%'))) {
+            updateDoc(doc(db, 'promotions', p.id), { tag: '15% OFF', title: 'Weekend Promo 15%' })
+              .catch(err => console.error('Error updating Firestore promo:', err));
+            return { ...p, tag: '15% OFF', title: 'Weekend Promo 15%' };
+          }
+          return p;
+        });
+        setPromotionsState(updatedPromos);
       }
     }, (err) => console.error('Promotions Firestore error:', err));
 
@@ -752,7 +840,15 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         setVouchersState(DEFAULT_VOUCHERS);
       } else {
         const vouches = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminVoucher);
-        setVouchersState(vouches);
+        const updatedVouches = vouches.map(v => {
+          if (v.code === 'WEEKENDSERU' && v.discountPercent !== 15) {
+            updateDoc(doc(db, 'vouchers', v.id), { discountPercent: 15, name: 'Weekend Promo Diskon 15%' })
+              .catch(err => console.error('Error updating Firestore voucher:', err));
+            return { ...v, discountPercent: 15, name: 'Weekend Promo Diskon 15%' };
+          }
+          return v;
+        });
+        setVouchersState(updatedVouches);
       }
     }, (err) => console.error('Vouchers Firestore error:', err));
 
@@ -928,6 +1024,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         isActive: nextActive,
         badge: nextActive ? 'Active' : 'Ended'
       }).catch(console.error);
+
+      const matchingVoucher = vouchers.find(v => v.id === id || (v.code && target.title.toLowerCase().includes(v.code.toLowerCase())));
+      if (matchingVoucher) {
+        updateDoc(doc(db, 'vouchers', matchingVoucher.id), {
+          status: nextActive ? 'Active' : 'Expired',
+          isActive: nextActive
+        }).catch(console.error);
+      }
     }
   };
 
@@ -956,6 +1060,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         status: nextActive ? 'Active' : 'Expired',
         isActive: nextActive
       }).catch(console.error);
+
+      const matchingPromo = promotions.find(p => p.id === target.id || (p.title && p.title.toLowerCase().includes(target.code.toLowerCase())));
+      if (matchingPromo) {
+        updateDoc(doc(db, 'promotions', matchingPromo.id), {
+          isActive: nextActive,
+          badge: nextActive ? 'Active' : 'Ended'
+        }).catch(console.error);
+      }
     }
   };
 
@@ -966,7 +1078,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const newOrder: AdminOrder = {
       ...orderData,
       id: newId,
-      date: nowStr
+      date: nowStr,
+      createdAt: orderData.createdAt || Date.now()
     };
     setDoc(doc(db, 'orders', newId), newOrder).catch(console.error);
     return newOrder;
@@ -1002,6 +1115,67 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       customerConfirmed: true,
       confirmedAt: dateStr
     }).catch(console.error);
+  };
+
+  /** Helper function untuk mengklaim penggunaan voucher & mematikan promo otomatis secara realtime jika kuota habis */
+  const claimVoucherRedemption = async (voucherCode: string): Promise<boolean> => {
+    if (!db || !voucherCode) return false;
+    try {
+      const codeUpper = voucherCode.trim().toUpperCase();
+      const q = collection(db, 'vouchers');
+      const snapshot = await getDocs(q);
+      const targetDoc = snapshot.docs.find(d => {
+        const data = d.data();
+        return (data.code && data.code.toUpperCase() === codeUpper) || (d.id && d.id.toUpperCase() === codeUpper);
+      });
+
+      if (targetDoc) {
+        const v = targetDoc.data();
+        let usedCount = v.usedCount;
+        let totalLimit = v.totalLimit;
+
+        if ((usedCount === undefined || totalLimit === undefined) && v.redemptions) {
+          const parts = String(v.redemptions).split('/');
+          if (parts.length === 2) {
+            usedCount = parseInt(parts[0].trim(), 10);
+            totalLimit = parseInt(parts[1].trim(), 10);
+          }
+        }
+
+        const newUsed = (usedCount || 0) + 1;
+        const limit = totalLimit || 500;
+        const isNowExpired = newUsed >= limit;
+        const newRedemptions = `${newUsed}/${limit}`;
+
+        await updateDoc(doc(db, 'vouchers', targetDoc.id), {
+          usedCount: newUsed,
+          totalLimit: limit,
+          redemptions: newRedemptions,
+          status: isNowExpired ? 'Expired' : (v.status || 'Active'),
+          isActive: isNowExpired ? false : (v.isActive !== false)
+        });
+
+        // Sync ke koleksi promotions jika ada
+        const promoQ = collection(db, 'promotions');
+        const promoSnapshot = await getDocs(promoQ);
+        const targetPromo = promoSnapshot.docs.find(d => {
+          const p = d.data();
+          return p.id === targetDoc.id || (p.title && p.title.toLowerCase().includes(v.code.toLowerCase()));
+        });
+        if (targetPromo) {
+          await updateDoc(doc(db, 'promotions', targetPromo.id), {
+            usedCount: newUsed,
+            totalLimit: limit,
+            badge: isNowExpired ? 'Ended' : (targetPromo.data().badge || 'Active'),
+            isActive: isNowExpired ? false : (targetPromo.data().isActive !== false)
+          });
+        }
+        return true;
+      }
+    } catch (err) {
+      console.error('Error claiming voucher redemption:', err);
+    }
+    return false;
   };
 
   const addReview = (reviewData: Omit<UserReview, 'id' | 'date' | 'likesCount'>): UserReview => {
@@ -1134,6 +1308,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       addVoucher,
       deleteVoucher,
       toggleVoucherStatus,
+      claimVoucherRedemption,
       addOrder,
       updateOrderStatus,
       updatePaymentStatus,

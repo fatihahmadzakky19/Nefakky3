@@ -11,7 +11,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { useData } from './DataContext';
+import { useData, isVoucherValidNow } from './DataContext';
 
 /** Interface Produk Keranjang */
 export interface CartItemProduct {
@@ -124,7 +124,8 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         try {
           const parsed = JSON.parse(savedPromo);
           setAppliedPromo(parsed.code);
-          setDiscountPercent(parsed.percent);
+          const liveV = (vouchers || []).find(v => v.code.toUpperCase() === parsed.code.toUpperCase());
+          setDiscountPercent(liveV?.discountPercent || parsed.percent || 15);
         } catch (e) {
           setAppliedPromo(null);
           setDiscountPercent(0);
@@ -153,34 +154,26 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Real-time effect: Auto-revoke applied promo if Admin deactivates it or if it's a Weekend promo used on weekdays
+  // Real-time effect: Auto-revoke applied promo if Admin deactivates it or if day is not valid (e.g., weekend promo on weekday)
   useEffect(() => {
     if (appliedPromo && vouchers.length > 0) {
       const foundVoucher = vouchers.find(
         v => (v.code.toUpperCase() === appliedPromo.toUpperCase() || v.id.toUpperCase() === appliedPromo.toUpperCase())
       );
       
-      const today = new Date();
-      const day = today.getDay(); // 0 = Minggu, 6 = Sabtu
-      const isWeekend = day === 0 || day === 6;
-
-      const isWeekendPromo = foundVoucher && (
-        foundVoucher.code.toUpperCase().includes('WEEKEND') || 
-        foundVoucher.name.toLowerCase().includes('weekend') ||
-        foundVoucher.expiry.toLowerCase().includes('akhir pekan') ||
-        foundVoucher.expiry.toLowerCase().includes('weekend')
-      );
-
-      const isStillActive = foundVoucher && 
-        foundVoucher.status === 'Active' && 
-        (foundVoucher.isActive !== false) &&
-        (!isWeekendPromo || isWeekend);
+      const { active: isStillActive } = isVoucherValidNow(foundVoucher);
 
       if (!isStillActive) {
         removePromo();
+      } else if (foundVoucher && foundVoucher.discountPercent && foundVoucher.discountPercent !== discountPercent) {
+        // Automatically sync stored discount percent with live voucher data
+        setDiscountPercent(foundVoucher.discountPercent);
+        if (user?.uid && typeof window !== 'undefined') {
+          localStorage.setItem(`nefakky_promo_${user.uid}`, JSON.stringify({ code: foundVoucher.code.toUpperCase(), percent: foundVoucher.discountPercent }));
+        }
       }
     }
-  }, [vouchers, appliedPromo]);
+  }, [vouchers, appliedPromo, discountPercent, user]);
 
   const claimPromo = (code: string) => {
     const upper = code.trim().toUpperCase();
@@ -198,37 +191,18 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
-    const isVoucherActive = foundVoucher.status === 'Active' && (foundVoucher.isActive !== false);
+    const { active: isVoucherActive, reason } = isVoucherValidNow(foundVoucher);
 
     if (!isVoucherActive) {
       removePromo();
       return {
         success: false,
-        message: `Maaf, promosi "${foundVoucher.name}" (${upper}) sedang NON-AKTIF atau telah dimatikan oleh Admin.`,
+        message: reason || `Maaf, promosi "${foundVoucher.name}" (${upper}) sedang NON-AKTIF atau tidak dapat digunakan saat ini.`,
         percent: 0
       };
     }
 
-    // Weekend Promo restriction check (Active ONLY on Saturday & Sunday)
-    const isWeekendPromo = 
-      foundVoucher.code.toUpperCase().includes('WEEKEND') || 
-      foundVoucher.name.toLowerCase().includes('weekend') ||
-      foundVoucher.expiry.toLowerCase().includes('akhir pekan') ||
-      foundVoucher.expiry.toLowerCase().includes('weekend');
-
-    const day = new Date().getDay(); // 0 = Minggu, 6 = Sabtu
-    const isWeekend = day === 0 || day === 6;
-
-    if (isWeekendPromo && !isWeekend) {
-      removePromo();
-      return {
-        success: false,
-        message: `Maaf, kode promo "${foundVoucher.code}" (${foundVoucher.name}) hanya dapat digunakan pada hari libur / akhir pekan (Sabtu & Minggu)! Pada hari kerja biasa promo ini otomatis NON-AKTIF / MATI.`,
-        percent: 0
-      };
-    }
-
-    const percent = foundVoucher.discountPercent || 20;
+    const percent = foundVoucher.discountPercent || 15;
 
     setAppliedPromo(upper);
     setDiscountPercent(percent);
@@ -239,7 +213,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
     return {
       success: true,
-      message: `Kode promo "${upper}" (${foundVoucher.name}) BERHASIL digunakan! Diskon ${percent}% diterapkan pada checkout Anda.`,
+      message: `Kode promo "${upper}" (${foundVoucher.name}) BERHASIL digunakan! Diskon ${percent}% diterapkan pada seluruh item keranjang Anda.`,
       percent
     };
   };

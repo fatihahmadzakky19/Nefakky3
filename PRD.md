@@ -1,7 +1,7 @@
 # Product Requirement Document (PRD) — Nefakky Marketplace
 
 **Nama Produk**: Nefakky - Artisanal Food & Culinary Marketplace  
-**Versi**: 1.3.0  
+**Versi**: 1.4.0 (Python Django REST Framework & PBO Backend)  
 **Tanggal Terakhir Diperbarui**: 7 Agustus 2026  
 **Status**: Production / Live  
 **Penulis / Team**: Tim Pengembang Nefakky (Fatih Ahmad Zakky)  
@@ -90,38 +90,132 @@
 ---
 
 ### 3.2 Modul Administrator (*Admin Control Panel - /admin*)
+## 1. Ringkasan Eksekutif & Visi Produk (Executive Summary)
 
-#### 1. Dashboard Ringkasan & Analitik Penjualan
-* **KPI Metric Cards**: Visualisasi Total Omset Kotor, Total Omset Bersih (Margin ~40%), Total Pesanan Masuk, dan Average Order Value (AOV).
-* **Grafik Trend Omset**: Visualisasi histori grafik penjualan harian, 6 bulanan, dan 1 tahunan tanpa tombol reset buatan.
+**Nefakky Marketplace** adalah platform kuliner *artisanal* berbasis web modern yang menghadirkan pengalaman pemesanan makanan dan minuman tradisional/moderen dengan estetika visual tinggi, fitur pelacakan *real-time*, peta lokasi interaktif GPS, kalkulasi jarak delivery presisi, generator kupon promo otomatis, serta integrasi *payment gateway* digital (Midtrans Snap Engine).
 
-#### 2. Analisis Makanan Terlaris & Kurang Laris (Real Web Data)
-* **Menu Paling Laris**: Peringkat 1 s.d 4 hidangan dihitung otomatis dari total porsi terjual pada pesanan web sesungguhnya.
+Aplikasi ini mengadopsi arsitektur **Clean Code & PBO (Pemrograman Berbasis Objek)** pada backend **Python 3 & Django 5 (Django REST Framework)**, menggunakan **Firebase Cloud Firestore DB** sebagai database NoSQL cloud terpusat, dan **Next.js 14 App Router** pada sisi frontend UI/UX.
+
+---
+
+## 2. Palet Warna & Spesifikasi Desain (Visual & Brand Guidelines)
+
+| Nama Warna | Kode Hex | Peran & Penggunaan Desain UI |
+| :--- | :--- | :--- |
+| **Espresso Brown** | `#5C3D28` | Warna Utama (Primary Brand Color), Tombol Utama, Header Active Tab, Banner Accent. |
+| **Warm Gold / Ochre** | `#8A6337` | Accent Highlight, Rating Stars, Lencana Promo/Diskon, Status In-Progress. |
+| **Dark Charcoal** | `#2D231C` | Text Headers (H1-H6), Body Text, Dark Card Backgrounds. |
+| **Warm Off-White / Cream** | `#FAF8F5` | Background Aplikasi Utama (Body BG), Card Fill Soft Contrast. |
+
+---
+
+## 3. Fitur Utama & Kebutuhan Fungsional (Functional Requirements)
+
+#### 1. Katalog Produk Interaktif & Filter Kategori
+* **Kategori Dinamis**: *Semua*, *Makanan Utama*, *Camilan*, *Minuman*, *Spesial Resto*.
+* **Opsi Penyaringan & Pencarian**: Pencarian kata kunci real-time, filter rentang harga, dan pengurutan (*Terpopuler*, *Harga Terendah*, *Rating Tertinggi*).
+* **Modal Detail Nutrisi & Bahan**: Menampilkan rincian bahan-bahan (*ingredients*), petunjuk konsumsi, serta kandungan gizi (Kalori, Lemak, Gula).
+
+#### 2. Dashboard Analitik Admin & Menu Terlaris vs Kurang Laris
+* **Ringkasan Performa**: Total Omset Penjualan (Rp), Total Transaksi, Produk Aktif, dan Jumlah Ulasan.
+* **Menu Terlaris (Top Seller)**: Visualisasi porsi makanan paling diminati konsumen berdasarkan data transaksi riil.
 * **Menu Kurang Laris (Slow Moving)**: Produk dengan porsi terjual terendah di web yang dilengkapi opsi tombol instan **`+ Buat Promo`**.
 
 #### 3. Manajemen Katalog Produk (CRUD) & Stok
 * **Penyuntingan Lengkap**: Tambah produk baru, ubah nama, harga, persentase diskon, tingkat stok, deskripsi, nilai gizi, galeri gambar, dan visibilitas.
 * **Kelengkapan 6 Produk Utama**: Terdiri dari *Ayam Bakar Rempah*, *Nasi Bakar Cumi*, *Krecek Pedas*, *Gudeg Jogja*, *Garang Asam*, dan *Jus Segar*.
 
-#### 4. Generator Promo & Export Rekap Penjualan
-* **Pembuatan Kupon**: Pengaturan kode voucher unik, persen diskon, batasan minimum belanja, kuota penggunaan, dan tanggal kadaluarsa.
-* **Export Rekap to Excel**: Mengunduh seluruh rekapitulasi data transaksi pelanggan dalam format `.xlsx` / `.csv`.
+---
+
+## 4. Arsitektur Teknologi & Struktur Project (System Architecture)
+
+### 4.1 Ringkasan Komponen Utama
+* **Frontend**: **Next.js 14 (App Router)**, React 18, Tailwind CSS v3, TypeScript (Strict Mode), Lucide React Icons.
+* **Backend PBO & Functions**: **Python 3.13 & Django 5.2 (Django REST Framework)** dengan Standalone Helper Functions (`utils.py`), Class-Based Views (CBVs), Service Classes (`services.py`), & Model Encapsulation (`models.py`).
+* **Database & Cloud Utama**: **Firebase Cloud Firestore DB (NoSQL Document Store)** dengan 6 Koleksi Real-Time Sync (`onSnapshot`) yang diakses langsung oleh Frontend Next.js dan Backend Python Django.
+
+### 4.2 Rincian Arsitektur Per Lapisan
+
+| Lapisan Arsitektur | Teknologi / Module | Fungsi & Deskripsi Teknis |
+| :--- | :--- | :--- |
+| **Frontend UI/UX** | Next.js 14 App Router, Tailwind CSS v3 | User Interface responsif dengan Palet 4 Warna Warm, SSR & Hydration instan. |
+| **Frontend State** | React Context API & LocalStorage | Pengelolaan state terpusat (`AuthContext`, `CartContext`, `DataContext`) & presistensi user-scoped storage. |
+| **Backend REST API (PBO)**| Python 3 & Django REST Framework (`backend_django/`) | Layanan REST API berbasis PBO/OOP (`ProductViewSet`, `OrderViewSet`, `VoucherViewSet`, `ReviewViewSet`, `MidtransSnapTokenView`). |
+| **Standalone Functions** | `backend_django/api/utils.py` | Modul fungsi terpisah (`format_rupiah_currency`, `calculate_haversine_distance`, `validate_voucher_rules`, `calculate_estimated_delivery_time`). |
+| **Database Utama** | Firebase Cloud Firestore DB | Database NoSQL cloud utama terpusat untuk katalog produk, transaksi pesanan 5-tahap, voucher, dan ulasan. |
+| **Backend Firestore Sync**| OOP Class `FirebaseFirestoreSyncService` | Service Class Singleton (PBO) & Django Signals (`signals.py`) untuk sinkronisasi otomatis ke Cloud Firestore. |
+| **Backend Payment Service**| OOP Class `MidtransPaymentService` | Meng-generate Token Pembayaran Snap Midtrans secara aman via Python Requests SDK. |
+| **Backend Distance Engine**| OOP Class `HaversineDistanceCalculator` | Algoritma matematis Haversine terenkapsulasi untuk kalkulasi jarak GPS pengiriman. |
+| **Backend Autentikasi** | Firebase Auth v10 SDK & Django Auth | Layanan Auth Email/Password & Google OAuth Single Sign-On (SSO) terintegrasi. |
+| **Pengujian Otomatis** | Automated Test Runner (`scripts/run-tests.mjs`) | Penguji 6 modul sistem (Compiler TS, Rute, Katalog, Ulasan, Promo, Firebase) & pembuat `TEST_REPORT.md`. |
 
 ---
 
-## 4. Arsitektur Teknologi & Dependensi (Tech Stack)
+### 4.3 Struktur Direktori Project (Directory Tree Structure)
 
-| Komponen | Teknologi / Library | Deskripsi / Peran |
-| :--- | :--- | :--- |
-| **Framework Utama** | Next.js 14 (App Router, React 18) | Server-Side Rendering (SSR) & Client-Side Hydration |
-| **Bahasa** | TypeScript (Strict Mode) | Pengetikan statis untuk keandalan data |
-| **Styling & Theme** | Tailwind CSS v3 & Custom Palette | Palet 4 Warna Natural (`#5C3D28`, `#8A6337`, `#2D231C`, `#FAF8F5`) |
-| **Database Cloud** | Firebase Cloud Firestore DB | Synchronizer data *real-time* (`onSnapshot`) untuk 6 koleksi |
-| **Autentikasi** | Firebase Auth v10 | Email/Password Auth & Google OAuth Provider |
-| **State & Persistence** | React Context API & Browser LocalStorage | State terpusat (`AuthContext`, `CartContext`, `DataContext`) |
-| **Payment Gateway** | Midtrans Snap Payment API v1 | Pengolahan transaksi digital aman (Sandbox & Live) |
-| **Geocoding & Maps** | OpenStreetMap / Nominatim API | Pencarian lokasi dan geokoding koordinat alamat |
-| **Pengujian Otomatis** | Automated Test Suite Runner (`scripts/run-tests.mjs`) | Pengujian otomatis 6 modul sistem & pembuatan `TEST_REPORT.md` |
+```
+nefakky3/
+├── backend_django/            # Backend REST API (Python & Django 5)
+│   ├── api/                   # Django App (OOP Models, Views, Serializers, Services, Utils)
+│   │   ├── management/        # Command Seed Data (seed_data.py)
+│   │   ├── admin.py           # Admin Site Registration
+│   │   ├── apps.py            # App Config & Signal Registration
+│   │   ├── firebase_service.py # OOP Service Singleton untuk Firebase Firestore DB
+│   │   ├── models.py          # Class Model OOP (ProductItem, AdminOrder, AdminVoucher)
+│   │   ├── serializers.py     # DRF Serializers
+│   │   ├── services.py        # Class Service (BasePaymentService, MidtransPaymentService, HaversineDistanceCalculator)
+│   │   ├── signals.py         # Django Event Signals untuk Real-time Firebase Sync
+│   │   ├── urls.py            # API URL Routing
+│   │   ├── utils.py           # Standalone Helper Functions (Rupiah, Haversine, Voucher Rules)
+│   │   └── views.py           # Class-Based Views (CBVs)
+│   ├── nefakky_backend/       # Django Main Project Config (settings.py, urls.py, wsgi.py)
+│   ├── db.sqlite3             # Local SQLite Cache DB
+│   ├── manage.py              # Django CLI Runner
+│   └── requirements.txt       # Dependencies Python (Django, DRF, firebase-admin, requests)
+├── public/                    # Static Assets (Foto Makanan, Logo, Favicon)
+│   ├── images/                # Ayam Bakar, Gudeg, Nasi Bakar, Krecek, Garang Asam, Jus
+│   └── favicon.ico
+├── scripts/                   # Automated Testing Scripts
+│   └── run-tests.mjs          # Test Runner Node ESM (npm test)
+├── src/                       # Next.js 14 Frontend Application
+│   ├── app/                   # App Router Pages & Routes
+│   │   ├── admin/             # Panel Kontrol Admin (Dashboard Analitik, Stok, Promo, Order)
+│   │   │   └── page.tsx
+│   │   ├── api/               # Next.js Client Proxy API Endpoints
+│   │   ├── cart/              # Halaman Checkout Keranjang & Lokasi GPS
+│   │   │   └── page.tsx
+│   │   ├── comments/          # Halaman Ulasan Pelanggan Bahasa Indonesia
+│   │   │   └── page.tsx
+│   │   ├── menu/              # Katalog Produk & Filtering Kategori
+│   │   │   ├── [id]/          # Detail Route Produk
+│   │   │   └── page.tsx
+│   │   ├── notifications/     # Halaman Pelacakan Pesanan Real-time
+│   │   │   └── page.tsx
+│   │   ├── profile/           # Halaman Profil User & Histori Belanja
+│   │   │   └── page.tsx
+│   │   ├── globals.css        # Global CSS, Font Imports, & Custom Tailwind Classes
+│   │   ├── layout.tsx         # Root Layout Wrapper (Providers & Navbar)
+│   │   └── page.tsx           # Halaman Utama (Hero Showcase & Dynamic Slides)
+│   ├── components/            # Reusable UI Components
+│   │   ├── AutoMapPickerModal.tsx  # Modal Map GPS Auto-Detect & Pinpoint
+│   │   ├── MenuDetailModal.tsx     # Modal Detail Nutrisi, Bahan, & Konsumsi Makanan
+│   │   ├── Navbar.tsx              # Header Navigation Bar & Profile Avatar
+│   │   └── RealtimeOrderTracker.tsx # Component Pelacak Status Pesanan 5-Tahap Live
+│   ├── context/               # Global Context State Providers
+│   │   ├── AuthContext.tsx    # State Autentikasi Firebase User & Role Admin
+│   │   ├── CartContext.tsx    # State Keranjang Belanja Per-User LocalStorage
+│   │   └── DataContext.tsx    # State Realtime Firestore DB (6 Koleksi)
+│   └── lib/                   # Utility Libraries & Configuration
+│       ├── firebase.ts        # Inisialisasi Firebase App, Auth, & Firestore DB
+│       └── reviews.ts         # Indonesian Review Engine Generator
+├── .env.local                 # Environment Variables (API Keys Firebase & Midtrans)
+├── DESIGN.md                  # Dokumentasi Design System & Tokens
+├── PRD.md                     # Product Requirement Document (v1.3.0)
+├── TEST_REPORT.md             # Laporan Pengujian Otomatis (Autogenerated)
+├── package.json               # Node Package Dependencies & Scripts
+├── tailwind.config.ts         # Konfigurasi Styling Tailwind CSS
+└── tsconfig.json              # Konfigurasi TypeScript Strict Mode
+```
 
 ---
 
@@ -131,12 +225,12 @@ Data terhubung secara *live* melalui 6 koleksi utama di Cloud Firestore (`db`):
 
 ```
 firebase-root/
-├── products/          # Koleksi Katalog Makanan & Stok
-├── orders/            # Koleksi Transaksi Pesanan & Status 5-Tahap
-├── promotions/        # Koleksi Event Banner Promo
-├── vouchers/          # Koleksi Kode Voucher Belanja
-├── reviews/           # Koleksi Ulasan & Penilaian Bintang
-└── chat_messages/     # Koleksi Obrolan Live Chat CS
+├── products/          # Koleksi Katalog Makanan, Stok, Harga, Visibilitas
+├── orders/            # Koleksi Transaksi Pesanan, Midtrans Badge, & Status 5-Tahap
+├── promotions/        # Koleksi Event Banner Promo & Diskon
+├── vouchers/          # Koleksi Kode Voucher Belanja (minSpend, discountPercent)
+├── reviews/           # Koleksi Ulasan & Penilaian Bintang 1-5 Bahasa Indonesia
+└── chat_messages/     # Koleksi Obrolan Live Chat CS Support
 ```
 
 Setiap perubahan di Admin atau Pelanggan akan menyalurkan sinyal *real-time* via `onSnapshot` tanpa memerlukan penyegaran ulang (*page refresh*).
