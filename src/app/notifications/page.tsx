@@ -16,6 +16,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useData, AdminOrder, isVoucherValidNow } from '@/context/DataContext';
+import { rtdb } from '@/lib/firebase';
+import { ref, onValue } from 'firebase/database';
 import Navbar from '@/components/Navbar';
 import { 
   ShoppingBag, 
@@ -86,9 +88,28 @@ export default function NotificationsPage() {
 
   const activeOrder: AdminOrder = displayOrdersList.find(o => o.id === selectedOrderId) || displayOrdersList[0];
 
+  const [liveRtdbStatus, setLiveRtdbStatus] = useState<string | null>(null);
+
+  // Subscribe to Realtime Database for active order status
+  React.useEffect(() => {
+    if (!activeOrder?.id) return;
+    const orderRef = ref(rtdb, `live_orders/${activeOrder.id}`);
+    const unsub = onValue(orderRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        if (val?.status) {
+          setLiveRtdbStatus(val.status);
+        }
+      }
+    });
+    return () => unsub();
+  }, [activeOrder?.id]);
+
+  const currentStatus = liveRtdbStatus || activeOrder.status;
+
   // Real-time Countdown Timer Logic
   React.useEffect(() => {
-    if (activeOrder.status === 'COMPLETED') return;
+    if (currentStatus === 'COMPLETED') return;
 
     const createdTime = activeOrder.createdAt || Date.now();
     const now = Date.now();
@@ -106,10 +127,10 @@ export default function NotificationsPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeOrder.id, activeOrder.status, activeOrder.createdAt]);
+  }, [activeOrder.id, currentStatus, activeOrder.createdAt]);
 
   const formatCountdown = (totalSec: number) => {
-    if (activeOrder.status === 'COMPLETED') return 'PESANAN TIBA';
+    if (currentStatus === 'COMPLETED') return 'PESANAN TIBA';
     if (totalSec <= 0) return '00:00 Mins';
     const mins = Math.floor(totalSec / 60);
     const secs = totalSec % 60;
@@ -137,7 +158,7 @@ export default function NotificationsPage() {
     }
   };
 
-  const activeStepIndex = getStepIndex(activeOrder.status);
+  const activeStepIndex = getStepIndex(currentStatus);
 
   if (loading) {
     return (
@@ -172,15 +193,15 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-4 bg-white px-6 py-3.5 rounded-2xl border border-amber-900/10 shadow-xl">
             <div className="flex flex-col items-end">
               <span className="text-[10px] text-[#4F4540] font-medium">
-                {activeOrder.status === 'COMPLETED' ? 'Status Pengiriman' : 'Estimasi Waktu Tiba'}
+                {currentStatus === 'COMPLETED' ? 'Status Pengiriman' : 'Estimasi Waktu Tiba'}
               </span>
-              <span className={`font-mono text-xl font-bold ${activeOrder.status === 'COMPLETED' ? 'text-emerald-600' : 'text-[#25160E]'}`}>
+              <span className={`font-mono text-xl font-bold ${currentStatus === 'COMPLETED' ? 'text-emerald-600' : 'text-[#25160E]'}`}>
                 {formatCountdown(secondsLeft)}
               </span>
             </div>
             <div className="relative flex h-3.5 w-3.5">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${activeOrder.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-[#934B19]'}`}></span>
-              <span className={`relative inline-flex rounded-full h-3.5 w-3.5 ${activeOrder.status === 'COMPLETED' ? 'bg-emerald-600' : 'bg-[#934B19]'}`}></span>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${currentStatus === 'COMPLETED' ? 'bg-emerald-500' : 'bg-[#934B19]'}`}></span>
+              <span className={`relative inline-flex rounded-full h-3.5 w-3.5 ${currentStatus === 'COMPLETED' ? 'bg-emerald-600' : 'bg-[#934B19]'}`}></span>
             </div>
           </div>
         </div>
@@ -406,17 +427,17 @@ export default function NotificationsPage() {
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="space-y-1">
                   <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2 justify-center sm:justify-start">
-                    <CheckCircle2 className={`w-5 h-5 ${activeOrder.status === 'COMPLETED' ? 'text-emerald-600' : 'text-[#934B19]'}`} />
+                    <CheckCircle2 className={`w-5 h-5 ${currentStatus === 'COMPLETED' ? 'text-emerald-600' : 'text-[#934B19]'}`} />
                     <span>Konfirmasi Penerimaan Makanan</span>
                   </h3>
                   <p className="text-xs text-[#4F4540] font-light leading-relaxed">
-                    {activeOrder.status === 'COMPLETED'
+                    {currentStatus === 'COMPLETED'
                       ? 'Pesanan telah resmi dikonfirmasi sampai di tangan Anda.'
                       : 'Ketika makanan telah sampai di tangan Anda, silakan klik tombol konfirmasi berikut.'}
                   </p>
                 </div>
 
-                {activeOrder.status === 'COMPLETED' ? (
+                {currentStatus === 'COMPLETED' ? (
                   <div className="px-5 py-3 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-2xl border border-emerald-300 flex items-center gap-2 shrink-0">
                     <Check className="w-4 h-4 text-emerald-700" />
                     <span>Pesanan Diterima</span>

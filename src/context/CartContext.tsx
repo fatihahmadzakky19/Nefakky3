@@ -87,7 +87,7 @@ interface CartContextType {
   appliedPromo: string | null;
   discountPercent: number;
   discountAmount: number;
-  addToCart: (productId: string) => void;
+  addToCart: (productId: string, variant?: string) => void;
   removeFromCart: (productId: string) => void;
   deleteFromCart: (productId: string) => void;
   clearCart: () => void;
@@ -218,8 +218,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     };
   };
 
-  const addToCart = (productId: string) => {
-    const updated = { ...cart, [productId]: (cart[productId] || 0) + 1 };
+  const addToCart = (productId: string, variant?: string) => {
+    const cartKey = variant ? `${productId}_${variant}` : productId;
+    const updated = { ...cart, [cartKey]: (cart[cartKey] || 0) + 1 };
     saveCart(updated);
   };
 
@@ -243,16 +244,31 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     saveCart({});
   };
 
-  const cartItems: CartLineItem[] = Object.entries(cart).map(([id, quantity]) => {
-    const product = products.find(p => p.id === id) || MASTER_PRODUCTS.find(p => p.id === id) || {
-      id,
+  const cartItems: CartLineItem[] = Object.entries(cart).map(([key, quantity]) => {
+    const [baseId, variant] = key.split('_');
+    const product = products.find(p => p.id === baseId) || MASTER_PRODUCTS.find(p => p.id === baseId) || {
+      id: baseId,
       name: 'Hidangan Nefakky',
       category: 'Makanan',
       price: 35000,
       image: '/images/hero_rendang.png'
     };
+
+    let itemImage = product.image;
+    let itemName = product.name;
+
+    if (variant) {
+      itemName = `Jus ${variant} Segar`;
+      if (variant === 'Mangga') itemImage = '/images/jus_mangga.jpg';
+      if (variant === 'Sirsak') itemImage = '/images/jus_sirsak.jpg';
+      if (variant === 'Jambu') itemImage = '/images/jus_jambu.jpg';
+    }
+
     return {
       ...product,
+      id: key,
+      name: itemName,
+      image: itemImage,
       quantity
     };
   });

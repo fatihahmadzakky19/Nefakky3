@@ -20,7 +20,8 @@ import {
   writeBatch,
   getDocs
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { ref, set as setRtdb, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
+import { db, rtdb } from '@/lib/firebase';
 
 
 /** Interface Data Produk Utama */
@@ -294,7 +295,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     badge: 'TERPOPULER',
     ingredients: 'Ayam Pejantan Segar, Kecap Rempah Bango, Bawang Merah, Bawang Putih, Ketumbar, Serai, Lengkuas.',
     usageAdvice: 'Santap selagi hangat dengan nasi panas dan sambal terasi',
-    origin: 'Jakarta, Indonesia',
+    origin: 'Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia',
     calories: '450 kcal',
     fat: '18g',
     sugar: '6g',
@@ -319,7 +320,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     badge: 'BARU',
     ingredients: 'Beras Pulen, Santan, Cumi Segar, Cabai Rawit, Daun Kemangi, Daun Salam, Daun Pisang.',
     usageAdvice: 'Buka bungkus daun pisang saat siap santap',
-    origin: 'Jawa Barat, Indonesia',
+    origin: 'Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia',
     calories: '520 kcal',
     fat: '16g',
     sugar: '3g',
@@ -344,7 +345,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     badge: 'TERPOPULER',
     ingredients: 'Krecek Kulit Sapi, Kacang Tolo, Santan Kelapa, Cabai Rawit Merah, Lengkuas, Daun Salam.',
     usageAdvice: 'Sangat cocok disandingkan dengan Gudeg atau Nasi Hangat',
-    origin: 'Yogyakarta, Indonesia',
+    origin: 'Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia',
     calories: '380 kcal',
     fat: '20g',
     sugar: '4g',
@@ -369,7 +370,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     badge: 'BEST SELLER',
     ingredients: 'Nangka Muda (Gori), Gula Jawa Asli, Santan Kelapa, Telur Bebek Bacem, Ayam Suwir, Daun Jati.',
     usageAdvice: 'Nikmati rasa manis gurih otentik ala Malioboro',
-    origin: 'Yogyakarta, Indonesia',
+    origin: 'Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia',
     calories: '490 kcal',
     fat: '19g',
     sugar: '18g',
@@ -393,7 +394,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     description: 'Potongan ayam kampung segar dikukus dalam bungkus daun pisang dengan kuah santan asam segar, belimbing wulung, dan cabai rawit.',
     ingredients: 'Ayam Kampung Segar, Belimbing Wulung, Tomat Hijau, Cabai Rawit Utuh, Santan Encuk, Daun Pisang.',
     usageAdvice: 'Kuah asam pedas gurih terasa nikmat disajikan hangat',
-    origin: 'Kudus, Jawa Tengah',
+    origin: 'Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia',
     calories: '410 kcal',
     fat: '17g',
     sugar: '3g',
@@ -417,7 +418,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     description: 'Aneka pilihan jus buah segar alami berkualitas premium: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis.',
     ingredients: 'Buah Asli Segar Pilihan, Es Batu, Gula Cair Alami.',
     usageAdvice: 'Pilih rasa favoritmu di catatan pesanan (Jambu / Sirsak / Mangga)',
-    origin: 'Indonesia',
+    origin: 'Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia',
     calories: '130 kcal',
     fat: '0.5g',
     sugar: '24g',
@@ -1075,39 +1076,60 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       createdAt: orderData.createdAt || Date.now()
     };
     setDoc(doc(db, 'orders', newId), newOrder).catch(console.error);
+    setRtdb(ref(rtdb, `orders/${newId}`), newOrder).catch(console.error);
+    setRtdb(ref(rtdb, `live_orders/${newId}`), {
+      id: newId,
+      status: newOrder.status,
+      customerName: newOrder.customerName,
+      total: newOrder.total,
+      updatedAt: Date.now()
+    }).catch(console.error);
     return newOrder;
   };
 
   const updateOrderStatus = (id: string, status: AdminOrder['status']) => {
     updateDoc(doc(db, 'orders', id), { status }).catch(console.error);
+    updateRtdb(ref(rtdb, `orders/${id}`), { status, updatedAt: Date.now() }).catch(console.error);
+    updateRtdb(ref(rtdb, `live_orders/${id}`), { status, updatedAt: Date.now() }).catch(console.error);
   };
 
   const updatePaymentStatus = (id: string, badge: AdminOrder['paymentBadge']) => {
     updateDoc(doc(db, 'orders', id), { paymentBadge: badge }).catch(console.error);
+    updateRtdb(ref(rtdb, `orders/${id}`), { paymentBadge: badge, updatedAt: Date.now() }).catch(console.error);
   };
 
   const deleteOrder = (id: string) => {
     deleteDoc(doc(db, 'orders', id)).catch(console.error);
+    removeRtdb(ref(rtdb, `orders/${id}`)).catch(console.error);
+    removeRtdb(ref(rtdb, `live_orders/${id}`)).catch(console.error);
   };
 
   const cancelOrder = (id: string, reason?: string) => {
     const target = orders.find(o => o.id === id);
     if (target) {
-      updateDoc(doc(db, 'orders', id), {
-        status: 'CANCELLED',
-        paymentBadge: target.paymentBadge === 'PAID' ? 'REFUNDED' : target.paymentBadge
-      }).catch(console.error);
+      const updates = {
+        status: 'CANCELLED' as AdminOrder['status'],
+        paymentBadge: target.paymentBadge === 'PAID' ? ('REFUNDED' as AdminOrder['paymentBadge']) : target.paymentBadge,
+        updatedAt: Date.now()
+      };
+      updateDoc(doc(db, 'orders', id), updates).catch(console.error);
+      updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
+      updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'CANCELLED', updatedAt: Date.now() }).catch(console.error);
     }
   };
 
   const confirmOrderReceived = (id: string) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const dateStr = `Hari ini, ${timeStr}`;
-    updateDoc(doc(db, 'orders', id), {
-      status: 'COMPLETED',
+    const updates = {
+      status: 'COMPLETED' as AdminOrder['status'],
       customerConfirmed: true,
-      confirmedAt: dateStr
-    }).catch(console.error);
+      confirmedAt: dateStr,
+      updatedAt: Date.now()
+    };
+    updateDoc(doc(db, 'orders', id), updates).catch(console.error);
+    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
+    updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'COMPLETED', updatedAt: Date.now() }).catch(console.error);
   };
 
   /** Helper function untuk mengklaim penggunaan voucher & mematikan promo otomatis secara realtime jika kuota habis */
@@ -1246,6 +1268,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       readByUser: true
     };
     setDoc(doc(db, 'chat_messages', newMsg.id), newMsg).catch(console.error);
+    setRtdb(ref(rtdb, `chat_messages/${newMsg.id}`), newMsg).catch(console.error);
   };
 
   const replyChatMessage = (userEmail: string, text: string) => {
@@ -1261,6 +1284,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       readByUser: false
     };
     setDoc(doc(db, 'chat_messages', newMsg.id), newMsg).catch(console.error);
+    setRtdb(ref(rtdb, `chat_messages/${newMsg.id}`), newMsg).catch(console.error);
   };
 
   const markChatAsRead = (userEmail: string, role: 'admin' | 'user') => {

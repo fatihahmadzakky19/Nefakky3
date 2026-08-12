@@ -20,6 +20,12 @@ import {
   MapPin
 } from 'lucide-react';
 
+const DRINK_VARIANTS = [
+  { id: 'Mangga', name: 'Jus Mangga Segar', tag: 'Fresh & Manis', desc: 'Mangga Harum Manis alami kaya akan Vitamin C & A', image: '/images/jus_mangga.jpg' },
+  { id: 'Sirsak', name: 'Jus Sirsak Segar', tag: 'Asam Manis', desc: 'Sirsak murni dengan cita rasa khas asam manis alami', image: '/images/jus_sirsak.jpg' },
+  { id: 'Jambu', name: 'Jus Jambu Biji', tag: 'Super Vitamin C', desc: 'Jambu biji merah segar untuk imunitas dan kesegaran harian', image: '/images/jus_jambu.jpg' }
+];
+
 export default function MenuDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -33,13 +39,25 @@ export default function MenuDetailPage() {
   const [isWishlist, setIsWishlist] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'description' | 'ingredients' | 'storage' | 'serving'>('description');
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [selectedVariant, setSelectedVariant] = useState<string>('Mangga');
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [addedNotice, setAddedNotice] = useState<boolean>(false);
 
-  const currentMainImage = selectedImage || product.image;
-  const productThumbnails = [
-    product.image
-  ];
+  const isDrink = product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus');
+  const activeDrinkVariant = DRINK_VARIANTS.find(v => v.id === selectedVariant) || DRINK_VARIANTS[0];
+
+  const currentMainImage = isDrink 
+    ? (selectedImage || activeDrinkVariant.image) 
+    : (selectedImage || product.image);
+
+  const productThumbnails = isDrink
+    ? DRINK_VARIANTS.map(v => v.image)
+    : [product.image];
+
+  const handleSelectVariant = (variantId: string, imgUrl: string) => {
+    setSelectedVariant(variantId);
+    setSelectedImage(imgUrl);
+  };
 
   const handleAddToCart = () => {
     if (!user) {
@@ -47,7 +65,7 @@ export default function MenuDetailPage() {
       return;
     }
     for (let i = 0; i < quantity; i++) {
-      addToCart(product.id);
+      addToCart(product.id, isDrink ? selectedVariant : undefined);
     }
     setAddedNotice(true);
     setTimeout(() => setAddedNotice(false), 2000);
@@ -59,7 +77,7 @@ export default function MenuDetailPage() {
       return;
     }
     for (let i = 0; i < quantity; i++) {
-      addToCart(product.id);
+      addToCart(product.id, isDrink ? selectedVariant : undefined);
     }
     router.push('/cart');
   };
@@ -139,17 +157,31 @@ export default function MenuDetailPage() {
 
             {/* Thumbnails Row */}
             <div className="flex items-center gap-3">
-              {productThumbnails.map((imgUrl, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedImage(imgUrl)}
-                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-stone-100 ${
-                    currentMainImage === imgUrl ? 'border-[#5C3D28] ring-2 ring-[#5C3D28]/20 scale-105' : 'border-transparent opacity-75 hover:opacity-100'
-                  }`}
-                >
-                  <Image src={imgUrl} alt={`Thumbnail ${idx}`} fill className="object-cover" />
-                </button>
-              ))}
+              {productThumbnails.map((imgUrl, idx) => {
+                const matchingVariant = isDrink ? DRINK_VARIANTS[idx] : null;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      if (matchingVariant) {
+                        handleSelectVariant(matchingVariant.id, imgUrl);
+                      } else {
+                        setSelectedImage(imgUrl);
+                      }
+                    }}
+                    className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-stone-100 ${
+                      currentMainImage === imgUrl ? 'border-[#5C3D28] ring-2 ring-[#5C3D28]/20 scale-105' : 'border-transparent opacity-75 hover:opacity-100'
+                    }`}
+                  >
+                    <Image src={imgUrl} alt={`Thumbnail ${idx}`} fill className="object-cover" />
+                    {matchingVariant && (
+                      <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-semibold text-center py-0.5">
+                        {matchingVariant.id}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -164,7 +196,7 @@ export default function MenuDetailPage() {
 
             <div className="space-y-2">
               <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-[#2D231C]">
-                {product.name}
+                {isDrink ? `Jus Segar (${activeDrinkVariant.id})` : product.name}
               </h1>
               
               <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500 font-light">
@@ -187,6 +219,55 @@ export default function MenuDetailPage() {
               Rp {product.price.toLocaleString('id-ID')}
             </div>
 
+            {/* 3 Drink Variants Selector (Khusus Minuman) */}
+            {isDrink && (
+              <div className="space-y-3 p-4 bg-[#FAF5F0] border border-[#8A6337]/25 rounded-2xl shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#5C3D28] flex items-center gap-1.5">
+                    🍹 Pilih Varian Rasa Jus (3 Pilihan):
+                  </span>
+                  <span className="text-[10px] text-[#7A4B29] font-medium bg-[#EADCCF] px-2 py-0.5 rounded-full">
+                    Varian: {selectedVariant}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  {DRINK_VARIANTS.map((v) => {
+                    const isSelected = selectedVariant === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => handleSelectVariant(v.id, v.image)}
+                        className={`relative p-2.5 rounded-xl border-2 text-left transition-all flex flex-col items-center text-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-white border-[#5C3D28] ring-2 ring-[#5C3D28]/20 shadow-md scale-[1.02]'
+                            : 'bg-white/60 border-stone-200 hover:bg-white hover:border-stone-300 opacity-80 hover:opacity-100'
+                        }`}
+                      >
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-stone-200">
+                          <Image src={v.image} alt={v.name} fill className="object-cover" />
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-bold text-[#2D231C] leading-tight">
+                            {v.name.replace(' Segar', '')}
+                          </div>
+                          <div className="text-[9px] text-stone-500 font-light mt-0.5">
+                            {v.tag}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <span className="absolute top-1 right-1 w-4 h-4 bg-[#5C3D28] text-white rounded-full flex items-center justify-center text-[10px]">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Production Origin Address Card */}
             <div className="p-3.5 bg-[#FAF6F0] border border-[#8A6337]/30 rounded-2xl flex items-start gap-3 text-xs text-stone-700">
               <MapPin className="w-4 h-4 text-[#8A6337] shrink-0 mt-0.5" />
@@ -195,7 +276,7 @@ export default function MenuDetailPage() {
                   🏭 ALAMAT &amp; DAERAH PRODUKSI:
                 </span>
                 <span className="font-semibold text-stone-900 leading-relaxed block">
-                  {(product as any).origin || 'Dapur Utama Menteng, Jl. H.O.S. Cokroaminoto No. 88, Menteng, Jakarta Pusat, 10310'}
+                  {(product as any).origin || 'Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia'}
                 </span>
               </div>
             </div>
@@ -242,7 +323,7 @@ export default function MenuDetailPage() {
             {addedNotice && (
               <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>{quantity}x {product.name} ditambahkan ke keranjang belanja!</span>
+                <span>{quantity}x {isDrink ? `Jus Segar (${selectedVariant})` : product.name} ditambahkan ke keranjang belanja!</span>
               </div>
             )}
 

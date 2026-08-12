@@ -49,6 +49,8 @@ import {
   X
 } from 'lucide-react';
 
+import Script from 'next/script';
+
 interface PlacedOrder {
   orderId: string;
   items: CartLineItem[];
@@ -209,6 +211,8 @@ export default function BasketCartPage() {
     vaNumber: string;
     paymentChannelName: string;
     simulatorUrl: string;
+    snapToken?: string;
+    redirectUrl?: string;
     orderSummarySnapshot: PlacedOrder;
   } | null>(null);
 
@@ -216,22 +220,12 @@ export default function BasketCartPage() {
     setIsProcessingPayment(true);
     const generatedId = `NFK-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    let vaCode = '';
-    let channelName = 'Midtrans Virtual Account';
-    let simUrl = 'https://simulator.sandbox.midtrans.com/bca/va/index';
+    let channelName = 'Virtual Account Bank BCA / Mandiri / BNI';
 
-    if (selectedMidtransChannel === 'va') {
-      vaCode = `82740${Math.floor(1000000000 + Math.random() * 9000000000)}`;
-      channelName = 'Virtual Account Bank BCA / Mandiri / BNI';
-      simUrl = 'https://simulator.sandbox.midtrans.com/bca/va/index';
-    } else if (selectedMidtransChannel === 'ewallet' || selectedMidtransChannel === 'qris') {
-      vaCode = `QRIS-NFK-${Math.floor(100000 + Math.random() * 900000)}`;
+    if (selectedMidtransChannel === 'ewallet' || selectedMidtransChannel === 'qris') {
       channelName = 'QRIS / GoPay / ShopeePay Instant';
-      simUrl = 'https://simulator.sandbox.midtrans.com/qris/index';
-    } else {
-      vaCode = `4811-1111-1111-${Math.floor(1000 + Math.random() * 9000)}`;
+    } else if (selectedMidtransChannel === 'card') {
       channelName = 'Kartu Kredit / Debit (3D Secure)';
-      simUrl = 'https://simulator.sandbox.midtrans.com/card/index';
     }
 
     const orderSummarySnapshot: PlacedOrder = {
@@ -254,18 +248,89 @@ export default function BasketCartPage() {
       })
     };
 
-    setTimeout(() => {
+    try {
+      // Call official Midtrans backend API route to register transaction on Midtrans Sandbox
+      const response = await fetch('/api/midtrans/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: generatedId,
+          grossAmount: totalPayment,
+          customerDetails: {
+            name: shippingAddress.name,
+            email: user?.email || 'customer@nefakky.com',
+            phone: shippingAddress.phone,
+            address: shippingAddress.address
+          },
+          itemDetails: cartItems
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.token) {
+        throw new Error(data.error || 'Gagal memproses transaksi Midtrans');
+      }
+
+      // Check if Midtrans Snap popup is loaded in browser
+      if (typeof window !== 'undefined' && (window as any).snap) {
+        setIsProcessingPayment(false);
+        (window as any).snap.pay(data.token, {
+          onSuccess: (result: any) => {
+            finalizeOrderPlacement(generatedId, orderSummarySnapshot);
+          },
+          onPending: (result: any) => {
+            const bcaVa = result?.va_numbers?.[0]?.va_number || result?.bca_va_number || data.token;
+            setPendingPaymentOrder({
+              orderId: generatedId,
+              grossAmount: totalPayment,
+              vaNumber: bcaVa,
+              paymentChannelName: channelName,
+              simulatorUrl: data.redirect_url || 'https://simulator.sandbox.midtrans.com/bca/va/index',
+              snapToken: data.token,
+              redirectUrl: data.redirect_url,
+              orderSummarySnapshot
+            });
+            setShowMidtransSimulatorModal(true);
+          },
+          onError: (result: any) => {
+            alert('Pembayaran Gagal atau Dibatalkan oleh Midtrans.');
+          },
+          onClose: () => {
+            setPendingPaymentOrder({
+              orderId: generatedId,
+              grossAmount: totalPayment,
+              vaNumber: data.token,
+              paymentChannelName: channelName,
+              simulatorUrl: data.redirect_url || 'https://simulator.sandbox.midtrans.com/bca/va/index',
+              snapToken: data.token,
+              redirectUrl: data.redirect_url,
+              orderSummarySnapshot
+            });
+            setShowMidtransSimulatorModal(true);
+          }
+        });
+        return;
+      }
+
+      // Fallback if Snap JS is not loaded directly
       setPendingPaymentOrder({
         orderId: generatedId,
         grossAmount: totalPayment,
-        vaNumber: vaCode,
+        vaNumber: data.token,
         paymentChannelName: channelName,
-        simulatorUrl: simUrl,
+        simulatorUrl: data.redirect_url || 'https://simulator.sandbox.midtrans.com/bca/va/index',
+        snapToken: data.token,
+        redirectUrl: data.redirect_url,
         orderSummarySnapshot
       });
       setIsProcessingPayment(false);
       setShowMidtransSimulatorModal(true);
-    }, 800);
+    } catch (err: any) {
+      console.error('Midtrans payment error:', err);
+      setIsProcessingPayment(false);
+      alert('Maaf, terjadi kesalahan saat menghubungi server Midtrans: ' + (err.message || 'Error'));
+    }
   };
 
   if (loading) {
@@ -312,7 +377,12 @@ export default function BasketCartPage() {
 
   return (
     <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19]">
-      
+      <Script
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'Mid-client-8T4q9uw1fIGB-pla'}
+        strategy="lazyOnload"
+      />
+
       {/* 1. TOP NAVBAR */}
       <Navbar />
 
@@ -1058,13 +1128,14 @@ export default function BasketCartPage() {
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-xs text-[#783603] space-y-2">
               <p className="font-bold flex items-center gap-1.5 text-sm">
                 <Info className="w-4 h-4 text-[#934B19]" />
-                <span>Petunjuk Lakukan Pembayaran di Midtrans Simulator:</span>
+                <span>Petunjuk Bayar di Midtrans Simulator (BCA Virtual Account):</span>
               </p>
-              <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
-                <li>Salin <strong>Kode Pembayaran / VA Code</strong> di bawah ini.</li>
-                <li>Klik tombol <strong>Buka Midtrans Simulator</strong> untuk menuju simulator resmi Midtrans.</li>
-                <li>Tempelkan kode di simulator lalu tekan <strong>Inquire / Pay</strong> hingga status sukses.</li>
-                <li>Kembali ke halaman ini dan tekan tombol <strong>Saya Sudah Bayar di Midtrans Simulator</strong>.</li>
+              <ol className="list-decimal list-inside space-y-1.5 text-[11px] leading-relaxed font-medium">
+                <li>Klik <strong>Buka Halaman Pembayaran Midtrans Snap</strong> di bawah untuk membuka halaman pembayaran resmi Sandbox.</li>
+                <li>Pilih <strong>BCA Virtual Account</strong> di halaman Midtrans. Midtrans akan menerbitkan <strong>Nomor VA Resmi Sandbox</strong> khusus pesanan ini.</li>
+                <li>Salin Nomor VA resmi tersebut, lalu klik <strong>Buka Midtrans Payment Simulator</strong>.</li>
+                <li>Tempelkan Nomor VA di simulator lalu klik <strong>Inquire &amp; Pay</strong> sampai status sukses.</li>
+                <li>Kembali ke halaman ini dan tekan <strong>Saya Sudah Bayar di Midtrans Simulator</strong>.</li>
               </ol>
             </div>
 
@@ -1076,9 +1147,9 @@ export default function BasketCartPage() {
               </div>
 
               <div className="space-y-1">
-                <span className="text-[10px] text-stone-400 uppercase tracking-widest block font-bold">KODE PEMBAYARAN / VA NUMBER:</span>
+                <span className="text-[10px] text-stone-400 uppercase tracking-widest block font-bold">SNAP TOKEN / ORDER ID:</span>
                 <div className="flex items-center justify-between bg-[#3C2A21] px-4 py-3 rounded-xl border border-amber-900/40">
-                  <span className="font-mono text-lg font-bold text-amber-300 tracking-wider">
+                  <span className="font-mono text-sm font-bold text-amber-300 tracking-wider truncate mr-2">
                     {pendingPaymentOrder.vaNumber}
                   </span>
                   <button
@@ -1090,7 +1161,7 @@ export default function BasketCartPage() {
                     className="px-3 py-1.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer shrink-0"
                   >
                     {copiedCode ? <Check className="w-3.5 h-3.5 text-amber-300" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedCode ? 'Tersalin!' : 'Salin Kode'}</span>
+                    <span>{copiedCode ? 'Tersalin!' : 'Salin'}</span>
                   </button>
                 </div>
               </div>
@@ -1101,16 +1172,28 @@ export default function BasketCartPage() {
               </div>
             </div>
 
-            {/* External Simulator Direct Link Button */}
-            <a
-              href={pendingPaymentOrder.simulatorUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-3.5 bg-[#FBF9F5] hover:bg-stone-100 border border-amber-900/20 text-[#25160E] font-bold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 shadow-xs group cursor-pointer"
-            >
-              <ExternalLink className="w-4 h-4 text-[#934B19] group-hover:scale-110 transition-transform" />
-              <span>🚀 Buka Website Midtrans Payment Simulator</span>
-            </a>
+            {/* External Action Links */}
+            <div className="space-y-2">
+              <a
+                href={pendingPaymentOrder.redirectUrl || pendingPaymentOrder.simulatorUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 bg-[#25160E] hover:bg-[#3C2A21] text-white font-bold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md group cursor-pointer"
+              >
+                <ExternalLink className="w-4 h-4 text-amber-300 group-hover:scale-110 transition-transform" />
+                <span>1. Buka Halaman Pembayaran Midtrans Snap (Dapatkan No. VA Real)</span>
+              </a>
+
+              <a
+                href="https://simulator.sandbox.midtrans.com/bca/va/index"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 bg-[#FBF9F5] hover:bg-stone-100 border border-amber-900/20 text-[#25160E] font-bold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 shadow-xs group cursor-pointer"
+              >
+                <ExternalLink className="w-4 h-4 text-[#934B19] group-hover:scale-110 transition-transform" />
+                <span>2. Buka Website Midtrans BCA VA Simulator (Untuk Bayar VA)</span>
+              </a>
+            </div>
 
             {/* Action Buttons */}
             <div className="space-y-2 pt-2 border-t border-stone-100">
