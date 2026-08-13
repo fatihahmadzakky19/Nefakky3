@@ -186,6 +186,7 @@ export interface AdminOrder {
   date: string;
   customerConfirmed?: boolean;
   confirmedAt?: string;
+  proofPhoto?: string;
 }
 
 /** Interface Data Ulasan (Reviews) */
@@ -265,7 +266,8 @@ interface DataContextType {
   toggleVoucherStatus: (id: string) => void;
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
-  updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
+  confirmOrderReceived: (id: string, proofPhotoUrl?: string) => void;
+  uploadOrderProofPhoto: (id: string, proofPhotoUrl: string) => void;
   deleteOrder: (id: string) => void;
   cancelOrder: (id: string, reason?: string) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
@@ -754,7 +756,8 @@ interface DataContextType {
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
-  confirmOrderReceived: (id: string) => void;
+  confirmOrderReceived: (id: string, proofPhotoUrl?: string) => void;
+  uploadOrderProofPhoto: (id: string, proofPhotoUrl: string) => void;
   deleteOrder: (id: string) => void;
   cancelOrder: (id: string, reason?: string) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
@@ -1126,18 +1129,38 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const confirmOrderReceived = (id: string) => {
+  const confirmOrderReceived = (id: string, proofPhotoUrl?: string) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const dateStr = `Hari ini, ${timeStr}`;
-    const updates = {
+    const updates: any = {
       status: 'COMPLETED' as AdminOrder['status'],
       customerConfirmed: true,
       confirmedAt: dateStr,
       updatedAt: Date.now()
     };
+    if (proofPhotoUrl) {
+      updates.proofPhoto = proofPhotoUrl;
+    }
+
+    // Local state sync
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+
     updateDoc(doc(db, 'orders', id), updates).catch(console.error);
     updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'COMPLETED', updatedAt: Date.now() }).catch(console.error);
+    updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'COMPLETED', proofPhoto: proofPhotoUrl || null, updatedAt: Date.now() }).catch(console.error);
+  };
+
+  const uploadOrderProofPhoto = (id: string, proofPhotoUrl: string) => {
+    const updates = {
+      proofPhoto: proofPhotoUrl,
+      updatedAt: Date.now()
+    };
+
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+
+    updateDoc(doc(db, 'orders', id), updates).catch(console.error);
+    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
+    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(console.error);
   };
 
   /** Helper function untuk mengklaim penggunaan voucher & mematikan promo otomatis secara realtime jika kuota habis */
@@ -1376,6 +1399,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       updateOrderStatus,
       updatePaymentStatus,
       confirmOrderReceived,
+      uploadOrderProofPhoto,
       deleteOrder,
       cancelOrder,
       addReview,

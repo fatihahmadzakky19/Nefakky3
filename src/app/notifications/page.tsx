@@ -19,6 +19,7 @@ import { useData, AdminOrder, isVoucherValidNow } from '@/context/DataContext';
 import { rtdb } from '@/lib/firebase';
 import { ref, onValue } from 'firebase/database';
 import Navbar from '@/components/Navbar';
+import LiveCameraModal from '@/components/LiveCameraModal';
 import { 
   ShoppingBag, 
   Truck, 
@@ -34,14 +35,19 @@ import {
   MessageSquare,
   MapPin,
   Utensils,
-  Check
+  Check,
+  Camera,
+  UploadCloud,
+  Pencil
 } from 'lucide-react';
 
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { orders, vouchers, updateOrderStatus, confirmOrderReceived } = useData();
+  const { orders, vouchers, updateOrderStatus, confirmOrderReceived, uploadOrderProofPhoto } = useData();
   const { totalCartCount } = useCart();
+  const proofInputRef = React.useRef<HTMLInputElement>(null);
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false);
 
   const [selectedReceipt, setSelectedReceipt] = useState<AdminOrder | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
@@ -104,6 +110,18 @@ export default function NotificationsPage() {
     });
     return () => unsub();
   }, [activeOrder?.id]);
+
+  const handleProofImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && activeOrder?.id) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        uploadOrderProofPhoto(activeOrder.id, result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const currentStatus = liveRtdbStatus || activeOrder.status;
 
@@ -385,41 +403,128 @@ export default function NotificationsPage() {
 
           </div>
 
-          {/* KOLOM KANAN: KURIR PENGANTAR & DETAIL ALAMAT */}
+          {/* KOLOM KANAN: BUKTI FOTO PENERIMAAN & DETAIL ALAMAT */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* Driver Profile Card (Google Stitch Specification) */}
+            {/* Hidden Input for Proof Photo Upload (Supports direct camera capture on mobile) */}
+            <input 
+              type="file" 
+              ref={proofInputRef} 
+              accept="image/*"
+              capture="environment"
+              className="hidden" 
+              onChange={handleProofImageChange} 
+            />
+
+            {/* LIVE CAMERA WEBCAM MODAL */}
+            <LiveCameraModal
+              isOpen={isLiveCameraOpen}
+              onClose={() => setIsLiveCameraOpen(false)}
+              onCapture={(base64Image) => {
+                if (activeOrder?.id) {
+                  uploadOrderProofPhoto(activeOrder.id, base64Image);
+                }
+              }}
+              onFallbackToFile={() => proofInputRef.current?.click()}
+            />
+
+            {/* BUKTI FOTO PESANAN DITERIMA CARD */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-900/10 shadow-xl space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#25160E] text-amber-200 flex items-center justify-center font-bold text-xl shadow-md">
-                    👨‍✈️
-                  </div>
-                  <div>
-                    <h4 className="font-serif text-lg font-bold text-[#25160E]">Budi Santoso</h4>
-                    <div className="flex items-center gap-2 text-xs text-[#4F4540] font-medium">
-                      <span className="text-amber-500 font-bold flex items-center gap-1">★ 4.9</span>
-                      <span>• Honda Vario (B 1234 NKL)</span>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2">
+                    <Camera className="w-5 h-5 text-[#934B19]" />
+                    <span>Bukti Foto Pesanan Diterima</span>
+                  </h3>
+                  <p className="text-xs text-[#4F4540] font-light mt-0.5">
+                    Unggah atau ambil foto langsung hidangan/pesanan yang telah Anda terima sebagai konfirmasi resmi.
+                  </p>
+                </div>
+
+                {activeOrder.proofPhoto && (
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full border border-emerald-300 flex items-center gap-1 shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Foto Bukti Terverifikasi</span>
+                  </span>
+                )}
+              </div>
+
+              {/* PHOTO DISPLAY OR UPLOAD AREA */}
+              {activeOrder.proofPhoto ? (
+                <div className="space-y-4">
+                  <div className="relative w-full h-60 sm:h-72 rounded-2xl overflow-hidden border border-amber-900/15 shadow-md bg-stone-900 group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={activeOrder.proofPhoto} 
+                      alt="Bukti Foto Pesanan Diterima" 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-between p-4 text-white">
+                      <div>
+                        <span className="text-xs font-bold block">Bukti Penerimaan Makanan #{activeOrder.id}</span>
+                        <span className="text-[10px] text-amber-200">Foto Resmi Dikonfirmasi Pelanggan</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsLiveCameraOpen(true)}
+                          className="px-3 py-1.5 bg-[#934B19] hover:bg-[#783603] backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white shadow"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>Foto Kamera</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => proofInputRef.current?.click()}
+                          className="px-3 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Galeri</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+              ) : (
+                <div className="border-2 border-dashed border-amber-900/25 bg-[#FBF9F5] rounded-2xl p-6 sm:p-8 text-center space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-[#934B19]/10 text-[#934B19] flex items-center justify-center mx-auto">
+                    <UploadCloud className="w-7 h-7" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-[#25160E]">Ambil atau Upload Bukti Foto Penerimaan</p>
+                    <p className="text-[11px] text-[#4F4540]">Pilih metode pengambilan foto bukti hidangan di lokasi Anda:</p>
+                  </div>
 
-                <div className="flex gap-2">
-                  <Link
-                    href="/profile"
-                    className="w-10 h-10 rounded-2xl bg-[#FBF9F5] border border-amber-900/15 text-[#25160E] flex items-center justify-center hover:bg-[#25160E] hover:text-white transition-all shadow-xs"
-                    title="Chat CS & Kurir"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                  </Link>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsLiveCameraOpen(true)}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
+                    >
+                      <Camera className="w-4 h-4 text-amber-200" />
+                      <span>📸 Ambil Foto Kamera Live</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => proofInputRef.current?.click()}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-[#25160E] hover:bg-[#3C2A21] text-amber-300 text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
+                    >
+                      <UploadCloud className="w-4 h-4 text-amber-300" />
+                      <span>📁 Pilih dari Galeri HP / File</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-2 pt-2 border-t border-stone-100">
+              {/* LOKASI ALAMAT PENGIRIMAN */}
+              <div className="space-y-1.5 pt-3 border-t border-stone-100">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#934B19]">Lokasi Alamat Antar</span>
                 <p className="text-xs font-bold text-[#25160E]">{activeOrder.customerName}</p>
                 <p className="text-xs text-[#4F4540] font-light leading-relaxed">{activeOrder.address}</p>
               </div>
+
             </div>
 
             {/* KONFIRMASI PENERIMAAN PESANAN OLEH PELANGGAN */}
@@ -433,7 +538,7 @@ export default function NotificationsPage() {
                   <p className="text-xs text-[#4F4540] font-light leading-relaxed">
                     {currentStatus === 'COMPLETED'
                       ? 'Pesanan telah resmi dikonfirmasi sampai di tangan Anda.'
-                      : 'Ketika makanan telah sampai di tangan Anda, silakan klik tombol konfirmasi berikut.'}
+                      : 'Ketika makanan telah sampai di tangan Anda, silakan upload bukti foto & klik konfirmasi.'}
                   </p>
                 </div>
 
@@ -445,7 +550,11 @@ export default function NotificationsPage() {
                 ) : (
                   <button
                     onClick={() => {
-                      confirmOrderReceived(activeOrder.id);
+                      if (!activeOrder.proofPhoto) {
+                        proofInputRef.current?.click();
+                      } else {
+                        confirmOrderReceived(activeOrder.id, activeOrder.proofPhoto);
+                      }
                     }}
                     className="px-6 py-3.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 cursor-pointer"
                   >
