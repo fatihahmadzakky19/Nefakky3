@@ -88,7 +88,7 @@ export default function RealtimeOrderTracker({
           return {
             etaText: '~60 - 90 Menit',
             etaIcon: '⚠️',
-            title: 'Diterima • Resto Membludak (>15 Order)',
+            title: 'Diterima • Resto Membludak (Lonjakan Pesanan)',
             desc: 'Dapur dalam antrean tinggi. Pesanan Anda berada dalam antrean masak utama.',
             badgeBg: 'bg-[#934B19] text-white border-amber-900',
             percentage: 20

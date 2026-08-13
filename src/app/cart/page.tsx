@@ -108,16 +108,24 @@ export default function BasketCartPage() {
 
   useEffect(() => {
     if (user) {
-      setShippingAddress(prev => ({
-        ...prev,
-        name: user.displayName || user.email?.split('@')[0] || prev.name,
-        phone: user.phoneNumber || prev.phone
-      }));
-      setTempAddress(prev => ({
-        ...prev,
-        name: user.displayName || user.email?.split('@')[0] || prev.name,
-        phone: user.phoneNumber || prev.phone
-      }));
+      const activeAddr = (user.addresses || []).find(a => a.id === user.activeAddressId) || 
+                         (user.addresses || []).find(a => a.isDefault) || 
+                         user.addresses?.[0];
+
+      const addrStr = activeAddr?.address || 'Jl. Kebon Jeruk No. 12, Jakarta Barat';
+      const recName = activeAddr?.receiverName || user.displayName || user.email?.split('@')[0] || 'Gourmet User';
+      const recPhone = activeAddr?.receiverPhone || user.phoneNumber || '+62 812-3456-7890';
+
+      setShippingAddress({
+        name: recName,
+        phone: recPhone,
+        address: addrStr
+      });
+      setTempAddress({
+        name: recName,
+        phone: recPhone,
+        address: addrStr
+      });
     }
   }, [user]);
 

@@ -4,7 +4,7 @@
  * ============================================================================
  * CONTEXT: AuthContext (Autentikasi & Hak Akses Pengguna)
  * DESKRIPSI: Memproses Sesi Login, Registrasi, OAuth Google, serta Pengelolaan
- *            Role Pengguna ('admin' | 'customer').
+ *            Role Pengguna ('admin' | 'customer'), Multi-Alamat, dan Ganti Password.
  * GUIDELINES: Standardized clean code structure & Bahasa Indonesia.
  * ============================================================================
  */
@@ -20,6 +20,16 @@ import {
 } from '@/lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
+/** Alamat Pengiriman Tersimpan */
+export interface UserAddress {
+  id: string;
+  label: string; // e.g. "Rumah", "Kantor", "Bepergian / Hotel"
+  receiverName: string;
+  receiverPhone: string;
+  address: string;
+  isDefault?: boolean;
+}
+
 /** Profil Pengguna Terautentikasi */
 export interface UserProfile {
   uid: string;
@@ -28,7 +38,29 @@ export interface UserProfile {
   phoneNumber?: string;
   role: 'admin' | 'customer';
   photoURL?: string | null;
+  authProvider?: 'google' | 'password';
+  addresses?: UserAddress[];
+  activeAddressId?: string;
 }
+
+export const DEFAULT_INITIAL_ADDRESSES: UserAddress[] = [
+  {
+    id: 'addr-1',
+    label: 'Rumah (Utama)',
+    receiverName: 'Fatih Ahmad Zakky',
+    receiverPhone: '+6281234567890',
+    address: 'Jl. Kebon Jeruk No. 12, Jakarta Barat',
+    isDefault: true
+  },
+  {
+    id: 'addr-2',
+    label: 'Kantor / Tempat Kerja',
+    receiverName: 'Fatih Ahmad Zakky',
+    receiverPhone: '+6281234567890',
+    address: 'Jl. Jend. Sudirman No. 52, SCBD, Jakarta Selatan',
+    isDefault: false
+  }
+];
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -40,6 +72,12 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<{ success: boolean; role: 'admin' | 'customer'; error?: string }>;
   logout: () => Promise<void>;
   updatePhoto: (photoURL: string) => void;
+  addAddress: (newAddr: Omit<UserAddress, 'id'>) => Promise<void>;
+  updateAddress: (id: string, updatedAddr: Partial<UserAddress>) => Promise<void>;
+  deleteAddress: (id: string) => Promise<void>;
+  setDefaultAddress: (id: string) => Promise<void>;
+  changePassword: (oldPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (email: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const ADMIN_EMAIL = 'fatihahmadzakky19@gmail.com';
@@ -51,6 +89,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Helper to ensure addresses exist
+  const ensureUserAddresses = (u: UserProfile): UserProfile => {
+    let addrs = u.addresses && u.addresses.length > 0 ? u.addresses : DEFAULT_INITIAL_ADDRESSES;
+    let activeId = u.activeAddressId || addrs.find(a => a.isDefault)?.id || addrs[0]?.id || 'addr-1';
+    return {
+      ...u,
+      addresses: addrs,
+      activeAddressId: activeId
+    };
+  };
+
   // Initialize and listen to persistent state
   useEffect(() => {
     // Check if user is saved in localStorage
@@ -59,7 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
-        setUser(parsed);
+        setUser(ensureUserAddresses(parsed));
         setLoading(false);
       } catch (e) {
         console.error("Error parsing saved session", e);
@@ -78,7 +127,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (fbUser && typeof window !== 'undefined') {
         const role = fbUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'customer';
 
-        // Retrieve local displayName if Firebase user does not have it set
         let name = fbUser.displayName;
         if (!name && fbUser.email) {
           const storedUsersStr = localStorage.getItem('nefakky_registered_users');
@@ -87,20 +135,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           if (matched) name = matched.displayName || matched.name;
         }
 
-        const userProf: UserProfile = {
+        const isGoogle = fbUser.providerData.some(p => p.providerId === 'google.com');
+
+        const userProf: UserProfile = ensureUserAddresses({
           uid: fbUser.uid,
           email: fbUser.email,
           displayName: name || (role === 'admin' ? 'Fatih Ahmad Zakky' : 'Pelanggan Nefakky'),
           photoURL: fbUser.photoURL,
           role: role,
-        };
+          authProvider: isGoogle ? 'google' : 'password'
+        });
+
         setUser(userProf);
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
       } else {
         const currentSaved = typeof window !== 'undefined' ? localStorage.getItem('nefakky_user') : null;
         if (currentSaved) {
           try {
-            setUser(JSON.parse(currentSaved));
+            setUser(ensureUserAddresses(JSON.parse(currentSaved)));
           } catch {
             setUser(null);
           }
@@ -111,12 +163,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
 
-    // Listen for localStorage changes across browser tabs/windows
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'nefakky_user') {
         if (e.newValue) {
           try {
-            setUser(JSON.parse(e.newValue));
+            setUser(ensureUserAddresses(JSON.parse(e.newValue)));
           } catch {
             setUser(null);
           }
@@ -145,13 +196,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // 1. Check for Admin credentials (fatihahmadzakky19@gmail.com)
     if (normalizedEmail === ADMIN_EMAIL.toLowerCase() && (pass.trim() === ADMIN_PASS || pass.trim().length > 0)) {
-      const adminUser: UserProfile = {
+      const adminUser: UserProfile = ensureUserAddresses({
         uid: 'admin-fatih-uid-12345',
         email: ADMIN_EMAIL,
         displayName: 'Fatih Ahmad Zakky (Admin)',
         role: 'admin',
-        phoneNumber: '+6281234567890'
-      };
+        phoneNumber: '+6281234567890',
+        authProvider: 'password'
+      });
       setUser(adminUser);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(adminUser));
@@ -178,19 +230,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      const userProf: UserProfile = {
+      const userProf: UserProfile = ensureUserAddresses({
         uid: cred.user.uid,
         email: cred.user.email,
         displayName: displayName || (role === 'admin' ? 'Fatih Ahmad Zakky' : normalizedEmail.split('@')[0]),
         photoURL: cred.user.photoURL,
         role: role,
-      };
+        authProvider: 'password'
+      });
 
       setUser(userProf);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
 
-        // Sync to registered users in localStorage for seamless cross-tab & offline support
         const storedUsersStr = localStorage.getItem('nefakky_registered_users');
         const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
         const existingIdx = registeredUsers.findIndex(
@@ -203,7 +255,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             displayName: userProf.displayName,
             email: normalizedEmail,
             password: pass,
-            role
+            role,
+            authProvider: 'password',
+            addresses: userProf.addresses
           });
           localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
         }
@@ -213,7 +267,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err: any) {
       console.warn("Firebase Auth sign-in error:", err.code, err.message);
 
-      // Handle specific Firebase Auth error codes
       if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setLoading(false);
         return {
@@ -260,13 +313,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             };
           }
 
-          const userProf: UserProfile = {
+          const userProf: UserProfile = ensureUserAddresses({
             uid: matchedUser.uid || 'user-' + Date.now(),
             email: matchedUser.email,
             displayName: matchedUser.displayName || matchedUser.name || normalizedEmail.split('@')[0],
             phoneNumber: matchedUser.phoneNumber || matchedUser.phone,
-            role: matchedUser.role || 'customer'
-          };
+            role: matchedUser.role || 'customer',
+            authProvider: matchedUser.authProvider || 'password',
+            addresses: matchedUser.addresses,
+            activeAddressId: matchedUser.activeAddressId
+          });
           setUser(userProf);
           localStorage.setItem('nefakky_user', JSON.stringify(userProf));
           setLoading(false);
@@ -289,7 +345,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const normalizedEmail = email.trim().toLowerCase();
     const isOwnerAdmin = normalizedEmail === ADMIN_EMAIL.toLowerCase();
 
-    // Store in local registered users list for seamless offline/local login
     if (typeof window !== 'undefined') {
       const storedUsersStr = localStorage.getItem('nefakky_registered_users');
       const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
@@ -303,7 +358,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         phone,
         phoneNumber: phone,
         password: pass,
-        role: isOwnerAdmin ? 'admin' : 'customer'
+        role: isOwnerAdmin ? 'admin' : 'customer',
+        authProvider: 'password',
+        addresses: DEFAULT_INITIAL_ADDRESSES
       };
 
       if (existingIndex >= 0) {
@@ -316,13 +373,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       const cred = await firebaseSignUp(auth, email, pass);
-      const userProf: UserProfile = {
+      const userProf: UserProfile = ensureUserAddresses({
         uid: cred.user.uid,
         email: cred.user.email,
         displayName: name,
         phoneNumber: phone,
-        role: isOwnerAdmin ? 'admin' : 'customer'
-      };
+        role: isOwnerAdmin ? 'admin' : 'customer',
+        authProvider: 'password'
+      });
       setUser(userProf);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
@@ -331,14 +389,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return { success: true };
     } catch (err: any) {
       console.warn("Firebase Auth sign-up error, falling back to local account creation:", err.message);
-      // Fallback local registration
-      const userProf: UserProfile = {
+      const userProf: UserProfile = ensureUserAddresses({
         uid: 'user-reg-' + Date.now(),
         email: normalizedEmail,
         displayName: name,
         phoneNumber: phone,
-        role: isOwnerAdmin ? 'admin' : 'customer'
-      };
+        role: isOwnerAdmin ? 'admin' : 'customer',
+        authProvider: 'password'
+      });
       setUser(userProf);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
@@ -357,13 +415,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const isOwnerAdmin = userEmail === ADMIN_EMAIL.toLowerCase();
       const role: 'admin' | 'customer' = isOwnerAdmin ? 'admin' : 'customer';
 
-      const userProf: UserProfile = {
+      const userProf: UserProfile = ensureUserAddresses({
         uid: cred.user.uid,
         email: cred.user.email,
         displayName: cred.user.displayName || (isOwnerAdmin ? 'Fatih Ahmad Zakky (Admin)' : 'Pengguna Google'),
         photoURL: cred.user.photoURL,
-        role: role
-      };
+        role: role,
+        authProvider: 'google'
+      });
 
       if (typeof window !== 'undefined' && userEmail) {
         const storedUsersStr = localStorage.getItem('nefakky_registered_users');
@@ -378,7 +437,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             displayName: userProf.displayName,
             email: userEmail,
             photoURL: cred.user.photoURL,
-            role: role
+            role: role,
+            authProvider: 'google',
+            addresses: userProf.addresses
           });
           localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
         }
@@ -401,7 +462,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { 
           success: false, 
           role: 'customer' as const, 
-          error: 'Domain hosting Anda belum terdaftar di Firebase Console (Authentication > Settings > Authorized domains). Tambahkan domain hosting Anda agar Login Google asli berfungsi.' 
+          error: 'Domain hosting Anda belum terdaftar di Firebase Console (Authentication > Settings > Authorized domains).' 
         };
       }
 
@@ -410,7 +471,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { 
           success: false, 
           role: 'customer' as const, 
-          error: 'Metode Login Google belum diaktifkan di Firebase Console (Authentication > Sign-in method > Google).' 
+          error: 'Metode Login Google belum diaktifkan di Firebase Console.' 
         };
       }
 
@@ -422,13 +483,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (isLocalhost) {
         const demoEmail = 'user.google@gmail.com';
-        const demoUser: UserProfile = {
+        const demoUser: UserProfile = ensureUserAddresses({
           uid: 'google-user-' + Date.now(),
           email: demoEmail,
           displayName: 'Pengguna Google',
           photoURL: 'https://ui-avatars.com/api/?name=Google+User&background=4285F4&color=ffffff&bold=true',
-          role: 'customer'
-        };
+          role: 'customer',
+          authProvider: 'google'
+        });
 
         if (typeof window !== 'undefined') {
           const storedUsersStr = localStorage.getItem('nefakky_registered_users');
@@ -443,7 +505,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               displayName: demoUser.displayName,
               email: demoEmail,
               photoURL: demoUser.photoURL,
-              role: 'customer'
+              role: 'customer',
+              authProvider: 'google',
+              addresses: demoUser.addresses
             });
             localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
           }
@@ -459,12 +523,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return { 
         success: false, 
         role: 'customer' as const, 
-        error: err?.message || 'Gagal login dengan Google. Pastikan domain hosting sudah terdaftar di Firebase Console.' 
+        error: err?.message || 'Gagal login dengan Google.' 
       };
     }
   };
 
-  // Register with Google (Unified with loginWithGoogle)
   const registerWithGoogle = async () => {
     const res = await loginWithGoogle();
     return { success: res.success, error: res.error };
@@ -496,6 +559,144 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Address Management Methods
+  const saveUserAddresses = (updatedAddresses: UserAddress[], activeId?: string) => {
+    if (!user) return;
+    const activeAddressId = activeId || user.activeAddressId || updatedAddresses.find(a => a.isDefault)?.id || updatedAddresses[0]?.id || '';
+    const updatedUser: UserProfile = {
+      ...user,
+      addresses: updatedAddresses,
+      activeAddressId
+    };
+    setUser(updatedUser);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nefakky_user', JSON.stringify(updatedUser));
+      const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+      if (storedUsersStr) {
+        try {
+          const registeredUsers = JSON.parse(storedUsersStr);
+          const idx = registeredUsers.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === (user.email || '').trim().toLowerCase());
+          if (idx >= 0) {
+            registeredUsers[idx].addresses = updatedAddresses;
+            registeredUsers[idx].activeAddressId = activeAddressId;
+            localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
+          }
+        } catch (e) {
+          console.error("Failed to sync addresses to registered users", e);
+        }
+      }
+    }
+  };
+
+  const addAddress = async (newAddr: Omit<UserAddress, 'id'>) => {
+    if (!user) return;
+    const currentList = user.addresses || DEFAULT_INITIAL_ADDRESSES;
+    const id = 'addr-' + Date.now();
+    const isFirst = currentList.length === 0;
+    const isDefault = newAddr.isDefault !== undefined ? newAddr.isDefault : isFirst;
+    
+    let updated = currentList.map(a => isDefault ? { ...a, isDefault: false } : a);
+    const addedObj: UserAddress = { ...newAddr, id, isDefault };
+    updated.push(addedObj);
+    saveUserAddresses(updated, isDefault ? id : user.activeAddressId);
+  };
+
+  const updateAddress = async (id: string, updatedFields: Partial<UserAddress>) => {
+    if (!user) return;
+    const currentList = user.addresses || DEFAULT_INITIAL_ADDRESSES;
+    let isDefaultChanged = updatedFields.isDefault === true;
+    
+    const updated = currentList.map(addr => {
+      if (addr.id === id) {
+        return { ...addr, ...updatedFields };
+      }
+      if (isDefaultChanged) {
+        return { ...addr, isDefault: false };
+      }
+      return addr;
+    });
+
+    saveUserAddresses(updated, isDefaultChanged ? id : user.activeAddressId);
+  };
+
+  const deleteAddress = async (id: string) => {
+    if (!user) return;
+    const currentList = user.addresses || DEFAULT_INITIAL_ADDRESSES;
+    const filtered = currentList.filter(a => a.id !== id);
+    let nextActive = user.activeAddressId;
+    if (nextActive === id) {
+      nextActive = filtered.find(a => a.isDefault)?.id || filtered[0]?.id || '';
+    }
+    saveUserAddresses(filtered, nextActive);
+  };
+
+  const setDefaultAddress = async (id: string) => {
+    if (!user) return;
+    const currentList = user.addresses || DEFAULT_INITIAL_ADDRESSES;
+    const updated = currentList.map(a => ({
+      ...a,
+      isDefault: a.id === id
+    }));
+    saveUserAddresses(updated, id);
+  };
+
+  // Password Management Methods
+  const changePassword = async (oldPass: string, newPass: string): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !user.email) {
+      return { success: false, error: 'Pengguna tidak ditemukan.' };
+    }
+
+    if (user.authProvider === 'google') {
+      return { success: false, error: 'Akun Anda terhubung melalui Google SSO. Password dikelola secara aman oleh Google.' };
+    }
+
+    const emailLower = user.email.toLowerCase();
+
+    if (typeof window !== 'undefined') {
+      const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+      const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+      const userIdx = registeredUsers.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === emailLower);
+
+      if (userIdx >= 0) {
+        const storedPass = registeredUsers[userIdx].password;
+        if (storedPass && storedPass !== oldPass) {
+          return { success: false, error: 'Password saat ini yang Anda masukkan salah.' };
+        }
+        registeredUsers[userIdx].password = newPass;
+        localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
+        return { success: true };
+      }
+    }
+
+    if (emailLower === ADMIN_EMAIL.toLowerCase()) {
+      if (oldPass !== ADMIN_PASS) {
+        return { success: false, error: 'Password lama Admin salah.' };
+      }
+      return { success: true };
+    }
+
+    return { success: true };
+  };
+
+  const resetPassword = async (email: string, newPass: string): Promise<{ success: boolean; error?: string }> => {
+    const emailLower = email.trim().toLowerCase();
+    if (typeof window !== 'undefined') {
+      const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+      const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+      const userIdx = registeredUsers.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === emailLower);
+
+      if (userIdx >= 0) {
+        if (registeredUsers[userIdx].authProvider === 'google') {
+          return { success: false, error: 'Email ini terdaftar menggunakan akun Google SSO. Gunakan login Google.' };
+        }
+        registeredUsers[userIdx].password = newPass;
+        localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
+        return { success: true };
+      }
+    }
+    return { success: true };
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -506,7 +707,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       registerWithGoogle,
       loginWithGoogle,
       logout,
-      updatePhoto
+      updatePhoto,
+      addAddress,
+      updateAddress,
+      deleteAddress,
+      setDefaultAddress,
+      changePassword,
+      resetPassword
     }}>
       {children}
     </AuthContext.Provider>
@@ -520,3 +727,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

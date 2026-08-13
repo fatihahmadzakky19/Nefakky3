@@ -273,6 +273,9 @@ interface DataContextType {
   sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string) => void;
   replyChatMessage: (userEmail: string, text: string) => void;
   markChatAsRead: (userEmail: string, role: 'admin' | 'user') => void;
+  isHighDemand: boolean;
+  highDemandMessage: string;
+  toggleHighDemand: (status?: boolean, customMessage?: string) => void;
 }
 
 export const DEFAULT_PRODUCTS: ProductItem[] = [
@@ -970,15 +973,18 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       visibility: productData.visibility ?? true,
       status: productData.status ?? 'Active'
     };
+    setProductsState(prev => [newProduct, ...prev]);
     setDoc(doc(db, 'products', newId), newProduct).catch(console.error);
     return newProduct;
   };
 
   const updateProduct = (id: string, updated: Partial<ProductItem>) => {
+    setProductsState(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p));
     updateDoc(doc(db, 'products', id), updated).catch(console.error);
   };
 
   const deleteProduct = (id: string) => {
+    setProductsState(prev => prev.filter(p => p.id !== id));
     deleteDoc(doc(db, 'products', id)).catch(console.error);
   };
 
@@ -986,9 +992,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const target = products.find(p => p.id === id);
     if (target) {
       const nextVis = !target.visibility;
+      const nextStatus = nextVis ? 'Active' : 'Inactive';
+      setProductsState(prev => prev.map(p => p.id === id ? { ...p, visibility: nextVis, status: nextStatus } : p));
       updateDoc(doc(db, 'products', id), {
         visibility: nextVis,
-        status: nextVis ? 'Active' : 'Inactive'
+        status: nextStatus
       }).catch(console.error);
     }
   };
@@ -1300,6 +1308,42 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
+  // High Demand / Resto Membludak Settings (Admin Configurable)
+  const [isHighDemand, setIsHighDemand] = useState<boolean>(false);
+  const [highDemandMessage, setHighDemandMessage] = useState<string>(
+    'Dapur kami saat ini sedang melayani pemesanan ramai sekaligus. Estimasi pengantaran diperkirakan MELEBIHI 1 JAM (~90 Menit). Terima kasih atas kesabaran Anda!'
+  );
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedDemand = localStorage.getItem('nefakky_high_demand');
+      if (savedDemand) {
+        try {
+          const parsed = JSON.parse(savedDemand);
+          setIsHighDemand(!!parsed.isHighDemand);
+          if (parsed.message) setHighDemandMessage(parsed.message);
+        } catch (e) {
+          console.error("Failed to parse saved high demand setting", e);
+        }
+      }
+    }
+  }, []);
+
+  const toggleHighDemand = (status?: boolean, customMessage?: string) => {
+    const newStatus = status !== undefined ? status : !isHighDemand;
+    const newMsg = customMessage !== undefined ? customMessage : highDemandMessage;
+    setIsHighDemand(newStatus);
+    if (customMessage !== undefined) {
+      setHighDemandMessage(newMsg);
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nefakky_high_demand', JSON.stringify({
+        isHighDemand: newStatus,
+        message: newMsg
+      }));
+    }
+  };
+
   return (
     <DataContext.Provider value={{
       products,
@@ -1308,6 +1352,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       orders,
       reviews,
       chatMessages,
+      isHighDemand,
+      highDemandMessage,
+      toggleHighDemand,
       setProducts,
       setPromotions,
       setVouchers,

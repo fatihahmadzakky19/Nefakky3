@@ -25,7 +25,6 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
   const isHomeActive = pathname === '/';
   const isMenuActive = pathname === '/menu' || pathname.startsWith('/menu/');
   const isCommentsActive = pathname === '/comments';
-  const isCartActive = pathname === '/cart';
   const isNotificationsActive = pathname === '/notifications';
   const isProfileActive = pathname === '/profile';
 
@@ -74,16 +73,6 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
             }`}
           >
             Ulasan Rasa
-          </Link>
-          <Link 
-            href="/cart" 
-            className={`transition-all py-2 font-medium ${
-              isCartActive 
-                ? 'text-[#934b19] font-bold border-b-2 border-[#934b19]' 
-                : 'text-[#4f4540] hover:text-[#934b19]'
-            }`}
-          >
-            Pemesanan & Keranjang
           </Link>
           <Link 
             href="/notifications" 
