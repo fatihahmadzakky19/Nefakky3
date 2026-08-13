@@ -4,10 +4,11 @@
 [![React](https://img.shields.io/badge/React-18.3.1-blue?style=for-the-badge&logo=react)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4.5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.3-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Storybook](https://img.shields.io/badge/Storybook-10.5.7-FF4785?style=for-the-badge&logo=storybook)](https://storybook.js.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-10.12.0-FFCA28?style=for-the-badge&logo=firebase)](https://firebase.google.com/)
 [![Midtrans](https://img.shields.io/badge/Midtrans-Snap_API-004B99?style=for-the-badge)](https://midtrans.com/)
 
-**Nefakky** adalah platform e-commerce dan toko kuliner *artisanal* berbasis web modern yang dirancang untuk menghadirkan pengalaman belanja makanan premium yang cepat, intuitif, dan aman. Platform ini dilengkapi dengan fitur integrasi gerbang pembayaran otomatis (**Midtrans Snap API**), alur checkout multi-step 4-tahap, sistem penentuan lokasi pengiriman presisi via GPS & Haversine Distance Engine, pelacakan ganda multi-order, cetak struk PDF resmi, autentikasi Firebase, serta dashboard pengelola toko terpusat dengan pengeditan grafik omset penjualan.
+**Nefakky** adalah platform e-commerce dan toko kuliner *artisanal* berbasis web modern yang dirancang untuk menghadirkan pengalaman belanja makanan premium yang cepat, intuitif, dan aman. Platform ini dilengkapi dengan fitur integrasi gerbang pembayaran otomatis (**Midtrans Snap API**), alur checkout multi-step 4-tahap, sistem pemetaan lokasi pengiriman presisi (**Auto Map Picker Modal** & Haversine Distance Engine), penangkapan foto kamera langsung (**Live Camera Capture System**), pengujian komponen UI terisolasi (**Storybook 10 Suite**), pelacakan ganda multi-order, cetak struk PDF resmi, autentikasi Firebase, serta dashboard pengelola toko terpusat dengan pengeditan grafik omset penjualan.
 
 ---
 
@@ -20,7 +21,7 @@
 - [Struktur Proyek](#-struktur-proyek)
 - [Persyaratan Sistem](#-persyaratan-sistem)
 - [Panduan Instalasi & Penggunaan](#-panduan-instalasi--penggunaan)
-- [Pengujian Otomatis (Automated Testing)](#-pengujian-otomatis-automated-testing)
+- [Pengujian Otomatis & Storybook](#-pengujian-otomatis--storybook)
 - [Lisensi & Hak Cipta](#-lisensi--hak-cipta)
 
 ---
@@ -29,14 +30,15 @@
 
 ### 1. Modul Pelanggan (Customer Facing)
 * 🔐 **Autentikasi Aman & SSO**: Login/Registrasi Email & Password serta Google OAuth 2.0 dengan penanganan error interaktif dan sinkronisasi sesi lintas tab.
-* 🍱 **Katalog Menu 3 Kategori**: Filter kategori (*Makanan Berat*, *Minuman*, *Menu Hemat*), rincian bahan, serta informasi kalori & gizi lengkap.
-* 📍 **Penentuan Lokasi Pengiriman GPS**: Pemilihan alamat presisi berbasis lokasi GPS atau preset Jabodetabek dengan perhitungan jarak Haversine dari Dapur Pusat.
+* 🍱 **Katalog Menu 3 Kategori**: Filter kategori (*Makanan Berat*, *Minuman*, *Menu Hemat*), varian 3-jus dalam 1 modal, rincian bahan, serta informasi kalori & gizi lengkap.
+* 📍 **Auto Map Picker & Penentuan Lokasi GPS**: Pemilihan alamat presisi via modal pemeta lokasi interaktif (`AutoMapPickerModal`) atau preset Jabodetabek dengan kalkulasi jarak Haversine dari Dapur Pusat.
+* 📷 **Live Camera Capture System**: Fitur penangkapan foto langsung via peramban (`LiveCameraModal`) untuk ulasan kuliner atau bukti pengiriman dengan toggle lensa depan/belakang dan fallback unggah file.
 * 🛒 **Alur Checkout Multi-Step 4-Tahap**: Proses transaksi terstruktur (`1. Keranjang` $\rightarrow$ `2. Checkout & Alamat` $\rightarrow$ `3. Payment Midtrans` $\rightarrow$ `4. Selesai`).
 * 🚚 **Formula Ongkir Transparan**: Biaya pengiriman 15% subtotal untuk jarak $\le 3$ km + Rp 1.500 per 2 km untuk jarak $> 3$ km (0 biaya layanan).
 * 💳 **Pembayaran Midtrans Snap**: Integrasi modal pembayaran Midtrans (QRIS, E-Wallet, Bank Transfer, Credit Card 3D Secure).
 * 📦 **Pelacakan Multi-Order Live**: Visualisasi alur pesanan 5-tahap (`RECEIVED` $\rightarrow$ `COOKING` $\rightarrow$ `READY` $\rightarrow$ `SHIPPING` $\rightarrow$ `COMPLETED`), tab switcher untuk beberapa pesanan aktif, dan tombol konfirmasi terima barang.
 * 📜 **Riwayat Pemesanan & Struk PDF**: Riwayat transaksi permanen di Firestore real-time dan modal cetak **Struk Pembayaran Resmi (PDF)** via `window.print()`.
-* ⭐ **Rating & Ulasan Pelanggan**: Penilaian ulasan bintang 1-5, bukti foto, serta sistem ulasan kontekstual hidangan Indonesia.
+* ⭐ **Rating & Ulasan Pelanggan**: Penilaian ulasan bintang 1-5, bukti foto, serta sistem ulasan kontekstual hidangan Indonesia (`reviews.ts`).
 
 ### 2. Modul Administrator (Admin Panel)
 * 📊 **Dashboard Analitik & Editable Sales Chart**: Grafik omset kotor dan laba bersih yang dimulai dari Juni 2026 (Event Bazar >10 Juta) dengan fitur **Edit Data Grafik Modal** per bulan.
@@ -51,15 +53,17 @@
 ## 🛠️ Teknologi & Modul Utama
 
 * **Frontend**: Next.js 14 (App Router), React 18, Tailwind CSS v3, TypeScript (Strict Mode), Lucide React Icons.
+* **Component Design & Storybook**: Storybook 10, Vitest Browser Engine, Playwright Integration.
 * **Backend API**: Python 3.13 & Django 5.2 (Django REST Framework) dengan arsitektur PBO/OOP.
-* **Database & Cloud**: Firebase Cloud Firestore DB (NoSQL Document Store) dengan 6 koleksi real-time sync.
-* **Payment Engine**: Midtrans Snap Payment Gateway API.
+* **Database & Cloud**: Firebase Cloud Firestore DB & Realtime Database (`asia-southeast1`) 6 koleksi real-time sync.
+* **Payment Engine**: Midtrans Snap Payment Gateway API & Midtrans Sandbox Simulator.
 * **Location & Distance**: OpenStreetMap Nominatim API & Algoritma Haversine Distance Engine.
 
 ---
 
-## 🧪 Pengujian Otomatis (Automated Testing)
+## 🧪 Pengujian Otomatis & Storybook
 
+### Running Test Suite
 Aplikasi dilengkapi dengan skrip penguji otomatis 6 modul utama:
 
 ```bash
@@ -68,14 +72,22 @@ npm test
 
 Skrip ini akan memeriksa:
 1. **TypeScript Type Compiler** (`npx tsc --noEmit`) - Lulus 0 error.
-2. **Route & Component Integrity** - Verifikasi ketersediaan seluruh rute utama.
+2. **Route & Component Integrity** - Verifikasi ketersediaan seluruh rute utama & modal baru.
 3. **Product Catalog & Master Data** - Verifikasi data 6 produk utama.
 4. **Indonesian Review Engine** - Generasi ulasan otomatis khas Indonesia.
 5. **Cart & Promo Engine** - Logika kalkulasi keranjang & voucher promo.
 6. **Firebase Cloud Connection** - Inisialisasi Auth & Firestore DB.
+
+### Running Storybook
+Untuk melihat dan menguji komponen UI secara terisolasi (`AutoMapPickerModal`, `MenuDetailModal`, `Navbar`, `RealtimeOrderTracker`):
+
+```bash
+npm run storybook
+```
 
 ---
 
 ## 📄 Lisensi & Hak Cipta
 
 © 2026 **Nefakky Artisanal Kitchen** (Fatih Ahmad Zakky). Hak Cipta Dilindungi Undang-Undang.
+

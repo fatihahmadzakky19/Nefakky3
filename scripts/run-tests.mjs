@@ -58,6 +58,8 @@ runTest('2. Route Integrity', 'Core application routes existence', () => {
     'src/app/notifications/page.tsx',
     'src/components/Navbar.tsx',
     'src/components/MenuDetailModal.tsx',
+    'src/components/AutoMapPickerModal.tsx',
+    'src/components/LiveCameraModal.tsx',
     'src/context/AuthContext.tsx',
     'src/context/CartContext.tsx',
     'src/context/DataContext.tsx',
