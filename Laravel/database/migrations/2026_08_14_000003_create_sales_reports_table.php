@@ -1,0 +1,26 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('sales_reports', function (Blueprint $table) {
+            $table->id();
+            $table->string('month_year'); // e.g. 'Juni 2026'
+            $table->decimal('gross_revenue', 15, 2)->default(0);
+            $table->decimal('net_profit', 15, 2)->default(0);
+            $table->integer('total_orders')->default(0);
+            $table->string('event_tag')->nullable(); // e.g. 'Bazar >10 Juta'
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('sales_reports');
+    }
+};

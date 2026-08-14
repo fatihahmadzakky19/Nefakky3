@@ -1,35 +1,43 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Dependencies
+node_modules/
+Laravel/vendor/
 
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files (Rahasia Admin / API Keys)
-.env
-.env*.local
-.env.development
-.env.test
-.env.production
-
-# vercel
-.vercel
-
-# typescript
+# Build & Cache Output
+.next/
 *.tsbuildinfo
+debug-storybook.log
+Laravel/bootstrap/cache/*
+!Laravel/bootstrap/cache/.gitignore
+Laravel/public/build/
+Laravel/public/hot/
+Laravel/storage/*.key
 
-*storybook.log
-storybook-static
+# Python / Django Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+*.sqlite3
+backend_django/db.sqlite3
+Laravel/database/database.sqlite
+
+# Environment & Credentials
+.env
+.env.local
+.env.production
+.env.*.local
+Laravel/.env
+Laravel/.env.backup
+Laravel/.env.production
+
+# Logs
+*.log
+Laravel/storage/logs/*.log
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
