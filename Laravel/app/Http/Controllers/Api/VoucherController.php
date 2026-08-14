@@ -11,10 +11,7 @@ class VoucherController extends Controller
     public function index()
     {
         $vouchers = Voucher::where('is_active', true)
-            ->where(function ($q) {
-                $q->whereNull('expires_at')
-                  ->orWhere('expires_at', '>', now());
-            })
+            ->where('status', 'Active')
             ->get();
 
         return response()->json([
@@ -41,48 +38,25 @@ class VoucherController extends Controller
             ], 404);
         }
 
-        if ($voucher->expires_at && $voucher->expires_at->isPast()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Voucher sudah kadaluarsa.'
-            ], 400);
-        }
+        $discountAmount = $voucher->calculateDiscountAmount($request->subtotal);
 
-        if ($voucher->quota > 0 && $voucher->used_count >= $voucher->quota) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Kuota penggunaan voucher ini sudah habis.'
-            ], 400);
-        }
-
-        if ($request->subtotal < $voucher->min_spend) {
+        if ($discountAmount <= 0) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Minimal belanja untuk voucher ini adalah Rp ' . number_format($voucher->min_spend, 0, ',', '.')
             ], 400);
         }
 
-        // Calculate discount
-        $discountAmount = 0;
-        if ($voucher->type === 'percent') {
-            $discountAmount = ($request->subtotal * $voucher->discount_value) / 100;
-            if ($voucher->max_discount && $discountAmount > $voucher->max_discount) {
-                $discountAmount = $voucher->max_discount;
-            }
-        } else {
-            $discountAmount = $voucher->discount_value;
-        }
-
         return response()->json([
             'status' => 'success',
             'message' => 'Voucher berhasil digunakan!',
             'data' => [
+                'voucher_id' => $voucher->voucher_id,
                 'code' => $voucher->code,
-                'title' => $voucher->title,
-                'type' => $voucher->type,
-                'discount_value' => $voucher->discount_value,
-                'discount_amount' => round($discountAmount),
-                'final_price' => max(0, $request->subtotal - round($discountAmount)),
+                'name' => $voucher->name,
+                'discount_percent' => $voucher->discount_percent,
+                'discount_amount' => $discountAmount,
+                'final_price' => max(0, $request->subtotal - $discountAmount),
             ]
         ]);
     }

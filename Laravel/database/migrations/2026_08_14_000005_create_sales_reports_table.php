@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('sales_reports', function (Blueprint $table) {
             $table->id();
-            $table->string('month_year'); // e.g. 'Juni 2026'
+            $table->string('month_year');
             $table->decimal('gross_revenue', 15, 2)->default(0);
             $table->decimal('net_profit', 15, 2)->default(0);
             $table->integer('total_orders')->default(0);
-            $table->string('event_tag')->nullable(); // e.g. 'Bazar >10 Juta'
+            $table->string('event_tag')->nullable();
             $table->timestamps();
         });
     }
