@@ -1,49 +1,55 @@
 <?php
 
+// Namespace penempat Model dalam struktur folder Laravel Eloquent
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+// Mengimpor UserFactory untuk pengujian data dummy
 use Database\Factories\UserFactory;
+// Mengimpor trait HasFactory untuk mendukung pembuatan data dummy via factory
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+// Mengimpor kelas autentikasi Authenticatable untuk manajemen login pengguna
 use Illuminate\Foundation\Auth\User as Authenticatable;
+// Mengimpor trait Notifiable untuk pengiriman notifikasi ke email/sistem
 use Illuminate\Notifications\Notifiable;
 
+// Class Model User yang mengelola akun pengguna/pengguna terdaftar di aplikasi
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
+     * Kolom yang diizinkan untuk diisi secara massal saat registrasi/update
      *
      * @var list<string>
      */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'name', // Nama pengguna
+        'email', // Email pengguna
+        'password', // Kata sandi pengguna (tersimpan dalam bentuk hash)
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * Kolom yang disembunyikan saat data user diubah ke format JSON/Array
      *
      * @var list<string>
      */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'password', // Sembunyikan hash password dari response API demi keamanan
+        'remember_token', // Sembunyikan token "remember me"
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * Aturan konversi otomatis (Casting) atribut model
      *
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at' => 'datetime', // Konversi tanggal verifikasi email ke datetime
+            'password' => 'hashed', // Otomatis meng-hash password saat disimpan di DB
         ];
     }
 }
+

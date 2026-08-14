@@ -9,25 +9,29 @@
  * ============================================================================
  */
 
+// Mengimpor React, Context API hooks (createContext, useContext, useEffect, useState)
 import React, { createContext, useContext, useEffect, useState } from 'react';
+// Mengimpor kustom hook AuthContext untuk mendapatkan status akun user yang sedang login
 import { useAuth } from './AuthContext';
+// Mengimpor DataContext & fungsi validasi voucher isVoucherValidNow
 import { useData, isVoucherValidNow } from './DataContext';
 
-/** Interface Produk Keranjang */
+/** Interface Struktur Data Produk Keranjang */
 export interface CartItemProduct {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  image: string;
-  description?: string;
+  id: string; // ID unik produk
+  name: string; // Nama hidangan produk
+  category: string; // Kategori menu
+  price: number; // Harga produk (Rp)
+  image: string; // URL/Path gambar produk
+  description?: string; // Deskripsi produk (opsional)
 }
 
+/** Interface Line Item dalam Keranjang (Produk + Kuantitas) */
 export interface CartLineItem extends CartItemProduct {
-  quantity: number;
+  quantity: number; // Jumlah kuantitas yang dipesan
 }
 
-// Master products fallback list
+// Master produk fallback jika data produk belum termuat dari API/Database
 export const MASTER_PRODUCTS: CartItemProduct[] = [
   {
     id: 'm1',
@@ -79,82 +83,87 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
   }
 ];
 
+// Interface Tipe Nilai yang Disediakan oleh CartContext
 interface CartContextType {
-  cart: { [itemId: string]: number };
-  cartItems: CartLineItem[];
-  totalCartCount: number;
-  subtotal: number;
-  appliedPromo: string | null;
-  discountPercent: number;
-  discountAmount: number;
-  addToCart: (productId: string, variant?: string) => void;
-  removeFromCart: (productId: string) => void;
-  deleteFromCart: (productId: string) => void;
-  clearCart: () => void;
-  claimPromo: (code: string) => { success: boolean; message: string; percent: number };
-  removePromo: () => void;
+  cart: { [itemId: string]: number }; // State objek key-value keranjang { itemId: quantity }
+  cartItems: CartLineItem[]; // Array daftar item keranjang beserta detail produk
+  totalCartCount: number; // Akumulasi total kuantitas seluruh item di keranjang
+  subtotal: number; // Total harga kotor sebelum diskon
+  appliedPromo: string | null; // Kode promo yang sedang diterapkan
+  discountPercent: number; // Persentase diskon (%)
+  discountAmount: number; // Nominal potongan harga (Rp)
+  addToCart: (productId: string, variant?: string) => void; // Fungsi menambah barang ke keranjang
+  removeFromCart: (productId: string) => void; // Fungsi mengurangi kuantitas 1 barang
+  deleteFromCart: (productId: string) => void; // Fungsi menghapus barang sepenuhnya dari keranjang
+  clearCart: () => void; // Fungsi mengosongkan seluruh keranjang
+  claimPromo: (code: string) => { success: boolean; message: string; percent: number }; // Fungsi klaim kode promo
+  removePromo: () => void; // Fungsi menghapus promo yang terpasang
 }
 
+// Inisialisasi React Context untuk Cart
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// Provider Component untuk membungkus komponen aplikasi Next.js
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-  const { products, vouchers } = useData();
-  const [cart, setCart] = useState<{ [itemId: string]: number }>({});
-  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
-  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const { user } = useAuth(); // Ambil status user dari AuthContext
+  const { products, vouchers } = useData(); // Ambil daftar produk & voucher dari DataContext
+  const [cart, setCart] = useState<{ [itemId: string]: number }>({}); // State data keranjang
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null); // State kode promo aktif
+  const [discountPercent, setDiscountPercent] = useState<number>(0); // State persentase diskon
 
-  // Load user-scoped cart and applied promo from localStorage
+  // Effect: Muat keranjang dan promo dari localStorage sesuai UID user yang sedang login
   useEffect(() => {
     if (user?.uid) {
-      const storageKey = `nefakky_cart_${user.uid}`;
+      const storageKey = `nefakky_cart_${user.uid}`; // Key storage keranjang per user
       const savedCart = localStorage.getItem(storageKey);
       if (savedCart) {
         try {
-          setCart(JSON.parse(savedCart));
+          setCart(JSON.parse(savedCart)); // Parse & set data keranjang tersimpan
         } catch (e) {
-          setCart({});
+          setCart({}); // Fallback keranjang kosong jika error
         }
       } else {
-        setCart({});
+        setCart({}); // Kosongkan jika belum ada data tersimpan
       }
 
-      const savedPromo = localStorage.getItem(`nefakky_promo_${user.uid}`);
+      const savedPromo = localStorage.getItem(`nefakky_promo_${user.uid}`); // Key storage promo per user
       if (savedPromo) {
         try {
           const parsed = JSON.parse(savedPromo);
-          setAppliedPromo(parsed.code);
+          setAppliedPromo(parsed.code); // Set kode promo tersimpan
           const liveV = (vouchers || []).find(v => v.code.toUpperCase() === parsed.code.toUpperCase());
-          setDiscountPercent(liveV?.discountPercent || parsed.percent || 15);
+          setDiscountPercent(liveV?.discountPercent || parsed.percent || 15); // Set persen diskon tersimpan
         } catch (e) {
           setAppliedPromo(null);
           setDiscountPercent(0);
         }
       }
     } else {
+      // Kosongkan state jika user logout / belum login
       setCart({});
       setAppliedPromo(null);
       setDiscountPercent(0);
     }
-  }, [user]);
+  }, [user, vouchers]);
 
-  // Save cart to localStorage whenever cart state changes
+  // Fungsi helper simpan state keranjang ke localStorage
   const saveCart = (newCart: { [itemId: string]: number }) => {
-    setCart(newCart);
+    setCart(newCart); // Update state React
     if (user?.uid && typeof window !== 'undefined') {
-      localStorage.setItem(`nefakky_cart_${user.uid}`, JSON.stringify(newCart));
+      localStorage.setItem(`nefakky_cart_${user.uid}`, JSON.stringify(newCart)); // Persist ke localStorage browser
     }
   };
 
+  // Fungsi menghapus promo yang terpasang di keranjang
   const removePromo = () => {
-    setAppliedPromo(null);
-    setDiscountPercent(0);
+    setAppliedPromo(null); // Reset kode promo
+    setDiscountPercent(0); // Reset diskon 0%
     if (user?.uid && typeof window !== 'undefined') {
-      localStorage.removeItem(`nefakky_promo_${user.uid}`);
+      localStorage.removeItem(`nefakky_promo_${user.uid}`); // Hapus data promo di localStorage
     }
   };
 
-  // Real-time effect: Auto-revoke applied promo if Admin deactivates it or if day is not valid (e.g., weekend promo on weekday)
+  // Effect Real-time: Otomatis mencabut promo jika Admin menonaktifkan voucher di DB
   useEffect(() => {
     if (appliedPromo && vouchers.length > 0) {
       const foundVoucher = vouchers.find(
@@ -164,10 +173,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const { active: isStillActive } = isVoucherValidNow(foundVoucher);
 
       if (!isStillActive) {
-        removePromo();
+        removePromo(); // Cabut promo jika voucher sudah tidak aktif
       } else if (foundVoucher && foundVoucher.discountPercent && foundVoucher.discountPercent !== discountPercent) {
-        // Automatically sync stored discount percent with live voucher data
-        setDiscountPercent(foundVoucher.discountPercent);
+        setDiscountPercent(foundVoucher.discountPercent); // Sinkronisasi persentase diskon terbaru
         if (user?.uid && typeof window !== 'undefined') {
           localStorage.setItem(`nefakky_promo_${user.uid}`, JSON.stringify({ code: foundVoucher.code.toUpperCase(), percent: foundVoucher.discountPercent }));
         }
@@ -175,14 +183,16 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [vouchers, appliedPromo, discountPercent, user]);
 
+  // Fungsi untuk mengklaim kode promo voucher
   const claimPromo = (code: string) => {
-    const upper = code.trim().toUpperCase();
+    const upper = code.trim().toUpperCase(); // Ubah kode ke huruf besar
     
-    // Find matching voucher from live DataContext vouchers list
+    // Cari voucher di daftar vouchers DataContext
     const foundVoucher = vouchers.find(
       v => v.code.toUpperCase() === upper || v.id.toUpperCase() === upper
     );
 
+    // Jika voucher tidak ditemukan atau sudah dihapus
     if (!foundVoucher || foundVoucher.isDeleted) {
       return {
         success: false,
@@ -191,6 +201,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
+    // Periksa status keaktifan voucher dan tanggal berlaku
     const { active: isVoucherActive, reason } = isVoucherValidNow(foundVoucher);
 
     if (!isVoucherActive) {
@@ -202,13 +213,13 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
-    const percent = foundVoucher.discountPercent || 15;
+    const percent = foundVoucher.discountPercent || 15; // Default diskon 15% jika tidak diset
 
-    setAppliedPromo(upper);
-    setDiscountPercent(percent);
+    setAppliedPromo(upper); // Set promo aktif
+    setDiscountPercent(percent); // Set persen diskon
 
     if (user?.uid && typeof window !== 'undefined') {
-      localStorage.setItem(`nefakky_promo_${user.uid}`, JSON.stringify({ code: upper, percent }));
+      localStorage.setItem(`nefakky_promo_${user.uid}`, JSON.stringify({ code: upper, percent })); // Simpan promo di localStorage
     }
 
     return {
@@ -218,34 +229,39 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     };
   };
 
+  // Fungsi menambah kuantitas barang ke keranjang
   const addToCart = (productId: string, variant?: string) => {
-    const cartKey = variant ? `${productId}_${variant}` : productId;
-    const updated = { ...cart, [cartKey]: (cart[cartKey] || 0) + 1 };
+    const cartKey = variant ? `${productId}_${variant}` : productId; // Tentukan key unik item
+    const updated = { ...cart, [cartKey]: (cart[cartKey] || 0) + 1 }; // Tambahkan kuantitas +1
     saveCart(updated);
   };
 
+  // Fungsi mengurangi 1 kuantitas barang di keranjang
   const removeFromCart = (productId: string) => {
     const updated = { ...cart };
     if (updated[productId] > 1) {
-      updated[productId] -= 1;
+      updated[productId] -= 1; // Kurangi kuantitas 1
     } else {
-      delete updated[productId];
+      delete updated[productId]; // Hapus jika sisa 1
     }
     saveCart(updated);
   };
 
+  // Fungsi menghapus barang sepenuhnya dari keranjang
   const deleteFromCart = (productId: string) => {
     const updated = { ...cart };
-    delete updated[productId];
+    delete updated[productId]; // Hapus key dari objek keranjang
     saveCart(updated);
   };
 
+  // Fungsi mengosongkan keranjang belanja
   const clearCart = () => {
-    saveCart({});
+    saveCart({}); // Reset objek keranjang ke {}
   };
 
+  // Memetakan objek cart { key: qty } menjadi array CartLineItem lengkap beserta detail produk
   const cartItems: CartLineItem[] = Object.entries(cart).map(([key, quantity]) => {
-    const [baseId, variant] = key.split('_');
+    const [baseId, variant] = key.split('_'); // Pisahkan ID produk dan varian (jika ada)
     const product = products.find(p => p.id === baseId) || MASTER_PRODUCTS.find(p => p.id === baseId) || {
       id: baseId,
       name: 'Hidangan Nefakky',
@@ -257,6 +273,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     let itemImage = product.image;
     let itemName = product.name;
 
+    // Menangani varian minuman jus khusus
     if (variant) {
       itemName = `Jus ${variant} Segar`;
       if (variant === 'Mangga') itemImage = '/images/jus_mangga.jpg';
@@ -273,12 +290,16 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     };
   });
 
+  // Hitung total akumulasi kuantitas seluruh item di keranjang
   const totalCartCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
 
+  // Hitung subtotal harga kotor seluruh barang
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  // Hitung besaran nominal potongan diskon dalam Rupiah
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
 
   return (
+    // Sediakan nilai Context ke seluruh komponen anak (children)
     <CartContext.Provider value={{
       cart,
       cartItems,
@@ -299,10 +320,12 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// Custom Hook useCart untuk mempermudah akses CartContext di komponen
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error('useCart must be used within a CartProvider'); // Lempar error jika dipanggil di luar Provider
   }
   return context;
 };
+

@@ -4,12 +4,11 @@
  * ============================================================================
  * MODULE: Halaman Komentar & Ulasan Pelanggan (Comments Page)
  * DESKRIPSI: Memungkinkan pelanggan melihat serta menuliskan ulasan rasa
- *            berbasis Google Stitch AI Design System 
- *            (Espresso #25160E, Terracotta #934B19, Warm Cream #FBF9F5).
+ *            beserta foto produk masakan (Google Stitch AI Design System).
  * ============================================================================
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -23,7 +22,12 @@ import {
   CheckCircle2, 
   MessageSquare,
   Sparkles,
-  Quote
+  Quote,
+  Camera,
+  Image as ImageIcon,
+  X,
+  Trash2,
+  UploadCloud
 } from 'lucide-react';
 
 export default function CommentsPage() {
@@ -31,11 +35,40 @@ export default function CommentsPage() {
   const { user, loading } = useAuth();
   const { products, reviews, addReview } = useData();
 
+  // Ref Input Berkas Foto
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // State Lokal Formulir Komentar
   const [newComment, setNewComment] = useState<string>('');
   const [newRating, setNewRating] = useState<number>(5);
   const [selectedDish, setSelectedDish] = useState<string>(products[0]?.name || 'Ayam Bakar');
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+
+  // Fungsi Menangani Unggah Foto dari Perangkat
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Batasi ukuran maksimal 5MB
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Ukuran foto terlalu besar. Maksimal ukuran file adalah 5MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Hapus Foto Terpilih
+  const handleRemovePhoto = () => {
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,10 +89,16 @@ export default function CommentsPage() {
       avatar: user.photoURL || undefined,
       rating: newRating,
       productName: selectedDish,
-      comment: newComment
+      comment: newComment,
+      photos: photoPreview ? [photoPreview] : undefined,
+      productImage: photoPreview || undefined
     });
 
     setNewComment('');
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     setSubmitSuccess(true);
     setTimeout(() => setSubmitSuccess(false), 3000);
   };
@@ -91,7 +130,7 @@ export default function CommentsPage() {
             Ulasan & Pengalaman Pelanggan
           </h1>
           <p className="text-xs sm:text-sm text-[#4F4540] font-medium leading-relaxed">
-            Temukan cerita cita rasa otentik dari pelanggan Nefakky. Bagikan masukan dan pengalaman kuliner Anda bersama kami.
+            Temukan cerita cita rasa otentik dari pelanggan Nefakky. Bagikan masukan dan foto hidangan masakan Anda bersama kami.
           </p>
         </div>
 
@@ -109,7 +148,7 @@ export default function CommentsPage() {
             {submitSuccess && (
               <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs flex items-center gap-2 animate-fade-in font-medium">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Ulasan Anda berhasil diterbitkan!</span>
+                <span>Ulasan & foto Anda berhasil diterbitkan!</span>
               </div>
             )}
 
@@ -162,10 +201,64 @@ export default function CommentsPage() {
                 />
               </div>
 
+              {/* Unggah Foto Hidangan / Makanan */}
+              <div>
+                <label className="block text-xs font-bold text-[#25160E] mb-1.5">
+                  Foto Hidangan Makanan (Opsional)
+                </label>
+                
+                {/* Input File Tersembunyi */}
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+
+                {!photoPreview ? (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-3.5 px-4 bg-[#FBF9F5] hover:bg-amber-900/5 border border-dashed border-amber-900/30 rounded-2xl text-xs text-[#934B19] font-bold transition-all flex items-center justify-center gap-2 group cursor-pointer shadow-sm"
+                  >
+                    <Camera className="w-4 h-4 text-[#934B19] group-hover:scale-110 transition-transform" />
+                    <span>Tambah Foto Masakan</span>
+                  </button>
+                ) : (
+                  <div className="relative rounded-2xl overflow-hidden border border-amber-900/20 shadow-sm bg-stone-100 group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={photoPreview} 
+                      alt="Pratinjau Foto Ulasan" 
+                      className="w-full h-40 object-cover" 
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Foto</span>
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="absolute top-2 right-2 p-1 bg-black/60 hover:bg-black/80 text-white rounded-full text-xs shadow transition-colors cursor-pointer"
+                      title="Hapus Foto"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Tombol Submit */}
               <button
                 type="submit"
-                className="w-full py-3.5 bg-[#25160E] hover:bg-[#3C2A21] text-white text-xs font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.99] uppercase tracking-wider"
+                className="w-full py-3.5 bg-[#25160E] hover:bg-[#3C2A21] text-white text-xs font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.99] uppercase tracking-wider cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5 text-amber-300" />
                 <span>Kirim Ulasan</span>
@@ -176,7 +269,8 @@ export default function CommentsPage() {
           {/* KOLOM KANAN: DAFTAR ULASAN PELANGGAN */}
           <div className="lg:col-span-8 space-y-6">
             {reviews.map((item) => {
-              const avatarUrl = item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.authorName)}&background=3C2A21&color=ffffff&bold=true`;
+              const avatarUrl = item.avatar || item.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.authorName)}&background=3C2A21&color=ffffff&bold=true`;
+              const attachedPhoto = item.photos?.[0] || item.productImage;
               
               return (
                 <div 
@@ -216,10 +310,31 @@ export default function CommentsPage() {
                     </div>
                   </div>
 
+                  {/* Isi Komentar */}
                   <p className="text-xs text-[#1B1C1A] font-light leading-relaxed pt-1 flex items-start gap-2">
                     <Quote className="w-4 h-4 text-[#934B19] shrink-0 rotate-180" />
                     <span>{item.comment}</span>
                   </p>
+
+                  {/* Tampilan Foto Makanan yang Ditempelkan */}
+                  {attachedPhoto && (
+                    <div className="pt-2">
+                      <div className="relative rounded-2xl overflow-hidden max-h-64 w-full sm:max-w-md border border-amber-900/15 shadow-sm bg-stone-100 group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={attachedPhoto} 
+                          alt={`Foto Ulasan ${item.productName || 'Hidangan'}`} 
+                          className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                          onClick={() => window.open(attachedPhoto, '_blank')}
+                        />
+                        <div className="absolute bottom-2 right-2 px-2.5 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-medium rounded-lg flex items-center gap-1 pointer-events-none">
+                          <ImageIcon className="w-3 h-3 text-amber-300" />
+                          <span>Foto Makanan</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               );
             })}
@@ -231,3 +346,4 @@ export default function CommentsPage() {
     </div>
   );
 }
+

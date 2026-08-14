@@ -1,19 +1,22 @@
+// Interface tipe data Ulasan Produk Spesifik untuk tampilan modal detail hidangan
 export interface ProductReview {
-  id: string;
-  author: string;
-  avatar: string;
-  rating: number;
-  text: string;
-  image?: string;
+  id: string; // ID unik ulasan
+  author: string; // Nama pengulas/pelanggan
+  avatar: string; // URL foto avatar pengulas
+  rating: number; // Nilai rating (1-5 bintang)
+  text: string; // Teks isi testimoni ulasan
+  image?: string; // URL gambar foto makanan ulasan (opsional)
 }
 
 /**
-  * Menghasilkan ulasan pelanggan spesifik yang relevan dengan nama menu hidangan.
+  * Fungsi PBO Helper: Menghasilkan ulasan pelanggan spesifik yang relevan dengan nama menu hidangan.
   * Bahasa Indonesia 100% dan relevan dengan cita rasa produk.
   */
 export function getProductSpecificReviews(productName: string, productImage?: string): ProductReview[] {
+  // Ubah nama produk ke huruf kecil untuk pencocokan string
   const name = (productName || '').toLowerCase();
   
+  // Jika produk adalah Ayam Bakar atau olahan Ayam
   if (name.includes('ayam bakar') || name.includes('ayam')) {
     return [
       {
@@ -41,6 +44,7 @@ export function getProductSpecificReviews(productName: string, productImage?: st
     ];
   }
 
+  // Jika produk adalah Nasi Bakar atau olahan Nasi
   if (name.includes('nasi bakar') || name.includes('nasi')) {
     return [
       {
@@ -68,6 +72,7 @@ export function getProductSpecificReviews(productName: string, productImage?: st
     ];
   }
 
+  // Jika produk adalah Krecek Kulit Sapi
   if (name.includes('krecek')) {
     return [
       {
@@ -95,6 +100,7 @@ export function getProductSpecificReviews(productName: string, productImage?: st
     ];
   }
 
+  // Jika produk adalah Gudeg Jogja
   if (name.includes('gudeg')) {
     return [
       {
@@ -122,6 +128,7 @@ export function getProductSpecificReviews(productName: string, productImage?: st
     ];
   }
 
+  // Jika produk adalah Garang Asam Ayam Kampung
   if (name.includes('garang asam') || name.includes('garang')) {
     return [
       {
@@ -149,6 +156,7 @@ export function getProductSpecificReviews(productName: string, productImage?: st
     ];
   }
 
+  // Jika produk adalah Minuman Jus Segar
   if (name.includes('jus')) {
     return [
       {
@@ -176,6 +184,7 @@ export function getProductSpecificReviews(productName: string, productImage?: st
     ];
   }
 
+  // Fallback ulasan umum jika nama produk tidak mencocokkan kategori utama
   return [
     {
       id: 'r1',
@@ -201,3 +210,4 @@ export function getProductSpecificReviews(productName: string, productImage?: st
     }
   ];
 }
+
