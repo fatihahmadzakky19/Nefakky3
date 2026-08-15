@@ -82,17 +82,30 @@ export interface AdminVoucher {
   redemptions: string;
   expiry: string;
   status: 'Active' | 'Expired';
+  event?: string;
   isActive?: boolean;
   usedCount?: number;
   totalLimit?: number;
   validUntil?: string;
   validFrom?: string;
   validDays?: string;
+  autoResetWeekly?: boolean;
+  lastResetWeek?: string;
   isDeleted?: boolean;
   deletedAt?: string;
 }
 
-/** Helper function untuk mengecek apakah voucher valid & aktif saat ini (termasuk validasi kuota & hari/tanggal) */
+/** Helper untuk mendapatkan identifier minggu ISO (contoh: "2026-W33") */
+export const getISOWeekString = (d: Date = new Date()): string => {
+  const date = new Date(d.getTime());
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+  const week1 = new Date(date.getFullYear(), 0, 4);
+  const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+  return `${date.getFullYear()}-W${weekNum}`;
+};
+
+/** Helper function untuk mengecek apakah voucher valid & aktif saat ini (termasuk validasi kuota, auto-reset mingguan & hari/tanggal) */
 export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boolean; reason?: string } => {
   if (!voucher) return { active: false, reason: 'Voucher tidak ditemukan' };
 
@@ -105,30 +118,72 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
   const codeUpper = (voucher.code || '').toUpperCase();
   const nameLower = (voucher.name || '').toLowerCase();
   const expiryLower = (voucher.expiry || '').toLowerCase();
+  const eventLower = (voucher.event || '').toLowerCase();
+  const daysLower = (voucher.validDays || '').toLowerCase();
 
-  // 2. Parse Usage Redemptions & Total Limit (Aturan Batas Pengguna)
-  let usedCount = voucher.usedCount;
-  let totalLimit = voucher.totalLimit;
+  // 1.5 AUTO-RESET MINGGUAN: Jika voucher diset auto-reset mingguan (atau promo akhir pekan)
+  const isAutoResetWeekly = 
+    voucher.autoResetWeekly === true || 
+    daysLower.includes('weekend') || 
+    eventLower.includes('akhir pekan') || 
+    codeUpper.includes('WEEKEND');
 
-  if ((usedCount === undefined || totalLimit === undefined) && voucher.redemptions) {
-    const parts = String(voucher.redemptions).split('/');
-    if (parts.length === 2) {
-      usedCount = parseInt(parts[0].trim(), 10);
-      totalLimit = parseInt(parts[1].trim(), 10);
+  if (isAutoResetWeekly && voucher.id) {
+    const currentWeek = getISOWeekString();
+    if (voucher.lastResetWeek && voucher.lastResetWeek !== currentWeek && voucher.usedCount && voucher.usedCount > 0) {
+      // Automatic reset kuota jika minggu telah berganti!
+      const limit = voucher.totalLimit || 500;
+      voucher.usedCount = 0;
+      voucher.redemptions = `0/${limit}`;
+      voucher.status = 'Active';
+      voucher.lastResetWeek = currentWeek;
+      
+      updateDoc(doc(db, 'vouchers', voucher.id), {
+        usedCount: 0,
+        redemptions: `0/${limit}`,
+        status: 'Active',
+        lastResetWeek: currentWeek,
+        isActive: true
+      }).catch(err => console.error('Error auto-resetting weekly voucher:', err));
     }
   }
 
-  if (usedCount !== undefined && totalLimit !== undefined && !isNaN(usedCount) && !isNaN(totalLimit)) {
-    if (usedCount >= totalLimit) {
-      return { 
-        active: false, 
-        reason: `Maaf, batas kuota penggunaan promo ${voucher.code || ''} telah habis (${usedCount}/${totalLimit} terpakai).` 
-      };
+  // ATURAN PROMO KHUSUS PELANGGAN BARU / AKTIF SELAMANYA & TANPA BATASAN PENGGUNA
+  const isNewCustomerPromo = 
+    voucher.event === 'Pelanggan Baru' ||
+    eventLower.includes('pelanggan baru') ||
+    nameLower.includes('pelanggan baru') ||
+    codeUpper.includes('NEFAKKY10') ||
+    codeUpper.includes('NEWUSER');
+
+  const isSelamanya = voucher.expiry === 'Selamanya' || expiryLower.includes('selamanya') || isNewCustomerPromo;
+  const isTanpaBatas = voucher.redemptions === 'Tanpa Batas' || (voucher.redemptions && String(voucher.redemptions).toLowerCase().includes('tanpa batas')) || isNewCustomerPromo;
+
+  // 2. Parse Usage Redemptions & Total Limit (Aturan Batas Pengguna)
+  if (!isTanpaBatas) {
+    let usedCount = voucher.usedCount;
+    let totalLimit = voucher.totalLimit;
+
+    if ((usedCount === undefined || totalLimit === undefined) && voucher.redemptions) {
+      const parts = String(voucher.redemptions).split('/');
+      if (parts.length === 2) {
+        usedCount = parseInt(parts[0].trim(), 10);
+        totalLimit = parseInt(parts[1].trim(), 10);
+      }
+    }
+
+    if (usedCount !== undefined && totalLimit !== undefined && !isNaN(usedCount) && !isNaN(totalLimit)) {
+      if (usedCount >= totalLimit) {
+        return { 
+          active: false, 
+          reason: `Maaf, batas kuota penggunaan promo ${voucher.code || ''} telah habis (${usedCount}/${totalLimit} terpakai). Kuota akan otomatis ter-reset pada minggu berikutnya.` 
+        };
+      }
     }
   }
 
   // 3. Expiry Date Check (Aturan Batas Waktu / Tanggal Kedaluwarsa)
-  if (voucher.validUntil) {
+  if (!isSelamanya && voucher.validUntil) {
     const untilDate = new Date(voucher.validUntil);
     if (!isNaN(untilDate.getTime())) {
       untilDate.setHours(23, 59, 59, 999);
@@ -141,23 +196,33 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
     }
   }
 
-  // 4. Weekend / Day of Week Validation (Aturan Batas Hari)
+  // 4. Weekend / Day of Week Validation (Aturan Batas Hari Aktif)
+  const day = new Date().getDay(); // 0 = Minggu, 6 = Sabtu, 1-5 = Senin-Jumat
+  const isWeekendDay = day === 0 || day === 6;
+  const isWeekday = day >= 1 && day <= 5;
+
   const isWeekendPromo = 
+    daysLower.includes('weekend') ||
     codeUpper.includes('WEEKEND') || 
     nameLower.includes('weekend') ||
     expiryLower.includes('akhir pekan') ||
     expiryLower.includes('weekend') ||
-    (voucher.validDays && String(voucher.validDays).toLowerCase().includes('weekend'));
+    eventLower.includes('akhir pekan');
 
-  if (isWeekendPromo) {
-    const day = new Date().getDay(); // 0 = Minggu, 6 = Sabtu
-    const isWeekend = day === 0 || day === 6;
-    if (!isWeekend) {
-      return { 
-        active: false, 
-        reason: `Promo ${voucher.code || ''} (${voucher.name || ''}) hanya berlaku pada hari Sabtu & Minggu (Weekend).` 
-      };
-    }
+  const isWeekdayPromo = daysLower.includes('weekday') || daysLower.includes('kerja');
+
+  if (isWeekendPromo && !isWeekendDay) {
+    return { 
+      active: false, 
+      reason: `Promo ${voucher.code || ''} (${voucher.name || ''}) hanya berlaku pada hari Sabtu & Minggu (Weekend).` 
+    };
+  }
+
+  if (isWeekdayPromo && !isWeekday) {
+    return { 
+      active: false, 
+      reason: `Promo ${voucher.code || ''} (${voucher.name || ''}) hanya berlaku pada hari kerja (Senin - Jumat).` 
+    };
   }
 
   return { active: true };
@@ -273,6 +338,7 @@ interface DataContextType {
   forceDeleteProduct: (id: string) => void;
   toggleProductVisibility: (id: string) => void;
   addVoucher: (voucher: Omit<AdminVoucher, 'id'>) => AdminVoucher;
+  updateVoucher: (id: string, updated: Partial<AdminVoucher>) => void;
   deleteVoucher: (id: string) => void;
   softDeleteVoucher: (id: string) => void;
   restoreVoucher: (id: string) => void;
@@ -500,6 +566,7 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     minSpend: 50000,
     redemptions: '142/500',
     expiry: '01 Mei - 31 Des',
+    event: 'Promo Akhir Pekan',
     status: 'Active',
     isActive: true
   },
@@ -512,6 +579,7 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     minSpend: 30000,
     redemptions: '98/1000',
     expiry: 'Akhir Pekan',
+    event: 'Flash Sale',
     status: 'Active',
     isActive: true
   },
@@ -524,6 +592,7 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     minSpend: 45000,
     redemptions: '45/100',
     expiry: '01 Juni - 31 Des',
+    event: 'Tanggal Kembar',
     status: 'Active',
     isActive: true
   },
@@ -534,8 +603,9 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     type: 'Percentage',
     discountPercent: 10,
     minSpend: 30000,
-    redemptions: '50/500',
-    expiry: '31 Des 2026',
+    redemptions: 'Tanpa Batas',
+    expiry: 'Selamanya',
+    event: 'Pelanggan Baru',
     status: 'Active',
     isActive: true
   }
@@ -767,6 +837,7 @@ interface DataContextType {
   deletePromotion: (id: string) => void;
   togglePromotionActive: (id: string) => void;
   addVoucher: (voucher: Omit<AdminVoucher, 'id'>) => AdminVoucher;
+  updateVoucher: (id: string, updated: Partial<AdminVoucher>) => void;
   deleteVoucher: (id: string) => void;
   toggleVoucherStatus: (id: string) => void;
   claimVoucherRedemption: (code: string) => Promise<boolean>;
@@ -858,10 +929,21 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         const vouches = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminVoucher);
         const updatedVouches = vouches.map(v => {
+          // Auto sync voucher pelanggan baru (NEFAKKY10) agar selalu Aktif Selamanya & Tanpa Batas Pengguna
+          if (v.code === 'NEFAKKY10' && (v.expiry !== 'Selamanya' || v.redemptions !== 'Tanpa Batas' || v.event !== 'Pelanggan Baru')) {
+            updateDoc(doc(db, 'vouchers', v.id), { 
+              expiry: 'Selamanya', 
+              redemptions: 'Tanpa Batas',
+              event: 'Pelanggan Baru',
+              status: 'Active',
+              isActive: true
+            }).catch(err => console.error('Error updating Firestore NEFAKKY10 voucher:', err));
+            return { ...v, expiry: 'Selamanya', redemptions: 'Tanpa Batas', event: 'Pelanggan Baru', status: 'Active' as const, isActive: true };
+          }
           if (v.code === 'WEEKENDSERU' && v.discountPercent !== 15) {
-            updateDoc(doc(db, 'vouchers', v.id), { discountPercent: 15, name: 'Weekend Promo Diskon 15%' })
+            updateDoc(doc(db, 'vouchers', v.id), { discountPercent: 15, name: 'Weekend Promo Diskon 15%', event: 'Promo Akhir Pekan' })
               .catch(err => console.error('Error updating Firestore voucher:', err));
-            return { ...v, discountPercent: 15, name: 'Weekend Promo Diskon 15%' };
+            return { ...v, discountPercent: 15, name: 'Weekend Promo Diskon 15%', event: 'Promo Akhir Pekan' };
           }
           return v;
         });
@@ -1078,10 +1160,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       ...voucherData,
       id: newId,
       code: voucherData.code.toUpperCase(),
-      status: voucherData.status || 'Active'
+      status: voucherData.status || 'Active',
+      lastResetWeek: getISOWeekString()
     };
     setDoc(doc(db, 'vouchers', newId), newVoucher).catch(console.error);
     return newVoucher;
+  };
+
+  const updateVoucher = (id: string, updated: Partial<AdminVoucher>) => {
+    setVouchersState(prev => prev.map(v => v.id === id ? { ...v, ...updated } : v));
+    updateDoc(doc(db, 'vouchers', id), updated).catch(console.error);
   };
 
   const softDeleteVoucher = (id: string) => {
@@ -1249,6 +1337,22 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (targetDoc) {
         const v = targetDoc.data();
+        
+        // Cek apakah promo pelanggan baru / tanpa batas
+        const isTanpaBatas = v.redemptions === 'Tanpa Batas' || v.expiry === 'Selamanya' || v.event === 'Pelanggan Baru' || (v.code && v.code.toUpperCase().includes('NEFAKKY10'));
+
+        if (isTanpaBatas) {
+          const newUsed = (v.usedCount || 0) + 1;
+          await updateDoc(doc(db, 'vouchers', targetDoc.id), {
+            usedCount: newUsed,
+            redemptions: 'Tanpa Batas',
+            expiry: 'Selamanya',
+            status: 'Active',
+            isActive: true
+          });
+          return true;
+        }
+
         let usedCount = v.usedCount;
         let totalLimit = v.totalLimit;
 
@@ -1467,6 +1571,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       deletePromotion,
       togglePromotionActive,
       addVoucher,
+      updateVoucher,
       deleteVoucher,
       softDeleteVoucher,
       restoreVoucher,

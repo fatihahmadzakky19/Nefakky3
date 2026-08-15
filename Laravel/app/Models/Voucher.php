@@ -23,7 +23,9 @@ class Voucher extends Model
         'name', // Nama deskriptif promo voucher
         'discount_percent', // Persentase diskon (%)
         'min_spend', // Syarat minimal total belanja untuk klaim voucher (Rp)
-        'expiry', // Tanggal kedaluwarsa voucher
+        'expiry', // Tanggal kedaluwarsa voucher ("31 Des 2026", "Selamanya")
+        'event', // Kategori/Event promo ("Pelanggan Baru", "Flash Sale", etc)
+        'redemptions', // Kuota penggunaan ("0/500", "Tanpa Batas")
         'status', // Status keaktifan voucher ("Active", "Expired")
         'is_active', // Flag boolean status aktif (true/false)
     ];
