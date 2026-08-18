@@ -63,53 +63,53 @@ export default function MenuCatalogPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-20 lg:pb-0">
+    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-28 lg:pb-12">
       
       {/* 1. BILAH NAVIGASI UTAMA */}
       <Navbar />
 
       {/* 2. HEADER BANNER KATALOG */}
-      <section className="bg-[#25160E] text-white py-10 sm:py-12 px-4 sm:px-12 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto space-y-3 relative z-10 text-center sm:text-left">
+      <section className="bg-[#25160E] text-white py-8 sm:py-12 px-4 sm:px-12 relative overflow-hidden text-center sm:text-left">
+        <div className="max-w-7xl mx-auto space-y-2.5 sm:space-y-3 relative z-10">
           <span className="px-3.5 py-1 bg-[#934B19] text-[#FBF9F5] text-[10px] sm:text-xs font-bold rounded-full uppercase tracking-wider inline-block">
-            Kolesi Hidangan Utama
+            Koleksi Hidangan Utama
           </span>
-          <h1 className="font-serif text-2xl sm:text-5xl font-bold tracking-tight text-[#FBF9F5]">
+          <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#FBF9F5]">
             Katalog Kuliner Otentik Nefakky
           </h1>
-          <p className="text-xs sm:text-sm text-[#FBF9F5]/80 font-light max-w-xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#FBF9F5]/80 font-light max-w-xl mx-auto sm:mx-0 leading-relaxed">
             Nikmati cita rasa kelezatan resep warisan rumahan yang dimasak segar setiap hari menggunakan bahan alami pilihan.
           </p>
         </div>
       </section>
 
       {/* 3. KONTEN KATALOG & FILTER */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-12 py-6 sm:py-10 space-y-6 sm:space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10 space-y-6 sm:space-y-8">
         
         {/* Bilah Filter & Pencarian Mobile/Desktop */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border border-amber-900/10 shadow-xl shadow-amber-950/5">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4 bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-amber-900/10 shadow-xl shadow-amber-950/5">
           
           {/* Input Pencarian (Search Bar) */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1">
             <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari menu kesukaan Anda (e.g. Ayam Bakar, Gudeg)..."
-              className="w-full pl-10 pr-4 py-2.5 bg-[#FBF9F5] border border-amber-900/15 rounded-2xl text-xs text-[#25160E] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 transition-all font-medium"
+              placeholder="Cari menu (Ayam Bakar, Gudeg, Jus)..."
+              className="w-full pl-10 pr-4 py-2.5 bg-[#FBF9F5] border border-amber-900/15 rounded-xl sm:rounded-2xl text-xs text-[#25160E] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 transition-all font-medium"
             />
           </div>
 
           {/* Controls: Pills Kategori & Sort */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
             {/* Pills Kategori */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
               {categories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+                  className={`px-3.5 py-2 rounded-xl sm:rounded-2xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                     activeCategory === cat
                       ? 'bg-[#25160E] text-white shadow-md'
                       : 'bg-[#FBF9F5] text-[#4F4540] hover:bg-stone-200'
@@ -121,17 +121,17 @@ export default function MenuCatalogPage() {
             </div>
 
             {/* Opsi Pengurutan Sort By */}
-            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-              <SlidersHorizontal className="w-4 h-4 text-[#934B19] shrink-0" />
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 w-full sm:w-auto">
+              <SlidersHorizontal className="w-4 h-4 text-[#934B19] shrink-0 hidden sm:block" />
               <select
                 value={sortBy}
                 onChange={(e: any) => setSortBy(e.target.value)}
-                className="bg-[#FBF9F5] border border-amber-900/15 text-xs text-[#25160E] font-semibold py-2 px-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 cursor-pointer"
+                className="w-full sm:w-auto bg-[#FBF9F5] border border-amber-900/15 text-xs text-[#25160E] font-semibold py-2 px-3 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 cursor-pointer"
               >
                 <option value="popular">Terpopuler</option>
                 <option value="rating">Rating Tertinggi</option>
-                <option value="price-low">Harga: Terendah ke Tertinggi</option>
-                <option value="price-high">Harga: Tertinggi ke Terendah</option>
+                <option value="price-low">Harga: Rendah ke Tinggi</option>
+                <option value="price-high">Harga: Tinggi ke Rendah</option>
               </select>
             </div>
           </div>
@@ -139,7 +139,7 @@ export default function MenuCatalogPage() {
         </div>
 
         {/* GRID DAFTAR PRODUK (Google Stitch Card Token) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredProducts.map((product) => {
             const inCart = cartItems.find(i => i.id === product.id);
             const cartQty = inCart?.quantity || 0;
@@ -148,11 +148,11 @@ export default function MenuCatalogPage() {
             return (
               <div 
                 key={product.id}
-                className="bg-white rounded-3xl overflow-hidden border border-amber-900/10 shadow-xl shadow-amber-950/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col group"
+                className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden border border-amber-900/10 shadow-xl shadow-amber-950/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col group"
               >
-                {/* Image Aspect Ratio Container 4:3 */}
+                {/* Image Aspect Ratio Container */}
                 <div 
-                  className="relative h-48 w-full overflow-hidden bg-[#25160E] cursor-pointer"
+                  className="relative h-44 sm:h-52 w-full overflow-hidden bg-[#25160E] cursor-pointer"
                   onClick={() => setDetailProduct({
                     id: product.id,
                     name: product.name,
@@ -176,13 +176,13 @@ export default function MenuCatalogPage() {
                   {/* Wishlist Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id); }}
-                    className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md rounded-full shadow-sm text-stone-700 hover:text-rose-500 transition-colors"
+                    className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md rounded-full shadow-sm text-stone-700 hover:text-rose-500 transition-colors active:scale-95"
                   >
                     <Heart className={`w-4 h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
                   </button>
 
                   {/* Rating & Sales Badge */}
-                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[11px] font-bold text-[#25160E] flex items-center gap-1 shadow-sm">
+                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-[#25160E] flex items-center gap-1 shadow-sm">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                     <span>{product.rating.toFixed(1)}</span>
                     <span className="text-[10px] text-[#4F4540] font-normal ml-1">• {product.soldCount || '500+ Terjual'}</span>
@@ -190,7 +190,7 @@ export default function MenuCatalogPage() {
                 </div>
 
                 {/* Card Body */}
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3.5 sm:space-y-4">
                   <div className="space-y-1.5">
                     <span className="text-[10px] font-bold text-[#934B19] uppercase tracking-wider">
                       {product.category}
@@ -208,7 +208,7 @@ export default function MenuCatalogPage() {
                         ingredients: product.ingredients || 'Bahan baku koki pilihan.',
                         storage: product.usageAdvice || 'Santap selagi hangat.'
                       })}
-                      className="font-serif text-lg font-bold text-[#25160E] hover:text-[#934B19] cursor-pointer transition-colors line-clamp-1"
+                      className="font-serif text-base sm:text-lg font-bold text-[#25160E] hover:text-[#934B19] cursor-pointer transition-colors line-clamp-1"
                     >
                       {product.name}
                     </h3>
@@ -221,23 +221,23 @@ export default function MenuCatalogPage() {
                   <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
                     <div>
                       <span className="text-[10px] text-stone-400 font-medium block">Harga Porsi</span>
-                      <span className="font-serif text-base font-bold text-[#25160E]">
+                      <span className="font-serif text-sm sm:text-base font-bold text-[#25160E]">
                         Rp {product.price.toLocaleString('id-ID')}
                       </span>
                     </div>
 
                     {cartQty > 0 ? (
-                      <div className="flex items-center gap-2 bg-[#FBF9F5] border border-amber-900/15 p-1 rounded-2xl">
+                      <div className="flex items-center gap-1.5 sm:gap-2 bg-[#FBF9F5] border border-amber-900/15 p-1 rounded-xl sm:rounded-2xl">
                         <button
                           onClick={() => removeFromCart(product.id)}
-                          className="w-7 h-7 bg-white text-[#25160E] rounded-xl flex items-center justify-center font-bold hover:bg-stone-100 shadow-xs"
+                          className="w-7 h-7 bg-white text-[#25160E] rounded-lg sm:rounded-xl flex items-center justify-center font-bold hover:bg-stone-100 shadow-xs active:scale-95"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
                         <span className="text-xs font-bold text-[#25160E] px-1">{cartQty}</span>
                         <button
                           onClick={() => addToCart(product.id)}
-                          className="w-7 h-7 bg-[#25160E] text-white rounded-xl flex items-center justify-center font-bold hover:bg-[#3C2A21] shadow-xs"
+                          className="w-7 h-7 bg-[#25160E] text-white rounded-lg sm:rounded-xl flex items-center justify-center font-bold hover:bg-[#3C2A21] shadow-xs active:scale-95"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
@@ -245,7 +245,7 @@ export default function MenuCatalogPage() {
                     ) : (
                       <button
                         onClick={() => addToCart(product.id)}
-                        className="px-4 py-2.5 bg-[#25160E] hover:bg-[#3C2A21] text-white text-xs font-bold rounded-2xl shadow-md transition-all flex items-center gap-1.5"
+                        className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-[#25160E] hover:bg-[#3C2A21] text-white text-xs font-bold rounded-xl sm:rounded-2xl shadow-md transition-all flex items-center gap-1.5 active:scale-95"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Pesan</span>

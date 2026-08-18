@@ -1,40 +1,60 @@
 'use client';
 
+/**
+ * ============================================================================
+ * HALAMAN: Pendaftaran Akun Baru / Registrasi (src/app/register/page.tsx)
+ * DESKRIPSI: Pembuatan akun pelanggan baru dengan validasi password,
+ *            persetujuan syarat ketentuan, dan pendaftaran cepat via Google SSO.
+ * ============================================================================
+ */
+
+// Mengimpor React dan hook useState untuk pengelolaan state form registrasi
 import React, { useState } from 'react';
+// Mengimpor Link untuk navigasi ke halaman login
 import Link from 'next/link';
+// Mengimpor Image dari Next.js untuk aset visual
 import Image from 'next/image';
+// Mengimpor hook useRouter untuk navigasi halaman
 import { useRouter } from 'next/navigation';
+// Mengimpor AuthContext untuk memanggil fungsi register & registerWithGoogle
 import { useAuth } from '@/context/AuthContext';
+// Mengimpor ikon-ikon modern dari Lucide React
 import { Eye, EyeOff, ShieldCheck, Truck, Leaf, User, Mail, Phone, Lock } from 'lucide-react';
 
+// Komponen Utama Halaman Registrasi
 export default function RegisterPage() {
   const router = useRouter();
   const { register, registerWithGoogle } = useAuth();
 
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // State Lokal Formulir Registrasi
+  const [fullName, setFullName] = useState(''); // Input nama lengkap
+  const [email, setEmail] = useState(''); // Input alamat email
+  const [phone, setPhone] = useState(''); // Input nomor telepon/WhatsApp
+  const [password, setPassword] = useState(''); // Input kata sandi
+  const [confirmPassword, setConfirmPassword] = useState(''); // Input konfirmasi kata sandi
+  const [agreeTerms, setAgreeTerms] = useState(false); // Checkbox persetujuan syarat & ketentuan
+  const [showPassword, setShowPassword] = useState(false); // Toggle lihat/sembunyikan kata sandi
+  const [errorMessage, setErrorMessage] = useState(''); // Pesan error validasi
+  const [isSubmitting, setIsSubmitting] = useState(false); // Status loading submit
 
+  // Handler Submit Form Registrasi Akun Manual
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
+    // Validasi kelengkapan form
     if (!fullName || !email || !password || !confirmPassword) {
       setErrorMessage('Silakan lengkapi semua kolom yang wajib diisi.');
       return;
     }
 
+    // Validasi kecocokan konfirmasi kata sandi
     if (password !== confirmPassword) {
       setErrorMessage('Konfirmasi kata sandi tidak cocok.');
       return;
     }
 
+    // Validasi persetujuan syarat dan ketentuan
     if (!agreeTerms) {
       setErrorMessage('Anda harus menyetujui Syarat & Ketentuan.');
       return;
@@ -56,6 +76,7 @@ export default function RegisterPage() {
     }
   };
 
+  // Handler Registrasi Cepat via Google OAuth SSO
   const handleGoogleSignUp = async () => {
     setErrorMessage('');
     setIsSubmitting(true);

@@ -1,34 +1,52 @@
 'use client';
 
+/**
+ * ============================================================================
+ * HALAMAN: Masuk Akun / Login Pengguna & Admin (src/app/login/page.tsx)
+ * DESKRIPSI: Otentikasi pengguna berbasis Firebase (Google SSO & Email/Password).
+ *            Dilengkapi pengalihan otomatis peran (Role-based redirect):
+ *            Admin -> /admin, Customer -> / (Beranda).
+ * ============================================================================
+ */
+
+// Mengimpor React dan hook useState untuk manajemen state form login
 import React, { useState } from 'react';
+// Mengimpor Link untuk navigasi ke halaman registrasi & lupa password
 import Link from 'next/link';
+// Mengimpor Next Image untuk optimasi logo
 import Image from 'next/image';
+// Mengimpor hook useRouter untuk navigasi halaman setelah login berhasil
 import { useRouter } from 'next/navigation';
+// Mengimpor AuthContext untuk memanggil fungsi login Firebase
 import { useAuth } from '@/context/AuthContext';
+// Mengimpor ikon-ikon modern dari Lucide React
 import { Mail, Lock, Eye, EyeOff, LockKeyhole } from 'lucide-react';
 
+// Komponen Utama Halaman Login
 export default function LoginPage() {
   const router = useRouter();
   const { user, login, loginWithGoogle, loading } = useAuth();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // State Lokal Formulir Login
+  const [email, setEmail] = useState(''); // Input alamat email
+  const [password, setPassword] = useState(''); // Input kata sandi
+  const [showPassword, setShowPassword] = useState(false); // Toggle lihat/sembunyikan password
+  const [rememberMe, setRememberMe] = useState(false); // Flag ingat saya
+  const [errorMessage, setErrorMessage] = useState(''); // Pesan error login
+  const [isSubmitting, setIsSubmitting] = useState(false); // Status loading submit
 
-  // Automatically redirect if already logged in
+  // Effect: Otomatis alihkan (redirect) jika pengguna sudah dalam sesi login
   React.useEffect(() => {
     if (!loading && user) {
       if (user.role === 'admin') {
-        router.push('/admin');
+        router.push('/admin'); // Alihkan akun admin ke Dashboard Admin
       } else {
-        router.push('/');
+        router.push('/'); // Alihkan pelanggan ke Beranda
       }
     }
   }, [user, loading, router]);
 
+  // Handler Submit Form Login Manual (Email & Password)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -57,6 +75,7 @@ export default function LoginPage() {
     }
   };
 
+  // Handler Login Cepat via Google OAuth SSO
   const handleGoogleSignIn = async () => {
     setErrorMessage('');
     setIsSubmitting(true);

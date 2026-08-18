@@ -120,13 +120,13 @@ export default function UserHomePage() {
   const activeVouchers = (vouchers || []).filter(v => isVoucherValidNow(v).active && !v.isDeleted);
 
   return (
-    <div className="min-h-screen bg-[#fbf9f5] text-[#1b1c1a] font-sans selection:bg-[#934b19]/10 selection:text-[#934b19] pb-20 lg:pb-0">
+    <div className="min-h-screen bg-[#fbf9f5] text-[#1b1c1a] font-sans selection:bg-[#934b19]/10 selection:text-[#934b19] pb-28 lg:pb-12">
       
       {/* 1. GOOGLE STITCH NAVBAR */}
       <Navbar />
 
       {/* 2. DYNAMIC HERO SHOWCASE SLIDER (Google Stitch Exact Specification) */}
-      <section className="relative w-full h-[520px] sm:h-[640px] lg:h-[760px] min-h-[460px] overflow-hidden bg-[#25160e]">
+      <section className="relative w-full h-[480px] sm:h-[600px] lg:h-[720px] min-h-[440px] overflow-hidden bg-[#25160e]">
         
         {/* Active Hero Image Background */}
         {heroSlides.map((slide, index) => {
@@ -142,7 +142,7 @@ export default function UserHomePage() {
                 src={slide.image}
                 alt={slide.name}
                 fill
-                className="object-cover object-center brightness-[0.75] contrast-[1.05]"
+                className="object-cover object-center brightness-[0.72] contrast-[1.05]"
                 priority
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#25160e] via-[#25160e]/50 to-transparent" />
@@ -152,10 +152,10 @@ export default function UserHomePage() {
 
         {/* Hero Content Overlay */}
         <div className="absolute inset-0 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 flex flex-col justify-end pb-12 sm:pb-16 z-20">
-          <div className="max-w-2xl space-y-4 sm:space-y-6">
+          <div className="max-w-2xl space-y-3.5 sm:space-y-6">
             
             {/* Main Headline */}
-            <h1 className="font-serif text-2xl sm:text-4xl lg:text-[52px] text-white font-bold leading-[1.2] lg:leading-[1.15] tracking-tight">
+            <h1 className="font-serif text-2xl sm:text-4xl lg:text-[50px] text-white font-bold leading-[1.2] lg:leading-[1.15] tracking-tight">
               Nikmati Kelezatan Kuliner Otentik Tradisional Khas Nusantara
             </h1>
 
@@ -168,7 +168,7 @@ export default function UserHomePage() {
             <div className="pt-1 sm:pt-2">
               <Link
                 href="/menu"
-                className="inline-flex items-center gap-2.5 sm:gap-3 bg-[#934b19] text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-full font-bold text-xs sm:text-sm hover:bg-[#ffa26a] hover:text-[#783603] transition-all shadow-[0_4px_24px_rgba(147,75,25,0.4)] group"
+                className="inline-flex items-center justify-center gap-2.5 sm:gap-3 bg-[#934b19] text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-full font-bold text-xs sm:text-sm hover:bg-[#ffa26a] hover:text-[#783603] transition-all shadow-[0_4px_24px_rgba(147,75,25,0.4)] group active:scale-95"
               >
                 <span>Eksplorasi Menu</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -182,13 +182,15 @@ export default function UserHomePage() {
         <div className="absolute right-4 sm:right-6 lg:right-16 bottom-6 sm:bottom-16 flex items-center gap-2 sm:gap-3 z-30">
           <button 
             onClick={() => setHeroSlideIndex((prev) => (prev === 0 ? heroSlides.length - 1 : prev - 1))}
-            className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/30 transition-colors shadow-md text-sm sm:text-base"
+            className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/30 transition-colors shadow-md text-sm sm:text-base active:scale-95"
+            aria-label="Previous Slide"
           >
             ‹
           </button>
           <button 
             onClick={() => setHeroSlideIndex((prev) => (prev + 1) % heroSlides.length)}
-            className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/30 transition-colors shadow-md text-sm sm:text-base"
+            className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/30 transition-colors shadow-md text-sm sm:text-base active:scale-95"
+            aria-label="Next Slide"
           >
             ›
           </button>
@@ -197,8 +199,8 @@ export default function UserHomePage() {
       </section>
 
       {/* 3. QUICK CATEGORY PILLS (Google Stitch Floating Card) */}
-      <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 w-full -mt-8 sm:-mt-10 relative z-30">
-        <div className="bg-[#fbf9f5]/95 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(69,26,3,0.08)] border border-amber-900/10 p-4 sm:p-6 lg:p-8 flex items-center justify-start sm:justify-center gap-3 sm:gap-4 lg:gap-8 overflow-x-auto no-scrollbar">
+      <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 w-full -mt-6 sm:-mt-8 relative z-30">
+        <div className="bg-[#fbf9f5]/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(69,26,3,0.08)] border border-amber-900/10 p-3.5 sm:p-5 lg:p-6 flex items-center justify-start sm:justify-center gap-2.5 sm:gap-4 lg:gap-8 overflow-x-auto no-scrollbar">
           {categoriesList.map((cat) => {
             const Icon = cat.icon;
             const isActive = activeCategory === cat.catKey;
@@ -206,9 +208,9 @@ export default function UserHomePage() {
               <div
                 key={cat.name}
                 onClick={() => setActiveCategory(cat.catKey)}
-                className={`flex items-center gap-2.5 sm:gap-3 px-5 py-3 sm:px-6 sm:py-3.5 rounded-full cursor-pointer transition-all shrink-0 group ${
+                className={`flex items-center gap-2 sm:gap-3 px-4 py-2.5 sm:px-6 sm:py-3 rounded-full cursor-pointer transition-all shrink-0 group ${
                   isActive
-                    ? 'bg-[#25160e] text-white shadow-md'
+                    ? 'bg-[#25160e] text-white shadow-md scale-[1.02]'
                     : 'bg-[#25160e]/5 hover:bg-[#25160e]/10 text-[#25160e]'
                 }`}
               >
@@ -222,24 +224,24 @@ export default function UserHomePage() {
 
       {/* 4. ACTIVE VOUCHERS PROMO STRIP */}
       {activeVouchers.length > 0 && (
-        <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 pt-8 sm:pt-10">
-          <div className="bg-gradient-to-r from-[#25160e] via-[#3c2a21] to-[#934b19] rounded-2xl p-5 sm:p-8 text-white shadow-xl border border-amber-900/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 pt-6 sm:pt-10">
+          <div className="bg-gradient-to-r from-[#25160e] via-[#3c2a21] to-[#934b19] rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-xl border border-amber-900/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 sm:gap-6">
             <div className="space-y-1">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-400/20 text-amber-300 text-[10px] font-bold rounded-full uppercase tracking-wider mb-1 border border-amber-400/30">
                 <Ticket className="w-3.5 h-3.5" />
                 Voucher Diskon Spesial
               </div>
-              <h3 className="font-serif text-xl sm:text-2xl font-bold text-white">Gunakan Kode Promo Nefakky</h3>
+              <h3 className="font-serif text-lg sm:text-2xl font-bold text-white">Gunakan Kode Promo Nefakky</h3>
               <p className="text-xs text-white/80 font-light">Klaim kupon belanja diskon hingga 50% untuk setiap pemesanan hari ini.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full md:w-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full md:w-auto">
               {activeVouchers.map((v) => {
                 const isUsed = isVoucherUsedByUser && isVoucherUsedByUser(v.code, user?.uid, user?.email);
 
                 return (
-                  <div key={v.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-3.5 rounded-2xl text-left flex items-center gap-3.5 hover:bg-white/15 transition-all shadow-md">
+                  <div key={v.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-3 sm:p-3.5 rounded-2xl text-left flex items-center gap-3 hover:bg-white/15 transition-all shadow-md">
                     {v.imageUrl ? (
-                      <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-white/30 shadow-xs">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden shrink-0 border border-white/30 shadow-xs">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={v.imageUrl} alt={v.name} className="w-full h-full object-cover" />
                       </div>
@@ -273,7 +275,7 @@ export default function UserHomePage() {
                               alert(res.message);
                             }
                           }}
-                          className="mt-1.5 px-3 py-1 bg-amber-400 text-[#25160e] text-[10px] font-bold rounded-lg hover:bg-amber-300 transition-colors block text-center shadow-xs w-full"
+                          className="mt-1.5 px-3 py-1 bg-amber-400 text-[#25160e] text-[10px] font-bold rounded-lg hover:bg-amber-300 transition-colors block text-center shadow-xs w-full active:scale-95"
                         >
                           Klaim Kupon
                         </button>
@@ -288,24 +290,24 @@ export default function UserHomePage() {
       )}
 
       {/* 5. FEATURED MENU GRID (Google Stitch Koleksi Terpopuler) */}
-      <section className="max-w-[1280px] mx-auto px-6 lg:px-16 w-full py-12 relative">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+      <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 w-full py-8 sm:py-12 relative">
+        <div className="flex justify-between items-end mb-6 sm:mb-8 gap-4">
           <div className="max-w-xl">
-            <h2 className="font-serif text-3xl font-bold text-[#25160e] mb-2 flex items-center gap-3">
-              <span className="w-12 h-[2px] bg-[#934b19] hidden md:block"></span>
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#25160e] mb-1 sm:mb-2 flex items-center gap-2.5 sm:gap-3">
+              <span className="w-8 sm:w-12 h-[2px] bg-[#934b19] hidden sm:block"></span>
               Koleksi Terpopuler
             </h2>
             <p className="text-xs text-[#4f4540] font-normal">
               Pilihan favorit para pencinta kuliner yang diolah dengan resep rahasia turun-temurun.
             </p>
           </div>
-          <Link href="/menu" className="text-[#934b19] font-bold text-xs flex items-center gap-1.5 hover:text-[#25160e] transition-colors">
-            <span>Lihat Semua Menu</span>
-            <ArrowRight className="w-4 h-4" />
+          <Link href="/menu" className="text-[#934b19] font-bold text-xs flex items-center gap-1 hover:text-[#25160e] transition-colors shrink-0">
+            <span>Lihat Semua</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredProducts.slice(0, 6).map((product) => {
             const inCart = cartItems.find(i => i.id === product.id);
             const cartQty = inCart?.quantity || 0;
@@ -313,10 +315,10 @@ export default function UserHomePage() {
             return (
               <article 
                 key={product.id}
-                className="group cursor-pointer rounded-2xl bg-white shadow-[0_4px_24px_rgba(69,26,3,0.05)] hover:shadow-[0_12px_48px_rgba(69,26,3,0.12)] transition-all duration-500 overflow-hidden relative flex flex-col h-full hover:-translate-y-2 border border-amber-900/10"
+                className="group cursor-pointer rounded-2xl sm:rounded-3xl bg-white shadow-[0_4px_24px_rgba(69,26,3,0.05)] hover:shadow-[0_12px_48px_rgba(69,26,3,0.12)] transition-all duration-500 overflow-hidden relative flex flex-col h-full hover:-translate-y-1.5 border border-amber-900/10"
               >
                 <div 
-                  className="relative w-full aspect-[4/3] overflow-hidden bg-[#25160e]"
+                  className="relative w-full aspect-[16/10] sm:aspect-[4/3] overflow-hidden bg-[#25160e]"
                   onClick={() => setDetailProduct({
                     id: product.id,
                     name: product.name,
@@ -333,13 +335,17 @@ export default function UserHomePage() {
                   <img 
                     src={product.image || '/images/ayam_bakar.jpg'}
                     alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out" 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out" 
                   />
+                  <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-[#25160E] flex items-center gap-1 shadow-sm">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span>{product.rating.toFixed(1)}</span>
+                  </div>
                 </div>
 
-                <div className="p-6 flex flex-col flex-grow justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-start">
+                <div className="p-4 sm:p-6 flex flex-col flex-grow justify-between space-y-3.5 sm:space-y-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <div className="flex justify-between items-start gap-2">
                       <h3 
                         onClick={() => setDetailProduct({
                           id: product.id,
@@ -353,11 +359,11 @@ export default function UserHomePage() {
                           ingredients: product.ingredients || 'Bahan baku koki pilihan.',
                           storage: product.usageAdvice || 'Santap selagi hangat.'
                         })}
-                        className="font-serif text-xl font-bold text-[#25160e] group-hover:text-[#934b19] transition-colors line-clamp-1"
+                        className="font-serif text-lg sm:text-xl font-bold text-[#25160e] group-hover:text-[#934b19] transition-colors line-clamp-1"
                       >
                         {product.name}
                       </h3>
-                      <span className="font-bold text-xs text-[#25160e] bg-[#25160e]/5 px-3 py-1 rounded-full whitespace-nowrap">
+                      <span className="font-bold text-xs text-[#25160e] bg-[#25160e]/5 px-2.5 py-1 rounded-full whitespace-nowrap">
                         Rp {product.price.toLocaleString('id-ID')}
                       </span>
                     </div>
@@ -368,7 +374,7 @@ export default function UserHomePage() {
 
                   <button 
                     onClick={() => addToCart(product.id)}
-                    className="w-full py-3 px-4 rounded-xl text-[#25160e] border border-[#25160e]/20 font-bold text-xs group-hover:bg-[#25160e] group-hover:text-white transition-all flex items-center justify-center gap-2 shadow-xs"
+                    className="w-full py-3 px-4 rounded-xl text-[#25160e] border border-[#25160e]/20 font-bold text-xs group-hover:bg-[#25160e] group-hover:text-white transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95"
                   >
                     <ShoppingBag className="w-4 h-4" />
                     <span>{cartQty > 0 ? `Tambah Porsi (${cartQty})` : 'Tambah ke Keranjang'}</span>
@@ -381,46 +387,44 @@ export default function UserHomePage() {
       </section>
 
       {/* 6. SPLIT PANEL: ART OF COOKING / FILOSOFI RASA (Google Stitch Specification) */}
-      <section className="w-full bg-[#25160e] text-white mt-12 py-16 relative overflow-hidden">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="w-full bg-[#25160e] text-white mt-8 sm:mt-12 py-10 sm:py-16 relative overflow-hidden">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           
-          <div className="order-2 lg:order-1 flex gap-4">
-            <div className="w-1/2 flex flex-col gap-4 mt-8">
+          <div className="order-2 lg:order-1 space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div 
-                className="w-full aspect-[3/4] bg-cover bg-center rounded-2xl shadow-xl border border-white/10" 
+                className="w-full aspect-[4/5] bg-cover bg-center rounded-2xl shadow-xl border border-white/10" 
                 style={{ backgroundImage: `url('/images/krecek.jpg')` }}
               />
-              <div className="w-full p-6 bg-[#3c2a21] rounded-2xl border border-amber-900/20">
-                <h4 className="font-serif text-2xl font-bold text-amber-300 mb-1">100%</h4>
-                <p className="text-xs text-white/80 font-medium">Rempah Alami Nusantara</p>
-              </div>
-            </div>
-            <div className="w-1/2 flex flex-col gap-4">
               <div 
-                className="w-full aspect-[3/4] bg-cover bg-center rounded-2xl shadow-xl border border-white/10" 
+                className="w-full aspect-[4/5] bg-cover bg-center rounded-2xl shadow-xl border border-white/10" 
                 style={{ backgroundImage: `url('/images/gudeg.jpg')` }}
               />
             </div>
+            <div className="w-full p-4 sm:p-5 bg-[#3c2a21] rounded-2xl border border-amber-900/20 text-center sm:text-left">
+              <h4 className="font-serif text-xl sm:text-2xl font-bold text-amber-300 mb-0.5">100% Rempah Alami</h4>
+              <p className="text-xs text-white/80 font-medium">Warisan Resep Tradisional Otentik Nusantara</p>
+            </div>
           </div>
 
-          <div className="order-1 lg:order-2 space-y-6">
-            <div className="inline-block border border-amber-300/30 rounded-full px-4 py-1.5">
+          <div className="order-1 lg:order-2 space-y-4 sm:space-y-6">
+            <div className="inline-block border border-amber-300/30 rounded-full px-3.5 py-1">
               <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">Filosofi Rasa</span>
             </div>
-            <h2 className="font-serif text-3xl lg:text-4xl font-bold leading-tight text-white">
+            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight text-white">
               Seni Memasak yang Merawat Tradisi Kuliner
             </h2>
             <p className="text-xs lg:text-sm text-white/80 font-light leading-relaxed max-w-lg">
               Kami percaya bahwa setiap hidangan adalah cerita. Menggunakan resep otentik dan metode memasak tradisional yang perlahan, kami memastikan setiap suapan membawa Anda pada perjalanan nostalgia rasa yang mendalam.
             </p>
-            <div className="grid grid-cols-2 gap-6 pt-2">
-              <div className="space-y-1">
-                <ChefHat className="w-7 h-7 text-[#ffa26a] mb-1" />
+            <div className="grid grid-cols-2 gap-4 pt-1">
+              <div className="space-y-1 bg-white/5 p-3 rounded-2xl border border-white/10">
+                <ChefHat className="w-6 h-6 text-[#ffa26a] mb-1" />
                 <h4 className="font-bold text-xs text-white">Slow Cooked</h4>
                 <p className="text-[11px] text-white/60">Tekstur lembut & bumbu meresap</p>
               </div>
-              <div className="space-y-1">
-                <Leaf className="w-7 h-7 text-[#ffa26a] mb-1" />
+              <div className="space-y-1 bg-white/5 p-3 rounded-2xl border border-white/10">
+                <Leaf className="w-6 h-6 text-[#ffa26a] mb-1" />
                 <h4 className="font-bold text-xs text-white">Bahan Segar</h4>
                 <p className="text-[11px] text-white/60">Dipilih segar setiap hari</p>
               </div>

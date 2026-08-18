@@ -10,11 +10,11 @@
 | Parameter | Hasil |
 | :--- | :--- |
 | **Status Keseluruhan** | **PASSED ✅** |
-| **Waktu Eksekusi** | 18/8/2026, 13.27.20 WIB |
+| **Waktu Eksekusi** | 18/8/2026, 14.05.59 WIB |
 | **Total Pengujian** | 6 Tes |
 | **Berhasil (Passed)** | **6** ✅ |
 | **Gagal (Failed)** | **0** ❌ |
-| **Durasi Eksekusi** | 2854 ms |
+| **Durasi Eksekusi** | 4221 ms |
 
 ---
 
@@ -23,7 +23,7 @@
 
 ### 1. 1. TypeScript Compilation — tsc --noEmit type check
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 2850 ms
+- **Waktu Eksekusi**: 4217 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 

@@ -187,33 +187,33 @@ export default function CommentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-20 lg:pb-0">
+    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-28 lg:pb-12">
       
       {/* 1. BILAH NAVIGASI UTAMA */}
       <Navbar />
 
       {/* 2. KONTEN UTAMA HALAMAN */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-12 py-6 sm:py-10 space-y-6 sm:space-y-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10 space-y-6 sm:space-y-10">
         
         {/* Header Judul Halaman (Google Stitch Design Token) */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <span className="px-3.5 py-1.5 bg-[#934B19]/10 text-[#934B19] text-xs font-bold rounded-full border border-[#934B19]/20 uppercase tracking-wider inline-block">
+        <div className="text-center max-w-2xl mx-auto space-y-2.5 sm:space-y-3">
+          <span className="px-3.5 py-1 bg-[#934B19]/10 text-[#934B19] text-[10px] sm:text-xs font-bold rounded-full border border-[#934B19]/20 uppercase tracking-wider inline-block">
             Komunitas Pecinta Kuliner
           </span>
-          <h1 className="font-serif text-2xl sm:text-5xl font-bold text-[#25160E] tracking-tight">
+          <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-bold text-[#25160E] tracking-tight">
             Ulasan & Pengalaman Pelanggan
           </h1>
-          <p className="text-xs sm:text-sm text-[#4F4540] font-medium leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#4F4540] font-medium leading-relaxed max-w-xl mx-auto">
             Temukan cerita cita rasa otentik dari pelanggan Nefakky. Bagikan masukan dan foto hidangan masakan Anda bersama kami.
           </p>
         </div>
 
         {/* Grid 2 Kolom: Form Komentar (Kiri) & Daftar Ulasan (Kanan) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
           
           {/* KOLOM KIRI: FORMULIR TAMBAH ULASAN */}
-          <div className="lg:col-span-4 bg-white border border-amber-900/10 rounded-3xl p-6 shadow-xl shadow-amber-950/5 space-y-4 sticky top-24">
-            <h2 className="font-serif text-xl font-bold text-[#25160E] flex items-center gap-2 border-b border-stone-100 pb-3">
+          <div className="lg:col-span-4 bg-white border border-amber-900/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl shadow-amber-950/5 space-y-4 lg:sticky lg:top-24">
+            <h2 className="font-serif text-lg sm:text-xl font-bold text-[#25160E] flex items-center gap-2 border-b border-stone-100 pb-3">
               <MessageSquare className="w-5 h-5 text-[#934B19]" />
               <span>Tulis Ulasan Rasa</span>
             </h2>

@@ -393,7 +393,7 @@ export default function BasketCartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-20 lg:pb-0">
+    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-28 lg:pb-12">
       <Script
         src="https://app.sandbox.midtrans.com/snap/snap.js"
         data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'Mid-client-8T4q9uw1fIGB-pla'}
@@ -419,20 +419,20 @@ export default function BasketCartPage() {
       <main className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 py-6 sm:py-10 space-y-6 sm:space-y-8">
         
         {/* Header Section */}
-        <div className="space-y-2">
-          <h1 className="font-serif text-3xl sm:text-5xl font-bold text-[#25160E] tracking-tight">
+        <div className="space-y-1.5 sm:space-y-2 text-center sm:text-left">
+          <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-bold text-[#25160E] tracking-tight">
             {currentStep === 1 && 'Keranjang Belanja Anda'}
             {currentStep === 2 && 'Checkout & Alamat Pengiriman'}
             {currentStep === 3 && 'Pembayaran via Midtrans'}
             {currentStep === 4 && 'Pesanan Berhasil Diselesaikan'}
           </h1>
-          <p className="text-xs sm:text-sm text-[#4F4540] font-medium leading-relaxed max-w-2xl">
+          <p className="text-xs sm:text-sm text-[#4F4540] font-medium leading-relaxed max-w-2xl mx-auto sm:mx-0">
             Tinjau pilihan makanan otentik Nusantara Anda sebelum menyelesaikan transaksi pembayaran Midtrans Snap.
           </p>
         </div>
 
         {/* STEPPER PROGRESS INDICATOR (Cart -> Checkout -> Payment -> Success) */}
-        <div className="max-w-lg mx-auto py-2">
+        <div className="max-w-md mx-auto py-2">
           <div className="flex items-center justify-between relative">
             <div className="absolute left-6 right-6 top-4 -translate-y-1/2 h-0.5 bg-amber-900/15 -z-0" />
             <div 
@@ -446,15 +446,15 @@ export default function BasketCartPage() {
             <div className="flex flex-col items-center gap-1 z-10 bg-[#FBF9F5] px-1">
               <button 
                 onClick={() => currentStep > 1 && currentStep < 4 && setCurrentStep(1)}
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                   currentStep > 1 
                     ? 'bg-emerald-600 text-white' 
                     : 'bg-[#25160E] text-white shadow-md ring-4 ring-[#25160E]/20'
                 }`}
               >
-                {currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
+                {currentStep > 1 ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : '1'}
               </button>
-              <span className={`text-[11px] ${currentStep === 1 ? 'text-[#25160E] font-bold' : 'text-stone-500'}`}>
+              <span className={`text-[10px] sm:text-[11px] ${currentStep === 1 ? 'text-[#25160E] font-bold' : 'text-stone-500'}`}>
                 1. Keranjang
               </span>
             </div>
@@ -463,7 +463,7 @@ export default function BasketCartPage() {
             <div className="flex flex-col items-center gap-1 z-10 bg-[#FBF9F5] px-1">
               <button 
                 onClick={() => currentStep > 2 && currentStep < 4 && setCurrentStep(2)}
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                   currentStep > 2 
                     ? 'bg-emerald-600 text-white' 
                     : currentStep === 2 
@@ -471,9 +471,9 @@ export default function BasketCartPage() {
                     : 'bg-stone-300 text-stone-600'
                 }`}
               >
-                {currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
+                {currentStep > 2 ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : '2'}
               </button>
-              <span className={`text-[11px] ${currentStep === 2 ? 'text-[#25160E] font-bold' : 'text-stone-500'}`}>
+              <span className={`text-[10px] sm:text-[11px] ${currentStep === 2 ? 'text-[#25160E] font-bold' : 'text-stone-500'}`}>
                 2. Checkout
               </span>
             </div>
@@ -482,7 +482,7 @@ export default function BasketCartPage() {
             <div className="flex flex-col items-center gap-1 z-10 bg-[#FBF9F5] px-1">
               <button 
                 onClick={() => currentStep > 3 && currentStep < 4 && setCurrentStep(3)}
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                   currentStep > 3 
                     ? 'bg-emerald-600 text-white' 
                     : currentStep === 3 
@@ -490,9 +490,9 @@ export default function BasketCartPage() {
                     : 'bg-stone-300 text-stone-600'
                 }`}
               >
-                {currentStep > 3 ? <Check className="w-4 h-4" /> : '3'}
+                {currentStep > 3 ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : '3'}
               </button>
-              <span className={`text-[11px] ${currentStep === 3 ? 'text-[#934B19] font-bold' : 'text-stone-500'}`}>
+              <span className={`text-[10px] sm:text-[11px] ${currentStep === 3 ? 'text-[#934B19] font-bold' : 'text-stone-500'}`}>
                 3. Payment
               </span>
             </div>
@@ -500,15 +500,15 @@ export default function BasketCartPage() {
             {/* STEP 4: SUCCESS */}
             <div className="flex flex-col items-center gap-1 z-10 bg-[#FBF9F5] px-1">
               <div 
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                   currentStep === 4 
                     ? 'bg-emerald-600 text-white shadow-md ring-4 ring-emerald-200' 
                     : 'bg-stone-300 text-stone-600'
                 }`}
               >
-                {currentStep === 4 ? <Check className="w-4 h-4" /> : '4'}
+                {currentStep === 4 ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : '4'}
               </div>
-              <span className={`text-[11px] ${currentStep === 4 ? 'text-emerald-700 font-bold' : 'text-stone-500'}`}>
+              <span className={`text-[10px] sm:text-[11px] ${currentStep === 4 ? 'text-emerald-700 font-bold' : 'text-stone-500'}`}>
                 4. Selesai
               </span>
             </div>

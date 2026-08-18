@@ -1,12 +1,29 @@
 'use client';
 
+/**
+ * ============================================================================
+ * KOMPONEN: MenuDetailModal.tsx (Modal Informasi & Pemesanan Detail Produk)
+ * DESKRIPSI: Modal pop-up modern untuk menampilkan visual galeri produk,
+ *            pemilihan 3 varian jus, deskripsi komposisi, saran penyimpanan,
+ *            alamat dapur produksi, serta ulasan realtime pelanggan.
+ * ============================================================================
+ */
+
+// Mengimpor React dan hook useState untuk pengelolaan varian, thumbnail, tab & kuantitas
 import React, { useState } from 'react';
+// Mengimpor komponen Image dari Next.js untuk optimasi gambar
 import Image from 'next/image';
+// Mengimpor Link untuk navigasi ke halaman ulasan
 import Link from 'next/link';
+// Mengimpor hook useRouter untuk navigasi halaman
 import { useRouter } from 'next/navigation';
+// Mengimpor CartContext untuk menambahkan pesanan ke keranjang belanja
 import { useCart } from '@/context/CartContext';
+// Mengimpor DataContext untuk membaca ulasan publik & daftar hidangan
 import { useData } from '@/context/DataContext';
+// Mengimpor generator ulasan makanan spesifik berbahasa Indonesia
 import { getProductSpecificReviews } from '@/lib/reviews';
+// Mengimpor ikon-ikon modern dari Lucide React
 import { 
   X, 
   Star, 
@@ -21,20 +38,21 @@ import {
   MessageCircle
 } from 'lucide-react';
 
+/** Interface Struktur Data Produk untuk Modal Detail */
 export interface DetailProduct {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  rating: number;
-  reviewsCount?: string;
-  soldCount?: string;
-  image: string;
-  description: string;
-  ingredients?: string;
-  storage?: string;
-  serving?: string;
-  thumbnails?: string[];
+  id: string; // ID unik produk
+  name: string; // Nama menu hidangan
+  category: string; // Kategori menu
+  price: number; // Harga per porsi (Rp)
+  rating: number; // Rating bintang
+  reviewsCount?: string; // Teks jumlah ulasan
+  soldCount?: string; // Teks jumlah terjual
+  image: string; // URL/Path gambar utama
+  description: string; // Deskripsi lengkap hidangan
+  ingredients?: string; // Komposisi bahan
+  storage?: string; // Cara penyimpanan
+  serving?: string; // Saran penyajian
+  thumbnails?: string[]; // Array gambar thumbnail galeri
   reviews?: {
     id: string;
     author: string;
@@ -45,17 +63,20 @@ export interface DetailProduct {
   }[];
 }
 
+/** Interface Properti Modal Detail Produk */
 interface MenuDetailModalProps {
-  product: DetailProduct | null;
-  onClose: () => void;
+  product: DetailProduct | null; // Data produk yang dipilih atau null jika tertutup
+  onClose: () => void; // Fungsi callback untuk menutup modal
 }
 
+// 3 Pilihan Varian Rasa Khusus Menu Minuman Jus
 const DRINK_VARIANTS = [
   { id: 'Mangga', name: 'Jus Mangga Segar', tag: 'Fresh & Manis', desc: 'Mangga Harum Manis alami kaya akan Vitamin C & A', image: '/images/jus_mangga.jpg' },
   { id: 'Sirsak', name: 'Jus Sirsak Segar', tag: 'Asam Manis', desc: 'Sirsak murni dengan cita rasa khas asam manis alami', image: '/images/jus_sirsak.jpg' },
   { id: 'Jambu', name: 'Jus Jambu Biji', tag: 'Super Vitamin C', desc: 'Jambu biji merah segar untuk imunitas dan kesegaran harian', image: '/images/jus_jambu.jpg' }
 ];
 
+// Komponen Utama Modal Detail Produk
 export default function MenuDetailModal({ product, onClose }: MenuDetailModalProps) {
   const router = useRouter();
   const { addToCart } = useCart();
@@ -127,26 +148,27 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 md:p-10 flex items-center justify-center animate-fade-in">
-      <div className="bg-[#FAF8F5] w-full max-w-5xl rounded-[32px] overflow-hidden shadow-2xl border border-stone-200/80 relative my-auto max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm p-3 sm:p-6 md:p-10 flex items-center justify-center animate-fade-in">
+      <div className="bg-[#FAF8F5] w-full max-w-5xl rounded-3xl sm:rounded-[32px] overflow-hidden shadow-2xl border border-stone-200/80 relative my-auto max-h-[92vh] overflow-y-auto">
         
         {/* Close Modal Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full bg-white/80 hover:bg-white text-stone-600 hover:text-stone-900 flex items-center justify-center transition-colors shadow-md"
+          className="absolute top-3 right-3 sm:top-5 sm:right-5 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/90 hover:bg-white text-stone-600 hover:text-stone-900 flex items-center justify-center transition-colors shadow-md active:scale-95"
+          aria-label="Tutup Modal"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
-        <div className="p-6 sm:p-10 md:p-12 space-y-12">
+        <div className="p-4 sm:p-8 md:p-12 space-y-6 sm:space-y-10">
           
           {/* TOP GRID: Product Gallery & Purchase Info */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start">
             
             {/* Left: Product Images & Gallery */}
-            <div className="lg:col-span-6 space-y-4">
+            <div className="lg:col-span-6 space-y-3 sm:space-y-4">
               {/* Main Display Image */}
-              <div className="relative w-full h-[360px] sm:h-[420px] rounded-[28px] overflow-hidden bg-stone-100 shadow-md border border-stone-200/60">
+              <div className="relative w-full h-[240px] sm:h-[340px] md:h-[400px] rounded-2xl sm:rounded-[28px] overflow-hidden bg-stone-100 shadow-md border border-stone-200/60">
                 <Image
                   src={currentMainImage}
                   alt={product.name}
@@ -157,7 +179,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
               </div>
 
               {/* Thumbnails Row */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-1">
                 {productThumbnails.map((imgUrl: string, idx: number) => {
                   const matchingVariant = isDrink ? DRINK_VARIANTS[idx] : null;
                   return (
@@ -170,7 +192,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                           setSelectedImage(imgUrl);
                         }
                       }}
-                      className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-stone-100 ${
+                      className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-stone-100 ${
                         currentMainImage === imgUrl ? 'border-[#5C3D28] ring-2 ring-[#5C3D28]/20 scale-105' : 'border-transparent opacity-75 hover:opacity-100'
                       }`}
                     >

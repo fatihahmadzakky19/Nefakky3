@@ -1,6 +1,23 @@
 'use client';
 
+/**
+ * ============================================================================
+ * KOMPONEN: LiveCameraModal.tsx (Modal Akses Kamera Langsung / WebRTC)
+ * DESKRIPSI: Mengakses hardware kamera browser untuk mengambil foto bukti penerimaan
+ *            pesanan secara realtime dan jernih (FHD 1080p).
+ * FITUR UTAMA:
+ * 1. Switch Kamera Depan / Belakang (Environment / User)
+ * 2. Kontrol Lampu Flash / Torch Senter (jika didukung perangkat)
+ * 3. Grid Garis Bantu Komposisi 3x3 (Rule of Thirds)
+ * 4. Efek Suara Shutter Web Audio API & Visual Flash Jepretan
+ * 5. Mirroring otomatis pada kamera depan untuk kenyamanan orientasi
+ * 6. Fallback cerdas ke input file galeri jika izin kamera ditolak
+ * ============================================================================
+ */
+
+// Mengimpor React dan hooks
 import React, { useState, useEffect, useRef } from 'react';
+// Mengimpor ikon-ikon modern dari Lucide React
 import { 
   Camera, 
   RefreshCw, 
@@ -18,37 +35,39 @@ import {
   RotateCcw
 } from 'lucide-react';
 
+/** Interface Properti Modal Kamera Live */
 interface LiveCameraModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onCapture: (base64Image: string) => void;
-  onFallbackToFile: () => void;
+  isOpen: boolean; // Status tampil modal kamera
+  onClose: () => void; // Callback saat modal ditutup
+  onCapture: (base64Image: string) => void; // Callback saat foto berhasil diambil (format base64)
+  onFallbackToFile: () => void; // Callback fallback membuka input galeri jika kamera error
 }
 
+// Komponen Utama Live Camera Modal
 export default function LiveCameraModal({
   isOpen,
   onClose,
   onCapture,
   onFallbackToFile
 }: LiveCameraModalProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null); // Ref elemen video HTML5 untuk stream kamera
+  const canvasRef = useRef<HTMLCanvasElement>(null); // Ref elemen canvas untuk rendering frame resolusi penuh
   
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [capturedPreview, setCapturedPreview] = useState<string | null>(null);
-  const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const [stream, setStream] = useState<MediaStream | null>(null); // State objek MediaStream aktif
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment'); // Orientasi kamera belakang / depan
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]); // Daftar perangkat kamera yang terdeteksi
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>(''); // Device ID kamera yang dipilih
+  const [cameraError, setCameraError] = useState<string | null>(null); // Pesan kesalahan akses kamera
+  const [capturedPreview, setCapturedPreview] = useState<string | null>(null); // Pratinjau foto hasil jepretan
+  const [isInitializing, setIsInitializing] = useState<boolean>(true); // Indikator inisialisasi lensa kamera
 
-  // Advanced Camera Controls
-  const [showGrid, setShowGrid] = useState<boolean>(true);
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
-  const [isTorchSupported, setIsTorchSupported] = useState<boolean>(false);
-  const [isTorchOn, setIsTorchOn] = useState<boolean>(false);
-  const [isFlashing, setIsFlashing] = useState<boolean>(false);
-  const [resolutionInfo, setResolutionInfo] = useState<string>('FHD 1080p');
+  // Kontrol Pengaturan Kamera Lanjutan
+  const [showGrid, setShowGrid] = useState<boolean>(true); // Tampilkan garis bantu 3x3
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true); // Aktifkan suara shutter jepretan
+  const [isTorchSupported, setIsTorchSupported] = useState<boolean>(false); // Dukungan lampu senter hardware
+  const [isTorchOn, setIsTorchOn] = useState<boolean>(false); // Status hidup/mati lampu senter
+  const [isFlashing, setIsFlashing] = useState<boolean>(false); // Efek animasi flash putih saat jepret
+  const [resolutionInfo, setResolutionInfo] = useState<string>('FHD 1080p'); // Label resolusi aktif
 
   // Enumerate video devices on mount/open
   useEffect(() => {

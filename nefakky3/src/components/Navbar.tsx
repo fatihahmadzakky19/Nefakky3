@@ -1,10 +1,31 @@
 'use client';
 
+/**
+ * ============================================================================
+ * KOMPONEN: Navbar.tsx (Bilah Navigasi Utama Aplikasi Nefakky)
+ * DESKRIPSI: Bilah navigasi atas (Desktop & Tablet) serta bilah navigasi bawah
+ *            mobile simetris 5-kolom (Beranda, Menu, Keranjang, Status, Profil).
+ * FITUR:
+ * 1. Brand Logo Nefakky
+ * 2. Tautan Navigasi Desktop & Drawer Navigasi Mobile
+ * 3. Indikator Badge Keranjang Belanja Realtime
+ * 4. Tombol Akses Panel Administrator (Admin Auth Guard)
+ * 5. Dropdown Profil Pelanggan & Tombol Logout
+ * 6. Bottom Navigation Bar 5 Kolom Simetris untuk Smartphone
+ * ============================================================================
+ */
+
+// Mengimpor React dan hook useState untuk state drawer mobile
 import React, { useState } from 'react';
+// Mengimpor Link untuk navigasi client-side Next.js
 import Link from 'next/link';
+// Mengimpor hook usePathname untuk mendeteksi rute aktif
 import { usePathname } from 'next/navigation';
+// Mengimpor AuthContext untuk membaca status login user & hak akses admin
 import { useAuth } from '@/context/AuthContext';
+// Mengimpor CartContext untuk membaca total jumlah barang di keranjang
 import { useCart } from '@/context/CartContext';
+// Mengimpor ikon-ikon modern dari Lucide React
 import { 
   ShoppingBag, 
   Search, 
@@ -19,22 +40,25 @@ import {
   LogOut 
 } from 'lucide-react';
 
+/** Interface Properti Komponen Navbar */
 interface NavbarProps {
-  showSearch?: boolean;
-  searchQuery?: string;
-  onSearchChange?: (val: string) => void;
+  showSearch?: boolean; // Tampilkan bilah pencarian inline jika true
+  searchQuery?: string; // Query teks pencarian
+  onSearchChange?: (val: string) => void; // Handler perubahan teks pencarian
 }
 
+// Komponen Utama Navbar Nefakky
 export default function Navbar({ showSearch, searchQuery, onSearchChange }: NavbarProps) {
-  const pathname = usePathname();
-  const { user, isAdmin, logout } = useAuth();
-  const { totalCartCount } = useCart();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname(); // Baca URL path saat ini
+  const { user, isAdmin, logout } = useAuth(); // Destruktur data user & fungsi logout dari AuthContext
+  const { totalCartCount } = useCart(); // Ambil total kuantitas item dari CartContext
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State buka/tutup drawer mobile
 
+  // Tentukan nama untuk avatar dan foto profil pengguna
   const nameForAvatar = user?.displayName || user?.email || 'Gourmet User';
   const userAvatar = user?.photoURL;
 
-  // Active route checkers
+  // Status pengecekan rute aktif untuk styling link aktif
   const isHomeActive = pathname === '/';
   const isMenuActive = pathname === '/menu' || pathname.startsWith('/menu/');
   const isCommentsActive = pathname === '/comments';
@@ -258,63 +282,65 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
       </header>
 
       {/* Fixed Mobile Bottom Navigation Bar (Google Delivery App Standard - lg:hidden) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#fbf9f5]/95 backdrop-blur-xl border-t border-amber-900/10 py-1.5 px-2 shadow-[0_-4px_24px_rgba(69,26,3,0.08)] flex justify-around items-center select-none">
-        <Link
-          href="/"
-          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${
-            isHomeActive ? 'text-[#934b19] font-bold' : 'text-[#4f4540] hover:text-[#934b19]'
-          }`}
-        >
-          <Home className={`w-5 h-5 ${isHomeActive ? 'scale-110' : ''}`} />
-          <span className="text-[10px]">Beranda</span>
-        </Link>
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#fbf9f5]/95 backdrop-blur-xl border-t border-amber-900/10 shadow-[0_-4px_24px_rgba(69,26,3,0.08)] select-none">
+        <div className="max-w-md mx-auto grid grid-cols-5 items-center py-2 px-1">
+          <Link
+            href="/"
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all ${
+              isHomeActive ? 'text-[#934b19] font-bold bg-[#934b19]/5' : 'text-[#4f4540] hover:text-[#934b19]'
+            }`}
+          >
+            <Home className={`w-5 h-5 ${isHomeActive ? 'scale-110' : ''}`} />
+            <span className="text-[10px] leading-tight">Beranda</span>
+          </Link>
 
-        <Link
-          href="/menu"
-          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${
-            isMenuActive ? 'text-[#934b19] font-bold' : 'text-[#4f4540] hover:text-[#934b19]'
-          }`}
-        >
-          <Utensils className={`w-5 h-5 ${isMenuActive ? 'scale-110' : ''}`} />
-          <span className="text-[10px]">Menu</span>
-        </Link>
+          <Link
+            href="/menu"
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all ${
+              isMenuActive ? 'text-[#934b19] font-bold bg-[#934b19]/5' : 'text-[#4f4540] hover:text-[#934b19]'
+            }`}
+          >
+            <Utensils className={`w-5 h-5 ${isMenuActive ? 'scale-110' : ''}`} />
+            <span className="text-[10px] leading-tight">Menu</span>
+          </Link>
 
-        <Link
-          href="/cart"
-          className={`relative flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${
-            isCartActive ? 'text-[#934b19] font-bold' : 'text-[#4f4540] hover:text-[#934b19]'
-          }`}
-        >
-          <div className="relative">
-            <ShoppingBag className={`w-5 h-5 ${isCartActive ? 'scale-110' : ''}`} />
-            {totalCartCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-[#934b19] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                {totalCartCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px]">Keranjang</span>
-        </Link>
+          <Link
+            href="/cart"
+            className={`relative flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all ${
+              isCartActive ? 'text-[#934b19] font-bold bg-[#934b19]/5' : 'text-[#4f4540] hover:text-[#934b19]'
+            }`}
+          >
+            <div className="relative">
+              <ShoppingBag className={`w-5 h-5 ${isCartActive ? 'scale-110' : ''}`} />
+              {totalCartCount > 0 && (
+                <span className="absolute -top-1 -right-2 bg-[#934b19] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                  {totalCartCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] leading-tight">Keranjang</span>
+          </Link>
 
-        <Link
-          href="/notifications"
-          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${
-            isNotificationsActive ? 'text-[#934b19] font-bold' : 'text-[#4f4540] hover:text-[#934b19]'
-          }`}
-        >
-          <Clock className={`w-5 h-5 ${isNotificationsActive ? 'scale-110' : ''}`} />
-          <span className="text-[10px]">Status</span>
-        </Link>
+          <Link
+            href="/notifications"
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all ${
+              isNotificationsActive ? 'text-[#934b19] font-bold bg-[#934b19]/5' : 'text-[#4f4540] hover:text-[#934b19]'
+            }`}
+          >
+            <Clock className={`w-5 h-5 ${isNotificationsActive ? 'scale-110' : ''}`} />
+            <span className="text-[10px] leading-tight">Status</span>
+          </Link>
 
-        <Link
-          href="/profile"
-          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-all ${
-            isProfileActive ? 'text-[#934b19] font-bold' : 'text-[#4f4540] hover:text-[#934b19]'
-          }`}
-        >
-          <User className={`w-5 h-5 ${isProfileActive ? 'scale-110' : ''}`} />
-          <span className="text-[10px]">Profil</span>
-        </Link>
+          <Link
+            href="/profile"
+            className={`flex flex-col items-center justify-center gap-0.5 py-1 px-1 rounded-xl transition-all ${
+              isProfileActive ? 'text-[#934b19] font-bold bg-[#934b19]/5' : 'text-[#4f4540] hover:text-[#934b19]'
+            }`}
+          >
+            <User className={`w-5 h-5 ${isProfileActive ? 'scale-110' : ''}`} />
+            <span className="text-[10px] leading-tight">Profil</span>
+          </Link>
+        </div>
       </div>
     </>
   );

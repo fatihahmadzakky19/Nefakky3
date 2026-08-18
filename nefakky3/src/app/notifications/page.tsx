@@ -203,7 +203,7 @@ export default function NotificationsPage() {
 
   if (!user || displayOrdersList.length === 0 || !activeOrder) {
     return (
-      <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-20">
+      <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-28 lg:pb-12">
         <Navbar />
         <main className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6">
           <div className="w-20 h-20 bg-white border border-amber-900/10 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-amber-950/5">
@@ -211,7 +211,7 @@ export default function NotificationsPage() {
           </div>
 
           <div className="space-y-2 max-w-md mx-auto">
-            <h1 className="font-serif text-3xl font-bold text-[#25160E]">Belum Ada Status Pesanan</h1>
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#25160E]">Belum Ada Status Pesanan</h1>
             <p className="text-xs text-[#4F4540] font-light leading-relaxed">
               Anda belum melakukan transaksi pemesanan makanan. Silakan pesan hidangan favorit Anda melalui katalog menu untuk memantau status pengiriman 5-tahap secara realtime!
             </p>
@@ -220,14 +220,14 @@ export default function NotificationsPage() {
           <div className="pt-4 flex items-center justify-center gap-3 flex-wrap">
             <Link
               href="/menu"
-              className="px-6 py-3.5 bg-[#25160E] hover:bg-[#3C2A21] text-white font-bold text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all inline-flex items-center gap-2"
+              className="px-6 py-3.5 bg-[#25160E] hover:bg-[#3C2A21] text-white font-bold text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all inline-flex items-center gap-2 active:scale-95"
             >
               <span>Jelajahi Katalog Menu</span>
               <ArrowRight className="w-4 h-4 text-amber-300" />
             </Link>
             <Link
               href="/profile"
-              className="px-6 py-3.5 bg-white text-[#25160E] hover:bg-stone-50 font-bold text-xs rounded-2xl border border-amber-900/15 shadow-sm transition-all inline-flex items-center gap-2"
+              className="px-6 py-3.5 bg-white text-[#25160E] hover:bg-stone-50 font-bold text-xs rounded-2xl border border-amber-900/15 shadow-sm transition-all inline-flex items-center gap-2 active:scale-95"
             >
               <span>Lihat Profil Saya</span>
             </Link>
@@ -238,32 +238,32 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-20 lg:pb-0">
+    <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-28 lg:pb-12">
       
       {/* 1. BILAH NAVIGASI UTAMA */}
       <Navbar />
 
       {/* 2. KONTEN TRACKER UTAMA */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-12 py-6 sm:py-10 space-y-6 sm:space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10 space-y-6 sm:space-y-8">
         
         {/* Header Judul Live Tracker */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 w-full border-b border-amber-900/10 pb-6">
-          <div className="space-y-1">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 w-full border-b border-amber-900/10 pb-5 sm:pb-6">
+          <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#934B19]">LIVE TRACKING STATUS</span>
             <h1 className="font-serif text-2xl sm:text-4xl font-bold text-[#25160E]">Pesanan Kuliner Anda</h1>
-            <p className="text-xs text-[#4F4540] font-medium flex items-center gap-1.5 pt-1">
+            <p className="text-xs text-[#4F4540] font-medium flex items-center justify-center sm:justify-start gap-1.5 pt-1">
               <Receipt className="w-4 h-4 text-[#934B19]" />
               <span>Order ID: <strong className="font-mono text-[#25160E]">#{activeOrder.id}</strong></span>
             </p>
           </div>
 
           {/* Countdown & Live Pulse */}
-          <div className="flex items-center gap-4 bg-white px-6 py-3.5 rounded-2xl border border-amber-900/10 shadow-xl">
-            <div className="flex flex-col items-end">
+          <div className="flex items-center justify-between sm:justify-end gap-4 bg-white px-5 py-3 sm:px-6 sm:py-3.5 rounded-2xl border border-amber-900/10 shadow-xl w-full sm:w-auto">
+            <div className="flex flex-col items-start sm:items-end">
               <span className="text-[10px] text-[#4F4540] font-medium">
                 {currentStatus === 'COMPLETED' ? 'Status Pengiriman' : 'Estimasi Waktu Tiba'}
               </span>
-              <span className={`font-mono text-xl font-bold ${currentStatus === 'COMPLETED' ? 'text-emerald-600' : 'text-[#25160E]'}`}>
+              <span className={`font-mono text-lg sm:text-xl font-bold ${currentStatus === 'COMPLETED' ? 'text-emerald-600' : 'text-[#25160E]'}`}>
                 {formatCountdown(secondsLeft)}
               </span>
             </div>

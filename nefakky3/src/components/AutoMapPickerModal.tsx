@@ -211,36 +211,37 @@ export default function AutoMapPickerModal({
   const isSafeDistanceRange = shippingDistanceKm <= 15;
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="p-5 border-b border-stone-100 flex items-center justify-between bg-[#FAF8F5]">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-[#5C3D28] text-amber-200 flex items-center justify-center shadow-xs">
-              <MapPin className="w-5 h-5" />
+        <div className="p-4 sm:p-5 border-b border-stone-100 flex items-center justify-between bg-[#FAF8F5]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#5C3D28] text-amber-200 flex items-center justify-center shadow-xs">
+              <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="font-serif text-lg font-bold text-stone-900">Peta Pinpoint Lokasi Otomatis</h3>
-              <p className="text-[11px] text-stone-500">Deteksi GPS &amp; kalkulasi radius kesegaran makanan</p>
+              <h3 className="font-serif text-base sm:text-lg font-bold text-stone-900">Peta Pinpoint Lokasi Otomatis</h3>
+              <p className="text-[10px] sm:text-[11px] text-stone-500">Deteksi GPS &amp; kalkulasi radius kesegaran makanan</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 flex items-center justify-center transition-colors active:scale-95"
+            aria-label="Tutup Peta"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 space-y-4 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-5 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
           
           {/* GPS Auto Detect Banner Button */}
           <button
             onClick={handleAutoDetectGps}
             disabled={isDetectingGps}
-            className="w-full py-3.5 px-4 bg-[#5C3D28] hover:bg-[#472E1E] text-white rounded-2xl text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2 group border border-amber-900/20 active:scale-[0.99]"
+            className="w-full py-3 sm:py-3.5 px-4 bg-[#5C3D28] hover:bg-[#472E1E] text-white rounded-xl sm:rounded-2xl text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2 group border border-amber-900/20 active:scale-[0.99]"
           >
             <Navigation className={`w-4 h-4 text-amber-300 ${isDetectingGps ? 'animate-spin' : 'group-hover:rotate-45 transition-transform'}`} />
             <span>{isDetectingGps ? 'Mendeteksi Koordinat GPS Anda...' : '📍 Deteksi Lokasi GPS Saya Saat Ini (Otomatis)'}</span>
@@ -254,7 +255,7 @@ export default function AutoMapPickerModal({
           )}
 
           {/* OpenStreetMap Interactive Map Preview Canvas */}
-          <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-stone-300/80 shadow-inner bg-stone-100 group">
+          <div className="relative w-full h-40 sm:h-48 rounded-xl sm:rounded-2xl overflow-hidden border border-stone-300/80 shadow-inner bg-stone-100 group">
             {/* Embedded OpenStreetMap Iframe centered at coordinates */}
             <iframe
               title="OpenStreetMap Location Picker"
@@ -269,20 +270,20 @@ export default function AutoMapPickerModal({
             />
 
             {/* Floating Distance Badge Over Map */}
-            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-stone-200 shadow-sm flex items-center gap-2 text-xs font-semibold text-stone-800">
+            <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full border border-stone-200 shadow-sm flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold text-stone-800">
               <Compass className="w-3.5 h-3.5 text-[#5C3D28]" />
-              <span>Radius dari Dapur Utama: <strong className={isSafeDistanceRange ? 'text-emerald-700' : 'text-rose-600'}>{shippingDistanceKm} km</strong></span>
+              <span>Radius Dapur: <strong className={isSafeDistanceRange ? 'text-emerald-700' : 'text-rose-600'}>{shippingDistanceKm} km</strong></span>
             </div>
 
             {/* Radius Safety Status Badge */}
-            <div className="absolute bottom-3 right-3">
+            <div className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3">
               {isSafeDistanceRange ? (
-                <span className="px-3 py-1 bg-emerald-700 text-white rounded-full text-[10px] font-bold shadow-md flex items-center gap-1">
+                <span className="px-2.5 py-1 bg-emerald-700 text-white rounded-full text-[9px] sm:text-[10px] font-bold shadow-md flex items-center gap-1">
                   <Check className="w-3 h-3" />
                   Radius Aman (&lt; 15 km)
                 </span>
               ) : (
-                <span className="px-3 py-1 bg-rose-600 text-white rounded-full text-[10px] font-bold shadow-md flex items-center gap-1">
+                <span className="px-2.5 py-1 bg-rose-600 text-white rounded-full text-[9px] sm:text-[10px] font-bold shadow-md flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   Melebihi Radius (15 km)
                 </span>
@@ -301,14 +302,14 @@ export default function AutoMapPickerModal({
                 onChange={(e) => setAddressInputText(e.target.value)}
                 rows={2}
                 placeholder="Jl. Nama Jalan, No. Rumah, RT/RW, Kelurahan, Kecamatan, Kota..."
-                className="w-full p-3 bg-[#FAF8F5] border border-stone-200 rounded-xl text-xs text-stone-800 focus:outline-none focus:border-[#5C3D28] focus:bg-white transition-all font-medium leading-relaxed"
+                className="w-full p-2.5 sm:p-3 bg-[#FAF8F5] border border-stone-200 rounded-xl text-xs text-stone-800 focus:outline-none focus:border-[#5C3D28] focus:bg-white transition-all font-medium leading-relaxed"
               />
             </div>
           </div>
 
           {/* Quick Select Presets Jabodetabek */}
           <div className="space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-400">
+            <label className="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-stone-400">
               PILIH AREA TERDEKAT (PRESET QUICK-SELECT):
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -317,14 +318,14 @@ export default function AutoMapPickerModal({
                   key={idx}
                   type="button"
                   onClick={() => handleSelectLocationPreset(p)}
-                  className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
+                  className={`p-2 sm:p-2.5 rounded-xl border text-left text-xs transition-all active:scale-95 ${
                     coordinates.lat === p.latitude && coordinates.lon === p.longitude
                       ? 'bg-[#F5EBE1] border-[#5C3D28] ring-1 ring-[#5C3D28]/30 font-semibold text-[#5C3D28]'
                       : 'bg-white border-stone-200/80 hover:bg-stone-50 text-stone-700 font-medium'
                   }`}
                 >
                   <div className="font-semibold text-stone-900 truncate">{p.name}</div>
-                  <div className="text-[10px] text-stone-500 mt-0.5">{p.estimatedDistanceKm} km dari Dapur</div>
+                  <div className="text-[9px] sm:text-[10px] text-stone-500 mt-0.5">{p.estimatedDistanceKm} km dari Dapur</div>
                 </button>
               ))}
             </div>
@@ -333,18 +334,18 @@ export default function AutoMapPickerModal({
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="p-4 border-t border-stone-100 bg-[#FAF8F5] flex items-center justify-between gap-3">
+        <div className="p-3.5 sm:p-4 border-t border-stone-100 bg-[#FAF8F5] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 bg-stone-200 hover:bg-stone-300 text-stone-700 text-xs font-semibold rounded-full transition-colors"
+            className="w-full sm:w-auto px-5 py-2.5 bg-stone-200 hover:bg-stone-300 text-stone-700 text-xs font-semibold rounded-xl sm:rounded-full transition-colors active:scale-95"
           >
             Batal
           </button>
           <button
             type="button"
             onClick={handleConfirmLocation}
-            className="px-6 py-2.5 bg-[#5C3D28] hover:bg-[#472E1E] text-white text-xs font-semibold rounded-full shadow-md transition-all flex items-center gap-1.5"
+            className="w-full sm:w-auto px-6 py-2.5 bg-[#5C3D28] hover:bg-[#472E1E] text-white text-xs font-semibold rounded-xl sm:rounded-full shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
           >
             <Check className="w-4 h-4" />
             <span>Gunakan Alamat Ini ({shippingDistanceKm} km)</span>

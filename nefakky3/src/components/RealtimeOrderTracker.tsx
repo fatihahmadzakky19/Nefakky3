@@ -1,6 +1,18 @@
 'use client';
 
+/**
+ * ============================================================================
+ * KOMPONEN: RealtimeOrderTracker.tsx (Widget Pelacak Pengiriman 5-Tahap Live)
+ * DESKRIPSI: Widget pelacak pesanan makanan realtime dengan visualisasi progres
+ *            5 tahap (Diterima -> Dimasak -> Siap -> Diantar -> Selesai),
+ *            perhitungan estimasi durasi waktu, deteksi jam sibuk (High Demand),
+ *            serta integrasi kamera live bukti foto penerimaan hidangan.
+ * ============================================================================
+ */
+
+// Mengimpor React dan hooks
 import React, { useState, useEffect } from 'react';
+// Mengimpor ikon-ikon modern dari Lucide React
 import { 
   Clock, 
   CheckCircle2, 
@@ -13,40 +25,42 @@ import {
   Flame,
   Camera
 } from 'lucide-react';
+// Mengimpor tipe data pesanan dari DataContext
 import { AdminOrder } from '@/context/DataContext';
-
+// Mengimpor modal kamera live untuk bukti penerimaan pesanan
 import LiveCameraModal from '@/components/LiveCameraModal';
 
+/** Interface Properti Komponen Pelacak Pesanan Realtime */
 interface RealtimeOrderTrackerProps {
-  order: AdminOrder;
-  onConfirmReceived: (id: string, proofPhotoUrl?: string) => void;
-  isHighDemand?: boolean;
+  order: AdminOrder; // Objek data transaksi pesanan yang dilacak
+  onConfirmReceived: (id: string, proofPhotoUrl?: string) => void; // Callback konfirmasi penerimaan pesanan
+  isHighDemand?: boolean; // Indikator jam sibuk pesanan tinggi
 }
 
+// Komponen Utama Realtime Order Tracker
 export default function RealtimeOrderTracker({
   order,
   onConfirmReceived,
   isHighDemand = false
 }: RealtimeOrderTrackerProps) {
-  const proofInputRef = React.useRef<HTMLInputElement>(null);
-  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false);
-  // Live ticking timer for real-time elapsed seconds
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
-  const [lastSyncTime, setLastSyncTime] = useState<string>('Baru saja');
+  const proofInputRef = React.useRef<HTMLInputElement>(null); // Ref input file galeri bukti penerimaan
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false); // State buka modal kamera live
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0); // State timer durasi detik berjalan
+  const [lastSyncTime, setLastSyncTime] = useState<string>('Baru saja'); // Teks waktu sinkronisasi terakhir
 
+  // Effect: Timer durasi berjalan setiap detik
   useEffect(() => {
-    // Increment timer every second
     const interval = setInterval(() => {
       setElapsedSeconds(prev => prev + 1);
     }, 1000);
 
-    // Update last sync text timestamp
+    // Update teks timestamp sinkronisasi saat status pesanan berubah
     setLastSyncTime(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
     return () => clearInterval(interval);
   }, [order.status]);
 
-  // Determine numerical step index (1..5)
+  // Fungsi mengonversi status teks menjadi indeks numerik 1 sampai 5
   const getStepIndex = (status: string) => {
     switch (status) {
       case 'RECEIVED':
@@ -197,12 +211,12 @@ export default function RealtimeOrderTracker({
   ];
 
   return (
-    <div className="bg-white rounded-3xl p-5 sm:p-6 border border-amber-900/10 shadow-xl shadow-amber-950/5 space-y-5 hover:shadow-2xl transition-all">
+    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-amber-900/10 shadow-xl shadow-amber-950/5 space-y-4 sm:space-y-5 hover:shadow-2xl transition-all">
       
       {/* 1. TOP HEADER INFO & REALTIME SYNC BADGE */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3 sm:pb-3.5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#3C2A21] text-amber-200 flex items-center justify-center font-bold text-xs shrink-0 border border-amber-900/20 shadow-sm">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#3C2A21] text-amber-200 flex items-center justify-center font-bold text-xs shrink-0 border border-amber-900/20 shadow-sm">
             #{order.id.slice(-4)}
           </div>
           <div>
@@ -226,7 +240,7 @@ export default function RealtimeOrderTracker({
             </span>
           </div>
 
-          <span className={`px-3.5 py-1 rounded-2xl text-[11px] font-bold shadow-sm shrink-0 ${
+          <span className={`px-3 py-1 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-bold shadow-sm shrink-0 ${
             isCompleted 
               ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
               : 'bg-[#934B19] text-white border border-amber-900 animate-pulse'
@@ -237,10 +251,10 @@ export default function RealtimeOrderTracker({
       </div>
 
       {/* 2. REALTIME MONITOR BANNER WITH LIVE PULSE */}
-      <div className="space-y-3 bg-[#FBF9F5] p-4 sm:p-5 rounded-2xl border border-amber-900/10">
+      <div className="space-y-3 bg-[#FBF9F5] p-3.5 sm:p-5 rounded-2xl border border-amber-900/10">
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-900/10 pb-3">
-          <div className="space-y-1">
+          <div className="space-y-1 text-left">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isCompleted ? 'bg-emerald-400' : 'bg-[#934B19]'} opacity-75`} />
@@ -259,14 +273,14 @@ export default function RealtimeOrderTracker({
             </p>
           </div>
 
-          <div className={`px-3.5 py-2 rounded-2xl text-xs font-bold border shrink-0 flex flex-col items-end gap-0.5 shadow-sm ${eta.badgeBg}`}>
+          <div className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl text-xs font-bold border shrink-0 flex flex-col items-start sm:items-end gap-0.5 shadow-sm ${eta.badgeBg}`}>
             <div className="flex items-center gap-1.5">
               <span>{eta.etaIcon}</span>
               <span>Estimasi: <strong>{eta.etaText}</strong></span>
             </div>
             {!isCompleted && (
               <span className="text-[9px] font-mono opacity-90">
-                Durasi Berjalan: +{timeFormatted}
+                Durasi: +{timeFormatted}
               </span>
             )}
           </div>
@@ -276,7 +290,7 @@ export default function RealtimeOrderTracker({
         <div className="space-y-2 pt-1">
           
           {/* Progress track */}
-          <div className="relative h-2.5 bg-stone-200/80 rounded-full overflow-hidden">
+          <div className="relative h-2 sm:h-2.5 bg-stone-200/80 rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-[#3C2A21] via-[#934B19] to-emerald-600 transition-all duration-700 ease-out"
               style={{ width: `${eta.percentage}%` }}
@@ -291,7 +305,7 @@ export default function RealtimeOrderTracker({
           </div>
 
           {/* 5 Step Badges Grid */}
-          <div className="flex sm:grid sm:grid-cols-5 gap-1.5 text-center pt-2 overflow-x-auto no-scrollbar pb-1">
+          <div className="grid grid-cols-5 gap-1 sm:gap-1.5 text-center pt-2">
             {STEPS.map((st) => {
               const isCurrent = currentStep === st.num;
               const isPassed = currentStep > st.num;
@@ -310,17 +324,18 @@ export default function RealtimeOrderTracker({
               return (
                 <div 
                   key={st.num}
-                  className={`p-2 rounded-2xl text-[9px] font-bold flex flex-col items-center gap-1 border transition-all shrink-0 sm:shrink min-w-[76px] sm:min-w-0 flex-1 ${styleClasses}`}
+                  className={`p-1.5 sm:p-2 rounded-xl sm:rounded-2xl text-[8px] sm:text-[9px] font-bold flex flex-col items-center gap-0.5 sm:gap-1 border transition-all ${styleClasses}`}
                 >
                   <div className="flex items-center gap-0.5 whitespace-nowrap">
                     {isPassed ? (
-                      <Check className="w-3 h-3 stroke-[3] shrink-0" />
+                      <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3] shrink-0" />
                     ) : (
-                      <Icon className="w-3 h-3 shrink-0" />
+                      <Icon className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
                     )}
-                    <span>{st.num}. {st.label}</span>
+                    <span className="hidden xs:inline sm:inline">{st.num}.</span>
+                    <span>{st.label}</span>
                   </div>
-                  <span className="text-[8px] font-normal opacity-90 whitespace-nowrap">{st.sub}</span>
+                  <span className="text-[7px] sm:text-[8px] font-normal opacity-90">{st.sub}</span>
                 </div>
               );
             })}
