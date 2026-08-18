@@ -45,7 +45,7 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
     id: 'm2',
     name: 'Nasi Bakar',
     category: 'Makanan Berat',
-    price: 28000,
+    price: 10000,
     image: '/images/nasi_bakar.jpg',
     description: 'Nasi gurih rempah dibungkus daun pisang dengan isian cumi pedas.'
   },
@@ -53,7 +53,7 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
     id: 'm3',
     name: 'Krecek',
     category: 'Menu Hemat',
-    price: 22000,
+    price: 20000,
     image: '/images/krecek.jpg',
     description: 'Olahan krecek kulit sapi lembut dimasak dengan santan kental gurih.'
   },
@@ -61,7 +61,7 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
     id: 'm4',
     name: 'Gudeg',
     category: 'Makanan Berat',
-    price: 40000,
+    price: 10000,
     image: '/images/gudeg.jpg',
     description: 'Nangka muda dimasak perlahan disajikan dengan telur bacem & krecek.'
   },
@@ -69,15 +69,15 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
     id: 'm5',
     name: 'Garang Asam',
     category: 'Menu Hemat',
-    price: 32000,
+    price: 10000,
     image: '/images/garang_asam.jpg',
     description: 'Ayam kampung segar dikukus dalam daun pisang dengan kuah santan asam.'
   },
   {
     id: 'm6',
-    name: 'Jus (Jambu, Sirsak, Mangga)',
+    name: 'Jus Segar (Jambu, Sirsak, Mangga)',
     category: 'Minuman',
-    price: 15000,
+    price: 5000,
     image: '/images/jus_mangga.jpg',
     description: 'Aneka pilihan jus buah segar alami: Jambu Biji, Sirsak, atau Mangga.'
   }

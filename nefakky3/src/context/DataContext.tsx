@@ -422,7 +422,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     category: 'Makanan Berat',
     price: 35000,
     discount: 0,
-    stock: 35,
+    stock: 34,
     visibility: true,
     status: 'Active',
     rating: 4.9,
@@ -445,7 +445,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     name: 'Nasi Bakar',
     sku: 'SKU-1002-NB',
     category: 'Makanan Berat',
-    price: 28000,
+    price: 10000,
     discount: 0,
     stock: 25,
     visibility: true,
@@ -470,7 +470,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     name: 'Krecek',
     sku: 'SKU-1003-KC',
     category: 'Menu Hemat',
-    price: 22000,
+    price: 20000,
     discount: 0,
     stock: 40,
     visibility: true,
@@ -495,7 +495,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     name: 'Gudeg',
     sku: 'SKU-1004-GD',
     category: 'Makanan Berat',
-    price: 40000,
+    price: 10000,
     discount: 0,
     stock: 30,
     visibility: true,
@@ -520,7 +520,7 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     name: 'Garang Asam',
     sku: 'SKU-1005-GA',
     category: 'Menu Hemat',
-    price: 32000,
+    price: 10000,
     discount: 0,
     stock: 20,
     visibility: true,
@@ -544,23 +544,24 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     name: 'Jus Segar (Jambu, Sirsak, Mangga)',
     sku: 'SKU-1006-JS',
     category: 'Minuman',
-    price: 15000,
+    price: 5000,
     discount: 0,
     stock: 50,
     visibility: true,
     status: 'Active',
-    rating: 4.7,
-    reviewsCount: 140,
+    rating: 4.9,
+    reviewsCount: 145,
     soldCount: '1.8k Terjual',
     image: '/images/jus_mangga.jpg',
     gallery: ['/images/jus_mangga.jpg', '/images/jus_sirsak.jpg', '/images/jus_jambu.jpg'],
-    description: 'Aneka pilihan jus buah segar alami berkualitas premium: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis.',
-    ingredients: 'Buah Asli Segar Pilihan, Es Batu, Gula Cair Alami.',
-    usageAdvice: 'Pilih rasa favoritmu di catatan pesanan (Jambu / Sirsak / Mangga)',
+    description: 'Pilihan aneka jus buah segar murni kaya vitamin: Mangga Harum Manis, Sirsak Segar, dan Jambu Biji Merah.',
+    badge: 'BARU',
+    ingredients: 'Buah Segar Pilihan (Mangga/Sirsak/Jambu), Air Mineral, Es Batu, Gula Tebu Alami.',
+    usageAdvice: 'Kocok dahulu sebelum diminum dan nikmati dalam keadaan dingin',
     origin: 'Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia',
-    calories: '130 kcal',
-    fat: '0.5g',
-    sugar: '24g',
+    calories: '120 kcal',
+    fat: '0g',
+    sugar: '12g',
     satFat: '0g'
   }
 ];
@@ -974,15 +975,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         setPromotionsState(DEFAULT_PROMOTIONS);
       } else {
         const promos = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as PromotionItem);
-        const updatedPromos = promos.map(p => {
-          if ((p.id === 'promo-1' || p.title.includes('Ayam Bakar')) && (p.tag === '30% OFF' || p.title.includes('30%'))) {
-            updateDoc(doc(db, 'promotions', p.id), { tag: '15% OFF', title: 'Weekend Promo 15%' })
-              .catch(err => console.error('Error updating Firestore promo:', err));
-            return { ...p, tag: '15% OFF', title: 'Weekend Promo 15%' };
-          }
-          return p;
-        });
-        setPromotionsState(updatedPromos);
+        setPromotionsState(promos);
       }
     }, (err) => console.error('Promotions Firestore error:', err));
 
@@ -997,26 +990,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         setVouchersState(DEFAULT_VOUCHERS);
       } else {
         const vouches = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminVoucher);
-        const updatedVouches = vouches.map(v => {
-          // Auto sync voucher pelanggan baru (NEFAKKY10) agar selalu Aktif Selamanya & 1x Per Pengguna Baru
-          if (v.code === 'NEFAKKY10' && (v.expiry !== 'Selamanya' || v.redemptions !== '1x Per Pengguna Baru' || v.event !== 'Pelanggan Baru')) {
-            updateDoc(doc(db, 'vouchers', v.id), { 
-              expiry: 'Selamanya', 
-              redemptions: '1x Per Pengguna Baru',
-              event: 'Pelanggan Baru',
-              status: 'Active',
-              isActive: true
-            }).catch(err => console.error('Error updating Firestore NEFAKKY10 voucher:', err));
-            return { ...v, expiry: 'Selamanya', redemptions: '1x Per Pengguna Baru', event: 'Pelanggan Baru', status: 'Active' as const, isActive: true };
-          }
-          if (v.code === 'WEEKENDSERU' && v.discountPercent !== 15) {
-            updateDoc(doc(db, 'vouchers', v.id), { discountPercent: 15, name: 'Weekend Promo Diskon 15%', event: 'Promo Akhir Pekan' })
-              .catch(err => console.error('Error updating Firestore voucher:', err));
-            return { ...v, discountPercent: 15, name: 'Weekend Promo Diskon 15%', event: 'Promo Akhir Pekan' };
-          }
-          return v;
-        });
-        setVouchersState(updatedVouches);
+        setVouchersState(vouches);
       }
     }, (err) => console.error('Vouchers Firestore error:', err));
 
@@ -1082,12 +1056,31 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
+  /** Helper membersihkan properti undefined agar tidak memicu Firestore Unsupported field error */
+  const cleanForFirestore = <T extends Record<string, any>>(obj: T): Record<string, any> => {
+    if (!obj || typeof obj !== 'object') return obj;
+    const clean: Record<string, any> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (val !== undefined) {
+        if (Array.isArray(val)) {
+          clean[key] = val.filter(item => item !== undefined);
+        } else if (val !== null && typeof val === 'object' && !(val instanceof Date)) {
+          clean[key] = cleanForFirestore(val);
+        } else {
+          clean[key] = val;
+        }
+      }
+    }
+    return clean;
+  };
+
   const setProducts: React.Dispatch<React.SetStateAction<ProductItem[]>> = (action) => {
     setProductsState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
-      // Sync each item to Firestore doc
+      // Sync each item to Firestore doc with sanitation
       next.forEach(p => {
-        setDoc(doc(db, 'products', p.id), p, { merge: true }).catch(console.error);
+        const cleanP = cleanForFirestore(p);
+        setDoc(doc(db, 'products', p.id), cleanP, { merge: true }).catch(console.error);
       });
       return next;
     });
@@ -1097,7 +1090,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setPromotionsState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       next.forEach(p => {
-        setDoc(doc(db, 'promotions', p.id), p, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'promotions', p.id), cleanForFirestore(p), { merge: true }).catch(console.error);
       });
       return next;
     });
@@ -1107,7 +1100,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setVouchersState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       next.forEach(v => {
-        setDoc(doc(db, 'vouchers', v.id), v, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'vouchers', v.id), cleanForFirestore(v), { merge: true }).catch(console.error);
       });
       return next;
     });
@@ -1117,7 +1110,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setOrdersState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       next.forEach(o => {
-        setDoc(doc(db, 'orders', o.id), o, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'orders', o.id), cleanForFirestore(o), { merge: true }).catch(console.error);
       });
       return next;
     });
@@ -1127,7 +1120,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setReviewsState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       next.forEach(r => {
-        setDoc(doc(db, 'reviews', r.id), r, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'reviews', r.id), cleanForFirestore(r), { merge: true }).catch(console.error);
       });
       return next;
     });
@@ -1137,7 +1130,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setChatMessagesState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       next.forEach(c => {
-        setDoc(doc(db, 'chat_messages', c.id), c, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'chat_messages', c.id), cleanForFirestore(c), { merge: true }).catch(console.error);
       });
       return next;
     });
@@ -1151,30 +1144,52 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       visibility: productData.visibility ?? true,
       status: productData.status ?? 'Active'
     };
-    setProductsState(prev => [newProduct, ...prev]);
-    setDoc(doc(db, 'products', newId), newProduct).catch(console.error);
-    return newProduct;
+    const cleanProd = cleanForFirestore(newProduct) as ProductItem;
+    setProductsState(prev => [cleanProd, ...prev]);
+    try {
+      setDoc(doc(db, 'products', newId), cleanProd).catch(console.error);
+    } catch (e) {
+      console.warn('Catch addProduct setDoc error:', e);
+    }
+    return cleanProd;
   };
 
   const updateProduct = (id: string, updated: Partial<ProductItem>) => {
-    setProductsState(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p));
-    updateDoc(doc(db, 'products', id), updated).catch(console.error);
+    const cleanUpdated = cleanForFirestore(updated);
+    setProductsState(prev => prev.map(p => p.id === id ? { ...p, ...cleanUpdated } : p));
+    try {
+      updateDoc(doc(db, 'products', id), cleanUpdated).catch(err => console.warn('updateProduct error:', err));
+    } catch (e) {
+      console.warn('Catch updateProduct updateDoc error:', e);
+    }
   };
 
   const softDeleteProduct = (id: string) => {
     const deletedAt = new Date().toISOString();
     setProductsState(prev => prev.map(p => p.id === id ? { ...p, isDeleted: true, deletedAt } : p));
-    updateDoc(doc(db, 'products', id), { isDeleted: true, deletedAt }).catch(console.error);
+    try {
+      updateDoc(doc(db, 'products', id), { isDeleted: true, deletedAt }).catch(console.error);
+    } catch (e) {
+      console.warn('Catch softDeleteProduct error:', e);
+    }
   };
 
   const restoreProduct = (id: string) => {
     setProductsState(prev => prev.map(p => p.id === id ? { ...p, isDeleted: false, deletedAt: undefined } : p));
-    updateDoc(doc(db, 'products', id), { isDeleted: false, deletedAt: null }).catch(console.error);
+    try {
+      updateDoc(doc(db, 'products', id), { isDeleted: false, deletedAt: null }).catch(console.error);
+    } catch (e) {
+      console.warn('Catch restoreProduct error:', e);
+    }
   };
 
   const forceDeleteProduct = (id: string) => {
     setProductsState(prev => prev.filter(p => p.id !== id));
-    deleteDoc(doc(db, 'products', id)).catch(console.error);
+    try {
+      deleteDoc(doc(db, 'products', id)).catch(console.error);
+    } catch (e) {
+      console.warn('Catch forceDeleteProduct error:', e);
+    }
   };
 
   const deleteProduct = (id: string) => {
@@ -1187,10 +1202,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       const nextVis = !target.visibility;
       const nextStatus = nextVis ? 'Active' : 'Inactive';
       setProductsState(prev => prev.map(p => p.id === id ? { ...p, visibility: nextVis, status: nextStatus } : p));
-      updateDoc(doc(db, 'products', id), {
-        visibility: nextVis,
-        status: nextStatus
-      }).catch(console.error);
+      try {
+        updateDoc(doc(db, 'products', id), {
+          visibility: nextVis,
+          status: nextStatus
+        }).catch(console.error);
+      } catch (e) {
+        console.warn('Catch toggleProductVisibility error:', e);
+      }
     }
   };
 

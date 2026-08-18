@@ -10,11 +10,11 @@
 | Parameter | Hasil |
 | :--- | :--- |
 | **Status Keseluruhan** | **PASSED ✅** |
-| **Waktu Eksekusi** | 18/8/2026, 14.05.59 WIB |
+| **Waktu Eksekusi** | 18/8/2026, 14.19.43 WIB |
 | **Total Pengujian** | 6 Tes |
 | **Berhasil (Passed)** | **6** ✅ |
 | **Gagal (Failed)** | **0** ❌ |
-| **Durasi Eksekusi** | 4221 ms |
+| **Durasi Eksekusi** | 4910 ms |
 
 ---
 
@@ -23,7 +23,7 @@
 
 ### 1. 1. TypeScript Compilation — tsc --noEmit type check
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 4217 ms
+- **Waktu Eksekusi**: 4905 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
@@ -53,7 +53,7 @@
 
 ### 6. 6. Firebase Configuration — Firebase app initialization in lib/firebase.ts
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 0 ms
+- **Waktu Eksekusi**: 1 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 

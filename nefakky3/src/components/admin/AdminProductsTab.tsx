@@ -147,7 +147,7 @@ export default function AdminProductsTab({
       stock: parseInt(prodForm.stock) || 0,
       visibility: prodForm.visibility,
       status: prodForm.status,
-      badge: (prodForm.badge || undefined) as any,
+      badge: prodForm.badge || null,
       image: mainCover,
       gallery: galleryPayload,
       description: prodForm.description.trim() || 'Hidangan tradisional rumahan otentik khas Nefakky.',
@@ -161,15 +161,19 @@ export default function AdminProductsTab({
       maxDeliveryKm: parseInt(prodForm.maxDeliveryKm) || 25
     };
 
-    if (editingProduct) {
-      updateProduct(editingProduct.id, productPayload);
-    } else {
-      addProduct({
-        ...productPayload,
-        rating: 5.0,
-        reviewsCount: 1,
-        soldCount: '0 Porsi'
-      });
+    try {
+      if (editingProduct) {
+        updateProduct(editingProduct.id, productPayload);
+      } else {
+        addProduct({
+          ...productPayload,
+          rating: 5.0,
+          reviewsCount: 1,
+          soldCount: '0 Porsi'
+        });
+      }
+    } catch (err) {
+      console.error('Gagal menyimpan produk:', err);
     }
 
     setShowProductModal(false);
