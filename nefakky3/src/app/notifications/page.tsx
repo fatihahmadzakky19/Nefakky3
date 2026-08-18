@@ -27,6 +27,7 @@ import {
   Tag, 
   Bell, 
   ArrowLeft,
+  ArrowRight,
   X,
   FileText,
   Clock,
@@ -38,16 +39,20 @@ import {
   Check,
   Camera,
   UploadCloud,
-  Pencil
+  Pencil,
+  AlertTriangle,
+  CreditCard
 } from 'lucide-react';
 
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { orders, vouchers, updateOrderStatus, confirmOrderReceived, uploadOrderProofPhoto } = useData();
+  const { orders, vouchers, updateOrderStatus, confirmOrderReceived, uploadOrderProofPhoto, uploadOrderPaymentProofPhoto } = useData();
   const { totalCartCount } = useCart();
   const proofInputRef = React.useRef<HTMLInputElement>(null);
+  const paymentProofInputRef = React.useRef<HTMLInputElement>(null);
   const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false);
+  const [cameraTarget, setCameraTarget] = useState<'product' | 'payment'>('product');
 
   const [selectedReceipt, setSelectedReceipt] = useState<AdminOrder | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
@@ -82,8 +87,7 @@ export default function NotificationsPage() {
     const list = (orders || [])
       .filter(o => 
         (o.customerEmail && o.customerEmail.toLowerCase() === currentUserEmail) ||
-        (o.userId && user.uid && o.userId === user.uid) ||
-        (currentUserName && o.customerName?.toLowerCase()?.includes(currentUserName))
+        (o.userId && user.uid && o.userId === user.uid)
       );
 
     return list.sort((a, b) => {
@@ -98,34 +102,11 @@ export default function NotificationsPage() {
       const timeB = b.createdAt || 0;
       return timeB - timeA; // Dalam grup status yang sama, urutkan dari terbaru ke terlama
     });
-  }, [user, currentUserEmail, currentUserName, orders]);
+  }, [user, currentUserEmail, orders]);
 
-  const fallbackOrder: AdminOrder = {
-    id: 'ORD-4837',
-    customerName: user?.displayName || user?.email?.split('@')[0] || 'Fatih Ahmad Zakky',
-    customerEmail: currentUserEmail,
-    avatar: user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || 'User')}&background=25160E&color=ffffff`,
-    address: 'Jl. Sudirman Kav 52-53, Jakarta Selatan, 12190',
-    items: [
-      { id: 'm1', name: 'Ayam Bakar', price: 35000, quantity: 1, image: '/images/ayam_bakar.jpg' },
-      { id: 'm4', name: 'Gudeg', price: 40000, quantity: 1, image: '/images/gudeg.jpg' }
-    ],
-    itemCount: 2,
-    paymentMethod: 'Midtrans Payment Gateway Engine',
-    paymentBadge: 'PAID',
-    deliveryType: 'Express Delivery (30 Mins)',
-    status: 'COOKING',
-    subtotal: 150000,
-    shippingCost: 15000,
-    discount: 0,
-    total: 165000,
-    date: 'Hari ini, 14:12 WIB',
-    createdAt: Date.now() - 1000 * 60 * 5
-  };
+  const displayOrdersList = userOrders;
 
-  const displayOrdersList = userOrders.length > 0 ? userOrders : [fallbackOrder];
-
-  const activeOrder: AdminOrder = displayOrdersList.find(o => o.id === selectedOrderId) || displayOrdersList[0];
+  const activeOrder: AdminOrder | undefined = displayOrdersList.find(o => o.id === selectedOrderId) || displayOrdersList[0];
 
   const [liveRtdbStatus, setLiveRtdbStatus] = useState<string | null>(null);
 
@@ -156,11 +137,11 @@ export default function NotificationsPage() {
     }
   };
 
-  const currentStatus = liveRtdbStatus || activeOrder.status;
+  const currentStatus = liveRtdbStatus || activeOrder?.status || 'PENDING';
 
   // Real-time Countdown Timer Logic
   React.useEffect(() => {
-    if (currentStatus === 'COMPLETED') return;
+    if (!activeOrder || currentStatus === 'COMPLETED') return;
 
     const createdTime = activeOrder.createdAt || Date.now();
     const now = Date.now();
@@ -178,7 +159,7 @@ export default function NotificationsPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeOrder.id, currentStatus, activeOrder.createdAt]);
+  }, [activeOrder?.id, currentStatus, activeOrder?.createdAt]);
 
   const formatCountdown = (totalSec: number) => {
     if (currentStatus === 'COMPLETED') return 'PESANAN TIBA';
@@ -216,6 +197,42 @@ export default function NotificationsPage() {
       <div className="min-h-screen bg-[#FBF9F5] flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-3 border-stone-300 border-t-[#25160E] rounded-full animate-spin mb-4" />
         <p className="text-xs text-[#4F4540] font-medium">Memuat Status Lacak Pesanan...</p>
+      </div>
+    );
+  }
+
+  if (!user || displayOrdersList.length === 0 || !activeOrder) {
+    return (
+      <div className="min-h-screen bg-[#FBF9F5] text-[#1B1C1A] font-sans selection:bg-[#934B19]/10 selection:text-[#934B19] pb-20">
+        <Navbar />
+        <main className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6">
+          <div className="w-20 h-20 bg-white border border-amber-900/10 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-amber-950/5">
+            <Truck className="w-10 h-10 text-[#934B19] stroke-[1.5]" />
+          </div>
+
+          <div className="space-y-2 max-w-md mx-auto">
+            <h1 className="font-serif text-3xl font-bold text-[#25160E]">Belum Ada Status Pesanan</h1>
+            <p className="text-xs text-[#4F4540] font-light leading-relaxed">
+              Anda belum melakukan transaksi pemesanan makanan. Silakan pesan hidangan favorit Anda melalui katalog menu untuk memantau status pengiriman 5-tahap secara realtime!
+            </p>
+          </div>
+
+          <div className="pt-4 flex items-center justify-center gap-3 flex-wrap">
+            <Link
+              href="/menu"
+              className="px-6 py-3.5 bg-[#25160E] hover:bg-[#3C2A21] text-white font-bold text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all inline-flex items-center gap-2"
+            >
+              <span>Jelajahi Katalog Menu</span>
+              <ArrowRight className="w-4 h-4 text-amber-300" />
+            </Link>
+            <Link
+              href="/profile"
+              className="px-6 py-3.5 bg-white text-[#25160E] hover:bg-stone-50 font-bold text-xs rounded-2xl border border-amber-900/15 shadow-sm transition-all inline-flex items-center gap-2"
+            >
+              <span>Lihat Profil Saya</span>
+            </Link>
+          </div>
+        </main>
       </div>
     );
   }
@@ -439,14 +456,42 @@ export default function NotificationsPage() {
           {/* KOLOM KANAN: BUKTI FOTO PENERIMAAN & DETAIL ALAMAT */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* Hidden Input for Proof Photo Upload (Supports direct camera capture on mobile) */}
+            {/* Hidden Input for Product Proof Photo Upload */}
             <input 
               type="file" 
               ref={proofInputRef} 
               accept="image/*"
               capture="environment"
               className="hidden" 
-              onChange={handleProofImageChange} 
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && activeOrder?.id) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    uploadOrderProofPhoto(activeOrder.id, reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }} 
+            />
+
+            {/* Hidden Input for COD Payment Proof Photo Upload */}
+            <input 
+              type="file" 
+              ref={paymentProofInputRef} 
+              accept="image/*"
+              capture="environment"
+              className="hidden" 
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && activeOrder?.id) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    uploadOrderPaymentProofPhoto(activeOrder.id, reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }} 
             />
 
             {/* LIVE CAMERA WEBCAM MODAL */}
@@ -455,38 +500,65 @@ export default function NotificationsPage() {
               onClose={() => setIsLiveCameraOpen(false)}
               onCapture={(base64Image) => {
                 if (activeOrder?.id) {
-                  uploadOrderProofPhoto(activeOrder.id, base64Image);
+                  if (cameraTarget === 'payment') {
+                    uploadOrderPaymentProofPhoto(activeOrder.id, base64Image);
+                  } else {
+                    uploadOrderProofPhoto(activeOrder.id, base64Image);
+                  }
                 }
               }}
-              onFallbackToFile={() => proofInputRef.current?.click()}
+              onFallbackToFile={() => {
+                if (cameraTarget === 'payment') {
+                  paymentProofInputRef.current?.click();
+                } else {
+                  proofInputRef.current?.click();
+                }
+              }}
             />
 
             {/* BUKTI FOTO PESANAN DITERIMA CARD */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-900/10 shadow-xl space-y-6">
               
+              {activeOrder.paymentMethod?.toLowerCase().includes('cod') && activeOrder.status !== 'COMPLETED' && (
+                <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-[#934B19] shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-[#934B19] uppercase tracking-wider block">⚠️ PESANAN COD (BAYAR DI TEMPAT) - PEMBAYARAN BELUM LUNAS</span>
+                    <p className="text-xs text-[#25160E] leading-relaxed font-normal">
+                      Pembayaran tunai sebesar <strong>Rp {activeOrder.total.toLocaleString('id-ID')}</strong> dilakukan saat kurir tiba. 
+                      Pembayaran belum dianggap berhasil sampai Anda menerima hidangan &amp; melampirkan <strong>2 Foto Bukti</strong>:
+                      <br />
+                      1. 📸 Foto Bukti Fisik Makanan Diterima
+                      <br />
+                      2. 💵 Foto Bukti Serah Terima Uang / Resi Pembayaran COD ke Kurir
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
                 <div>
                   <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2">
                     <Camera className="w-5 h-5 text-[#934B19]" />
-                    <span>Bukti Foto Pesanan Diterima</span>
+                    <span>1. Bukti Foto Makanan Diterima</span>
                   </h3>
                   <p className="text-xs text-[#4F4540] font-light mt-0.5">
-                    Unggah atau ambil foto langsung hidangan/pesanan yang telah Anda terima sebagai konfirmasi resmi.
+                    Unggah atau ambil foto langsung hidangan/pesanan yang telah Anda terima.
                   </p>
                 </div>
 
                 {activeOrder.proofPhoto && (
                   <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full border border-emerald-300 flex items-center gap-1 shrink-0">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Foto Bukti Terverifikasi</span>
+                    <span>Foto Makanan Terverifikasi</span>
                   </span>
                 )}
               </div>
 
-              {/* PHOTO DISPLAY OR UPLOAD AREA */}
+              {/* PRODUCT PHOTO DISPLAY OR UPLOAD AREA */}
               {activeOrder.proofPhoto ? (
                 <div className="space-y-4">
-                  <div className="relative w-full h-60 sm:h-72 rounded-2xl overflow-hidden border border-amber-900/15 shadow-md bg-stone-900 group">
+                  <div className="relative w-full h-52 rounded-2xl overflow-hidden border border-amber-900/15 shadow-md bg-stone-900 group">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img 
                       src={activeOrder.proofPhoto} 
@@ -495,21 +567,21 @@ export default function NotificationsPage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-between p-4 text-white">
                       <div>
-                        <span className="text-xs font-bold block">Bukti Penerimaan Makanan #{activeOrder.id}</span>
-                        <span className="text-[10px] text-amber-200">Foto Resmi Dikonfirmasi Pelanggan</span>
+                        <span className="text-xs font-bold block">Foto Bukti Makanan Diterima #{activeOrder.id}</span>
+                        <span className="text-[10px] text-amber-200">Foto Resmi Hidangan Dikonfirmasi</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => setIsLiveCameraOpen(true)}
+                          onClick={() => { setCameraTarget('product'); setIsLiveCameraOpen(true); }}
                           className="px-3 py-1.5 bg-[#934B19] hover:bg-[#783603] backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white shadow"
                         >
                           <Camera className="w-3.5 h-3.5" />
-                          <span>Foto Kamera</span>
+                          <span>Kamera</span>
                         </button>
                         <button
                           type="button"
-                          onClick={() => proofInputRef.current?.click()}
+                          onClick={() => { setCameraTarget('product'); proofInputRef.current?.click(); }}
                           className="px-3 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -520,34 +592,123 @@ export default function NotificationsPage() {
                   </div>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-amber-900/25 bg-[#FBF9F5] rounded-2xl p-6 sm:p-8 text-center space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#934B19]/10 text-[#934B19] flex items-center justify-center mx-auto">
-                    <UploadCloud className="w-7 h-7" />
+                <div className="border-2 border-dashed border-amber-900/25 bg-[#FBF9F5] rounded-2xl p-5 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[#934B19]/10 text-[#934B19] flex items-center justify-center mx-auto">
+                    <UploadCloud className="w-6 h-6" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-[#25160E]">Ambil atau Upload Bukti Foto Penerimaan</p>
-                    <p className="text-[11px] text-[#4F4540]">Pilih metode pengambilan foto bukti hidangan di lokasi Anda:</p>
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-[#25160E]">Foto 1: Ambil / Upload Bukti Foto Makanan Diterima</p>
+                    <p className="text-[11px] text-[#4F4540]">Format: Foto sajian hangat makanan yang telah sampai di tempat Anda.</p>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
                     <button
                       type="button"
-                      onClick={() => setIsLiveCameraOpen(true)}
-                      className="w-full sm:w-auto px-5 py-2.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
+                      onClick={() => { setCameraTarget('product'); setIsLiveCameraOpen(true); }}
+                      className="w-full sm:w-auto px-4 py-2 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
                     >
-                      <Camera className="w-4 h-4 text-amber-200" />
-                      <span>📸 Ambil Foto Kamera Live</span>
+                      <Camera className="w-3.5 h-3.5 text-amber-200" />
+                      <span>📸 Foto Kamera Live</span>
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => proofInputRef.current?.click()}
-                      className="w-full sm:w-auto px-5 py-2.5 bg-[#25160E] hover:bg-[#3C2A21] text-amber-300 text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95"
+                      onClick={() => { setCameraTarget('product'); proofInputRef.current?.click(); }}
+                      className="w-full sm:w-auto px-4 py-2 bg-[#25160E] hover:bg-[#3C2A21] text-amber-300 text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
                     >
-                      <UploadCloud className="w-4 h-4 text-amber-300" />
-                      <span>📁 Pilih dari Galeri HP / File</span>
+                      <UploadCloud className="w-3.5 h-3.5 text-amber-300" />
+                      <span>📁 Pilih dari Galeri</span>
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* CARD KHUSUS BUKTI PEMBAYARAN COD */}
+              {activeOrder.paymentMethod?.toLowerCase().includes('cod') && (
+                <div className="pt-4 border-t border-amber-900/10 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-emerald-600" />
+                        <span>2. Bukti Foto Pembayaran Tunai COD</span>
+                      </h3>
+                      <p className="text-xs text-[#4F4540] font-light mt-0.5">
+                        Foto serah terima uang cash / resi pembayaran tunai kepada kurir pengantar.
+                      </p>
+                    </div>
+
+                    {activeOrder.paymentProofPhoto && (
+                      <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full border border-emerald-300 flex items-center gap-1 shrink-0">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Bukti Pembayaran Terverifikasi</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {activeOrder.paymentProofPhoto ? (
+                    <div className="space-y-4">
+                      <div className="relative w-full h-52 rounded-2xl overflow-hidden border border-emerald-600/20 shadow-md bg-stone-900 group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={activeOrder.paymentProofPhoto} 
+                          alt="Bukti Foto Pembayaran COD" 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-between p-4 text-white">
+                          <div>
+                            <span className="text-xs font-bold block">Bukti Pembayaran COD #{activeOrder.id}</span>
+                            <span className="text-[10px] text-emerald-300">Lunas Rp {activeOrder.total.toLocaleString('id-ID')}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => { setCameraTarget('payment'); setIsLiveCameraOpen(true); }}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white shadow"
+                            >
+                              <Camera className="w-3.5 h-3.5" />
+                              <span>Foto Uang Kamera</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setCameraTarget('payment'); paymentProofInputRef.current?.click(); }}
+                              className="px-3 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>Galeri</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-emerald-600/30 bg-emerald-50/50 rounded-2xl p-5 text-center space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-600/10 text-emerald-700 flex items-center justify-center mx-auto">
+                        <CreditCard className="w-6 h-6" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-[#25160E]">Foto 2: Ambil / Upload Bukti Foto Pembayaran Tunai COD</p>
+                        <p className="text-[11px] text-[#4F4540]">Format: Foto serah terima uang cash / resi pembayaran tunai Rp {activeOrder.total.toLocaleString('id-ID')} ke kurir.</p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => { setCameraTarget('payment'); setIsLiveCameraOpen(true); }}
+                          className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                        >
+                          <Camera className="w-3.5 h-3.5 text-emerald-200" />
+                          <span>📸 Foto Uang Kamera Live</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setCameraTarget('payment'); paymentProofInputRef.current?.click(); }}
+                          className="w-full sm:w-auto px-4 py-2 bg-[#25160E] hover:bg-[#3C2A21] text-emerald-300 text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5 text-emerald-300" />
+                          <span>📁 Pilih dari Galeri</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -566,33 +727,44 @@ export default function NotificationsPage() {
                 <div className="space-y-1">
                   <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2 justify-center sm:justify-start">
                     <CheckCircle2 className={`w-5 h-5 ${currentStatus === 'COMPLETED' ? 'text-emerald-600' : 'text-[#934B19]'}`} />
-                    <span>Konfirmasi Penerimaan Makanan</span>
+                    <span>Konfirmasi Penerimaan Makanan &amp; Pembayaran</span>
                   </h3>
                   <p className="text-xs text-[#4F4540] font-light leading-relaxed">
                     {currentStatus === 'COMPLETED'
-                      ? 'Pesanan telah resmi dikonfirmasi sampai di tangan Anda.'
-                      : 'Ketika makanan telah sampai di tangan Anda, silakan upload bukti foto & klik konfirmasi.'}
+                      ? 'Pesanan & pembayaran telah resmi dikonfirmasi sampai di tangan Anda.'
+                      : activeOrder.paymentMethod?.toLowerCase().includes('cod')
+                        ? 'Khusus COD: Pembayaran belum berhasil sampai Anda menerima hidangan & mengunggah Foto Bukti Makanan + Foto Pembayaran Tunai.'
+                        : 'Ketika makanan telah sampai di tangan Anda, silakan upload bukti foto & klik konfirmasi.'}
                   </p>
                 </div>
 
                 {currentStatus === 'COMPLETED' ? (
                   <div className="px-5 py-3 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-2xl border border-emerald-300 flex items-center gap-2 shrink-0">
                     <Check className="w-4 h-4 text-emerald-700" />
-                    <span>Pesanan Diterima</span>
+                    <span>Pesanan Diterima &amp; Lunas</span>
                   </div>
                 ) : (
                   <button
                     onClick={() => {
+                      const isCod = activeOrder.paymentMethod?.toLowerCase().includes('cod') || activeOrder.paymentMethod?.toLowerCase().includes('cash on delivery');
                       if (!activeOrder.proofPhoto) {
-                        proofInputRef.current?.click();
-                      } else {
-                        confirmOrderReceived(activeOrder.id, activeOrder.proofPhoto);
+                        alert('⚠️ WAJIB UNGGAH FOTO BUKTI MAKANAN DITERIMA!\n\nSilakan ambil foto makanan dengan kamera live atau pilih dari galeri terlebih dahulu.');
+                        setCameraTarget('product');
+                        setIsLiveCameraOpen(true);
+                        return;
                       }
+                      if (isCod && !activeOrder.paymentProofPhoto) {
+                        alert('⚠️ WAJIB UNGGAH FOTO BUKTI PEMBAYARAN TUNAI COD!\n\nKhusus metode Cash On Delivery (COD), Anda wajib melampirkan foto serah terima uang cash / resi pembayaran tunai ke kurir!');
+                        setCameraTarget('payment');
+                        setIsLiveCameraOpen(true);
+                        return;
+                      }
+                      confirmOrderReceived(activeOrder.id, activeOrder.proofPhoto, activeOrder.paymentProofPhoto);
                     }}
                     className="px-6 py-3.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 cursor-pointer"
                   >
                     <CheckCircle2 className="w-4 h-4 text-amber-200" />
-                    <span>Konfirmasi Pesanan Diterima</span>
+                    <span>Konfirmasi Pesanan {activeOrder.paymentMethod?.toLowerCase().includes('cod') ? 'COD Diterima & Lunas' : 'Diterima'}</span>
                   </button>
                 )}
               </div>

@@ -395,28 +395,58 @@ export default function RealtimeOrderTracker({
       )}
 
       {!isCompleted && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1 border-t border-stone-100">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-stone-100">
           <p className="text-[11px] text-[#4F4540] font-medium text-center sm:text-left">
-            💡 Makanan sudah Anda terima? Tekan tombol konfirmasi & sertakan foto bukti makanan jika ada.
+            {order.proofPhoto ? (
+              <span className="text-emerald-700 font-bold flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Foto bukti penerimaan terverifikasi. Silakan tekan tombol konfirmasi!</span>
+              </span>
+            ) : (
+              <span className="text-[#934B19] font-bold flex items-center gap-1">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>WAJIB: Ambil foto live / upload galeri bukti makanan sebelum konfirmasi!</span>
+              </span>
+            )}
           </p>
           <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-            {!order.proofPhoto && (
+            {!order.proofPhoto ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsLiveCameraOpen(true)}
+                  className="px-3.5 py-2.5 bg-[#934B19] text-white font-bold text-xs rounded-2xl shadow-sm hover:bg-[#783603] transition-all flex items-center gap-1.5 shrink-0"
+                  title="Ambil Foto dengan Kamera Live"
+                >
+                  <Camera className="w-4 h-4 text-amber-200" />
+                  <span>📸 Foto Live</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => proofInputRef.current?.click()}
+                  className="px-3.5 py-2.5 bg-[#25160E] text-amber-300 font-bold text-xs rounded-2xl shadow-sm hover:bg-[#3C2A21] transition-all flex items-center gap-1.5 shrink-0"
+                  title="Upload Foto dari Galeri"
+                >
+                  <span>📁 Galeri</span>
+                </button>
+              </>
+            ) : (
               <button
-                onClick={() => setIsLiveCameraOpen(true)}
-                className="px-3.5 py-2.5 bg-amber-100 text-amber-950 font-bold text-xs rounded-2xl border border-amber-300 shadow-xs hover:bg-amber-200 transition-all flex items-center gap-1.5"
-                title="Ambil Foto dengan Kamera Live"
+                type="button"
+                onClick={() => {
+                  if (!order.proofPhoto) {
+                    alert('⚠️ WAJIB UNGGAH FOTO BUKTI PENERIMAAN!\n\nSilakan ambil foto makanan dengan kamera live atau pilih foto dari galeri terlebih dahulu.');
+                    setIsLiveCameraOpen(true);
+                    return;
+                  }
+                  onConfirmReceived(order.id, order.proofPhoto);
+                }}
+                className="flex-1 sm:flex-initial px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
               >
-                <Camera className="w-4 h-4 text-[#934B19]" />
-                <span>📸 Foto Live</span>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>✅ Konfirmasi Pesanan Diterima</span>
               </button>
             )}
-            <button
-              onClick={() => onConfirmReceived(order.id, order.proofPhoto)}
-              className="flex-1 sm:flex-initial px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>✅ Konfirmasi Pesanan Diterima</span>
-            </button>
           </div>
         </div>
       )}

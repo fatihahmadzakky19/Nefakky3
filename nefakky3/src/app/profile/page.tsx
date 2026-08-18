@@ -56,7 +56,9 @@ import {
   Briefcase,
   Building,
   Plane,
-  AlertCircle
+  AlertCircle,
+  Paperclip,
+  Film
 } from 'lucide-react';
 
 export default function UserProfilePage() {
@@ -93,6 +95,9 @@ export default function UserProfilePage() {
   
   // Chat & Order Filter States
   const [chatInput, setChatInput] = useState('');
+  const [chatMediaUrl, setChatMediaUrl] = useState<string | null>(null);
+  const [chatMediaType, setChatMediaType] = useState<'image' | 'video'>('image');
+  const chatFileInputRef = React.useRef<HTMLInputElement>(null);
   const [orderFilter, setOrderFilter] = useState<'ALL' | 'ACTIVE' | 'DELIVERING' | 'COMPLETED'>('ALL');
   const [confirmedSuccessMessage, setConfirmedSuccessMessage] = useState<string | null>(null);
 
@@ -136,13 +141,11 @@ export default function UserProfilePage() {
   const myOrders = React.useMemo(() => {
     if (!user?.email) return [];
     const emailLower = user.email.toLowerCase();
-    const nameLower = (user.displayName || user.email.split('@')[0]).toLowerCase();
 
     return (orders || [])
       .filter(o => 
         (o.customerEmail && o.customerEmail.toLowerCase() === emailLower) ||
-        (o.userId && user.uid && o.userId === user.uid) ||
-        (o.customerName && o.customerName.toLowerCase().includes(nameLower))
+        (o.userId && user.uid && o.userId === user.uid)
       )
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   }, [user, orders]);
@@ -174,13 +177,47 @@ export default function UserProfilePage() {
     }
   }, [user, loading]);
 
+  // Handle Unggah Foto / Video CS Chat
+  const handleChatMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 20 * 1024 * 1024) {
+        alert('Ukuran file terlalu besar. Maksimal ukuran file foto/video adalah 20MB.');
+        return;
+      }
+      const isVid = file.type.startsWith('video/');
+      const isImg = file.type.startsWith('image/');
+      if (!isVid && !isImg) {
+        alert('Format file tidak didukung. Harap pilih file foto atau video.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setChatMediaUrl(reader.result as string);
+        setChatMediaType(isVid ? 'video' : 'image');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Handle Chat Submit
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim() || !user?.email) return;
+    if ((!chatInput.trim() && !chatMediaUrl) || !user?.email) return;
 
-    sendChatMessage(user.email, displayName, chatInput.trim(), userAvatar);
+    sendChatMessage(
+      user.email, 
+      displayName, 
+      chatInput.trim() || (chatMediaType === 'video' ? '📹 [Lampiran Video Bantuan]' : '📷 [Lampiran Foto Bantuan]'), 
+      userAvatar,
+      chatMediaUrl || undefined,
+      chatMediaType
+    );
     setChatInput('');
+    setChatMediaUrl(null);
+    if (chatFileInputRef.current) {
+      chatFileInputRef.current.value = '';
+    }
   };
 
   const handleChipClick = (text: string) => {
@@ -503,6 +540,19 @@ export default function UserProfilePage() {
                     <span>Panel Administrator</span>
                   </Link>
                 )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (confirm('Apakah Anda yakin ingin keluar (log out) dari akun ini?')) {
+                      await logout();
+                      router.push('/login');
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl shadow-sm transition-all flex items-center gap-1.5"
+                >
+                  <LogOut className="w-4 h-4 text-rose-600" />
+                  <span>Keluar / Log Out</span>
+                </button>
               </div>
             </div>
 
@@ -539,7 +589,7 @@ export default function UserProfilePage() {
                   )}
                 </div>
                 <span className="text-xs font-semibold text-[#1B1C1A] leading-snug line-clamp-2">
-                  {activeAddress?.address || <span className="text-stone-400 font-normal italic">Belum diisi</span>}
+                  {activeAddress?.address || <span className="text-amber-800/70 font-normal italic">Belum ada alamat tersimpan</span>}
                 </span>
               </div>
             </div>
@@ -554,50 +604,7 @@ export default function UserProfilePage() {
           {/* LEFT SIDEBAR: Account Security & Live Chat CS Desk */}
           <div className="lg:col-span-4 space-y-6">
             
-            {/* KEAMANAN AKUN & GANTI PASSWORD CARD */}
-            <div className="bg-white border border-amber-900/10 rounded-3xl p-6 shadow-xl shadow-amber-950/5 space-y-4">
-              <div className="flex items-center gap-3 border-b border-stone-100 pb-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#934B19]/10 text-[#934B19] flex items-center justify-center shrink-0 border border-[#934B19]/20">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-serif text-base font-bold text-[#25160E]">Keamanan & Akun</h3>
-                  <p className="text-[10px] text-[#4F4540]">Status verifikasi & kata sandi</p>
-                </div>
-              </div>
 
-              {user.authProvider === 'google' ? (
-                <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-2">
-                  <div className="flex items-center gap-2 text-blue-900 text-xs font-bold">
-                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                    <span>Terhubung dengan Google SSO</span>
-                  </div>
-                  <p className="text-[11px] text-blue-800 leading-relaxed font-light">
-                    Anda masuk menggunakan Akun Google. Kata sandi Anda dikelola dan dilindungi secara aman langsung oleh Google.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-xs text-[#4F4540] font-light leading-relaxed">
-                    Perbarui kata sandi Anda secara berkala untuk menjaga keamanan transaksi kuliner Anda.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setPassError(null);
-                      setPassSuccess(false);
-                      setCurrentPass('');
-                      setNewPass('');
-                      setConfirmNewPass('');
-                      setIsPasswordModalOpen(true);
-                    }}
-                    className="w-full py-3 bg-[#25160E] hover:bg-[#3C2A21] text-amber-300 text-xs font-bold rounded-2xl shadow transition-all flex items-center justify-center gap-2"
-                  >
-                    <KeyRound className="w-4 h-4" />
-                    <span>Ganti Kata Sandi</span>
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* LIVE CHAT CUSTOMER SERVICE CARD */}
             <div className="bg-white border border-amber-900/10 rounded-3xl p-6 shadow-xl shadow-amber-950/5 space-y-4">
@@ -660,13 +667,33 @@ export default function UserProfilePage() {
                       </div>
 
                       <div
-                        className={`max-w-[88%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
+                        className={`max-w-[88%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm space-y-2 ${
                           msg.sender === 'user'
                             ? 'bg-[#25160E] text-white rounded-br-none font-medium'
                             : 'bg-white border border-amber-900/10 text-[#1B1C1A] rounded-bl-none font-normal'
                         }`}
                       >
-                        {msg.text}
+                        {msg.text && <p>{msg.text}</p>}
+                        
+                        {msg.mediaUrl && (
+                          <div className="mt-1.5 rounded-xl overflow-hidden border border-stone-200/40 bg-black/10">
+                            {msg.mediaType === 'video' || msg.mediaUrl.startsWith('data:video') ? (
+                              <video 
+                                src={msg.mediaUrl} 
+                                controls 
+                                className="max-w-full max-h-48 rounded-xl object-contain bg-black"
+                              />
+                            ) : (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img 
+                                src={msg.mediaUrl} 
+                                alt="Lampiran CS" 
+                                onClick={() => window.open(msg.mediaUrl, '_blank')}
+                                className="max-w-full max-h-48 rounded-xl object-cover cursor-pointer hover:opacity-90 transition-opacity" 
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))
@@ -674,18 +701,63 @@ export default function UserProfilePage() {
                 <div ref={chatBottomRef} />
               </div>
 
+              {/* Preview Lampiran Media (Foto / Video) sebelum Kirim */}
+              {chatMediaUrl && (
+                <div className="flex items-center gap-2 p-2 bg-amber-100/70 border border-amber-300/80 rounded-xl animate-fade-in">
+                  {chatMediaType === 'video' ? (
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#934B19]">
+                      <Film className="w-4 h-4 shrink-0" />
+                      <span className="text-[11px] truncate max-w-[200px]">Video terlampir siap dikirim</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={chatMediaUrl} alt="Preview Lampiran" className="w-8 h-8 rounded-lg object-cover border border-amber-900/20" />
+                      <span className="text-[11px] font-bold text-[#934B19]">Foto terlampir</span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChatMediaUrl(null);
+                      if (chatFileInputRef.current) chatFileInputRef.current.value = '';
+                    }}
+                    className="ml-auto text-rose-600 hover:text-rose-800 p-1"
+                    title="Batal Lampiran"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               {/* Chat Input Form */}
               <form onSubmit={handleSendChat} className="flex items-center gap-2">
+                <input
+                  type="file"
+                  ref={chatFileInputRef}
+                  onChange={handleChatMediaUpload}
+                  accept="image/*,video/*"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => chatFileInputRef.current?.click()}
+                  className="p-2.5 bg-[#FBF9F5] hover:bg-amber-100/80 text-[#934B19] rounded-xl border border-amber-900/15 transition-colors shrink-0 flex items-center gap-1"
+                  title="Lampirkan Foto atau Video"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+
                 <input
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Ketik pesan Anda..."
+                  placeholder="Ketik pesan atau lampirkan foto/video..."
                   className="flex-1 px-3.5 py-2.5 bg-[#FBF9F5] border border-amber-900/15 rounded-xl text-xs text-[#1B1C1A] focus:outline-none focus:ring-2 focus:ring-[#934B19]/30"
                 />
                 <button
                   type="submit"
-                  disabled={!chatInput.trim()}
+                  disabled={!chatInput.trim() && !chatMediaUrl}
                   className="px-4 py-2.5 bg-[#934B19] hover:bg-[#783603] disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow transition-all flex items-center justify-center shrink-0"
                 >
                   <Send className="w-3.5 h-3.5" />
@@ -734,86 +806,109 @@ export default function UserProfilePage() {
                 </button>
               </div>
 
-              {/* LIST OF SAVED ADDRESSES */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {userAddresses.map((addr) => {
-                  const isCurrentActive = addr.id === user.activeAddressId || (addr.isDefault && !user.activeAddressId);
-                  
-                  return (
-                    <div
-                      key={addr.id}
-                      className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 relative ${
-                        isCurrentActive
-                          ? 'bg-[#FBF9F5] border-[#934B19] ring-2 ring-[#934B19]/20 shadow-md'
-                          : 'bg-white border-amber-900/10 hover:border-amber-900/30 shadow-sm'
-                      }`}
+              {/* LIST OF SAVED ADDRESSES / EMPTY STATE */}
+              {userAddresses.length === 0 ? (
+                <div className="bg-[#FBF9F5] border border-amber-900/10 rounded-3xl p-8 text-center space-y-3">
+                  <div className="w-12 h-12 bg-white text-[#934B19] border border-amber-900/10 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                    <MapPin className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-serif text-lg font-bold text-[#25160E]">Belum Ada Alamat Tersimpan</h3>
+                    <p className="text-xs text-[#4F4540] max-w-sm mx-auto font-light leading-relaxed">
+                      Anda belum memiliki daftar alamat pengiriman tersimpan. Tambahkan alamat Rumah, Kantor, atau Hotel Anda untuk mempermudah transaksi pemesanan.
+                    </p>
+                  </div>
+                  <div className="pt-2">
+                    <button
+                      onClick={handleOpenAddAddressModal}
+                      className="px-5 py-2.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow transition-all inline-flex items-center gap-1.5 cursor-pointer"
                     >
-                      <div className="space-y-2">
-                        {/* Header Tag & Active Badge */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-1 bg-[#25160E] text-amber-300 font-bold text-[10px] rounded-xl flex items-center gap-1">
-                              {addr.label.toLowerCase().includes('rumah') && <Home className="w-3 h-3" />}
-                              {addr.label.toLowerCase().includes('kantor') && <Briefcase className="w-3 h-3" />}
-                              {(addr.label.toLowerCase().includes('bepergian') || addr.label.toLowerCase().includes('hotel')) && <Plane className="w-3 h-3" />}
-                              <span>{addr.label}</span>
-                            </span>
+                      <Plus className="w-4 h-4" />
+                      <span>Tambah Alamat Baru</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {userAddresses.map((addr) => {
+                    const isCurrentActive = addr.id === user.activeAddressId || (addr.isDefault && !user.activeAddressId);
+                    
+                    return (
+                      <div
+                        key={addr.id}
+                        className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 relative ${
+                          isCurrentActive
+                            ? 'bg-[#FBF9F5] border-[#934B19] ring-2 ring-[#934B19]/20 shadow-md'
+                            : 'bg-white border-amber-900/10 hover:border-amber-900/30 shadow-sm'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          {/* Header Tag & Active Badge */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2.5 py-1 bg-[#25160E] text-amber-300 font-bold text-[10px] rounded-xl flex items-center gap-1">
+                                {addr.label.toLowerCase().includes('rumah') && <Home className="w-3 h-3" />}
+                                {addr.label.toLowerCase().includes('kantor') && <Briefcase className="w-3 h-3" />}
+                                {(addr.label.toLowerCase().includes('bepergian') || addr.label.toLowerCase().includes('hotel')) && <Plane className="w-3 h-3" />}
+                                <span>{addr.label}</span>
+                              </span>
+                            </div>
+
+                            {isCurrentActive && (
+                              <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-300 flex items-center gap-1">
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span>Alamat Utama</span>
+                              </span>
+                            )}
                           </div>
 
-                          {isCurrentActive && (
-                            <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-300 flex items-center gap-1">
-                              <Check className="w-3 h-3 text-emerald-600" />
-                              <span>Alamat Utama</span>
-                            </span>
+                          {/* Receiver Details */}
+                          <div className="text-xs space-y-1 pt-1">
+                            <p className="font-bold text-[#1B1C1A]">{addr.receiverName || displayName}</p>
+                            <p className="text-[#4F4540] text-[11px]">{addr.receiverPhone || phone}</p>
+                            <p className="text-[#25160E] font-medium leading-relaxed pt-1 text-[11px]">
+                              {addr.address}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Card Action Buttons */}
+                        <div className="flex items-center justify-between pt-3 border-t border-amber-900/10 text-xs">
+                          {!isCurrentActive ? (
+                            <button
+                              onClick={() => handleSwitchActiveAddress(addr.id, addr.label)}
+                              className="text-[#934B19] font-bold text-[11px] hover:underline flex items-center gap-1"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Jadikan Utama</span>
+                            </button>
+                          ) : (
+                            <span className="text-emerald-700 font-bold text-[11px]">Sedang Aktif</span>
                           )}
+
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleOpenEditAddressModal(addr)}
+                              className="text-stone-600 hover:text-[#25160E] font-semibold text-[11px] flex items-center gap-1"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAddressClick(addr.id, addr.label)}
+                              className="text-rose-600 hover:text-rose-800 font-semibold text-[11px] flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Hapus</span>
+                            </button>
+                          </div>
                         </div>
 
-                        {/* Receiver Details */}
-                        <div className="text-xs space-y-1 pt-1">
-                          <p className="font-bold text-[#1B1C1A]">{addr.receiverName || displayName}</p>
-                          <p className="text-[#4F4540] text-[11px]">{addr.receiverPhone || phone}</p>
-                          <p className="text-[#25160E] font-medium leading-relaxed pt-1 text-[11px]">
-                            {addr.address}
-                          </p>
-                        </div>
                       </div>
-
-                      {/* Card Action Buttons */}
-                      <div className="flex items-center justify-between pt-3 border-t border-amber-900/10 text-xs">
-                        {!isCurrentActive ? (
-                          <button
-                            onClick={() => handleSwitchActiveAddress(addr.id, addr.label)}
-                            className="text-[#934B19] font-bold text-[11px] hover:underline flex items-center gap-1"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Jadikan Utama</span>
-                          </button>
-                        ) : (
-                          <span className="text-emerald-700 font-bold text-[11px]">Sedang Aktif</span>
-                        )}
-
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleOpenEditAddressModal(addr)}
-                            className="text-stone-600 hover:text-[#25160E] font-semibold text-[11px] flex items-center gap-1"
-                          >
-                            <Pencil className="w-3 h-3" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAddressClick(addr.id, addr.label)}
-                            className="text-rose-600 hover:text-rose-800 font-semibold text-[11px] flex items-center gap-1"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Hapus</span>
-                          </button>
-                        </div>
-                      </div>
-
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
             </div>
 
@@ -1025,16 +1120,21 @@ export default function UserProfilePage() {
 
             <form onSubmit={handleSaveAddress} className="space-y-4">
               
-              {/* Preset Label Chips */}
+              {/* Label Alamat (Preset & Custom Typing) */}
               <div>
-                <label className="block text-xs font-bold text-[#25160E] mb-2">Label Alamat</label>
-                <div className="flex flex-wrap gap-2">
-                  {['Rumah', 'Kantor', 'Rumah Ortu', 'Bepergian / Hotel', 'Lainnya'].map((chip) => (
+                <label className="block text-xs font-bold text-[#25160E] mb-1.5 flex items-center justify-between">
+                  <span>Label Alamat *</span>
+                  <span className="text-[10px] text-amber-800 font-medium">Bisa diketik custom atau pilih preset</span>
+                </label>
+
+                {/* Quick Preset Chips */}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {['Rumah', 'Kantor', 'Rumah Ortu', 'Bepergian / Hotel'].map((chip) => (
                     <button
                       key={chip}
                       type="button"
                       onClick={() => setAddressLabel(chip)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                      className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all border ${
                         addressLabel === chip
                           ? 'bg-[#25160E] text-amber-300 border-[#25160E] shadow-sm'
                           : 'bg-[#FBF9F5] text-[#4F4540] border-amber-900/15 hover:bg-amber-50'
@@ -1044,6 +1144,16 @@ export default function UserProfilePage() {
                     </button>
                   ))}
                 </div>
+
+                {/* Input Teks Ketik Label Custom */}
+                <input
+                  type="text"
+                  value={addressLabel}
+                  onChange={(e) => setAddressLabel(e.target.value)}
+                  placeholder="Ketik nama label alamat (contoh: Kost Cokro, Apartemen Sukajadi, Toko...)"
+                  className="w-full px-4 py-2.5 bg-[#FBF9F5] border border-amber-900/15 rounded-2xl text-xs text-[#1B1C1A] font-bold focus:outline-none focus:ring-2 focus:ring-[#934B19]/30"
+                  required
+                />
               </div>
 
               {/* GPS AUTO SET & MAP PICKER BUTTONS */}

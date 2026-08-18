@@ -49,7 +49,7 @@ import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
 export default function UserHomePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { products, vouchers } = useData();
+  const { products, vouchers, isVoucherUsedByUser } = useData();
   const { cart, totalCartCount, addToCart, removeFromCart, cartItems, subtotal, claimPromo } = useCart();
 
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
@@ -232,22 +232,56 @@ export default function UserHomePage() {
               <h3 className="font-serif text-xl sm:text-2xl font-bold text-white">Gunakan Kode Promo Nefakky</h3>
               <p className="text-xs text-white/80 font-light">Klaim kupon belanja diskon hingga 50% untuk setiap pemesanan hari ini.</p>
             </div>
-            <div className="flex items-center gap-3 flex-wrap w-full md:w-auto">
-              {activeVouchers.map((v) => (
-                <div key={v.id} className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-3 rounded-xl text-left flex-1 sm:flex-initial">
-                  <div className="text-xs font-mono font-bold text-amber-300">{v.code}</div>
-                  <div className="text-[10px] text-white/80">Diskon (Min Rp {v.minSpend.toLocaleString('id-ID')})</div>
-                  <button
-                    onClick={() => {
-                      claimPromo(v.code);
-                      alert(`Voucher ${v.code} berhasil dklaim!`);
-                    }}
-                    className="mt-1.5 w-full sm:w-auto px-3 py-1 bg-amber-400 text-[#25160e] text-[10px] font-bold rounded-lg hover:bg-amber-300 transition-colors block text-center"
-                  >
-                    Klaim Kupon
-                  </button>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full md:w-auto">
+              {activeVouchers.map((v) => {
+                const isUsed = isVoucherUsedByUser && isVoucherUsedByUser(v.code, user?.uid, user?.email);
+
+                return (
+                  <div key={v.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-3.5 rounded-2xl text-left flex items-center gap-3.5 hover:bg-white/15 transition-all shadow-md">
+                    {v.imageUrl ? (
+                      <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-white/30 shadow-xs">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={v.imageUrl} alt={v.name} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0 font-bold font-mono text-xs">
+                        {v.discountPercent}%
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-mono font-extrabold text-amber-300 flex items-center gap-1.5">
+                        <span>{v.code}</span>
+                        <span className="text-[9px] bg-amber-400/30 px-1.5 py-0.5 rounded-full text-amber-200 font-sans font-bold">{v.discountPercent}% OFF</span>
+                      </div>
+                      <div className="text-[10px] text-white font-bold line-clamp-1 mt-0.5">{v.name}</div>
+                      <div className="text-[9px] text-white/70 font-light">Min. Rp {v.minSpend.toLocaleString('id-ID')}</div>
+                      
+                      {isUsed ? (
+                        <button
+                          disabled
+                          className="mt-1.5 px-3 py-1 bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 text-[10px] font-bold rounded-lg cursor-not-allowed block text-center shadow-xs w-full"
+                        >
+                          ✅ Terpakai (Sudah Dipakai)
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            const res = claimPromo(v.code);
+                            if (res.success) {
+                              alert(`Voucher ${v.code} berhasil diklaim!`);
+                            } else {
+                              alert(res.message);
+                            }
+                          }}
+                          className="mt-1.5 px-3 py-1 bg-amber-400 text-[#25160e] text-[10px] font-bold rounded-lg hover:bg-amber-300 transition-colors block text-center shadow-xs w-full"
+                        >
+                          Klaim Kupon
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>

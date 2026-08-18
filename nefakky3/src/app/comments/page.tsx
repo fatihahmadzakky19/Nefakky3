@@ -8,13 +8,13 @@
  * ============================================================================
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { useData } from '@/context/DataContext';
+import { useData, sortReviewsNewestFirst } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
 import { 
   Star, 
@@ -27,23 +27,96 @@ import {
   Image as ImageIcon,
   X,
   Trash2,
-  UploadCloud
+  UploadCloud,
+  MessageCircle
 } from 'lucide-react';
 
 export default function CommentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const dishParam = searchParams?.get('dish');
+
   const { user, loading } = useAuth();
-  const { products, reviews, addReview } = useData();
+  const { products, reviews, addReview, addReviewReply } = useData();
+
+  // Urutkan ulasan agar Ulasan Terbaru selalu berada di paling atas
+  const sortedReviews = React.useMemo(() => {
+    return sortReviewsNewestFirst(reviews || []);
+  }, [reviews]);
 
   // Ref Input Berkas Foto
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State Lokal Formulir Komentar
   const [newComment, setNewComment] = useState<string>('');
-  const [newRating, setNewRating] = useState<number>(5);
-  const [selectedDish, setSelectedDish] = useState<string>(products[0]?.name || 'Ayam Bakar');
+  const [ratingInput, setRatingInput] = useState<string>('5.0');
+  const [selectedDish, setSelectedDish] = useState<string>(dishParam || products[0]?.name || 'Ayam Bakar');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (dishParam) {
+      setSelectedDish(dishParam);
+    }
+  }, [dishParam]);
+
+  // State Balasan Komentar Ulasan
+  const [activeReplyReviewId, setActiveReplyReviewId] = useState<string | null>(null);
+  const [replyTextMap, setReplyTextMap] = useState<Record<string, string>>({});
+
+  // Handler Kirim Balasan Komentar
+  const handleSendReply = (reviewId: string) => {
+    if (!user) {
+      alert('Silakan Masuk (Login) terlebih dahulu untuk membalas ulasan.');
+      router.push('/login');
+      return;
+    }
+
+    const text = replyTextMap[reviewId]?.trim();
+    if (!text) return;
+
+    const authorName = user.displayName || user.email?.split('@')[0] || 'Pengguna Nefakky';
+    const authorAvatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=3C2A21&color=ffffff&bold=true`;
+
+    addReviewReply(reviewId, {
+      authorName,
+      authorEmail: user.email || undefined,
+      authorAvatar,
+      comment: text
+    });
+
+    setReplyTextMap((prev) => ({ ...prev, [reviewId]: '' }));
+  };
+
+  // Nilai desimal numerik terhitung untuk kalkulasi presisi bintang
+  const parsedRating = parseFloat(ratingInput);
+  const currentRatingNum = isNaN(parsedRating)
+    ? 5.0
+    : Math.max(1.0, Math.min(5.0, Number(parsedRating.toFixed(1))));
+
+  // Helper render bintang rating dengan dukungan desimal (presisi partial fill)
+  const renderStarRating = (ratingVal: number, starSize = "w-4 h-4") => {
+    return (
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((starIdx) => {
+          const fillPercent = Math.max(0, Math.min(100, (ratingVal - (starIdx - 1)) * 100));
+          return (
+            <div key={starIdx} className="relative inline-flex items-center">
+              <Star className={`${starSize} text-stone-200 fill-stone-100`} />
+              {fillPercent > 0 && (
+                <div 
+                  className="absolute top-0 left-0 overflow-hidden" 
+                  style={{ width: `${fillPercent}%` }}
+                >
+                  <Star className={`${starSize} fill-amber-400 text-amber-400`} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   // Fungsi Menangani Unggah Foto dari Perangkat
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +160,7 @@ export default function CommentsPage() {
       authorName,
       authorEmail: user.email || undefined,
       avatar: user.photoURL || undefined,
-      rating: newRating,
+      rating: currentRatingNum,
       productName: selectedDish,
       comment: newComment,
       photos: photoPreview ? [photoPreview] : undefined,
@@ -95,6 +168,7 @@ export default function CommentsPage() {
     });
 
     setNewComment('');
+    setRatingInput('5.0');
     setPhotoPreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -170,21 +244,57 @@ export default function CommentsPage() {
                 </select>
               </div>
 
-              {/* Pilihan Bintang Rating */}
+              {/* Bintang Penilaian - Input Custom Rating */}
               <div>
-                <label className="block text-xs font-bold text-[#25160E] mb-1.5">Bintang Penilaian</label>
-                <div className="flex items-center gap-1.5 bg-[#FBF9F5] p-2.5 rounded-2xl border border-amber-900/15">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      type="button"
-                      key={star}
-                      onClick={() => setNewRating(star)}
-                      className="p-1 text-amber-400 hover:scale-110 transition-transform"
-                    >
-                      <Star className={`w-5 h-5 ${star <= newRating ? 'fill-amber-400 text-amber-400' : 'text-stone-300'}`} />
-                    </button>
-                  ))}
-                  <span className="text-xs font-bold text-[#25160E] ml-auto">{newRating}.0 / 5.0</span>
+                <label className="block text-xs font-bold text-[#25160E] mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-[#934B19]" />
+                    <span>Bintang Penilaian (Rating 1.0 - 5.0) *</span>
+                  </span>
+                  <span className="text-[10px] text-amber-800 font-medium">Bisa Ketik Custom (contoh: 4.8)</span>
+                </label>
+                
+                <div className="flex items-center gap-3 bg-[#FBF9F5] p-3 rounded-2xl border border-amber-900/15">
+                  {/* Input Angka Custom Rating (Ketik Bebas Desimal) */}
+                  <div className="relative shrink-0">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={ratingInput}
+                      onChange={(e) => {
+                        // Izinkan hanya angka, titik, koma
+                        const val = e.target.value.replace(',', '.');
+                        setRatingInput(val);
+                      }}
+                      onBlur={() => {
+                        const val = parseFloat(ratingInput);
+                        if (isNaN(val) || val < 1) {
+                          setRatingInput('1.0');
+                        } else if (val > 5) {
+                          setRatingInput('5.0');
+                        } else {
+                          setRatingInput(Number(val.toFixed(1)).toString());
+                        }
+                      }}
+                      placeholder="4.8"
+                      className="w-20 px-3 py-2 bg-white border border-amber-900/20 rounded-xl text-sm font-extrabold text-[#934B19] text-center focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 shadow-xs"
+                      required
+                    />
+                    <span className="absolute -top-2 -right-1 text-[9px] font-bold bg-[#934B19] text-white px-1.5 py-0.2 rounded-full shadow-xs">
+                      ★
+                    </span>
+                  </div>
+
+                  {/* Visual Live Star Preview & Score Text */}
+                  <div className="flex-1 flex items-center justify-between pl-1">
+                    <div>
+                      {renderStarRating(currentRatingNum, "w-5 h-5")}
+                      <p className="text-[10px] text-stone-500 font-medium mt-0.5">Rating: {currentRatingNum.toFixed(1)} / 5.0</p>
+                    </div>
+                    <span className="text-xs font-mono font-black text-[#934B19] bg-amber-100/80 px-2.5 py-1 rounded-xl border border-amber-300/60">
+                      {currentRatingNum.toFixed(1)} ★
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -268,7 +378,7 @@ export default function CommentsPage() {
 
           {/* KOLOM KANAN: DAFTAR ULASAN PELANGGAN */}
           <div className="lg:col-span-8 space-y-6">
-            {reviews.map((item) => {
+            {sortedReviews.map((item) => {
               const avatarUrl = item.avatar || item.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.authorName)}&background=3C2A21&color=ffffff&bold=true`;
               const attachedPhoto = item.photos?.[0] || item.productImage;
               
@@ -300,13 +410,11 @@ export default function CommentsPage() {
                     </div>
 
                     {/* Bintang Penilaian */}
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star 
-                          key={i}
-                          className={`w-4 h-4 ${i < item.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200 fill-stone-200'}`}
-                        />
-                      ))}
+                    <div className="flex items-center gap-1.5 bg-[#FBF9F5] px-2.5 py-1 rounded-xl border border-amber-900/10 shrink-0">
+                      {renderStarRating(item.rating, "w-4 h-4")}
+                      <span className="text-xs font-black text-[#934B19] ml-0.5">
+                        {Number(item.rating).toFixed(1)} ★
+                      </span>
                     </div>
                   </div>
 
@@ -334,6 +442,84 @@ export default function CommentsPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Seksi Balasan Komentar antar Pengguna */}
+                  <div className="pt-3 border-t border-stone-100 space-y-3">
+                    {/* Bar Akses Tombol Balas */}
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setActiveReplyReviewId(activeReplyReviewId === item.id ? null : item.id)}
+                        className="text-xs font-bold text-[#934B19] hover:text-[#783603] flex items-center gap-1.5 transition-colors"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        <span>
+                          {item.replies && item.replies.length > 0 
+                            ? `Balasan Komentar (${item.replies.length})` 
+                            : 'Balas Komentar Ini'}
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* Daftar Balasan Komentar yang Sudah Ada */}
+                    {item.replies && item.replies.length > 0 && (
+                      <div className="bg-[#FBF9F5] p-3.5 rounded-2xl border border-amber-900/10 space-y-3">
+                        {item.replies.map((reply) => {
+                          const replyAvatar = reply.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(reply.authorName)}&background=934B19&color=ffffff`;
+                          const isAdmin = reply.authorName.toLowerCase().includes('admin') || reply.authorEmail === 'admin@nefakky.com';
+                          
+                          return (
+                            <div key={reply.id} className="flex items-start gap-2.5 text-xs border-b border-amber-900/5 pb-2.5 last:border-b-0 last:pb-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={replyAvatar} alt={reply.authorName} className="w-7 h-7 rounded-full object-cover shrink-0 border border-amber-900/20" />
+                              <div className="flex-1 space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-bold text-[#25160E]">{reply.authorName}</span>
+                                    {isAdmin && (
+                                      <span className="bg-[#934B19] text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-md">
+                                        CS ADMIN
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-stone-400 font-medium">{reply.date}</span>
+                                </div>
+                                <p className="text-[#4F4540] font-normal leading-relaxed text-[11px]">{reply.comment}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Form Balas Inline */}
+                    {activeReplyReviewId === item.id && (
+                      <div className="flex items-center gap-2 pt-1 animate-fade-in">
+                        <input
+                          type="text"
+                          value={replyTextMap[item.id] || ''}
+                          onChange={(e) => setReplyTextMap({ ...replyTextMap, [item.id]: e.target.value })}
+                          placeholder={`Tulis balasan untuk ${item.authorName}...`}
+                          className="flex-1 px-3.5 py-2 bg-[#FBF9F5] border border-amber-900/15 rounded-xl text-xs text-[#1B1C1A] focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 font-medium"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSendReply(item.id);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSendReply(item.id)}
+                          disabled={!replyTextMap[item.id]?.trim()}
+                          className="px-3.5 py-2 bg-[#934B19] hover:bg-[#783603] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors shrink-0 flex items-center gap-1 shadow-xs"
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>Kirim</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
                 </div>
               );

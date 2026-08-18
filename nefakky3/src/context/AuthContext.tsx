@@ -89,10 +89,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Helper to ensure addresses exist
+  // Helper to ensure addresses exist (Demo addresses ONLY attached for Admin account)
   const ensureUserAddresses = (u: UserProfile): UserProfile => {
-    let addrs = u.addresses && u.addresses.length > 0 ? u.addresses : DEFAULT_INITIAL_ADDRESSES;
-    let activeId = u.activeAddressId || addrs.find(a => a.isDefault)?.id || addrs[0]?.id || 'addr-1';
+    const isAdminAccount = u.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || u.role === 'admin';
+    let addrs = u.addresses || [];
+    
+    if (addrs.length === 0 && isAdminAccount) {
+      addrs = DEFAULT_INITIAL_ADDRESSES;
+    }
+
+    let activeId = u.activeAddressId || addrs.find(a => a.isDefault)?.id || addrs[0]?.id || '';
     return {
       ...u,
       addresses: addrs,
@@ -360,7 +366,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password: pass,
         role: isOwnerAdmin ? 'admin' : 'customer',
         authProvider: 'password',
-        addresses: DEFAULT_INITIAL_ADDRESSES
+        addresses: isOwnerAdmin ? DEFAULT_INITIAL_ADDRESSES : []
       };
 
       if (existingIndex >= 0) {
@@ -590,7 +596,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const addAddress = async (newAddr: Omit<UserAddress, 'id'>) => {
     if (!user) return;
-    const currentList = user.addresses || DEFAULT_INITIAL_ADDRESSES;
+    const currentList = user.addresses || [];
     const id = 'addr-' + Date.now();
     const isFirst = currentList.length === 0;
     const isDefault = newAddr.isDefault !== undefined ? newAddr.isDefault : isFirst;
@@ -603,7 +609,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateAddress = async (id: string, updatedFields: Partial<UserAddress>) => {
     if (!user) return;
-    const currentList = user.addresses || DEFAULT_INITIAL_ADDRESSES;
+    const currentList = user.addresses || [];
     let isDefaultChanged = updatedFields.isDefault === true;
     
     const updated = currentList.map(addr => {
@@ -621,7 +627,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const deleteAddress = async (id: string) => {
     if (!user) return;
-    const currentList = user.addresses || DEFAULT_INITIAL_ADDRESSES;
+    const currentList = user.addresses || [];
     const filtered = currentList.filter(a => a.id !== id);
     let nextActive = user.activeAddressId;
     if (nextActive === id) {
@@ -632,7 +638,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const setDefaultAddress = async (id: string) => {
     if (!user) return;
-    const currentList = user.addresses || DEFAULT_INITIAL_ADDRESSES;
+    const currentList = user.addresses || [];
     const updated = currentList.map(a => ({
       ...a,
       isDefault: a.id === id

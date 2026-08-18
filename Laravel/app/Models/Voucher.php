@@ -28,6 +28,7 @@ class Voucher extends Model
         'redemptions', // Kuota penggunaan ("0/500", "Tanpa Batas")
         'status', // Status keaktifan voucher ("Active", "Expired")
         'is_active', // Flag boolean status aktif (true/false)
+        'image_url', // URL/Base64 gambar banner promo voucher
     ];
 
     // Casting tipe data kolom

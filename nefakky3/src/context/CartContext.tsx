@@ -106,7 +106,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 // Provider Component untuk membungkus komponen aplikasi Next.js
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth(); // Ambil status user dari AuthContext
-  const { products, vouchers } = useData(); // Ambil daftar produk & voucher dari DataContext
+  const { products, vouchers, isVoucherUsedByUser } = useData(); // Ambil daftar produk & voucher dari DataContext
   const [cart, setCart] = useState<{ [itemId: string]: number }>({}); // State data keranjang
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null); // State kode promo aktif
   const [discountPercent, setDiscountPercent] = useState<number>(0); // State persentase diskon
@@ -197,6 +197,16 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       return {
         success: false,
         message: `Maaf, kode promo "${upper}" tidak ditemukan atau telah non-aktif! Silakan periksa kembali kode promo Anda.`,
+        percent: 0
+      };
+    }
+
+    // Periksa apakah user sudah pernah memakai voucher ini sebelumnya
+    if (isVoucherUsedByUser && isVoucherUsedByUser(upper, user?.uid, user?.email)) {
+      removePromo();
+      return {
+        success: false,
+        message: `Maaf, Anda sudah pernah menggunakan kode promo "${upper}". Setiap voucher promo hanya dapat digunakan 1 kali per akun!`,
         percent: 0
       };
     }

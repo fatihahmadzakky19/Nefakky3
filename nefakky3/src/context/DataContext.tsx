@@ -91,6 +91,7 @@ export interface AdminVoucher {
   validDays?: string;
   autoResetWeekly?: boolean;
   lastResetWeek?: string;
+  imageUrl?: string;
   isDeleted?: boolean;
   deletedAt?: string;
 }
@@ -148,7 +149,7 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
     }
   }
 
-  // ATURAN PROMO KHUSUS PELANGGAN BARU / AKTIF SELAMANYA & TANPA BATASAN PENGGUNA
+  // ATURAN PROMO KHUSUS PELANGGAN BARU / AKTIF SELAMANYA (1x Per Pengguna Baru)
   const isNewCustomerPromo = 
     voucher.event === 'Pelanggan Baru' ||
     eventLower.includes('pelanggan baru') ||
@@ -157,7 +158,7 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
     codeUpper.includes('NEWUSER');
 
   const isSelamanya = voucher.expiry === 'Selamanya' || expiryLower.includes('selamanya') || isNewCustomerPromo;
-  const isTanpaBatas = voucher.redemptions === 'Tanpa Batas' || (voucher.redemptions && String(voucher.redemptions).toLowerCase().includes('tanpa batas')) || isNewCustomerPromo;
+  const isTanpaBatas = (voucher.redemptions === 'Tanpa Batas' || (voucher.redemptions && String(voucher.redemptions).toLowerCase().includes('tanpa batas'))) && !isNewCustomerPromo;
 
   // 2. Parse Usage Redemptions & Total Limit (Aturan Batas Pengguna)
   if (!isTanpaBatas) {
@@ -258,8 +259,20 @@ export interface AdminOrder {
   customerConfirmed?: boolean;
   confirmedAt?: string;
   proofPhoto?: string;
+  paymentProofPhoto?: string;
+  voucherCode?: string;
+  appliedPromo?: string;
   isDeleted?: boolean;
   deletedAt?: string;
+}
+
+export interface ReviewReply {
+  id: string;
+  authorName: string;
+  authorEmail?: string;
+  authorAvatar?: string;
+  comment: string;
+  date: string;
 }
 
 /** Interface Data Ulasan (Reviews) */
@@ -271,6 +284,7 @@ export interface UserReview {
   avatar?: string;
   rating: number;
   date: string;
+  createdAt?: number;
   productName?: string;
   productImage?: string;
   comment: string;
@@ -280,7 +294,41 @@ export interface UserReview {
   isPinned?: boolean;
   isHidden?: boolean;
   photos?: string[];
+  photoUrl?: string;
+  photo?: string;
+  image?: string;
+  replies?: ReviewReply[];
 }
+
+/** Helper untuk mengurutkan ulasan agar ULASAN TERBARU selalu berada di paling atas */
+export const sortReviewsNewestFirst = (revs: UserReview[]): UserReview[] => {
+  if (!Array.isArray(revs)) return [];
+  return [...revs].sort((a, b) => {
+    const timeA = a.createdAt || (a.id && a.id.startsWith('rev_') ? parseInt(a.id.replace('rev_', ''), 10) : 0);
+    const timeB = b.createdAt || (b.id && b.id.startsWith('rev_') ? parseInt(b.id.replace('rev_', ''), 10) : 0);
+
+    if (timeA && timeB && timeA !== timeB) {
+      return timeB - timeA;
+    }
+    if (timeA && !timeB) return -1;
+    if (!timeA && timeB) return 1;
+
+    const datePriority = (dStr?: string) => {
+      const s = (dStr || '').toLowerCase();
+      if (s.includes('baru saja') || s.includes('just now')) return 1;
+      if (s.includes('hari ini') || s.includes('today')) return 2;
+      if (s.includes('kemarin') || s.includes('yesterday')) return 3;
+      return 10;
+    };
+
+    const prioA = datePriority(a.date);
+    const prioB = datePriority(b.date);
+
+    if (prioA !== prioB) return prioA - prioB;
+
+    return 0;
+  });
+};
 
 /** Interface Pesan Bantuan (Customer Support Chat) */
 export interface ChatMessage {
@@ -293,6 +341,8 @@ export interface ChatMessage {
   timestamp: string;
   readByAdmin?: boolean;
   readByUser?: boolean;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
 }
 
 export const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [
@@ -304,7 +354,7 @@ export const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [
     userAvatar: 'https://ui-avatars.com/api/?name=Nizar+Azzuhra&background=5C3D28&color=ffffff',
     text: 'Halo Min, saya mau tanya apakah pesanan Ayam Bakar saya bisa request tanpa sambal pedas?',
     timestamp: '10:15 AM',
-    readByAdmin: false,
+    readByAdmin: true,
     readByUser: true
   },
   {
@@ -346,7 +396,7 @@ interface DataContextType {
   toggleVoucherStatus: (id: string) => void;
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
-  confirmOrderReceived: (id: string, proofPhotoUrl?: string) => void;
+  confirmOrderReceived: (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => void;
   uploadOrderProofPhoto: (id: string, proofPhotoUrl: string) => void;
   deleteOrder: (id: string) => void;
   softDeleteOrder: (id: string) => void;
@@ -355,8 +405,9 @@ interface DataContextType {
   cancelOrder: (id: string, reason?: string) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
   deleteReview: (id: string) => void;
-  sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string) => void;
-  replyChatMessage: (userEmail: string, text: string) => void;
+  addReviewReply: (reviewId: string, replyData: Omit<ReviewReply, 'id' | 'date'>) => void;
+  sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void;
+  replyChatMessage: (userEmail: string, text: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void;
   markChatAsRead: (userEmail: string, role: 'admin' | 'user') => void;
   isHighDemand: boolean;
   highDemandMessage: string;
@@ -568,7 +619,8 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     expiry: '01 Mei - 31 Des',
     event: 'Promo Akhir Pekan',
     status: 'Active',
-    isActive: true
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'promo-2',
@@ -581,7 +633,8 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     expiry: 'Akhir Pekan',
     event: 'Flash Sale',
     status: 'Active',
-    isActive: true
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'promo-3',
@@ -594,7 +647,8 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     expiry: '01 Juni - 31 Des',
     event: 'Tanggal Kembar',
     status: 'Active',
-    isActive: true
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'v4',
@@ -603,11 +657,12 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     type: 'Percentage',
     discountPercent: 10,
     minSpend: 30000,
-    redemptions: 'Tanpa Batas',
+    redemptions: '1x Per Pengguna Baru',
     expiry: 'Selamanya',
     event: 'Pelanggan Baru',
     status: 'Active',
-    isActive: true
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80'
   }
 ];
 
@@ -742,7 +797,17 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     productImage: '/images/ayam_bakar.jpg',
     comment: 'Ayam bakarnya sangat empuk dan bumbu kecap rempahnya meresap sempurna sampai ke dalam tulang. Pengiriman super cepat!',
     likesCount: 12,
-    status: 'PUBLISHED'
+    status: 'PUBLISHED',
+    photos: ['https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=800&q=80'],
+    replies: [
+      {
+        id: 'rep-1',
+        authorName: 'Siti Rahmawati',
+        authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+        comment: 'Wah setuju banget kak! Sambal kecap rempahnya emang nagih parah 👍',
+        date: 'Kemarin'
+      }
+    ]
   },
   {
     id: 'rev-2',
@@ -756,7 +821,8 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     productImage: '/images/gudeg.jpg',
     comment: 'Gudeg paling otentik yang pernah saya pesan online. Bumbu kreceknya gurih pedas manis beraroma harum.',
     likesCount: 8,
-    status: 'PUBLISHED'
+    status: 'PUBLISHED',
+    photos: ['https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80']
   },
   {
     id: 'rev-3',
@@ -840,18 +906,21 @@ interface DataContextType {
   updateVoucher: (id: string, updated: Partial<AdminVoucher>) => void;
   deleteVoucher: (id: string) => void;
   toggleVoucherStatus: (id: string) => void;
-  claimVoucherRedemption: (code: string) => Promise<boolean>;
+  claimVoucherRedemption: (code: string, userUid?: string | null, userEmail?: string | null) => Promise<boolean>;
+  isVoucherUsedByUser: (code: string, userUid?: string | null, userEmail?: string | null) => boolean;
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
-  confirmOrderReceived: (id: string, proofPhotoUrl?: string) => void;
+  confirmOrderReceived: (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => void;
   uploadOrderProofPhoto: (id: string, proofPhotoUrl: string) => void;
+  uploadOrderPaymentProofPhoto: (id: string, paymentProofPhotoUrl: string) => void;
   deleteOrder: (id: string) => void;
   cancelOrder: (id: string, reason?: string) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
   deleteReview: (id: string) => void;
-  sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string) => void;
-  replyChatMessage: (userEmail: string, text: string) => void;
+  addReviewReply: (reviewId: string, replyData: Omit<ReviewReply, 'id' | 'date'>) => void;
+  sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void;
+  replyChatMessage: (userEmail: string, text: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void;
   markChatAsRead: (userEmail: string, role: 'admin' | 'user') => void;
 }
 
@@ -929,16 +998,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         const vouches = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminVoucher);
         const updatedVouches = vouches.map(v => {
-          // Auto sync voucher pelanggan baru (NEFAKKY10) agar selalu Aktif Selamanya & Tanpa Batas Pengguna
-          if (v.code === 'NEFAKKY10' && (v.expiry !== 'Selamanya' || v.redemptions !== 'Tanpa Batas' || v.event !== 'Pelanggan Baru')) {
+          // Auto sync voucher pelanggan baru (NEFAKKY10) agar selalu Aktif Selamanya & 1x Per Pengguna Baru
+          if (v.code === 'NEFAKKY10' && (v.expiry !== 'Selamanya' || v.redemptions !== '1x Per Pengguna Baru' || v.event !== 'Pelanggan Baru')) {
             updateDoc(doc(db, 'vouchers', v.id), { 
               expiry: 'Selamanya', 
-              redemptions: 'Tanpa Batas',
+              redemptions: '1x Per Pengguna Baru',
               event: 'Pelanggan Baru',
               status: 'Active',
               isActive: true
             }).catch(err => console.error('Error updating Firestore NEFAKKY10 voucher:', err));
-            return { ...v, expiry: 'Selamanya', redemptions: 'Tanpa Batas', event: 'Pelanggan Baru', status: 'Active' as const, isActive: true };
+            return { ...v, expiry: 'Selamanya', redemptions: '1x Per Pengguna Baru', event: 'Pelanggan Baru', status: 'Active' as const, isActive: true };
           }
           if (v.code === 'WEEKENDSERU' && v.discountPercent !== 15) {
             updateDoc(doc(db, 'vouchers', v.id), { discountPercent: 15, name: 'Weekend Promo Diskon 15%', event: 'Promo Akhir Pekan' })
@@ -951,7 +1020,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }, (err) => console.error('Vouchers Firestore error:', err));
 
-    // 4. Orders Listener
+    // 4. Orders Listener & Test Order Cleanup
+    const testOrderIds = ['ORD-3097', 'ORD-9528', 'ORD-8621', 'ORD-9127', 'ORD-8909', 'ORD-4164', 'ORD-8560', 'ORD-9296', 'ORD-4837'];
+    testOrderIds.forEach(testId => {
+      deleteDoc(doc(db, 'orders', testId)).catch(() => {});
+    });
+
     const unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
       if (snapshot.empty) {
         const batch = writeBatch(db);
@@ -961,7 +1035,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         batch.commit().catch(err => console.error('Error seeding orders:', err));
         setOrdersState(DEFAULT_ORDERS);
       } else {
-        const ords = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminOrder);
+        const ords = snapshot.docs
+          .map(d => ({ ...d.data(), id: d.id }) as AdminOrder)
+          .filter(o => !testOrderIds.includes(o.id));
         setOrdersState(ords);
       }
     }, (err) => console.error('Orders Firestore error:', err));
@@ -974,10 +1050,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           batch.set(doc(db, 'reviews', r.id), r);
         });
         batch.commit().catch(err => console.error('Error seeding reviews:', err));
-        setReviewsState(DEFAULT_REVIEWS);
+        setReviewsState(sortReviewsNewestFirst(DEFAULT_REVIEWS));
       } else {
         const revs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as UserReview);
-        setReviewsState(revs);
+        setReviewsState(sortReviewsNewestFirst(revs));
       }
     }, (err) => console.error('Reviews Firestore error:', err));
 
@@ -1288,17 +1364,38 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const confirmOrderReceived = (id: string, proofPhotoUrl?: string) => {
+  const confirmOrderReceived = (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => {
+    const targetOrder = orders.find(o => o.id === id);
+    const isCod = targetOrder?.paymentMethod?.toLowerCase().includes('cod') || targetOrder?.paymentMethod?.toLowerCase().includes('cash on delivery');
+
+    const activeProofPhoto = proofPhotoUrl || targetOrder?.proofPhoto;
+    const activePaymentProofPhoto = paymentProofPhotoUrl || targetOrder?.paymentProofPhoto;
+
+    if (!activeProofPhoto) {
+      alert('⚠️ GAGAL KONFIRMASI:\n\nFoto bukti penerimaan pesanan/produk wajib diunggah terlebih dahulu sebelum mengonfirmasi pesanan.');
+      return;
+    }
+
+    if (isCod && !activePaymentProofPhoto) {
+      alert('⚠️ GAGAL KONFIRMASI PESANAN COD:\n\nKhusus pembayaran Cash On Delivery (COD), pembayaran belum dianggap berhasil karena Anda WAJIB mengirimkan foto bukti pembayaran tunai / resi serah terima uang kepada kurir!');
+      return;
+    }
+
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const dateStr = `Hari ini, ${timeStr}`;
     const updates: any = {
       status: 'COMPLETED' as AdminOrder['status'],
       customerConfirmed: true,
       confirmedAt: dateStr,
+      proofPhoto: activeProofPhoto,
       updatedAt: Date.now()
     };
-    if (proofPhotoUrl) {
-      updates.proofPhoto = proofPhotoUrl;
+
+    if (isCod) {
+      updates.paymentBadge = 'PAID';
+      if (activePaymentProofPhoto) {
+        updates.paymentProofPhoto = activePaymentProofPhoto;
+      }
     }
 
     // Local state sync using correct setter setOrdersState
@@ -1306,7 +1403,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     updateDoc(doc(db, 'orders', id), updates).catch(console.error);
     updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'COMPLETED', proofPhoto: proofPhotoUrl || null, updatedAt: Date.now() }).catch(console.error);
+    updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'COMPLETED', paymentBadge: isCod ? 'PAID' : targetOrder?.paymentBadge, proofPhoto: activeProofPhoto, paymentProofPhoto: activePaymentProofPhoto || null, updatedAt: Date.now() }).catch(console.error);
   };
 
   const uploadOrderProofPhoto = (id: string, proofPhotoUrl: string) => {
@@ -1323,11 +1420,70 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(console.error);
   };
 
+  const uploadOrderPaymentProofPhoto = (id: string, paymentProofPhotoUrl: string) => {
+    const updates = {
+      paymentProofPhoto: paymentProofPhotoUrl,
+      updatedAt: Date.now()
+    };
+
+    // Local state sync using correct setter setOrdersState
+    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+
+    updateDoc(doc(db, 'orders', id), updates).catch(console.error);
+    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
+    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(console.error);
+  };
+
+  /** Helper function untuk mengecek apakah user tertentu sudah pernah menggunakan voucher */
+  const isVoucherUsedByUser = (voucherCode: string, userUid?: string | null, userEmail?: string | null): boolean => {
+    if (!voucherCode) return false;
+    const codeUpper = voucherCode.trim().toUpperCase();
+
+    // 1. Cek dari localStorage per user
+    if (typeof window !== 'undefined') {
+      const storageKey = `nefakky_used_vouchers_${userUid || userEmail || 'guest'}`;
+      try {
+        const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        if (existing.includes(codeUpper)) return true;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 2. Cek dari riwayat pemesanan pengguna
+    const userOrders = (orders || []).filter(o => 
+      (userUid && o.userId === userUid) || 
+      (userEmail && o.customerEmail?.toLowerCase() === userEmail.toLowerCase())
+    );
+
+    const hasUsedInOrders = userOrders.some(o => 
+      (o.voucherCode && o.voucherCode.toUpperCase() === codeUpper) ||
+      (o.appliedPromo && o.appliedPromo.toUpperCase() === codeUpper)
+    );
+
+    return hasUsedInOrders;
+  };
+
   /** Helper function untuk mengklaim penggunaan voucher & mematikan promo otomatis secara realtime jika kuota habis */
-  const claimVoucherRedemption = async (voucherCode: string): Promise<boolean> => {
+  const claimVoucherRedemption = async (voucherCode: string, userUid?: string | null, userEmail?: string | null): Promise<boolean> => {
     if (!db || !voucherCode) return false;
     try {
       const codeUpper = voucherCode.trim().toUpperCase();
+
+      // Catat ke localStorage user agar langsung tidak dapat digunakan kembali
+      if (typeof window !== 'undefined') {
+        const storageKey = `nefakky_used_vouchers_${userUid || userEmail || 'guest'}`;
+        try {
+          const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          if (!existing.includes(codeUpper)) {
+            existing.push(codeUpper);
+            localStorage.setItem(storageKey, JSON.stringify(existing));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       const q = collection(db, 'vouchers');
       const snapshot = await getDocs(q);
       const targetDoc = snapshot.docs.find(d => {
@@ -1338,8 +1494,21 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       if (targetDoc) {
         const v = targetDoc.data();
         
-        // Cek apakah promo pelanggan baru / tanpa batas
-        const isTanpaBatas = v.redemptions === 'Tanpa Batas' || v.expiry === 'Selamanya' || v.event === 'Pelanggan Baru' || (v.code && v.code.toUpperCase().includes('NEFAKKY10'));
+        // Cek apakah promo pelanggan baru (1x Per Pengguna Baru)
+        const isNewCust = v.event === 'Pelanggan Baru' || (v.code && v.code.toUpperCase().includes('NEFAKKY10'));
+        const isTanpaBatas = (v.redemptions === 'Tanpa Batas' || (v.redemptions && String(v.redemptions).toLowerCase().includes('tanpa batas'))) && !isNewCust;
+
+        if (isNewCust) {
+          const newUsed = (v.usedCount || 0) + 1;
+          await updateDoc(doc(db, 'vouchers', targetDoc.id), {
+            usedCount: newUsed,
+            redemptions: '1x Per Pengguna Baru',
+            expiry: 'Selamanya',
+            status: 'Active',
+            isActive: true
+          });
+          return true;
+        }
 
         if (isTanpaBatas) {
           const newUsed = (v.usedCount || 0) + 1;
@@ -1410,10 +1579,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       avatar,
       authorAvatar: avatar,
       date: 'Baru saja',
+      createdAt: Date.now(),
       likesCount: 0,
       status: 'PUBLISHED'
     };
 
+    setReviewsState(prev => sortReviewsNewestFirst([newReview, ...prev]));
     setDoc(doc(db, 'reviews', newId), newReview).catch(console.error);
 
     // Recalculate Product Average Rating automatically
@@ -1461,7 +1632,33 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const sendChatMessage = (userEmail: string, userName: string, text: string, userAvatar?: string) => {
+  const addReviewReply = (reviewId: string, replyData: Omit<ReviewReply, 'id' | 'date'>) => {
+    const newReply: ReviewReply = {
+      id: 'rep_' + Date.now(),
+      date: 'Baru saja',
+      ...replyData
+    };
+
+    setReviewsState(prev => {
+      const updated = prev.map(rev => {
+        if (rev.id === reviewId) {
+          const existingReplies = rev.replies || [];
+          return { ...rev, replies: [...existingReplies, newReply] };
+        }
+        return rev;
+      });
+
+      const target = updated.find(r => r.id === reviewId);
+      if (target) {
+        updateDoc(doc(db, 'reviews', reviewId), { replies: target.replies }).catch(console.error);
+        setRtdb(ref(rtdb, `reviews/${reviewId}`), target).catch(console.error);
+      }
+
+      return updated;
+    });
+  };
+
+  const sendChatMessage = (userEmail: string, userName: string, text: string, userAvatar?: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const newMsg: ChatMessage = {
       id: 'msg-' + Date.now(),
@@ -1472,30 +1669,66 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       text,
       timestamp: timeStr,
       readByAdmin: false,
-      readByUser: true
+      readByUser: true,
+      ...(mediaUrl ? { mediaUrl, mediaType: mediaType || 'image' } : {})
     };
     setDoc(doc(db, 'chat_messages', newMsg.id), newMsg).catch(console.error);
     setRtdb(ref(rtdb, `chat_messages/${newMsg.id}`), newMsg).catch(console.error);
   };
 
-  const replyChatMessage = (userEmail: string, text: string) => {
+  const replyChatMessage = (userEmail: string, text: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const emailNorm = userEmail.trim().toLowerCase();
     const newMsg: ChatMessage = {
       id: 'msg-' + Date.now(),
       sender: 'admin',
-      userEmail: userEmail.trim().toLowerCase(),
+      userEmail: emailNorm,
       userName: 'Admin CS Nefakky',
       text,
       timestamp: timeStr,
       readByAdmin: true,
-      readByUser: false
+      readByUser: false,
+      ...(mediaUrl ? { mediaUrl, mediaType: mediaType || 'image' } : {})
     };
+
+    // Immediately update local state & mark previous user messages as readByAdmin: true
+    setChatMessagesState(prev => {
+      const updated = prev.map(m => {
+        if (m.userEmail.toLowerCase() === emailNorm && m.sender === 'user' && !m.readByAdmin) {
+          return { ...m, readByAdmin: true };
+        }
+        return m;
+      });
+      return [...updated, newMsg];
+    });
+
     setDoc(doc(db, 'chat_messages', newMsg.id), newMsg).catch(console.error);
     setRtdb(ref(rtdb, `chat_messages/${newMsg.id}`), newMsg).catch(console.error);
+
+    // Update Firestore documents
+    chatMessages.forEach(m => {
+      if (m.userEmail.toLowerCase() === emailNorm && m.sender === 'user' && !m.readByAdmin) {
+        updateDoc(doc(db, 'chat_messages', m.id), { readByAdmin: true }).catch(console.error);
+      }
+    });
   };
 
   const markChatAsRead = (userEmail: string, role: 'admin' | 'user') => {
     const emailNorm = userEmail.trim().toLowerCase();
+
+    // Immediately update local state
+    setChatMessagesState(prev => prev.map(m => {
+      if (m.userEmail.toLowerCase() === emailNorm) {
+        if (role === 'admin' && !m.readByAdmin) {
+          return { ...m, readByAdmin: true };
+        } else if (role === 'user' && !m.readByUser) {
+          return { ...m, readByUser: true };
+        }
+      }
+      return m;
+    }));
+
+    // Update Firestore documents
     chatMessages.forEach(m => {
       if (m.userEmail.toLowerCase() === emailNorm) {
         if (role === 'admin' && !m.readByAdmin) {
@@ -1578,11 +1811,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       forceDeleteVoucher,
       toggleVoucherStatus,
       claimVoucherRedemption,
+      isVoucherUsedByUser,
       addOrder,
       updateOrderStatus,
       updatePaymentStatus,
       confirmOrderReceived,
       uploadOrderProofPhoto,
+      uploadOrderPaymentProofPhoto,
       deleteOrder,
       softDeleteOrder,
       restoreOrder,
@@ -1590,6 +1825,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       cancelOrder,
       addReview,
       deleteReview,
+      addReviewReply,
       sendChatMessage,
       replyChatMessage,
       markChatAsRead

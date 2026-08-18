@@ -16,12 +16,14 @@ import {
 
 interface AdminSidebarProps {
   pendingOrdersCount?: number;
+  unreadChatCount?: number;
   isOpenOnMobile?: boolean;
   onCloseMobile?: () => void;
 }
 
 export default function AdminSidebar({
   pendingOrdersCount = 0,
+  unreadChatCount = 0,
   isOpenOnMobile = false,
   onCloseMobile
 }: AdminSidebarProps) {
@@ -147,19 +149,26 @@ export default function AdminSidebar({
           <Link
             href="/admin/settings"
             onClick={onCloseMobile}
-            className={`w-full flex items-center px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
               isNavActive('/admin/settings')
                 ? 'bg-[#3c2a21] text-amber-200 shadow-md'
                 : 'text-[#4f4540] hover:bg-[#eae8e4] hover:text-[#25160e]'
             }`}
           >
-            <Settings className="w-4 h-4 mr-3.5 shrink-0" />
-            <span>Pengaturan Toko</span>
+            <div className="flex items-center">
+              <Settings className="w-4 h-4 mr-3.5 shrink-0" />
+              <span>Pengaturan &amp; CS Chat</span>
+            </div>
+            {unreadChatCount > 0 && (
+              <span className="px-2 py-0.5 bg-rose-600 text-white text-[10px] rounded-full font-bold animate-pulse shadow-sm">
+                {unreadChatCount}
+              </span>
+            )}
           </Link>
         </nav>
 
         {/* Sidebar Footer Link */}
-        <div className="p-6 border-t border-amber-900/10 space-y-3">
+        <div className="p-5 border-t border-amber-900/10">
           <Link 
             href="/" 
             className="flex items-center gap-2 text-xs font-bold text-[#934b19] hover:underline"

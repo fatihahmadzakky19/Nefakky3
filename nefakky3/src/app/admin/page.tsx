@@ -10,6 +10,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useData } from '@/context/DataContext';
+import { exportNefakkyExcelReport } from '@/lib/exportUtils';
 import AdminDashboardTab from '@/components/admin/AdminDashboardTab';
 
 export default function AdminOverviewPage() {
@@ -17,27 +18,7 @@ export default function AdminOverviewPage() {
   const { products, orders } = useData();
 
   const handleExportCSV = () => {
-    const csvRows = [
-      ['ID Pesanan', 'Tanggal', 'Pelanggan', 'Alamat', 'Total Omset (Rp)', 'Status Alur', 'Metode Pembayaran'],
-      ...(orders || []).map(o => [
-        o.id,
-        o.date,
-        o.customerName,
-        `"${o.address}"`,
-        o.total,
-        o.status,
-        o.paymentMethod
-      ])
-    ];
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.map(e => e.join(',')).join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Rekap_Omset_Nefakky_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportNefakkyExcelReport(orders || [], products || []);
   };
 
   const handlePrintPDFReport = () => {

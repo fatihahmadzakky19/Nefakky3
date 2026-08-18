@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Trash2, RotateCcw, Tag, AlertTriangle, Calendar, Users, Sparkles, Check, Gift, Edit3, RefreshCw, Clock } from 'lucide-react';
+import { Plus, X, Trash2, RotateCcw, Tag, AlertTriangle, Calendar, Users, Sparkles, Check, Gift, Edit3, RefreshCw, Clock, Image as ImageIcon, Upload, Link2, Camera } from 'lucide-react';
 import { AdminVoucher, useData } from '@/context/DataContext';
 
 interface AdminPromotionsTabProps {
@@ -30,7 +30,7 @@ export default function AdminPromotionsTab({
   const [voucherDiscount, setVoucherDiscount] = useState<string>('30');
   const [voucherMinSpend, setVoucherMinSpend] = useState<string>('50000');
   
-  // Custom Fields: Event, Hari Berlaku, Auto-Reset Mingguan, Tanggal Kedaluwarsa, & Batas Pengguna
+  // Custom Fields: Event, Hari Berlaku, Auto-Reset Mingguan, Tanggal Kedaluwarsa, Batas Pengguna & Gambar Banner
   const [voucherEvent, setVoucherEvent] = useState<string>('Pelanggan Baru');
   const [customEvent, setCustomEvent] = useState<string>('');
   const [validDays, setValidDays] = useState<string>('Semua Hari');
@@ -39,6 +39,8 @@ export default function AdminPromotionsTab({
   const [voucherExpiryDate, setVoucherExpiryDate] = useState<string>('2026-12-31');
   const [limitType, setLimitType] = useState<'unlimited' | 'limited'>('unlimited');
   const [voucherMaxUsers, setVoucherMaxUsers] = useState<string>('500');
+  const [voucherImageUrl, setVoucherImageUrl] = useState<string>('');
+  const [imageInputTab, setImageInputTab] = useState<'upload' | 'url'>('upload');
 
   const activeVouchers = (voucherList || []).filter(v => !v.isDeleted);
   const trashedVouchers = (voucherList || []).filter(v => v.isDeleted);
@@ -72,6 +74,8 @@ export default function AdminPromotionsTab({
     setVoucherExpiryDate('2026-12-31');
     setLimitType('unlimited');
     setVoucherMaxUsers('500');
+    setVoucherImageUrl('');
+    setImageInputTab('upload');
     setShowVoucherModal(true);
   };
 
@@ -82,6 +86,8 @@ export default function AdminPromotionsTab({
     setVoucherName(voucher.name);
     setVoucherDiscount(String(voucher.discountPercent));
     setVoucherMinSpend(String(voucher.minSpend));
+    setVoucherImageUrl(voucher.imageUrl || '');
+    setImageInputTab(voucher.imageUrl?.startsWith('http') ? 'url' : 'upload');
 
     const isNewCust = voucher.event === 'Pelanggan Baru' || voucher.code?.toUpperCase().includes('NEFAKKY10') || voucher.name?.toLowerCase().includes('pelanggan baru');
     const knownEvents = ['Pelanggan Baru', 'Promo Akhir Pekan', 'Flash Sale', 'Tanggal Kembar', 'Hari Raya'];
@@ -117,6 +123,22 @@ export default function AdminPromotionsTab({
     setShowVoucherModal(true);
   };
 
+  // Upload file gambar dari perangkat (Base64)
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Ukuran gambar terlalu besar! Maksimal 5MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVoucherImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Switch event handler: Jika memilih 'Pelanggan Baru', otomatis set Aktif Selamanya & Tanpa Batas Pengguna
   const handleEventChange = (selectedEvent: string) => {
     setVoucherEvent(selectedEvent);
@@ -139,16 +161,16 @@ export default function AdminPromotionsTab({
     const finalEvent = voucherEvent === 'Lainnya' ? (customEvent.trim() || 'Event Khusus') : voucherEvent;
     const isNewCustomer = finalEvent === 'Pelanggan Baru';
 
-    // Jika Promo Pelanggan Baru atau dipilih Selamanya, maka expiry = 'Selamanya'
-    const finalExpiry = (isNewCustomer || expiryType === 'selamanya') 
+    // Expiry date calculation
+    const finalExpiry = expiryType === 'selamanya' 
       ? 'Selamanya' 
       : formatDateIndo(voucherExpiryDate);
 
     // Kuota & Limit
     const maxLimitNum = parseInt(voucherMaxUsers || '500', 10);
     const existingUsed = editingVoucher?.usedCount || 0;
-    const finalRedemptions = (isNewCustomer || limitType === 'unlimited') 
-      ? 'Tanpa Batas' 
+    const finalRedemptions = limitType === 'unlimited' 
+      ? (isNewCustomer ? '1x Per Pengguna Baru' : 'Tanpa Batas') 
       : `${existingUsed}/${maxLimitNum}`;
 
     const isWeekendSched = validDays === 'Weekend' || finalEvent === 'Promo Akhir Pekan';
@@ -167,7 +189,8 @@ export default function AdminPromotionsTab({
       status: 'Active' as const,
       isActive: true,
       totalLimit: (isNewCustomer || limitType === 'unlimited') ? 999999999 : maxLimitNum,
-      usedCount: existingUsed
+      usedCount: existingUsed,
+      imageUrl: voucherImageUrl.trim()
     };
 
     if (editingVoucher) {
@@ -241,165 +264,198 @@ export default function AdminPromotionsTab({
           displayedVouchers.map((v) => {
             const isNewCust = v.event === 'Pelanggan Baru' || v.code?.toUpperCase().includes('NEFAKKY10') || v.name?.toLowerCase().includes('pelanggan baru');
             const isPerpetual = v.expiry === 'Selamanya' || isNewCust;
-            const isUnlimited = v.redemptions === 'Tanpa Batas' || isNewCust;
+            const isUnlimited = (v.redemptions === 'Tanpa Batas' || (v.redemptions && v.redemptions.toLowerCase().includes('tanpa batas'))) && !isNewCust;
             const daysSetting = v.validDays || (v.event === 'Promo Akhir Pekan' || v.code?.toUpperCase().includes('WEEKEND') ? 'Weekend' : 'Semua Hari');
             const isAutoReset = v.autoResetWeekly ?? (daysSetting === 'Weekend' || v.event === 'Promo Akhir Pekan');
 
             return (
-              <div key={v.id} className={`bg-white rounded-3xl p-6 border shadow-xl space-y-4 transition-all duration-200 hover:shadow-2xl ${v.isDeleted ? 'border-rose-200 bg-stone-50/80' : 'border-amber-900/10'}`}>
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-lg font-extrabold text-[#934b19] tracking-wider">{v.code}</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1 border ${
-                        isNewCust 
-                          ? 'bg-amber-100 text-amber-900 border-amber-300/80' 
-                          : 'bg-stone-100 text-stone-700 border-stone-200'
-                      }`}>
-                        <Sparkles className="w-3 h-3 text-amber-600" />
-                        {v.event || (isNewCust ? 'Pelanggan Baru' : 'Promo Umum')}
-                      </span>
-                    </div>
-                    <h3 className="text-xs font-bold text-[#25160e] mt-1">{v.name}</h3>
-                  </div>
-
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${
-                    v.isDeleted
-                      ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                      : v.status === 'Active' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-stone-200 text-stone-600'
-                  }`}>
-                    {v.isDeleted ? 'Terhapus' : v.status}
-                  </span>
-                </div>
-
-                {/* DETAILS VOUCHER CARD */}
-                <div className="space-y-2 text-xs text-[#4f4540] bg-[#fbf9f5] p-3.5 rounded-2xl border border-amber-900/10">
-                  <div className="flex justify-between items-center">
-                    <span className="text-stone-500 font-medium">Diskon:</span>
-                    <strong className="text-[#934b19] font-bold text-sm">{v.discountPercent}%</strong>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-stone-500 font-medium">Min. Belanja:</span>
-                    <strong className="text-[#25160e] font-semibold">Rp {v.minSpend.toLocaleString('id-ID')}</strong>
-                  </div>
-
-                  {/* HARI BERLAKU SCHEDULE BADGE */}
-                  <div className="flex justify-between items-center pt-1 border-t border-amber-900/5">
-                    <span className="text-stone-500 font-medium flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-stone-400" />
-                      Hari Aktif:
-                    </span>
-                    {daysSetting === 'Weekend' ? (
-                      <strong className="text-amber-800 font-bold bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300/70 text-[11px]">
-                        Sabtu & Minggu (Weekend)
-                      </strong>
-                    ) : daysSetting === 'Weekdays' ? (
-                      <strong className="text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80 text-[11px]">
-                        Senin - Jumat (Hari Kerja)
-                      </strong>
-                    ) : (
-                      <strong className="text-stone-700 font-semibold">Semua Hari</strong>
-                    )}
-                  </div>
-
-                  {/* PENGGUNAAN & AUTO RESET */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-stone-500 font-medium flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5 text-stone-400" />
-                      Penggunaan:
-                    </span>
-                    {isUnlimited ? (
-                      <strong className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/80 flex items-center gap-1">
-                        Tanpa Batas (∞)
-                      </strong>
-                    ) : (
-                      <div className="text-right">
-                        <strong className="text-[#25160e] font-semibold">{v.redemptions || '0/500'}</strong>
-                        {isAutoReset && (
-                          <div className="text-[9px] text-amber-700 font-bold flex items-center gap-0.5 justify-end">
-                            <RefreshCw className="w-2.5 h-2.5" />
-                            <span>Reset Tiap Minggu</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* MASA BERLAKU */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-stone-500 font-medium flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                      Masa Berlaku:
-                    </span>
-                    {isPerpetual ? (
-                      <strong className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/80">
-                        Selamanya (Aktif Terus)
-                      </strong>
-                    ) : (
-                      <strong className="text-[#25160e] font-semibold">{v.expiry}</strong>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-stone-100 flex justify-between items-center gap-2">
-                  {v.isDeleted ? (
-                    <>
-                      <button
-                        onClick={() => {
-                          restoreVoucher(v.id);
-                          alert(`Voucher "${v.code}" berhasil dipulihkan!`);
-                        }}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Pulihkan</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`PERINGATAN FORCE DELETE!\nHapus voucher "${v.code}" secara PERMANEN? Data yang dihapus tidak dapat dikembalikan.`)) {
-                            forceDeleteVoucher(v.id);
-                          }
-                        }}
-                        className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Hapus Permanen</span>
-                      </button>
-                    </>
+              <div key={v.id} className={`bg-white rounded-3xl border shadow-xl space-y-0 transition-all duration-200 hover:shadow-2xl overflow-hidden flex flex-col justify-between ${v.isDeleted ? 'border-rose-200 bg-stone-50/80' : 'border-amber-900/10'}`}>
+                {/* GAMBAR BANNER PROMO HEADER */}
+                <div className="relative h-44 w-full bg-gradient-to-br from-[#25160e] via-[#4a2e1b] to-[#934b19] overflow-hidden group">
+                  {v.imageUrl ? (
+                    <img
+                      src={v.imageUrl}
+                      alt={v.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
                   ) : (
-                    <>
-                      <div className="flex items-center gap-3">
-                        {/* TOMBOL EDIT VOUCHER */}
-                        <button
-                          onClick={() => handleOpenEditModal(v)}
-                          className="text-xs font-bold text-amber-800 hover:text-amber-950 hover:underline flex items-center gap-1 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200/60 transition-all"
-                        >
-                          <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-                          <span>Edit</span>
-                        </button>
-
-                        <button
-                          onClick={() => toggleVoucherStatus(v.id)}
-                          className="text-xs font-bold text-[#934b19] hover:underline"
-                        >
-                          {v.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan'}
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          if (confirm(`Pindahkan voucher "${v.code}" ke Tempat Sampah (Soft Delete)?`)) {
-                            softDeleteVoucher(v.id);
-                          }
-                        }}
-                        className="text-xs font-bold text-rose-600 hover:underline flex items-center gap-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Hapus</span>
-                      </button>
-                    </>
+                    <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-amber-200/80">
+                      <Sparkles className="w-8 h-8 text-amber-400 mb-1 animate-pulse" />
+                      <span className="font-mono text-sm font-bold text-amber-300">{v.code}</span>
+                      <span className="text-[10px] text-amber-200/70">{v.event || 'Promo Spesial'}</span>
+                    </div>
                   )}
+
+                  {/* OVERLAY GRADIENT FOR TEXT LEGIBILITY */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#25160e] via-[#25160e]/30 to-transparent"></div>
+
+                  {/* BADGE EVENT (TOP LEFT) */}
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold flex items-center gap-1 shadow-md backdrop-blur-md border ${
+                      isNewCust 
+                        ? 'bg-amber-500/90 text-amber-950 border-amber-300' 
+                        : 'bg-black/60 text-amber-300 border-amber-400/30'
+                    }`}>
+                      <Sparkles className="w-3 h-3 text-amber-300" />
+                      {v.event || (isNewCust ? 'Pelanggan Baru' : 'Promo Umum')}
+                    </span>
+                  </div>
+
+                  {/* BADGE STATUS (TOP RIGHT) */}
+                  <div className="absolute top-3 right-3">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shadow-md backdrop-blur-md ${
+                      v.isDeleted
+                        ? 'bg-rose-600 text-white border border-rose-400'
+                        : v.status === 'Active' ? 'bg-emerald-600/90 text-white border border-emerald-300' : 'bg-stone-800/90 text-stone-300 border border-stone-600'
+                    }`}>
+                      {v.isDeleted ? 'Terhapus' : v.status}
+                    </span>
+                  </div>
+
+                  {/* PROMO TITLE & CODE OVERLAY (BOTTOM LEFT) */}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                    <div>
+                      <span className="inline-block font-mono text-base font-black text-amber-300 tracking-wider bg-black/50 px-2 py-0.5 rounded-md backdrop-blur-xs border border-amber-400/30">
+                        {v.code}
+                      </span>
+                      <h3 className="text-xs font-bold text-white mt-1 drop-shadow-md line-clamp-1">{v.name}</h3>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] text-amber-200 font-semibold block">DISKON</span>
+                      <span className="text-xl font-black text-amber-400 drop-shadow-md">{v.discountPercent}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* DETAILS VOUCHER CARD BODY */}
+                <div className="p-5 space-y-3.5 flex-1 flex flex-col justify-between">
+                  <div className="space-y-2 text-xs text-[#4f4540] bg-[#fbf9f5] p-3.5 rounded-2xl border border-amber-900/10">
+                    <div className="flex justify-between items-center">
+                      <span className="text-stone-500 font-medium">Min. Belanja:</span>
+                      <strong className="text-[#25160e] font-semibold">Rp {v.minSpend.toLocaleString('id-ID')}</strong>
+                    </div>
+
+                    {/* HARI BERLAKU SCHEDULE BADGE */}
+                    <div className="flex justify-between items-center pt-1 border-t border-amber-900/5">
+                      <span className="text-stone-500 font-medium flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-stone-400" />
+                        Hari Aktif:
+                      </span>
+                      {daysSetting === 'Weekend' ? (
+                        <strong className="text-amber-800 font-bold bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300/70 text-[11px]">
+                          Sabtu & Minggu (Weekend)
+                        </strong>
+                      ) : daysSetting === 'Weekdays' ? (
+                        <strong className="text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80 text-[11px]">
+                          Senin - Jumat (Hari Kerja)
+                        </strong>
+                      ) : (
+                        <strong className="text-stone-700 font-semibold">Semua Hari</strong>
+                      )}
+                    </div>
+
+                    {/* PENGGUNAAN & AUTO RESET */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-stone-500 font-medium flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5 text-stone-400" />
+                        Penggunaan:
+                      </span>
+                      {isNewCust ? (
+                        <strong className="text-amber-900 font-bold bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300 flex items-center gap-1">
+                          1x Per Pengguna Baru
+                        </strong>
+                      ) : isUnlimited ? (
+                        <strong className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/80 flex items-center gap-1">
+                          Tanpa Batas (∞)
+                        </strong>
+                      ) : (
+                        <div className="text-right">
+                          <strong className="text-[#25160e] font-semibold">{v.redemptions || '0/500'}</strong>
+                          {isAutoReset && (
+                            <div className="text-[9px] text-amber-700 font-bold flex items-center gap-0.5 justify-end">
+                              <RefreshCw className="w-2.5 h-2.5" />
+                              <span>Reset Tiap Minggu</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* MASA BERLAKU */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-stone-500 font-medium flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                        Masa Berlaku:
+                      </span>
+                      {isPerpetual ? (
+                        <strong className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/80">
+                          Selamanya (Aktif Terus)
+                        </strong>
+                      ) : (
+                        <strong className="text-[#25160e] font-semibold">{v.expiry}</strong>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-stone-100 flex justify-between items-center gap-2">
+                    {v.isDeleted ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            restoreVoucher(v.id);
+                            alert(`Voucher "${v.code}" berhasil dipulihkan!`);
+                          }}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Pulihkan</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`PERINGATAN FORCE DELETE!\nHapus voucher "${v.code}" secara PERMANEN? Data yang dihapus tidak dapat dikembalikan.`)) {
+                              forceDeleteVoucher(v.id);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus Permanen</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          {/* TOMBOL EDIT VOUCHER */}
+                          <button
+                            onClick={() => handleOpenEditModal(v)}
+                            className="text-xs font-bold text-amber-800 hover:text-amber-950 hover:underline flex items-center gap-1 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200/60 transition-all"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            onClick={() => toggleVoucherStatus(v.id)}
+                            className="text-xs font-bold text-[#934b19] hover:underline"
+                          >
+                            {v.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan'}
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            if (confirm(`Pindahkan voucher "${v.code}" ke Tempat Sampah (Soft Delete)?`)) {
+                              softDeleteVoucher(v.id);
+                            }
+                          }}
+                          className="text-xs font-bold text-rose-600 hover:underline flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -452,6 +508,97 @@ export default function AdminPromotionsTab({
                 />
               </div>
 
+              {/* 2.5 GAMBAR BANNER PROMO */}
+              <div className="pt-2 border-t border-stone-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-[#25160e] flex items-center gap-1 text-xs">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#934b19]" />
+                    <span>Gambar Banner Promo *</span>
+                  </label>
+                  <span className="text-[10px] text-amber-800 font-medium">Mempercantik Kartu Promo</span>
+                </div>
+
+                {/* TAB SELECTION CARA INPUT GAMBAR */}
+                <div className="flex items-center gap-1.5 p-1 bg-stone-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setImageInputTab('upload')}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 ${
+                      imageInputTab === 'upload'
+                        ? 'bg-white text-[#934b19] shadow-xs'
+                        : 'text-stone-600 hover:text-[#25160e]'
+                    }`}
+                  >
+                    <Upload className="w-3 h-3 text-blue-600" />
+                    <span>Upload Foto</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageInputTab('url')}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 ${
+                      imageInputTab === 'url'
+                        ? 'bg-white text-[#934b19] shadow-xs'
+                        : 'text-stone-600 hover:text-[#25160e]'
+                    }`}
+                  >
+                    <Link2 className="w-3 h-3 text-emerald-600" />
+                    <span>Input URL</span>
+                  </button>
+                </div>
+
+                {/* INPUT OPTION 2: UPLOAD FILE */}
+                {imageInputTab === 'upload' && (
+                  <div className="pt-1">
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-amber-900/20 rounded-2xl cursor-pointer bg-[#fbf9f5] hover:bg-amber-50/50 transition-all">
+                      <div className="flex flex-col items-center justify-center pt-2 pb-2">
+                        <Camera className="w-6 h-6 text-[#934b19] mb-1" />
+                        <p className="text-[11px] font-bold text-[#25160e]">Klik untuk Pilih Gambar dari Perangkat</p>
+                        <p className="text-[9px] text-stone-500">Format PNG, JPG, WEBP (Maks 5MB)</p>
+                      </div>
+                      <input type="file" accept="image/*" onChange={handleImageFileUpload} className="hidden" />
+                    </label>
+                  </div>
+                )}
+
+                {/* INPUT OPTION 3: URL IMAGE */}
+                {imageInputTab === 'url' && (
+                  <div className="pt-1">
+                    <input
+                      type="url"
+                      value={voucherImageUrl}
+                      onChange={(e) => setVoucherImageUrl(e.target.value)}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      className="w-full px-4 py-2 bg-[#fbf9f5] border border-amber-900/15 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-[#934b19]/30"
+                    />
+                  </div>
+                )}
+
+                {/* LIVE PREVIEW BANNER PROMO */}
+                {voucherImageUrl && (
+                  <div className="mt-2 relative h-28 rounded-2xl overflow-hidden border border-amber-900/20 shadow-inner group">
+                    <img src={voucherImageUrl} alt="Preview Promo" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30 p-2.5 flex flex-col justify-between">
+                      <div className="flex justify-between items-start">
+                        <span className="px-2 py-0.5 bg-amber-400 text-[#25160e] text-[9px] font-black rounded-md uppercase tracking-wider shadow-xs">
+                          Live Preview Banner
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setVoucherImageUrl('')}
+                          className="p-1 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition-colors shadow-xs"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div className="text-white">
+                        <span className="font-mono text-xs font-bold text-amber-300 bg-black/40 px-1.5 py-0.5 rounded">{voucherCode || 'KODEPROMO'}</span>
+                        <h4 className="text-[11px] font-bold line-clamp-1 mt-0.5">{voucherName || 'Nama Promo'}</h4>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* 3. PERSEN DISKON & MIN SPEND */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -489,7 +636,7 @@ export default function AdminPromotionsTab({
                   onChange={(e) => handleEventChange(e.target.value)}
                   className="w-full px-4 py-2.5 bg-[#fbf9f5] border border-amber-900/15 rounded-2xl text-xs font-semibold text-[#25160e] focus:outline-none focus:ring-2 focus:ring-[#934b19]/30 cursor-pointer"
                 >
-                  <option value="Pelanggan Baru">🎁 Promo Pelanggan Baru (Aktif Selamanya & Tanpa Batas)</option>
+                  <option value="Pelanggan Baru">🎁 Promo Pelanggan Baru (Aktif Selamanya & 1x Per Pengguna Baru)</option>
                   <option value="Promo Akhir Pekan">📅 Promo Akhir Pekan (Weekend Seru)</option>
                   <option value="Flash Sale">⚡ Flash Sale</option>
                   <option value="Tanggal Kembar">🏷️ Tanggal Kembar / Harbolnas</option>
@@ -591,7 +738,7 @@ export default function AdminPromotionsTab({
                     <span>Promo Pelanggan Baru Terpilih!</span>
                   </div>
                   <p className="text-amber-800/90 leading-relaxed font-light">
-                    Sesuai kebijakan toko, promo khusus pelanggan baru <strong>aktif selamanya</strong> tanpa tanggal kedaluwarsa dan <strong>tanpa batasan pengguna (unlimited)</strong>.
+                    Sesuai kebijakan toko, promo khusus pelanggan baru <strong>aktif selamanya</strong> tanpa tanggal kedaluwarsa dan berlaku <strong>1x penggunaan per akun pengguna baru</strong>.
                   </p>
                 </div>
               )}
@@ -608,7 +755,7 @@ export default function AdminPromotionsTab({
                     type="button"
                     onClick={() => setExpiryType('selamanya')}
                     className={`p-2.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                      expiryType === 'selamanya' || voucherEvent === 'Pelanggan Baru'
+                      expiryType === 'selamanya'
                         ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs'
                         : 'bg-[#fbf9f5] border-stone-200 text-stone-600 hover:bg-stone-100'
                     }`}
@@ -617,25 +764,16 @@ export default function AdminPromotionsTab({
                       <div className="text-xs">Aktif Selamanya</div>
                       <div className="text-[10px] text-emerald-700 font-normal">Tanpa kedaluwarsa</div>
                     </div>
-                    {(expiryType === 'selamanya' || voucherEvent === 'Pelanggan Baru') && (
+                    {expiryType === 'selamanya' && (
                       <Check className="w-4 h-4 text-emerald-600" />
                     )}
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      if (voucherEvent === 'Pelanggan Baru') {
-                        alert('Promo Pelanggan Baru dikhususkan untuk aktif selamanya.');
-                        return;
-                      }
-                      setExpiryType('date');
-                    }}
-                    disabled={voucherEvent === 'Pelanggan Baru'}
+                    onClick={() => setExpiryType('date')}
                     className={`p-2.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                      voucherEvent === 'Pelanggan Baru'
-                        ? 'opacity-50 cursor-not-allowed bg-stone-100 border-stone-200 text-stone-400'
-                        : expiryType === 'date'
+                      expiryType === 'date'
                         ? 'bg-amber-50 border-amber-600 text-amber-950 font-bold shadow-xs'
                         : 'bg-[#fbf9f5] border-stone-200 text-stone-600 hover:bg-stone-100'
                     }`}
@@ -644,13 +782,13 @@ export default function AdminPromotionsTab({
                       <div className="text-xs">Pilih Tanggal</div>
                       <div className="text-[10px] text-stone-500 font-normal">Set kedaluwarsa</div>
                     </div>
-                    {expiryType === 'date' && voucherEvent !== 'Pelanggan Baru' && (
+                    {expiryType === 'date' && (
                       <Check className="w-4 h-4 text-amber-600" />
                     )}
                   </button>
                 </div>
 
-                {expiryType === 'date' && voucherEvent !== 'Pelanggan Baru' && (
+                {expiryType === 'date' && (
                   <div className="pt-1">
                     <input
                       type="date"
@@ -675,34 +813,25 @@ export default function AdminPromotionsTab({
                     type="button"
                     onClick={() => setLimitType('unlimited')}
                     className={`p-2.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                      limitType === 'unlimited' || voucherEvent === 'Pelanggan Baru'
+                      limitType === 'unlimited'
                         ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs'
                         : 'bg-[#fbf9f5] border-stone-200 text-stone-600 hover:bg-stone-100'
                     }`}
                   >
                     <div>
-                      <div className="text-xs">Tanpa Batasan</div>
-                      <div className="text-[10px] text-emerald-700 font-normal">Unlimited pengguna</div>
+                      <div className="text-xs">{voucherEvent === 'Pelanggan Baru' ? '1x Per Pengguna Baru' : 'Tanpa Batasan'}</div>
+                      <div className="text-[10px] text-emerald-700 font-normal">{voucherEvent === 'Pelanggan Baru' ? 'Max 1x Per Akun' : 'Unlimited pengguna'}</div>
                     </div>
-                    {(limitType === 'unlimited' || voucherEvent === 'Pelanggan Baru') && (
+                    {limitType === 'unlimited' && (
                       <Check className="w-4 h-4 text-emerald-600" />
                     )}
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      if (voucherEvent === 'Pelanggan Baru') {
-                        alert('Promo Pelanggan Baru dikhususkan tanpa batasan pengguna.');
-                        return;
-                      }
-                      setLimitType('limited');
-                    }}
-                    disabled={voucherEvent === 'Pelanggan Baru'}
+                    onClick={() => setLimitType('limited')}
                     className={`p-2.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                      voucherEvent === 'Pelanggan Baru'
-                        ? 'opacity-50 cursor-not-allowed bg-stone-100 border-stone-200 text-stone-400'
-                        : limitType === 'limited'
+                      limitType === 'limited'
                         ? 'bg-amber-50 border-amber-600 text-amber-950 font-bold shadow-xs'
                         : 'bg-[#fbf9f5] border-stone-200 text-stone-600 hover:bg-stone-100'
                     }`}
@@ -711,13 +840,13 @@ export default function AdminPromotionsTab({
                       <div className="text-xs">Batasi Kuota</div>
                       <div className="text-[10px] text-stone-500 font-normal">Set maksimal klaim</div>
                     </div>
-                    {limitType === 'limited' && voucherEvent !== 'Pelanggan Baru' && (
+                    {limitType === 'limited' && (
                       <Check className="w-4 h-4 text-amber-600" />
                     )}
                   </button>
                 </div>
 
-                {limitType === 'limited' && voucherEvent !== 'Pelanggan Baru' && (
+                {limitType === 'limited' && (
                   <div className="pt-1">
                     <input
                       type="number"

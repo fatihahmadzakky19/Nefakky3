@@ -15,7 +15,8 @@ import {
   Home, 
   Utensils, 
   MessageSquare, 
-  Clock 
+  Clock,
+  LogOut 
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -26,7 +27,7 @@ interface NavbarProps {
 
 export default function Navbar({ showSearch, searchQuery, onSearchChange }: NavbarProps) {
   const pathname = usePathname();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const { totalCartCount } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -140,26 +141,41 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
               )}
             </Link>
 
-            {/* User Profile Avatar Pill */}
+            {/* User Profile Avatar Pill & Log Out */}
             {user ? (
-              <Link 
-                href="/profile"
-                className="flex items-center gap-3 pl-2 sm:pl-3 border-l border-[#d3c3bd] group cursor-pointer"
-                title="Lihat Profil Akun"
-              >
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs font-bold text-[#1b1c1a] leading-tight group-hover:text-[#934b19] transition-colors">
-                    {user.displayName || user.email?.split('@')[0] || 'Gourmet User'}
-                  </p>
-                </div>
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#25160e] flex items-center justify-center text-white shrink-0 overflow-hidden ring-2 ring-transparent group-hover:ring-[#934b19]/40 transition-all shadow-sm">
-                  {userAvatar ? (
-                    <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  )}
-                </div>
-              </Link>
+              <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-[#d3c3bd]">
+                <Link 
+                  href="/profile"
+                  className="flex items-center gap-2.5 group cursor-pointer"
+                  title="Lihat Profil Akun"
+                >
+                  <div className="text-right hidden sm:block">
+                    <p className="text-xs font-bold text-[#1b1c1a] leading-tight group-hover:text-[#934b19] transition-colors">
+                      {user.displayName || user.email?.split('@')[0] || 'Gourmet User'}
+                    </p>
+                  </div>
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#25160e] flex items-center justify-center text-white shrink-0 overflow-hidden ring-2 ring-transparent group-hover:ring-[#934b19]/40 transition-all shadow-sm">
+                    {userAvatar ? (
+                      <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                    )}
+                  </div>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (confirm('Apakah Anda yakin ingin keluar (log out) dari akun ini?')) {
+                      await logout();
+                    }
+                  }}
+                  className="p-2 text-stone-500 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
+                  title="Keluar / Log Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
               <Link
                 href="/login"
