@@ -136,11 +136,15 @@ class DatabaseSeeder extends Seeder
             'status' => 'PUBLISHED',
         ]);
 
-        // 5. Seed Sales Reports Hanya Sampai Agustus 2026 (Live)
+        // 5. Seed Sales Reports: Juni-Agustus memuat data omset, September-Desember 0 (Placeholder Mendatang)
         $months2026 = [
             ['month_year' => 'Juni 2026', 'gross' => 10500000, 'net' => 4750000, 'orders' => 210, 'is_bazar' => true, 'event' => '🎪 Event Bazar Pembukaan Juni (>10Jt Omset)'],
             ['month_year' => 'Juli 2026', 'gross' => 11200000, 'net' => 5100000, 'orders' => 235, 'is_bazar' => true, 'event' => '🎪 Event Bazar Kuliner Juli (>10Jt Omset)'],
-            ['month_year' => 'Agustus 2026 (Live)', 'gross' => 13200000, 'net' => 6600000, 'orders' => 260, 'is_bazar' => true, 'event' => '🎪 Event Bazar Merdeka + Live Web Realtime'],
+            ['month_year' => 'Agustus 2026 (Live)', 'gross' => 13800000, 'net' => 6900000, 'orders' => 260, 'is_bazar' => true, 'event' => '🎪 Event Bazar Merdeka + Live Web Realtime'],
+            ['month_year' => 'September 2026', 'gross' => 0, 'net' => 0, 'orders' => 0, 'is_bazar' => false, 'event' => 'Belum Ada Data (Periode Mendatang)'],
+            ['month_year' => 'Oktober 2026', 'gross' => 0, 'net' => 0, 'orders' => 0, 'is_bazar' => false, 'event' => 'Belum Ada Data (Periode Mendatang)'],
+            ['month_year' => 'November 2026', 'gross' => 0, 'net' => 0, 'orders' => 0, 'is_bazar' => false, 'event' => 'Belum Ada Data (Periode Mendatang)'],
+            ['month_year' => 'Desember 2026', 'gross' => 0, 'net' => 0, 'orders' => 0, 'is_bazar' => false, 'event' => 'Belum Ada Data (Periode Mendatang)'],
         ];
 
         foreach ($months2026 as $m) {

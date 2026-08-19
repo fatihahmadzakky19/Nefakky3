@@ -91,8 +91,8 @@ export default function AdminReviewsTab({
                         <div key={starIdx} className="relative inline-flex items-center">
                           <Star className="w-4 h-4 text-stone-300 fill-stone-100" />
                           {fillPercent > 0 && (
-                            <div 
-                              className="absolute top-0 left-0 overflow-hidden" 
+                            <div
+                              className="absolute top-0 left-0 overflow-hidden"
                               style={{ width: `${fillPercent}%` }}
                             >
                               <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -121,17 +121,17 @@ export default function AdminReviewsTab({
                   </div>
                   <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
                     {photos.map((photoSrc: string, idx: number) => (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         onClick={() => setSelectedPhotoZoom(photoSrc)}
                         className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-amber-900/15 group cursor-pointer shadow-xs hover:border-[#934b19] transition-all shrink-0 bg-stone-100"
                         title="Klik untuk memperbesar foto ulasan"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={photoSrc} 
-                          alt={`Foto Ulasan ${idx + 1}`} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                        <img
+                          src={photoSrc}
+                          alt={`Foto Ulasan ${idx + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
                           <Maximize2 className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" />
@@ -212,12 +212,12 @@ export default function AdminReviewsTab({
 
       {/* MODAL ZOOM FULL-SCREEN FOTO ULASAN */}
       {selectedPhotoZoom && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in" 
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
           onClick={() => setSelectedPhotoZoom(null)}
         >
-          <div 
-            className="relative max-w-3xl w-full bg-[#25160E] rounded-3xl overflow-hidden shadow-2xl border border-amber-900/40" 
+          <div
+            className="relative max-w-3xl w-full bg-[#25160E] rounded-3xl overflow-hidden shadow-2xl border border-amber-900/40"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 bg-[#1e110a] flex items-center justify-between border-b border-amber-900/30">
@@ -225,8 +225,8 @@ export default function AdminReviewsTab({
                 <Camera className="w-4 h-4 text-amber-400" />
                 <span>Foto Ulasan Pelanggan</span>
               </span>
-              <button 
-                onClick={() => setSelectedPhotoZoom(null)} 
+              <button
+                onClick={() => setSelectedPhotoZoom(null)}
                 className="p-1.5 text-stone-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -235,18 +235,18 @@ export default function AdminReviewsTab({
 
             <div className="p-4 flex items-center justify-center max-h-[75vh] overflow-auto bg-black">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src={selectedPhotoZoom} 
-                alt="Foto Ulasan Full Size" 
-                className="max-h-[65vh] w-auto object-contain rounded-xl shadow-lg" 
+              <img
+                src={selectedPhotoZoom}
+                alt="Foto Ulasan Full Size"
+                className="max-h-[65vh] w-auto object-contain rounded-xl shadow-lg"
               />
             </div>
 
             <div className="p-4 bg-[#1e110a] border-t border-amber-900/30 flex justify-between items-center text-xs text-amber-200/80">
               <span>Lampiran Foto Ulasan Terverifikasi Pelanggan</span>
-              <a 
-                href={selectedPhotoZoom} 
-                target="_blank" 
+              <a
+                href={selectedPhotoZoom}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 bg-[#934B19] hover:bg-[#783603] text-white font-bold rounded-xl flex items-center gap-1.5 shadow transition-all"
               >
