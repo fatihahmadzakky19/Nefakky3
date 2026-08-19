@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TrendingUp,
   Receipt,
@@ -18,7 +18,21 @@ import {
   Check,
   Trash2,
   RotateCcw,
-  Calendar
+  Calendar,
+  Search,
+  Clock,
+  Truck,
+  CheckCircle2,
+  Radio,
+  Activity,
+  CreditCard,
+  Building2,
+  QrCode,
+  Wallet,
+  Filter,
+  RefreshCw,
+  Eye,
+  ArrowUpDown
 } from 'lucide-react';
 import { ProductItem, AdminOrder, useData } from '@/context/DataContext';
 import { exportNefakkyExcelReport, exportNefakkyPDFReport } from '@/lib/exportUtils';
@@ -123,8 +137,306 @@ export default function AdminDashboardTab({
   }, [selectedYear]);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<AdminOrder | null>(null);
 
+  // Live Current Time state that updates every 10 seconds for truly live ticking relative time
+  const [currentTime, setCurrentTime] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Helper timestamp ekstraksi akurat
+  const getOrderTimestamp = (ord: AdminOrder): number => {
+    if (typeof ord.createdAt === 'number' && !isNaN(ord.createdAt) && ord.createdAt > 0) {
+      return ord.createdAt;
+    }
+    if (ord.createdAt && typeof (ord.createdAt as any).seconds === 'number') {
+      return (ord.createdAt as any).seconds * 1000;
+    }
+    if (ord.date) {
+      const dStr = ord.date.toLowerCase();
+      const now = new Date();
+      if (dStr.includes('hari ini') || dStr.includes('today')) {
+        const timeMatch = ord.date.match(/(\d{1,2})[:.](\d{2})/);
+        if (timeMatch) {
+          const t = new Date();
+          t.setHours(parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10), 0, 0);
+          return t.getTime();
+        }
+        return now.getTime();
+      }
+      if (dStr.includes('kemarin') || dStr.includes('yesterday')) {
+        const timeMatch = ord.date.match(/(\d{1,2})[:.](\d{2})/);
+        const t = new Date(now.getTime() - 86400000);
+        if (timeMatch) {
+          t.setHours(parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10), 0, 0);
+          return t.getTime();
+        }
+        return t.getTime();
+      }
+      const parsed = Date.parse(ord.date.replace(/,/g, ''));
+      if (!isNaN(parsed)) return parsed;
+    }
+    return Date.now() - 3600000;
+  };
+
+  // Helper memformat tanggal & waktu relatif secara real-time
+  const formatRealtimeDate = (ord: AdminOrder) => {
+    const timestamp = getOrderTimestamp(ord);
+    const diffMs = currentTime - timestamp;
+    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    let relativeTime = 'Baru saja';
+    let isLive = false;
+
+    if (diffSec < 45) {
+      relativeTime = 'Baru saja';
+      isLive = true;
+    } else if (diffMin < 60) {
+      relativeTime = `${diffMin} mnt lalu`;
+      if (diffMin <= 15) isLive = true;
+    } else if (diffHours < 24) {
+      relativeTime = `${diffHours} jam lalu`;
+    } else if (diffDays === 1) {
+      relativeTime = 'Kemarin';
+    } else if (diffDays < 7) {
+      relativeTime = `${diffDays} hari lalu`;
+    } else {
+      relativeTime = `${Math.floor(diffDays / 7)} mgg lalu`;
+    }
+
+    // Format jam & tanggal yang presisi
+    let formattedDate = ord.date;
+    if (timestamp > 0) {
+      const d = new Date(timestamp);
+      if (!isNaN(d.getTime())) {
+        const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+        const isToday = new Date().toDateString() === d.toDateString();
+        const yesterday = new Date(Date.now() - 86400000);
+        const isYesterday = yesterday.toDateString() === d.toDateString();
+
+        if (isToday) {
+          formattedDate = `Hari ini, ${timeStr}`;
+        } else if (isYesterday) {
+          formattedDate = `Kemarin, ${timeStr}`;
+        } else {
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+          formattedDate = `${d.getDate()} ${months[d.getMonth()]}, ${timeStr}`;
+        }
+      }
+    }
+
+    return { formattedDate, relativeTime, isLive };
+  };
+
+  // State Filter & Search Rekap Realtime
+  const [rekapSearchQuery, setRekapSearchQuery] = useState<string>('');
+  const [rekapStatusFilter, setRekapStatusFilter] = useState<'ALL' | 'PENDING' | 'COOKING' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED'>('ALL');
+  const [rekapDateFilter, setRekapDateFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | 'thisMonth'>('all');
+  const [lastSyncTime, setLastSyncTime] = useState<string>('Baru saja');
+
+  // Live active orders source (from Firestore live DataContext / props)
+  const liveActiveOrders = React.useMemo(() => {
+    const list = (orders && orders.length > 0) ? orders : (orderList || []);
+    return list.filter(o => !o.isDeleted);
+  }, [orders, orderList]);
+
+  // Update live sync timestamp
+  React.useEffect(() => {
+    setLastSyncTime(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  }, [liveActiveOrders]);
+
+  // Filtered & Sorted Rekap Orders (Paling Baru Selalu Di Paling Atas)
+  const filteredRekapOrders = React.useMemo(() => {
+    return liveActiveOrders
+      .filter((ord) => {
+        // Status filter
+        if (rekapStatusFilter !== 'ALL') {
+          if (rekapStatusFilter === 'PENDING') {
+            if (ord.status !== 'PENDING' && ord.status !== 'RECEIVED') return false;
+          } else if (rekapStatusFilter === 'COOKING') {
+            if (ord.status !== 'COOKING' && ord.status !== 'READY') return false;
+          } else if (rekapStatusFilter === 'SHIPPING') {
+            if (ord.status !== 'SHIPPING' && ord.status !== 'DELIVERING') return false;
+          } else if (ord.status !== rekapStatusFilter) {
+            return false;
+          }
+        }
+
+        // Date range filter
+        if (rekapDateFilter !== 'all') {
+          const orderTime = getOrderTimestamp(ord);
+          const now = new Date();
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+          const startOfYesterday = startOfToday - 86400000;
+
+          if (rekapDateFilter === 'today') {
+            if (orderTime < startOfToday) return false;
+          } else if (rekapDateFilter === 'yesterday') {
+            if (orderTime < startOfYesterday || orderTime >= startOfToday) return false;
+          } else if (rekapDateFilter === '7days') {
+            const sevenDaysAgo = startOfToday - 6 * 86400000;
+            if (orderTime < sevenDaysAgo) return false;
+          } else if (rekapDateFilter === 'thisMonth') {
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+            if (orderTime < startOfMonth) return false;
+          }
+        }
+
+        // Search query filter
+        if (rekapSearchQuery.trim()) {
+          const q = rekapSearchQuery.toLowerCase();
+          const matchId = (ord.id || '').toLowerCase().includes(q);
+          const matchName = (ord.customerName || '').toLowerCase().includes(q);
+          const matchAddr = (ord.address || '').toLowerCase().includes(q);
+          const matchItems = (ord.items || []).some(i => (i.name || '').toLowerCase().includes(q));
+          const matchMethod = (ord.paymentMethod || '').toLowerCase().includes(q);
+          if (!matchId && !matchName && !matchAddr && !matchItems && !matchMethod) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const timeA = getOrderTimestamp(a);
+        const timeB = getOrderTimestamp(b);
+        return timeB - timeA;
+      });
+  }, [liveActiveOrders, rekapStatusFilter, rekapDateFilter, rekapSearchQuery]);
+
+  // Total omset terhitung dari data yang terfilter
+  const filteredRekapOmset = React.useMemo(() => {
+    return filteredRekapOrders
+      .filter(o => o.status !== 'CANCELLED')
+      .reduce((sum, o) => sum + (o.total || 0), 0);
+  }, [filteredRekapOrders]);
+
+  const renderRekapStatusBadge = (status: string) => {
+    switch (status) {
+      case 'RECEIVED':
+      case 'PENDING':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 text-[10px] font-bold rounded-full border border-amber-200/80 shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+            <span>PENDING</span>
+          </span>
+        );
+      case 'COOKING':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-800 text-[10px] font-bold rounded-full border border-orange-200/80 shadow-2xs">
+            <Flame className="w-3 h-3 text-orange-600 animate-pulse" />
+            <span>DIMASAK</span>
+          </span>
+        );
+      case 'READY':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-50 text-sky-800 text-[10px] font-bold rounded-full border border-sky-200/80 shadow-2xs">
+            <CheckCircle2 className="w-3 h-3 text-sky-600" />
+            <span>SIAP</span>
+          </span>
+        );
+      case 'SHIPPING':
+      case 'DELIVERING':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-800 text-[10px] font-bold rounded-full border border-blue-200/80 shadow-2xs">
+            <Truck className="w-3 h-3 text-blue-600 animate-bounce" />
+            <span>DIANTAR</span>
+          </span>
+        );
+      case 'COMPLETED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-200/80 shadow-2xs">
+            <Check className="w-3 h-3 text-emerald-600" />
+            <span>COMPLETED</span>
+          </span>
+        );
+      case 'CANCELLED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-800 text-[10px] font-bold rounded-full border border-rose-200/80 shadow-2xs">
+            <X className="w-3 h-3 text-rose-600" />
+            <span>BATAL</span>
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2.5 py-1 bg-[#25160e] text-amber-200 text-[10px] font-bold rounded-full uppercase">
+            {status}
+          </span>
+        );
+    }
+  };
+
+  const renderRekapPaymentBadge = (method: string) => {
+    const isMidtrans = method.toLowerCase().includes('midtrans');
+    const isQris = method.toLowerCase().includes('qris') || method.toLowerCase().includes('gopay') || method.toLowerCase().includes('shopeepay') || method.toLowerCase().includes('dana') || method.toLowerCase().includes('ovo');
+    const isCOD = method.toLowerCase().includes('cod') || method.toLowerCase().includes('tempat');
+    const isTransfer = method.toLowerCase().includes('transfer') || method.toLowerCase().includes('bca') || method.toLowerCase().includes('mandiri') || method.toLowerCase().includes('bni') || method.toLowerCase().includes('bri');
+
+    if (isMidtrans) {
+      return (
+        <div className="flex flex-col items-start gap-0.5">
+          <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-200 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Midtrans
+          </span>
+          <span className="text-[9.5px] text-stone-500 font-mono">Payment Gateway</span>
+        </div>
+      );
+    }
+
+    if (isQris) {
+      return (
+        <div className="flex flex-col items-start gap-0.5">
+          <span className="px-2.5 py-0.5 bg-cyan-50 text-cyan-800 text-[10px] font-bold rounded-full border border-cyan-200 flex items-center gap-1">
+            <QrCode className="w-2.5 h-2.5 text-cyan-600" />
+            QRIS
+          </span>
+          <span className="text-[9.5px] text-stone-500 truncate max-w-[110px]">{method}</span>
+        </div>
+      );
+    }
+
+    if (isCOD) {
+      return (
+        <div className="flex flex-col items-start gap-0.5">
+          <span className="px-2.5 py-0.5 bg-amber-50 text-amber-800 text-[10px] font-bold rounded-full border border-amber-200 flex items-center gap-1">
+            <Wallet className="w-2.5 h-2.5 text-amber-600" />
+            COD
+          </span>
+          <span className="text-[9.5px] text-stone-500">Bayar di Tempat</span>
+        </div>
+      );
+    }
+
+    if (isTransfer) {
+      return (
+        <div className="flex flex-col items-start gap-0.5">
+          <span className="px-2.5 py-0.5 bg-purple-50 text-purple-800 text-[10px] font-bold rounded-full border border-purple-200 flex items-center gap-1">
+            <Building2 className="w-2.5 h-2.5 text-purple-600" />
+            Transfer Bank
+          </span>
+          <span className="text-[9.5px] text-stone-500 truncate max-w-[110px]">{method}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col items-start gap-0.5">
+        <span className="px-2.5 py-0.5 bg-stone-100 text-stone-800 text-[10px] font-bold rounded-full border border-stone-200 flex items-center gap-1">
+          <CreditCard className="w-2.5 h-2.5 text-stone-600" />
+          Online
+        </span>
+        <span className="text-[9.5px] text-stone-500 truncate max-w-[110px]">{method}</span>
+      </div>
+    );
+  };
+
   // Computations
-  const realOrders = orderList || [];
+  const realOrders = liveActiveOrders;
   const nonCancelledOrders = realOrders.filter(o => o.status !== 'CANCELLED');
   const ordersCount = realOrders.length;
   const totalRevenueIDR = nonCancelledOrders.reduce((acc, ord) => acc + (ord.total || 0), 0);
@@ -817,77 +1129,237 @@ export default function AdminDashboardTab({
         </div>
       </div>
 
-      {/* REKAP PEMBELIAN OMSET TRANSAKSI */}
+      {/* REKAP PEMBELIAN OMSET TRANSAKSI REALTIME */}
       <div className="bg-white shadow-xl shadow-amber-950/5 rounded-3xl p-6 sm:p-8 border border-amber-900/10 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h3 className="font-serif text-2xl font-bold text-[#25160e]">Rekap Pembelian & Transaksi Omset</h3>
-            <p className="text-xs text-[#4f4540]">Rincian riwayat data pembelian transaksi riil dari konsumen web.</p>
+        
+        {/* Header Rekap Realtime */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-stone-100 pb-5">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h3 className="font-serif text-2xl font-bold text-[#25160e]">Rekap Pembelian &amp; Transaksi Omset</h3>
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-200/80 shadow-2xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>Live Sync Realtime • {lastSyncTime}</span>
+              </div>
+            </div>
+            <p className="text-xs text-[#4f4540]">Rincian riwayat data pembelian transaksi riil dari konsumen web secara langsung dan terurut paling baru.</p>
           </div>
-          <button
-            onClick={onExportCSV}
-            className="px-4 py-2.5 bg-[#25160e] hover:bg-[#3c2a21] text-white text-xs font-bold rounded-2xl shadow-md flex items-center gap-2 print:hidden"
-          >
-            <Download className="w-4 h-4 text-amber-300" />
-            <span>Download Rekap CSV</span>
-          </button>
+
+          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            <button
+              onClick={onExportCSV}
+              className="flex-1 sm:flex-initial px-4 py-2.5 bg-[#25160e] hover:bg-[#3c2a21] text-white text-xs font-bold rounded-2xl shadow-md flex items-center justify-center gap-2 print:hidden transition-all active:scale-95"
+            >
+              <Download className="w-4 h-4 text-amber-300" />
+              <span>Download Rekap CSV</span>
+            </button>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Live Metrics Mini Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-3 bg-[#fbf9f5] rounded-2xl border border-amber-900/10">
+            <span className="text-[10px] text-[#4f4540] font-bold uppercase tracking-wider block">Total Transaksi</span>
+            <span className="text-base sm:text-lg font-bold font-serif text-[#25160e]">{filteredRekapOrders.length} Pesanan</span>
+          </div>
+          <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200/60">
+            <span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider block">Omset Terfilter</span>
+            <span className="text-base sm:text-lg font-bold font-serif text-emerald-900">Rp {filteredRekapOmset.toLocaleString('id-ID')}</span>
+          </div>
+          <div className="p-3 bg-amber-50/70 rounded-2xl border border-amber-200/60">
+            <span className="text-[10px] text-amber-800 font-bold uppercase tracking-wider block">Aktif / Diproses</span>
+            <span className="text-base sm:text-lg font-bold font-serif text-amber-900">
+              {filteredRekapOrders.filter(o => o.status === 'PENDING' || o.status === 'RECEIVED' || o.status === 'COOKING' || o.status === 'READY' || o.status === 'SHIPPING' || o.status === 'DELIVERING').length} Transaksi
+            </span>
+          </div>
+          <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80">
+            <span className="text-[10px] text-stone-600 font-bold uppercase tracking-wider block">Selesai (Completed)</span>
+            <span className="text-base sm:text-lg font-bold font-serif text-stone-800">
+              {filteredRekapOrders.filter(o => o.status === 'COMPLETED').length} Transaksi
+            </span>
+          </div>
+        </div>
+
+        {/* Filter & Search Bar */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[#fbf9f5] p-3 rounded-2xl border border-amber-900/10">
+          {/* Input Search */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={rekapSearchQuery}
+              onChange={(e) => setRekapSearchQuery(e.target.value)}
+              placeholder="Cari ID (#ORD-xxxx), nama pelanggan, menu masakan..."
+              className="w-full pl-9 pr-8 py-2 bg-white border border-amber-900/15 rounded-xl text-xs text-[#25160e] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934b19]/30 font-medium"
+            />
+            {rekapSearchQuery && (
+              <button
+                onClick={() => setRekapSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Status Pills */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            {[
+              { id: 'ALL', label: 'Semua' },
+              { id: 'PENDING', label: 'Pending' },
+              { id: 'COOKING', label: 'Dimasak' },
+              { id: 'SHIPPING', label: 'Diantar' },
+              { id: 'COMPLETED', label: 'Selesai' },
+              { id: 'CANCELLED', label: 'Batal' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setRekapStatusFilter(tab.id as any)}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all ${
+                  rekapStatusFilter === tab.id
+                    ? 'bg-[#25160e] text-white shadow-xs'
+                    : 'bg-white text-[#4f4540] hover:bg-stone-100 border border-stone-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Date Filter Dropdown */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Calendar className="w-3.5 h-3.5 text-[#934b19]" />
+            <select
+              value={rekapDateFilter}
+              onChange={(e) => setRekapDateFilter(e.target.value as any)}
+              className="px-3 py-2 bg-white border border-amber-900/15 rounded-xl text-xs font-bold text-[#25160e] focus:outline-none focus:ring-2 focus:ring-[#934b19]/30"
+            >
+              <option value="all">Semua Waktu</option>
+              <option value="today">Hari Ini</option>
+              <option value="yesterday">Kemarin</option>
+              <option value="7days">7 Hari Terakhir</option>
+              <option value="thisMonth">Bulan Ini</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Tabel Data Realtime */}
+        <div className="overflow-x-auto rounded-2xl border border-stone-200">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-stone-200 text-[#4f4540] font-bold uppercase tracking-wider">
-                <th className="py-3.5 px-4">ID & Tanggal</th>
-                <th className="py-3.5 px-4">Pelanggan</th>
-                <th className="py-3.5 px-4">Menu Dipesan</th>
-                <th className="py-3.5 px-4">Metode Bayar</th>
-                <th className="py-3.5 px-4">Total Omset (Rp)</th>
-                <th className="py-3.5 px-4">Status Alur</th>
-                <th className="py-3.5 px-4 text-right print:hidden">Aksi</th>
+              <tr className="bg-[#fbf9f5] border-b border-stone-200 text-[#4f4540] font-bold uppercase tracking-wider text-[11px]">
+                <th className="py-3.5 px-4 whitespace-nowrap min-w-[175px]">ID &amp; Tanggal</th>
+                <th className="py-3.5 px-4 min-w-[160px]">Pelanggan</th>
+                <th className="py-3.5 px-4 min-w-[160px]">Menu Dipesan</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Metode Bayar</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Total Omset (Rp)</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Status Alur</th>
+                <th className="py-3.5 px-4 text-right print:hidden whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-stone-100">
-              {realOrders.map((ord) => (
-                <tr key={ord.id} className="hover:bg-[#fbf9f5]">
-                  <td className="py-3.5 px-4 font-mono">
-                    <strong className="text-[#934b19] block">#{ord.id}</strong>
-                    <span className="text-[10px] text-[#4f4540]">{ord.date}</span>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <strong className="text-[#25160e] block">{ord.customerName}</strong>
-                    <span className="text-[10px] text-[#4f4540] truncate max-w-xs block">{ord.address}</span>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span className="font-bold text-[#25160e]">
-                      {ord.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 font-medium">
-                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-200">
-                      {ord.paymentMethod}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 font-serif font-bold text-sm text-[#25160e]">
-                    Rp {ord.total.toLocaleString('id-ID')}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span className="px-2.5 py-1 bg-[#25160e] text-amber-200 text-[10px] font-bold rounded-full uppercase">
-                      {ord.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right print:hidden">
-                    <button
-                      onClick={() => setSelectedReceiptOrder(ord)}
-                      className="p-2 text-[#934b19] hover:bg-amber-100/50 rounded-xl transition-all border border-amber-900/10 shadow-xs"
-                      title="Cetak Struk Pembelian / Nota Order"
-                    >
-                      <Printer className="w-4 h-4" />
-                    </button>
+            <tbody className="divide-y divide-stone-100 bg-white">
+              {filteredRekapOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-[#4f4540]">
+                    <ShoppingBag className="w-10 h-10 text-stone-300 mx-auto mb-2" />
+                    <p className="font-bold text-sm text-[#25160e]">Tidak ada transaksi ditemukan</p>
+                    <p className="text-xs text-stone-500">Coba ubah kata kunci pencarian atau sesuaikan filter status.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredRekapOrders.map((ord, idx) => {
+                  const { formattedDate, relativeTime, isLive } = formatRealtimeDate(ord);
+                  const isVeryRecent = isLive || (idx === 0 && (ord.status === 'PENDING' || ord.status === 'RECEIVED' || ord.status === 'COOKING'));
+                  return (
+                    <tr 
+                      key={ord.id} 
+                      className={`hover:bg-[#fbf9f5] transition-colors ${
+                        isVeryRecent ? 'bg-amber-50/40' : ''
+                      }`}
+                    >
+                      <td className="py-3.5 px-4 whitespace-nowrap min-w-[175px]">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono font-bold text-[#934b19] bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-900/15 text-xs shadow-2xs">
+                            #{ord.id}
+                          </span>
+                          {isLive && (
+                            <span className="px-1.5 py-0.5 bg-emerald-600 text-white text-[9px] font-black rounded-md tracking-wider animate-pulse flex items-center gap-0.5 shadow-2xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                              LIVE
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-[#4f4540] mt-1.5">
+                          <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                          <span className="font-semibold text-[#25160e]">{formattedDate}</span>
+                          <span className="text-stone-300">•</span>
+                          <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-bold ${
+                            isLive 
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                              : 'bg-stone-100 text-stone-600 border border-stone-200'
+                          }`}>
+                            {relativeTime}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-[#25160e] text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                            {ord.customerName ? ord.customerName.charAt(0).toUpperCase() : 'U'}
+                          </div>
+                          <div className="min-w-0">
+                            <strong className="text-[#25160e] block font-bold truncate max-w-[140px] sm:max-w-[180px]">{ord.customerName}</strong>
+                            <span className="text-[10px] text-stone-500 truncate max-w-[140px] sm:max-w-[180px] block" title={ord.address}>
+                              {ord.address}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1">
+                          {(ord.items || []).map((item, itemIdx) => (
+                            <div key={itemIdx} className="flex items-center gap-1.5 text-[#25160e] font-medium">
+                              <span className="px-1.5 py-0.2 bg-amber-100 text-[#934b19] rounded font-bold text-[10px]">
+                                {item.quantity}x
+                              </span>
+                              <span className="truncate max-w-[160px]">{item.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {renderRekapPaymentBadge(ord.paymentMethod || 'Online')}
+                      </td>
+                      <td className="py-3.5 px-4 font-serif font-bold text-sm text-[#25160e] whitespace-nowrap">
+                        Rp {ord.total.toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {renderRekapStatusBadge(ord.status)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right print:hidden whitespace-nowrap">
+                        <button
+                          onClick={() => setSelectedReceiptOrder(ord)}
+                          className="p-2 text-[#934b19] hover:bg-amber-100/60 rounded-xl transition-all border border-amber-900/15 shadow-2xs hover:scale-105 active:scale-95"
+                          title="Cetak Struk Pembelian / Nota Order"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
+        </div>
+
+        {/* Footer info rekap */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-[11px] text-[#4f4540] pt-1">
+          <span>Menampilkan <strong>{filteredRekapOrders.length}</strong> dari total <strong>{liveActiveOrders.length}</strong> transaksi sistem.</span>
+          <span className="text-stone-400">Terhubung ke Realtime Cloud Database • Auto Refresh Otomatis</span>
         </div>
       </div>
 
