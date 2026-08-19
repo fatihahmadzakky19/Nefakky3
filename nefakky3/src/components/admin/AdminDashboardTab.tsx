@@ -98,7 +98,7 @@ export default function AdminDashboardTab({
 
   const [showEditChartModal, setShowEditChartModal] = useState<boolean>(false);
   // Yearly Archiving & Selection State
-  const [selectedYear, setSelectedYear] = useState<string>('2026');
+  const [selectedYear, setSelectedYear] = useState<string>(() => new Date().getFullYear().toString());
   const [availableYears, setAvailableYears] = useState<string[]>(['2026']);
 
   React.useEffect(() => {
@@ -340,20 +340,7 @@ export default function AdminDashboardTab({
         </div>
 
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-          {/* Year Filter Dropdown */}
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="w-full sm:w-auto px-4 py-2.5 bg-[#3c2a21] text-amber-200 font-bold border border-amber-900/30 text-xs rounded-2xl shadow-sm focus:ring-2 focus:ring-[#934b19] outline-none cursor-pointer"
-          >
-            {availableYears.map(yr => (
-              <option key={yr} value={yr} className="bg-[#25160e] text-white">
-                📅 Tahun {yr} {yr === new Date().getFullYear().toString() ? '(Berjalan / Aktif)' : '(Arsip Tersimpan)'}
-              </option>
-            ))}
-            <option value="2027" className="bg-[#25160e] text-white">📅 Tahun 2027 (Auto-Reset Baru)</option>
-            <option value="2028" className="bg-[#25160e] text-white">📅 Tahun 2028 (Auto-Reset Baru)</option>
-          </select>
+          
 
           {/* Month Filter Dropdown */}
           <select
