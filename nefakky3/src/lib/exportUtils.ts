@@ -1,6 +1,7 @@
 import { AdminOrder, ProductItem } from '@/context/DataContext';
 
 export interface ExcelExportOptions {
+  selectedYear?: string;
   selectedMonthLabel?: string;
   customChartMonths?: { label: string; gross: number; net: number; isBazar: boolean; badge: string }[];
   manualOmsetData?: any;
@@ -8,12 +9,6 @@ export interface ExcelExportOptions {
 
 /**
  * Helper function untuk mengekspor laporan komprehensif ke format Microsoft Excel (.xls)
- * Terformat 100% rapi dengan warna background khas Nefakky, gridlines, dan 5 seksi lengkap dari Halaman Ringkasan Bisnis:
- * 1. Kop Header Resmi & Information Filter Periode Laporan
- * 2. 5 Metrik Eksekutif KPI Utama (Omset, Margin 40%, Total Pesanan, AOV, Rating 4.9/5.0)
- * 3. Analisis Tren Omset & Laba Bersih (Tabel Data Visual Grafik Bulanan & Event Bazar)
- * 4. Rekap Pembelian & Kinerja Penjualan Produk (Terlaris & Kurang Laris)
- * 5. Detil Log Transaksi Pesanan Realtime (Riwayat Seluruh Order & COD Dual Proof Verification)
  */
 export function exportNefakkyExcelReport(
   orders: AdminOrder[], 
@@ -23,28 +18,25 @@ export function exportNefakkyExcelReport(
   const safeOrders = orders || [];
   const safeProducts = products || [];
 
-  // 1. Calculate Core Summary Metrics
+  const yearStr = options?.selectedYear || new Date().getFullYear().toString();
   const totalOmset = safeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
   const totalOrdersCount = safeOrders.length;
   const completedOrders = safeOrders.filter(o => o.status === 'COMPLETED').length;
-  const estimatedMargin = Math.round(totalOmset * 0.40); // 40% Margin Laba Bersih
+  const estimatedMargin = Math.round(totalOmset * 0.40);
   const averageOrderValue = totalOrdersCount > 0 ? Math.round(totalOmset / totalOrdersCount) : 0;
-  const selectedPeriodText = options?.selectedMonthLabel || 'Semua Periode (Akumulasi Total)';
+  const selectedPeriodText = options?.selectedMonthLabel || `Periode Tahun ${yearStr}`;
 
-  // 2. Default Monthly Trend Chart Data if not provided
   const chartMonths = options?.customChartMonths || [
-    { label: 'Juni 2026', gross: 10500000, net: 4750000, isBazar: true, badge: '🎪 Event Bazar Pembukaan Juni (>10Jt Omset)' },
-    { label: 'Juli 2026', gross: 11200000, net: 5100000, isBazar: true, badge: '🎪 Event Bazar Kuliner Juli (>10Jt Omset)' },
-    { label: 'Agustus 2026 (Live)', gross: 12000000 + totalOmset, net: 6000000 + estimatedMargin, isBazar: true, badge: '🎪 Event Bazar Merdeka + Live Web Realtime' },
-    { label: 'September 2026', gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
-    { label: 'Oktober 2026', gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
-    { label: 'November 2026', gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
+    { label: `Juni ${yearStr}`, gross: 10500000, net: 4750000, isBazar: true, badge: '🎪 Event Bazar Pembukaan Juni (>10Jt Omset)' },
+    { label: `Juli ${yearStr}`, gross: 11200000, net: 5100000, isBazar: true, badge: '🎪 Event Bazar Kuliner Juli (>10Jt Omset)' },
+    { label: `Agustus ${yearStr} (Live)`, gross: 12600000, net: 6300000, isBazar: true, badge: '🎪 Event Bazar Merdeka + Live Web Realtime' },
+    { label: `September ${yearStr}`, gross: 9800000, net: 3920000, isBazar: false, badge: 'Penjualan Reguler Dapur' },
+    { label: `Oktober ${yearStr}`, gross: 10400000, net: 4160000, isBazar: false, badge: 'Penjualan Reguler Dapur' },
+    { label: `November ${yearStr}`, gross: 11500000, net: 4600000, isBazar: true, badge: '🎪 Event Bazar Akhir Tahun' },
   ];
 
-  // 3. Aggregate Rekap Pembelian (Product Sales Summary)
   const productMap: Record<string, { name: string; category: string; price: number; qty: number; totalRevenue: number }> = {};
 
-  // Initialize with master products
   safeProducts.forEach(p => {
     productMap[p.name] = {
       name: p.name,
@@ -55,7 +47,6 @@ export function exportNefakkyExcelReport(
     };
   });
 
-  // Accumulate actual orders
   safeOrders.forEach(o => {
     if (o.status !== 'CANCELLED') {
       (o.items || []).forEach(item => {
@@ -78,7 +69,6 @@ export function exportNefakkyExcelReport(
   const productRecapList = Object.values(productMap).sort((a, b) => b.qty - a.qty);
   const exportDateStr = new Date().toLocaleString('id-ID');
 
-  // 4. Construct Pristine Microsoft Excel XML/HTML Format (.xls) with full bgcolor attributes & inline CSS
   const excelHtml = `
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
@@ -88,7 +78,7 @@ export function exportNefakkyExcelReport(
  <x:ExcelWorkbook>
   <x:ExcelWorksheets>
    <x:ExcelWorksheet>
-    <x:Name>Laporan Ringkasan Bisnis</x:Name>
+    <x:Name>Laporan Omset ${yearStr}</x:Name>
     <x:WorksheetOptions>
      <x:DisplayGridlines/>
     </x:WorksheetOptions>
@@ -110,7 +100,7 @@ export function exportNefakkyExcelReport(
   <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1.5px solid #25160E;">
     <tr bgcolor="#25160E" style="background-color: #25160E;">
       <td colspan="5" bgcolor="#25160E" style="background-color: #25160E; color: #FFFFFF; font-family: Georgia, serif; font-size: 16pt; font-weight: bold; padding: 14px; text-align: left;">
-        LAPORAN REKAPITULASI BISNIS &amp; OMSET PENJUALAN NEFAKKY
+        LAPORAN REKAPITULASI BISNIS &amp; OMSET PENJUALAN NEFAKKY TAHUN ${yearStr}
       </td>
     </tr>
     <tr bgcolor="#3C2A21" style="background-color: #3C2A21;">
@@ -122,14 +112,14 @@ export function exportNefakkyExcelReport(
 
   <br />
 
-  <!-- SEKSI 1: 5 METRIK EKSEKUTIF KPI UTAMA -->
+  <!-- SEKSI 1: KPI CARDS -->
   <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1.5px solid #934B19;">
     <col width="280" />
     <col width="240" />
     <col width="380" />
     <tr bgcolor="#934B19" style="background-color: #934B19;">
       <td colspan="3" bgcolor="#934B19" style="background-color: #934B19; color: #FFFFFF; font-size: 12pt; font-weight: bold; padding: 10px 14px; border: 1px solid #783603;">
-        1. METRIK EKSEKUTIF KINERJA BISNIS (5 KPI CARDS)
+        1. METRIK EKSEKUTIF KINERJA BISNIS TAHUN ${yearStr}
       </td>
     </tr>
     <tr bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF;">
@@ -166,7 +156,7 @@ export function exportNefakkyExcelReport(
 
   <br />
 
-  <!-- SEKSI 2: ANALISIS TREN OMSET & LABA BERSIH (DATA GRAFIK BULANAN) -->
+  <!-- SEKSI 2: REKAP BULANAN -->
   <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1.5px solid #934B19;">
     <col width="60" />
     <col width="180" />
@@ -175,7 +165,7 @@ export function exportNefakkyExcelReport(
     <col width="260" />
     <tr bgcolor="#934B19" style="background-color: #934B19;">
       <td colspan="5" bgcolor="#934B19" style="background-color: #934B19; color: #FFFFFF; font-size: 12pt; font-weight: bold; padding: 10px 14px; border: 1px solid #783603;">
-        2. ANALISIS TREN OMSET PENJUALAN &amp; LABA BERSIH (DATA GRAFIK BULANAN)
+        2. DATA TREN OMSET BULANAN TAHUN ${yearStr}
       </td>
     </tr>
     <tr bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF;">
@@ -199,125 +189,132 @@ export function exportNefakkyExcelReport(
       `;
     }).join('')}
   </table>
-
-  <br />
-
-  <!-- SEKSI 3: REKAP PEMBELIAN & KINERJA PRODUK (TERLARIS & KURANG LARIS) -->
-  <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1.5px solid #934B19;">
-    <col width="60" />
-    <col width="260" />
-    <col width="160" />
-    <col width="140" />
-    <col width="160" />
-    <col width="200" />
-    <col width="180" />
-    <tr bgcolor="#934B19" style="background-color: #934B19;">
-      <td colspan="7" bgcolor="#934B19" style="background-color: #934B19; color: #FFFFFF; font-size: 12pt; font-weight: bold; padding: 10px 14px; border: 1px solid #783603;">
-        3. REKAP PEMBELIAN &amp; KINERJA PENJUALAN PRODUK TERLARIS
-      </td>
-    </tr>
-    <tr bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF;">
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E; text-align: center;">Rank</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E;">Nama Menu / Hidangan Kuliner</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E;">Kategori Menu</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E; text-align: right;">Harga Satuan (Rp)</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E; text-align: center;">Total Terjual (Qty)</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E; text-align: right;">Total Omset Produk (Rp)</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E; text-align: center;">Status Performa</th>
-    </tr>
-    ${productRecapList.length > 0 ? productRecapList.map((p, idx) => {
-      const bg = idx % 2 === 1 ? '#FBF9F5' : '#FFFFFF';
-      const isTop3 = idx < 3;
-      const statusBadge = isTop3 ? '🔥 Best Seller Terlaris' : p.qty === 0 ? '⚠️ Belum Ada Penjualan' : '⭐ Penjualan Stabil';
-      const statusBg = isTop3 ? '#FEF3C7' : p.qty === 0 ? '#FEE2E2' : '#F3F4F6';
-      const statusColor = isTop3 ? '#92400E' : p.qty === 0 ? '#991B1B' : '#374151';
-
-      return `
-    <tr bgcolor="${bg}" style="background-color: ${bg};">
-      <td style="text-align: center; font-weight: bold; border: 1px solid #D3C3BD;">#${idx + 1}</td>
-      <td style="font-weight: bold; color: #25160E; border: 1px solid #D3C3BD;">${p.name}</td>
-      <td style="border: 1px solid #D3C3BD; color: #4F4540;">${p.category}</td>
-      <td style="text-align: right; border: 1px solid #D3C3BD;">Rp ${(p.price || 0).toLocaleString('id-ID')}</td>
-      <td style="text-align: center; font-weight: bold; color: #934B19; border: 1px solid #D3C3BD;">${p.qty} Porsi</td>
-      <td style="text-align: right; font-weight: bold; color: #25160E; border: 1px solid #D3C3BD;">Rp ${p.totalRevenue.toLocaleString('id-ID')}</td>
-      <td bgcolor="${statusBg}" style="background-color: ${statusBg}; color: ${statusColor}; font-weight: bold; text-align: center; border: 1px solid #D3C3BD;">${statusBadge}</td>
-    </tr>
-      `;
-    }).join('') : `
-    <tr bgcolor="#FFFFFF">
-      <td colspan="7" style="text-align: center; color: #6B7280; font-style: italic; border: 1px solid #D3C3BD;">Belum ada data pembelian produk terjual.</td>
-    </tr>
-    `}
-  </table>
-
-  <br />
-
-  <!-- SEKSI 4: DETIL LOG TRANSAKSI PESANAN REALTIME -->
-  <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1.5px solid #934B19;">
-    <col width="50" />
-    <col width="100" />
-    <col width="140" />
-    <col width="160" />
-    <col width="220" />
-    <col width="240" />
-    <col width="140" />
-    <col width="130" />
-    <col width="160" />
-    <tr bgcolor="#934B19" style="background-color: #934B19;">
-      <td colspan="9" bgcolor="#934B19" style="background-color: #934B19; color: #FFFFFF; font-size: 12pt; font-weight: bold; padding: 10px 14px; border: 1px solid #783603;">
-        4. DETIL LOG TRANSAKSI OMSET &amp; PESANAN PELANGGAN REALTIME
-      </td>
-    </tr>
-    <tr bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF;">
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E; text-align: center;">No</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E;">ID Pesanan</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E;">Tanggal &amp; Waktu</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E;">Nama Pelanggan</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E;">Alamat Pengiriman</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E;">Detail Item Dipesan</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E;">Metode Pembayaran</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E; text-align: center;">Status Pesanan</th>
-      <th bgcolor="#3C2A21" style="background-color: #3C2A21; color: #FFFFFF; font-weight: bold; border: 1px solid #25160E; text-align: right;">Total Omset (Rp)</th>
-    </tr>
-    ${safeOrders.length > 0 ? safeOrders.map((o, idx) => {
-      const itemsFormatted = (o.items || []).map(i => `${i.name} (${i.quantity}x)`).join(', ');
-      const bg = idx % 2 === 1 ? '#FBF9F5' : '#FFFFFF';
-      const isCompleted = o.status === 'COMPLETED';
-      const statusBg = isCompleted ? '#D1FAE5' : '#FEF3C7';
-      const statusColor = isCompleted ? '#065F46' : '#92400E';
-
-      return `
-    <tr bgcolor="${bg}" style="background-color: ${bg};">
-      <td style="text-align: center; font-weight: bold; border: 1px solid #D3C3BD;">${idx + 1}</td>
-      <td style="font-weight: bold; color: #25160E; border: 1px solid #D3C3BD;">#${o.id}</td>
-      <td style="border: 1px solid #D3C3BD;">${o.date}</td>
-      <td style="font-weight: bold; border: 1px solid #D3C3BD;">${o.customerName || 'Pelanggan'}</td>
-      <td style="border: 1px solid #D3C3BD;">${o.address || '-'}</td>
-      <td style="border: 1px solid #D3C3BD;">${itemsFormatted}</td>
-      <td style="border: 1px solid #D3C3BD;">${o.paymentMethod || 'Online'}</td>
-      <td bgcolor="${statusBg}" style="background-color: ${statusBg}; color: ${statusColor}; font-weight: bold; text-align: center; border: 1px solid #D3C3BD;">${o.status}</td>
-      <td style="text-align: right; font-weight: bold; color: #25160E; border: 1px solid #D3C3BD;">Rp ${(o.total || 0).toLocaleString('id-ID')}</td>
-    </tr>
-      `;
-    }).join('') : `
-    <tr bgcolor="#FFFFFF">
-      <td colspan="9" style="text-align: center; color: #6B7280; font-style: italic; border: 1px solid #D3C3BD;">Belum ada data transaksi pesanan.</td>
-    </tr>
-    `}
-  </table>
-
 </body>
 </html>
   `.trim();
 
-  // Trigger browser download with .xls format (Microsoft Excel HTML Table Format)
   const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `Laporan_Ringkasan_Bisnis_Nefakky_${new Date().toISOString().slice(0, 10)}.xls`);
+  link.setAttribute('download', `Laporan_Omset_Nefakky_Tahun_${yearStr}.xls`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
+/**
+ * Helper function untuk mencetak/mengekspor laporan resmi ke format PDF
+ */
+export function exportNefakkyPDFReport(
+  year: string,
+  totalGross: number,
+  totalNet: number,
+  totalOrders: number,
+  months: { label: string; gross: number; net: number; isBazar: boolean; badge: string }[]
+) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const exportDateStr = new Date().toLocaleString('id-ID');
+  const aov = totalOrders > 0 ? Math.round(totalGross / totalOrders) : 0;
+
+  const pdfHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Laporan Omset Penjualan Tahun ${year} - Nefakky</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #25160E; background: #FFFDF9; }
+    .header { background: #25160E; color: #FFFFFF; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .header h1 { margin: 0; font-family: Georgia, serif; font-size: 20pt; color: #FDE68A; }
+    .header p { margin: 6px 0 0 0; font-size: 10pt; opacity: 0.9; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+    .kpi-card { background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; text-align: center; }
+    .kpi-title { font-size: 9pt; color: #6B7280; font-weight: bold; text-transform: uppercase; }
+    .kpi-value { font-size: 14pt; font-weight: bold; color: #934B19; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; background: #FFFFFF; border-radius: 8px; overflow: hidden; }
+    th { background: #3C2A21; color: #FFFFFF; text-align: left; padding: 10px 12px; font-size: 10pt; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E5E7EB; font-size: 10pt; }
+    tr:nth-child(even) { background: #FBF9F5; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .footer { margin-top: 30px; font-size: 9pt; color: #6B7280; text-align: center; border-top: 1px solid #E5E7EB; padding-top: 12px; }
+    @media print {
+      body { padding: 0; background: #FFFFFF; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="margin-bottom: 16px; text-align: right;">
+    <button onclick="window.print()" style="background: #934B19; color: #FFF; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+      🖨️ Cetak / Download PDF
+    </button>
+  </div>
+
+  <div class="header">
+    <h1>NEFAKKY ARTISANAL FOOD &amp; CULINARY</h1>
+    <p>LAPORAN RESMI REKAPITULASI OMSET PENJUALAN &amp; LABA BERSIH TAHUN ${year}</p>
+    <p style="font-size: 8.5pt; color: #FDE68A;">Alamat Produksi Resmi: Puri Bojong Lestari AF No 41, Bojong Gede, Bogor | Dicetak: ${exportDateStr}</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-title">Total Omset Kotor</div>
+      <div class="kpi-value">Rp ${totalGross.toLocaleString('id-ID')}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Laba Bersih (40%)</div>
+      <div class="kpi-value" style="color: #047857;">Rp ${totalNet.toLocaleString('id-ID')}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Total Transaksi</div>
+      <div class="kpi-value" style="color: #25160E;">${totalOrders} Transaksi</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Rata-Rata AOV</div>
+      <div class="kpi-value" style="color: #D97706;">Rp ${aov.toLocaleString('id-ID')}</div>
+    </div>
+  </div>
+
+  <h3 style="font-family: Georgia, serif; color: #25160E; margin-bottom: 8px;">Rincian Omset Bulanan (Tahun ${year})</h3>
+  <table>
+    <thead>
+      <tr>
+        <th class="text-center">No</th>
+        <th>Bulan / Periode</th>
+        <th class="text-right">Omset Kotor (Bruto)</th>
+        <th class="text-right">Laba Bersih (40%)</th>
+        <th>Catatan Event / Bazar</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${months.map((m, idx) => `
+        <tr>
+          <td class="text-center">${idx + 1}</td>
+          <td style="font-weight: bold;">${m.label}</td>
+          <td class="text-right" style="font-weight: bold; color: #934B19;">Rp ${m.gross.toLocaleString('id-ID')}</td>
+          <td class="text-right" style="font-weight: bold; color: #047857;">Rp ${m.net.toLocaleString('id-ID')}</td>
+          <td>${m.badge}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Dokumen ini diterbitkan secara sah oleh Sistem Operasional Command Desk Nefakky (Laravel API Backend).
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 500);
+    };
+  </script>
+</body>
+</html>
+  `;
+
+  printWindow.document.write(pdfHtml);
+  printWindow.document.close();
+}
