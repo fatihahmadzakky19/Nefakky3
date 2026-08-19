@@ -136,15 +136,11 @@ class DatabaseSeeder extends Seeder
             'status' => 'PUBLISHED',
         ]);
 
-        // 5. Seed Sales Reports Tahun 2026 (Tahun Lalu / Arsip)
+        // 5. Seed Sales Reports Hanya Sampai Agustus 2026 (Live)
         $months2026 = [
             ['month_year' => 'Juni 2026', 'gross' => 10500000, 'net' => 4750000, 'orders' => 210, 'is_bazar' => true, 'event' => '🎪 Event Bazar Pembukaan Juni (>10Jt Omset)'],
             ['month_year' => 'Juli 2026', 'gross' => 11200000, 'net' => 5100000, 'orders' => 235, 'is_bazar' => true, 'event' => '🎪 Event Bazar Kuliner Juli (>10Jt Omset)'],
-            ['month_year' => 'Agustus 2026 (Live)', 'gross' => 12600000, 'net' => 6300000, 'orders' => 260, 'is_bazar' => true, 'event' => '🎪 Event Bazar Merdeka + Live Web Realtime'],
-            ['month_year' => 'September 2026', 'gross' => 9800000, 'net' => 3920000, 'orders' => 190, 'is_bazar' => false, 'event' => 'Penjualan Reguler Dapur'],
-            ['month_year' => 'Oktober 2026', 'gross' => 10400000, 'net' => 4160000, 'orders' => 205, 'is_bazar' => false, 'event' => 'Penjualan Reguler Dapur'],
-            ['month_year' => 'November 2026', 'gross' => 11500000, 'net' => 4600000, 'orders' => 220, 'is_bazar' => true, 'event' => '🎪 Event Bazar Akhir Tahun'],
-            ['month_year' => 'Desember 2026', 'gross' => 13200000, 'net' => 5280000, 'orders' => 275, 'is_bazar' => true, 'event' => '🎪 Promo Liburan & Natal'],
+            ['month_year' => 'Agustus 2026 (Live)', 'gross' => 13200000, 'net' => 6600000, 'orders' => 260, 'is_bazar' => true, 'event' => '🎪 Event Bazar Merdeka + Live Web Realtime'],
         ];
 
         foreach ($months2026 as $m) {

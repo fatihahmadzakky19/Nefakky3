@@ -29,10 +29,7 @@ export function exportNefakkyExcelReport(
   const chartMonths = options?.customChartMonths || [
     { label: `Juni ${yearStr}`, gross: 10500000, net: 4750000, isBazar: true, badge: '🎪 Event Bazar Pembukaan Juni (>10Jt Omset)' },
     { label: `Juli ${yearStr}`, gross: 11200000, net: 5100000, isBazar: true, badge: '🎪 Event Bazar Kuliner Juli (>10Jt Omset)' },
-    { label: `Agustus ${yearStr} (Live)`, gross: 12600000, net: 6300000, isBazar: true, badge: '🎪 Event Bazar Merdeka + Live Web Realtime' },
-    { label: `September ${yearStr}`, gross: 9800000, net: 3920000, isBazar: false, badge: 'Penjualan Reguler Dapur' },
-    { label: `Oktober ${yearStr}`, gross: 10400000, net: 4160000, isBazar: false, badge: 'Penjualan Reguler Dapur' },
-    { label: `November ${yearStr}`, gross: 11500000, net: 4600000, isBazar: true, badge: '🎪 Event Bazar Akhir Tahun' },
+    { label: `Agustus ${yearStr} (Live)`, gross: 13200000, net: 6600000, isBazar: true, badge: '🎪 Event Bazar Merdeka + Live Web Realtime' },
   ];
 
   const productMap: Record<string, { name: string; category: string; price: number; qty: number; totalRevenue: number }> = {};

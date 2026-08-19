@@ -10,27 +10,29 @@ class SalesReportController extends Controller
 {
     public function index(Request $request)
     {
-        $year = $request->query('year', date('Y'));
+        $year = $request->query('year', '2026');
         
         $reports = SalesReport::where('year', $year)
             ->orderBy('id', 'asc')
             ->get();
 
         if ($reports->isEmpty()) {
-            $monthNames = [
-                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            // Default 3 bulan berjalan (Juni - Agustus 2026) jika belum ada data
+            $defaultMonths = [
+                ['month_year' => "Juni {$year}", 'gross' => 10500000, 'net' => 4750000, 'orders' => 210, 'is_bazar' => true, 'event' => "🎪 Event Bazar Pembukaan Juni"],
+                ['month_year' => "Juli {$year}", 'gross' => 11200000, 'net' => 5100000, 'orders' => 235, 'is_bazar' => true, 'event' => "🎪 Event Bazar Kuliner Juli"],
+                ['month_year' => "Agustus {$year} (Live)", 'gross' => 13200000, 'net' => 6600000, 'orders' => 260, 'is_bazar' => true, 'event' => "🎪 Event Bazar Merdeka + Live Web"],
             ];
 
-            foreach ($monthNames as $monthName) {
+            foreach ($defaultMonths as $m) {
                 SalesReport::create([
                     'year' => $year,
-                    'month_year' => "{$monthName} {$year}",
-                    'gross_revenue' => 0,
-                    'net_profit' => 0,
-                    'total_orders' => 0,
-                    'event_tag' => "Belum Ada Data (Periode Tahun {$year})",
-                    'is_bazar' => false,
+                    'month_year' => $m['month_year'],
+                    'gross_revenue' => $m['gross'],
+                    'net_profit' => $m['net'],
+                    'total_orders' => $m['orders'],
+                    'event_tag' => $m['event'],
+                    'is_bazar' => $m['is_bazar'],
                 ]);
             }
 
@@ -85,7 +87,7 @@ class SalesReportController extends Controller
             'is_bazar' => 'nullable|boolean',
         ]);
 
-        $year = $validated['year'] ?? date('Y');
+        $year = $validated['year'] ?? '2026';
 
         $report = SalesReport::updateOrCreate(
             [

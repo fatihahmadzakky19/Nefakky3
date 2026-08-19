@@ -79,10 +79,7 @@ export default function AdminDashboardTab({
   const default6mMonths = [
     { label: 'Juni 2026', gross: 10500000, net: 4750000, isBazar: true, badge: '🎪 Event Bazar Pembukaan Juni (>10Jt Omset)' },
     { label: 'Juli 2026', gross: 11200000, net: 5100000, isBazar: true, badge: '🎪 Event Bazar Kuliner Juli (>10Jt Omset)' },
-    { label: 'Agustus 2026 (Live)', gross: 12000000, net: 6000000, isBazar: true, badge: '🎪 Event Bazar Merdeka (>10Jt) + Live Realtime Web & Offline' },
-    { label: 'September 2026', gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
-    { label: 'Oktober 2026', gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
-    { label: 'November 2026', gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
+    { label: 'Agustus 2026 (Live)', gross: 13200000, net: 6600000, isBazar: true, badge: '🎪 Event Bazar Merdeka (>10Jt) + Live Realtime Web & Offline' },
   ];
 
   const [customChartMonths, setCustomChartMonths] = useState<{ label: string; gross: number; net: number; isBazar: boolean; badge: string }[]>(() => {
@@ -371,9 +368,7 @@ export default function AdminDashboardTab({
             <option value="2026-06">Juni 2026 (Bazar &amp; Baseline)</option>
             <option value="2026-07">Juli 2026 (Bazar Kuliner)</option>
             <option value="2026-08">Agustus 2026 (Bulan Ini / Live)</option>
-            <option value="2026-09">September 2026 (Mendatang)</option>
-            <option value="2026-10">Oktober 2026 (Mendatang)</option>
-            <option value="2026-11">November 2026 (Mendatang)</option>
+            
           </select>
         </div>
       </div>
