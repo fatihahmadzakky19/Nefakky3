@@ -140,51 +140,44 @@ export default function AdminDashboardTab({
   // Filter metrics based on selected month
   const filteredMetrics = React.useMemo(() => {
     if (selectedKpiMonth === 'ALL') {
+      const sumRevenue = customChartMonths.reduce((acc, m) => acc + (m.gross || 0), 0);
+      const sumProfit = customChartMonths.reduce((acc, m) => acc + (m.net || 0), 0);
+      const calcOrders = ordersCount > 0 ? (85 + ordersCount) : Math.round(sumRevenue / 50000);
+      
       return {
-        revenue: displayRevenue,
-        profit: displayCleanProfit,
-        orders: displayOrdersCount,
-        aov: displayAOV,
-        label: 'Semua Periode (Akumulasi)'
+        revenue: sumRevenue || displayRevenue,
+        profit: sumProfit || displayCleanProfit,
+        orders: calcOrders || displayOrdersCount,
+        aov: calcOrders > 0 ? Math.round((sumRevenue || displayRevenue) / calcOrders) : 0,
+        label: `Semua Periode (Tahun ${selectedYear})`
       };
     }
 
-    if (selectedKpiMonth === '2026-06') {
-      const rev = 10500000;
-      const profit = 4750000;
-      const cnt = 45;
-      return {
-        revenue: rev,
-        profit: profit,
-        orders: cnt,
-        aov: Math.round(rev / cnt),
-        label: 'Juni 2026'
-      };
-    }
+    const monthIndexMap: Record<string, string> = {
+      '2026-06': 'Juni',
+      '2026-07': 'Juli',
+      '2026-08': 'Agustus',
+      '2026-09': 'September',
+      '2026-10': 'Oktober',
+      '2026-11': 'November',
+      '2026-12': 'Desember',
+    };
 
-    if (selectedKpiMonth === '2026-07') {
-      const rev = 11200000;
-      const profit = 5100000;
-      const cnt = 48;
-      return {
-        revenue: rev,
-        profit: profit,
-        orders: cnt,
-        aov: Math.round(rev / cnt),
-        label: 'Juli 2026'
-      };
-    }
+    const targetMonthName = monthIndexMap[selectedKpiMonth] || '';
+    const matchedMonthData = customChartMonths.find(m => m.label.toLowerCase().includes(targetMonthName.toLowerCase()));
 
-    if (selectedKpiMonth === '2026-08') {
-      const rev = 12000000 + (manualOmsetData ? manualOmsetData.revenue : 0) + totalRevenueIDR;
-      const profit = 6000000 + (manualOmsetData ? manualOmsetData.cleanProfit : 0) + Math.round(totalRevenueIDR * 0.4);
-      const cnt = 52 + (manualOmsetData ? manualOmsetData.ordersCount : 0) + ordersCount;
+    if (matchedMonthData) {
+      const isLiveAgustus = selectedKpiMonth === '2026-08';
+      const rev = matchedMonthData.gross + (isLiveAgustus ? totalRevenueIDR : 0);
+      const profit = matchedMonthData.net + (isLiveAgustus ? Math.round(totalRevenueIDR * 0.4) : 0);
+      const cnt = isLiveAgustus ? (52 + ordersCount) : (rev > 0 ? Math.round(rev / 50000) : 0);
+
       return {
         revenue: rev,
         profit: profit,
         orders: cnt,
         aov: cnt > 0 ? Math.round(rev / cnt) : 0,
-        label: 'Agustus 2026 (Bulan Ini)'
+        label: matchedMonthData.label
       };
     }
 
@@ -193,9 +186,9 @@ export default function AdminDashboardTab({
       profit: 0,
       orders: 0,
       aov: 0,
-      label: selectedKpiMonth === '2026-09' ? 'September 2026' : selectedKpiMonth === '2026-10' ? 'Oktober 2026' : 'November 2026'
+      label: `Periode ${selectedKpiMonth}`
     };
-  }, [selectedKpiMonth, displayRevenue, displayCleanProfit, displayOrdersCount, displayAOV, manualOmsetData, totalRevenueIDR, ordersCount]);
+  }, [selectedKpiMonth, selectedYear, customChartMonths, displayRevenue, displayCleanProfit, displayOrdersCount, displayAOV, totalRevenueIDR, ordersCount]);
 
   // Real product sales calculation
   const realProductSalesMap = React.useMemo(() => {
