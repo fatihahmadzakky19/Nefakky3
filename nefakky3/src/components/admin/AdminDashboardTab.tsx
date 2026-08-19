@@ -77,9 +77,9 @@ export default function AdminDashboardTab({
 
   // Custom Chart Data State
   const default6mMonths = [
-    { label: 'Juni 2026', gross: 10500000, net: 4750000, isBazar: true, badge: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Event Bazar Pembukaan Juni (>10Jt Omset)' },
-    { label: 'Juli 2026', gross: 11200000, net: 5100000, isBazar: true, badge: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Event Bazar Kuliner Juli (>10Jt Omset)' },
-    { label: 'Agustus 2026 (Live)', gross: 12000000, net: 6000000, isBazar: true, badge: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Event Bazar Merdeka (>10Jt) + Live Realtime Web & Offline' },
+    { label: 'Juni 2026', gross: 10500000, net: 4750000, isBazar: true, badge: '🎪 Event Bazar Pembukaan Juni (>10Jt Omset)' },
+    { label: 'Juli 2026', gross: 11200000, net: 5100000, isBazar: true, badge: '🎪 Event Bazar Kuliner Juli (>10Jt Omset)' },
+    { label: 'Agustus 2026 (Live)', gross: 12000000, net: 6000000, isBazar: true, badge: '🎪 Event Bazar Merdeka (>10Jt) + Live Realtime Web & Offline' },
     { label: 'September 2026', gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
     { label: 'Oktober 2026', gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
     { label: 'November 2026', gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
@@ -354,11 +354,11 @@ export default function AdminDashboardTab({
           >
             {availableYears.map(yr => (
               <option key={yr} value={yr} className="bg-[#25160e] text-white">
-                ðŸ“… Tahun {yr} {yr === new Date().getFullYear().toString() ? '(Berjalan / Aktif)' : '(Arsip Tersimpan)'}
+                📅 Tahun {yr} {yr === new Date().getFullYear().toString() ? '(Berjalan / Aktif)' : '(Arsip Tersimpan)'}
               </option>
             ))}
-            <option value="2027" className="bg-[#25160e] text-white">ðŸ“… Tahun 2027 (Auto-Reset Baru)</option>
-            <option value="2028" className="bg-[#25160e] text-white">ðŸ“… Tahun 2028 (Auto-Reset Baru)</option>
+            <option value="2027" className="bg-[#25160e] text-white">📅 Tahun 2027 (Auto-Reset Baru)</option>
+            <option value="2028" className="bg-[#25160e] text-white">📅 Tahun 2028 (Auto-Reset Baru)</option>
           </select>
 
           {/* Month Filter Dropdown */}
@@ -367,7 +367,7 @@ export default function AdminDashboardTab({
             onChange={(e) => setSelectedKpiMonth(e.target.value)}
             className="w-full sm:w-auto px-4 py-2.5 bg-[#fbf9f5] border border-amber-900/20 text-[#25160e] text-xs font-bold rounded-2xl shadow-xs focus:ring-2 focus:ring-[#934b19] outline-none cursor-pointer"
           >
-            <option value="ALL">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦ Semua Bulan (Akumulasi Total)</option>
+            <option value="ALL">📅 Semua Bulan (Akumulasi Total)</option>
             <option value="2026-06">Juni 2026 (Bazar &amp; Baseline)</option>
             <option value="2026-07">Juli 2026 (Bazar Kuliner)</option>
             <option value="2026-08">Agustus 2026 (Bulan Ini / Live)</option>
@@ -511,7 +511,7 @@ export default function AdminDashboardTab({
               onClick={() => setShowEditChartModal(true)}
               className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-[#25160e] text-xs font-bold rounded-2xl transition-all border border-stone-200/80 print:hidden flex items-center gap-1.5"
             >
-              <span>ÃƒÂ¢Ã…Â¡Ã¢â€žÂ¢ÃƒÂ¯Ã‚Â¸Ã‚Â Edit Data Grafik</span>
+              <span>⚙️ Edit Data Grafik</span>
             </button>
           </div>
         </div>
@@ -529,7 +529,7 @@ export default function AdminDashboardTab({
           </div>
           <div className="flex items-center gap-1.5 ml-auto text-[11px] text-[#934b19]">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Skala Event Bazar &gt; Rp 10 Juta</span>
+            <span>🎪 Skala Event Bazar &gt; Rp 10 Juta</span>
           </div>
         </div>
 
@@ -555,16 +555,16 @@ export default function AdminDashboardTab({
                     { label: 'Selasa', gross: 1100000, net: 480000, isBazar: false, badge: 'Dapur Regular' },
                     { label: 'Rabu', gross: 850000, net: 370000, isBazar: false, badge: 'Dapur Regular' },
                     { label: 'Kamis', gross: 1400000, net: 600000, isBazar: false, badge: 'Dapur Regular' },
-                    { label: 'Jumat', gross: 2200000, net: 1100000, isBazar: true, badge: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Bazar Weekend (+2Jt Omset / 1Jt Bersih)' },
-                    { label: 'Sabtu', gross: 3500000, net: 1750000, isBazar: true, badge: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Bazar Kuliner (+2Jt Omset / 1Jt Bersih)' },
-                    { label: 'Minggu (Live)', gross: 2800000 + totalRevenueIDR, net: 1400000 + Math.round(totalRevenueIDR * 0.4), isBazar: true, badge: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Live Web + Bazar' },
+                    { label: 'Jumat', gross: 2200000, net: 1100000, isBazar: true, badge: '🎪 Bazar Weekend (+2Jt Omset / 1Jt Bersih)' },
+                    { label: 'Sabtu', gross: 3500000, net: 1750000, isBazar: true, badge: '🎪 Bazar Kuliner (+2Jt Omset / 1Jt Bersih)' },
+                    { label: 'Minggu (Live)', gross: 2800000 + totalRevenueIDR, net: 1400000 + Math.round(totalRevenueIDR * 0.4), isBazar: true, badge: '🎪 Live Web + Bazar' },
                   ]
                 : chartTimeframe === '1m'
                 ? [
                     { label: 'Minggu 1', gross: 1750000, net: 750000, isBazar: false, badge: 'Regular Dapur' },
-                    { label: 'Minggu 2', gross: 2100000, net: 900000, isBazar: true, badge: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Mini Bazar (+2Jt Omset / 1Jt Bersih)' },
+                    { label: 'Minggu 2', gross: 2100000, net: 900000, isBazar: true, badge: '🎪 Mini Bazar (+2Jt Omset / 1Jt Bersih)' },
                     { label: 'Minggu 3', gross: 1850000, net: 800000, isBazar: false, badge: 'Regular Dapur' },
-                    { label: 'Minggu 4 (Live)', gross: 2500000 + totalRevenueIDR, net: 1200000 + Math.round(totalRevenueIDR * 0.4), isBazar: true, badge: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Live Web + Bazar' },
+                    { label: 'Minggu 4 (Live)', gross: 2500000 + totalRevenueIDR, net: 1200000 + Math.round(totalRevenueIDR * 0.4), isBazar: true, badge: '🎪 Live Web + Bazar' },
                   ]
                 : customChartMonths.map(m => {
                     const isLive = m.label.includes('Live') || m.label.includes('Agustus');
@@ -645,7 +645,7 @@ export default function AdminDashboardTab({
                       </>
                     ) : (
                       <div className="w-full h-8 border-2 border-dashed border-stone-200 rounded-t-xl bg-stone-50/50 flex items-center justify-center">
-                        <span className="text-[8px] text-stone-300 font-bold">ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢</span>
+                        <span className="text-[8px] text-stone-300 font-bold">•</span>
                       </div>
                     )}
                   </div>
@@ -673,9 +673,9 @@ export default function AdminDashboardTab({
             <span className="text-[#25160e] font-bold">Aturan Operasional Omset &amp; Bazar:</span>
           </div>
           <div className="flex flex-wrap gap-3 text-[11px] text-[#4f4540]">
-            <span>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Baseline Juni: <strong>Rp 7Jt Kotor / 3Jt Bersih</strong></span>
-            <span>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Setiap Event Bazar: <strong>Omset &gt; Rp 10Jt</strong></span>
-            <span>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Skala Bazar (+2Jt Omset): <strong>+Rp 1Jt Bersih</strong></span>
+            <span>• Baseline Juni: <strong>Rp 7Jt Kotor / 3Jt Bersih</strong></span>
+            <span>• Setiap Event Bazar: <strong>Omset &gt; Rp 10Jt</strong></span>
+            <span>• Skala Bazar (+2Jt Omset): <strong>+Rp 1Jt Bersih</strong></span>
           </div>
         </div>
       </div>
@@ -1060,7 +1060,7 @@ export default function AdminDashboardTab({
                         }}
                         className="rounded border-amber-900/30 text-[#934b19] focus:ring-[#934b19]"
                       />
-                      <span>ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Status Event Bazar</span>
+                      <span>🎪 Status Event Bazar</span>
                     </label>
                   </div>
 
@@ -1106,7 +1106,7 @@ export default function AdminDashboardTab({
                         setCustomChartMonths(updated);
                       }}
                       className="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-[#1b1c1a]"
-                      placeholder="contoh: ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âª Event Bazar Merdeka (>10Jt)"
+                      placeholder="contoh: 🎪 Event Bazar Merdeka (>10Jt)"
                     />
                   </div>
                 </div>
@@ -1415,7 +1415,7 @@ export default function AdminDashboardTab({
             </div>
             <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl">
               <span className="text-[9px] text-amber-800 block uppercase font-bold">Rating Pelanggan</span>
-              <span className="text-xs font-serif font-bold text-amber-900">4.9 / 5.0 ÃƒÂ¢Ã‚Â­Ã‚Â</span>
+              <span className="text-xs font-serif font-bold text-amber-900">4.9 / 5.0 ⭐</span>
             </div>
           </div>
         </div>
