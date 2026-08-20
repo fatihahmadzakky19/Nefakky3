@@ -1,125 +1,242 @@
 <?php
 
-// Namespace penempat controller dalam struktur folder Laravel API
 namespace App\Http\Controllers\Api;
 
-// Mengimpor controller induk dari Laravel
 use App\Http\Controllers\Controller;
-// Mengimpor Model ProductItem untuk berinteraksi dengan tabel produk di database
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use App\Http\Resources\ProductResource;
 use App\Models\ProductItem;
-// Mengimpor Request untuk menangani HTTP request dari client
+use App\Traits\ApiResponseTrait;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-// Class Controller untuk mengelola endpoint data Produk (Menu Kuliner)
+/**
+ * Controller ProductController
+ * Mengelola Master Menu Kuliner, Stok Real-time, Visibilitas Katalog, dan Pencarian.
+ */
 class ProductController extends Controller
 {
-    /**
-     * Menampilkan semua data produk dari database
-     */
-    public function index()
-    {
-        // Ambil semua data produk dan kembalikan sebagai format JSON
-        return response()->json(ProductItem::all());
-    }
+    use ApiResponseTrait;
 
     /**
-     * Menampilkan produk yang status visibility-nya aktif (true) untuk Katalog Pengunjung
+     * Menampilkan daftar semua produk dengan filter, pencarian, dan pengurutan
      */
-    public function visible()
+    public function index(Request $request): JsonResponse
     {
-        // Filter produk dimana kolom 'visibility' bernilai true
-        $products = ProductItem::where('visibility', true)->get();
-        // Kembalikan daftar produk aktif dalam bentuk JSON
-        return response()->json($products);
-    }
+        $query = ProductItem::query();
 
-    /**
-     * Menampilkan detail satu produk berdasarkan ID produk (item_id)
-     */
-    public function show($id)
-    {
-        // Cari produk berdasarkan primary key (item_id)
-        $product = ProductItem::find($id);
-        // Jika produk tidak ditemukan di database
-        if (!$product) {
-            // Kembalikan pesan error 404 (Not Found)
-            return response()->json(['message' => 'Produk tidak ditemukan'], 404);
+        // 1. Filter Pencarian Keyword (Nama, SKU, Deskripsi)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
         }
-        // Jika ditemukan, kembalikan detail data produk
-        return response()->json($product);
+
+        // 2. Filter Kategori
+        if ($request->filled('category') && $request->category !== 'Semua') {
+            $query->where('category', $request->category);
+        }
+
+        // 3. Filter Status Stok
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // 4. Filter Visibilitas (Publik / Admin)
+        if ($request->has('visibility')) {
+            $query->where('visibility', filter_var($request->visibility, FILTER_VALIDATE_BOOLEAN));
+        }
+
+        // 5. Pengurutan Data (Sorting)
+        $sortBy = $request->query('sort', 'newest');
+        switch ($sortBy) {
+            case 'price_asc':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_desc':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'rating':
+                $query->orderBy('rating', 'desc');
+                break;
+            case 'popular':
+                $query->orderBy('reviews_count', 'desc');
+                break;
+            case 'newest':
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        // Paginasi atau Semua Data
+        if ($request->has('per_page')) {
+            $perPage = (int) $request->query('per_page', 12);
+            $paginator = $query->paginate($perPage);
+            return response()->json([
+                'success' => true,
+                'status' => 'success',
+                'code' => 200,
+                'message' => 'Daftar produk berhasil diambil',
+                'data' => ProductResource::collection($paginator->items()),
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'last_page' => $paginator->lastPage(),
+                ]
+            ]);
+        }
+
+        $products = $query->get();
+        return $this->successResponse(ProductResource::collection($products), 'Daftar produk berhasil diambil');
     }
 
     /**
-     * Menyimpan data produk baru ke dalam database
+     * Menampilkan menu aktif untuk katalog pengunjung / etalase toko
      */
-    public function store(Request $request)
+    public function visible(): JsonResponse
     {
-        // Validasi input HTTP request sesuai aturan skema database
-        $validated = $request->validate([
-            'item_id' => 'required|string|unique:product_items,item_id', // ID item wajib unik
-            'sku' => 'required|string|unique:product_items,sku', // SKU produk wajib unik
-            'name' => 'required|string|max:150', // Nama produk wajib string max 150 karakter
-            'category' => 'nullable|string', // Kategori opsional
-            'price' => 'required|numeric|min:0', // Harga wajib angka positif
-            'discount' => 'nullable|numeric|min:0', // Diskon persen opsional
-            'stock' => 'nullable|integer|min:0', // Stok barang opsional
-            'visibility' => 'nullable|boolean', // Status visibilitas opsional
-            'status' => 'nullable|string', // Status stok (In Stock/Low Stock/Inactive)
-            'rating' => 'nullable|numeric', // Rating rata-rata opsional
-            'reviews_count' => 'nullable|integer', // Jumlah ulasan opsional
-            'sold_count' => 'nullable|string', // Jumlah terjual opsional
-            'image' => 'required|string', // URL/Path Gambar wajib diisi
-            'description' => 'required|string', // Deskripsi produk wajib diisi
-            'badge' => 'nullable|string', // Badge promo (cth: Best Seller)
-            'ingredients' => 'nullable|string', // Komposisi bahan opsional
-            'usage_advice' => 'nullable|string', // Saran penyajian opsional
-            'calories' => 'nullable|string', // Informasi kalori opsional
-            'fat' => 'nullable|string', // Informasi lemak opsional
-            'sugar' => 'nullable|string', // Informasi gula opsional
+        $products = ProductItem::where('visibility', true)
+            ->where('status', '!=', 'Inactive')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return $this->successResponse(ProductResource::collection($products), 'Katalog menu aktif berhasil diambil');
+    }
+
+    /**
+     * Menampilkan detail satu produk berdasarkan item_id
+     */
+    public function show($id): JsonResponse
+    {
+        $product = ProductItem::with('reviews')->find($id);
+
+        if (!$product) {
+            return $this->notFoundResponse('Produk tidak ditemukan');
+        }
+
+        return $this->successResponse(new ProductResource($product), 'Detail produk berhasil diambil');
+    }
+
+    /**
+     * Menyimpan produk menu kuliner baru
+     */
+    public function store(StoreProductRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+        $product = ProductItem::create($data);
+        $product->updateStockStatus();
+        $product->save();
+
+        return $this->createdResponse(new ProductResource($product), 'Produk berhasil ditambahkan ke katalog');
+    }
+
+    /**
+     * Memperbarui data produk
+     */
+    public function update(UpdateProductRequest $request, $id): JsonResponse
+    {
+        $product = ProductItem::find($id);
+
+        if (!$product) {
+            return $this->notFoundResponse('Produk tidak ditemukan');
+        }
+
+        $product->update($request->validated());
+        $product->updateStockStatus();
+        $product->save();
+
+        return $this->successResponse(new ProductResource($product), 'Data produk berhasil diperbarui');
+    }
+
+    /**
+     * Menghapus produk (Soft Delete)
+     */
+    public function destroy($id): JsonResponse
+    {
+        $product = ProductItem::find($id);
+
+        if (!$product) {
+            return $this->notFoundResponse('Produk tidak ditemukan');
+        }
+
+        $product->delete();
+
+        return $this->successResponse(null, 'Produk berhasil dihapus (Soft Delete)');
+    }
+
+    /**
+     * Memulihkan produk yang dihapus
+     */
+    public function restore($id): JsonResponse
+    {
+        $product = ProductItem::withTrashed()->find($id);
+
+        if (!$product) {
+            return $this->notFoundResponse('Produk tidak ditemukan');
+        }
+
+        $product->restore();
+
+        return $this->successResponse(new ProductResource($product), 'Produk berhasil dipulihkan');
+    }
+
+    /**
+     * Menghapus produk secara permanen
+     */
+    public function forceDelete($id): JsonResponse
+    {
+        $product = ProductItem::withTrashed()->find($id);
+
+        if (!$product) {
+            return $this->notFoundResponse('Produk tidak ditemukan');
+        }
+
+        $product->forceDelete();
+
+        return $this->successResponse(null, 'Produk berhasil dihapus permanen');
+    }
+
+    /**
+     * Mengubah status tampil/sembunyi produk di katalog
+     */
+    public function toggleVisibility($id): JsonResponse
+    {
+        $product = ProductItem::find($id);
+
+        if (!$product) {
+            return $this->notFoundResponse('Produk tidak ditemukan');
+        }
+
+        $product->visibility = !$product->visibility;
+        $product->save();
+
+        return $this->successResponse(new ProductResource($product), 'Status visibilitas produk berhasil diubah');
+    }
+
+    /**
+     * Memperbarui kuantitas stok produk secara langsung
+     */
+    public function updateStock(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'stock' => 'required|integer|min:0',
         ]);
 
-        // Buat record produk baru di database menggunakan data terverifikasi
-        $product = ProductItem::create($validated);
-        // Kembalikan response JSON berisi produk yang dibuat beserta HTTP status code 201 (Created)
-        return response()->json($product, 201);
-    }
-
-    /**
-     * Memperbarui data produk yang sudah ada di database
-     */
-    public function update(Request $request, $id)
-    {
-        // Cari produk berdasarkan ID
         $product = ProductItem::find($id);
-        // Jika produk tidak ditemukan
+
         if (!$product) {
-            // Kembalikan response error 404
-            return response()->json(['message' => 'Produk tidak ditemukan'], 404);
+            return $this->notFoundResponse('Produk tidak ditemukan');
         }
 
-        // Perbarui atribut produk sesuai input dari request
-        $product->update($request->all());
-        // Kembalikan data produk setelah diupdate
-        return response()->json($product);
-    }
+        $product->stock = (int) $request->stock;
+        $product->updateStockStatus();
+        $product->save();
 
-    /**
-     * Menghapus produk dari database berdasarkan ID
-     */
-    public function destroy($id)
-    {
-        // Cari produk berdasarkan ID
-        $product = ProductItem::find($id);
-        // Jika produk tidak ditemukan
-        if (!$product) {
-            // Kembalikan response error 404
-            return response()->json(['message' => 'Produk tidak ditemukan'], 404);
-        }
-
-        // Hapus data produk dari database
-        $product->delete();
-        // Kembalikan pesan sukses penghapusan
-        return response()->json(['message' => 'Produk berhasil dihapus']);
+        return $this->successResponse(new ProductResource($product), 'Jumlah stok produk berhasil diperbarui');
     }
 }
-

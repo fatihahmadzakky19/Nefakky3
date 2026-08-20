@@ -27,9 +27,9 @@ export function exportNefakkyExcelReport(
   const selectedPeriodText = options?.selectedMonthLabel || `Periode Tahun ${yearStr}`;
 
   const chartMonths = options?.customChartMonths || [
-    { label: `Juni ${yearStr}`, gross: 10500000, net: 4750000, isBazar: true, badge: '🎪 Event Bazar Pembukaan Juni (>10Jt Omset)' },
-    { label: `Juli ${yearStr}`, gross: 11200000, net: 5100000, isBazar: true, badge: '🎪 Event Bazar Kuliner Juli (>10Jt Omset)' },
-    { label: `Agustus ${yearStr} (Live)`, gross: 13800000, net: 6900000, isBazar: true, badge: '🎪 Event Bazar Merdeka + Live Web Realtime' },
+    { label: `Juni ${yearStr}`, gross: 10500000, net: 4750000, isBazar: true, badge: 'Event Bazar Pembukaan Juni (>10Jt Omset)' },
+    { label: `Juli ${yearStr}`, gross: 11200000, net: 5100000, isBazar: true, badge: 'Event Bazar Kuliner Juli (>10Jt Omset)' },
+    { label: `Agustus ${yearStr} (Live)`, gross: 13800000, net: 6900000, isBazar: true, badge: 'Event Bazar Merdeka + Live Web Realtime' },
     { label: `September ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
     { label: `Oktober ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
     { label: `November ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },

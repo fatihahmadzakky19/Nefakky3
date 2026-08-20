@@ -1,55 +1,90 @@
 <?php
 
-// Namespace penempat Model dalam struktur folder Laravel Eloquent
 namespace App\Models;
 
-// Mengimpor UserFactory untuk pengujian data dummy
-use Database\Factories\UserFactory;
-// Mengimpor trait HasFactory untuk mendukung pembuatan data dummy via factory
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-// Mengimpor kelas autentikasi Authenticatable untuk manajemen login pengguna
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-// Mengimpor trait Notifiable untuk pengiriman notifikasi ke email/sistem
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-// Class Model User yang mengelola akun pengguna/pengguna terdaftar di aplikasi
+/**
+ * Model User
+ * 
+ * Model Eloquent ini merepresentasikan tabel 'users' di database.
+ * Bertanggung jawab mengelola autentikasi pengguna (Admin & Pelanggan),
+ * penerbitan Bearer Token via Laravel Sanctum, relasi multi-alamat pengiriman,
+ * serta verifikasi role hak akses.
+ */
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * Kolom yang diizinkan untuk diisi secara massal saat registrasi/update
+     * Kolom-kolom yang dapat diisi secara massal (Mass Assignment).
      *
      * @var list<string>
      */
     protected $fillable = [
-        'name', // Nama pengguna
-        'email', // Email pengguna
-        'password', // Kata sandi pengguna (tersimpan dalam bentuk hash)
+        'name',     // Nama lengkap pengguna
+        'email',    // Alamat email unik untuk login
+        'password', // Hash kata sandi akun
+        'role',     // Hak akses akun: 'admin' atau 'customer'
+        'phone',    // Nomor WhatsApp / HP pengguna
+        'avatar',   // URL foto profil avatar
     ];
 
     /**
-     * Kolom yang disembunyikan saat data user diubah ke format JSON/Array
+     * Kolom-kolom yang disembunyikan saat serialisasi JSON (keamanan).
      *
      * @var list<string>
      */
     protected $hidden = [
-        'password', // Sembunyikan hash password dari response API demi keamanan
-        'remember_token', // Sembunyikan token "remember me"
+        'password',
+        'remember_token',
     ];
 
     /**
-     * Aturan konversi otomatis (Casting) atribut model
+     * Konversi tipe data otomatis.
      *
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime', // Konversi tanggal verifikasi email ke datetime
-            'password' => 'hashed', // Otomatis meng-hash password saat disimpan di DB
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
         ];
     }
-}
 
+    /**
+     * Relasi One-to-Many: Satu pengguna dapat menyimpan banyak alamat pengiriman (UserAddress).
+     *
+     * @return HasMany
+     */
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(UserAddress::class);
+    }
+
+    /**
+     * Relasi One-to-Many: Satu pengguna dapat memiliki riwayat banyak transaksi pesanan (Order).
+     *
+     * @return HasMany
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'user_id', 'id');
+    }
+
+    /**
+     * Metode Bisnis PBO: Memeriksa apakah pengguna memiliki hak akses Administrator.
+     *
+     * @return bool
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+}

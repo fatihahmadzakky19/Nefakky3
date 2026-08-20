@@ -1,37 +1,70 @@
 <?php
 
-// Namespace penempat Model dalam struktur folder Laravel Eloquent
 namespace App\Models;
 
-// Mengimpor kelas dasar Model dari Eloquent ORM Laravel
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-// Class Model OrderItem yang merepresentasikan rincian barang di tabel 'order_items'
+/**
+ * Model OrderItem
+ * 
+ * Model Eloquent ini merepresentasikan tabel 'order_items' di database.
+ * Menyimpan snapshot data hidangan yang dibeli (nama, harga satuan saat checkout,
+ * kuantitas, dan foto) untuk mencegah perubahan histori harga di masa depan.
+ */
 class OrderItem extends Model
 {
-    // Kolom-kolom yang diizinkan untuk diisi secara massal
+    /**
+     * Kolom-kolom yang dapat diisi secara massal.
+     *
+     * @var list<string>
+     */
     protected $fillable = [
-        'order_id', // ID pesanan tempat item ini terikat (Foreign Key)
-        'product_id', // ID produk makanan/minuman (Foreign Key)
-        'name', // Nama produk saat dipesan
-        'price', // Harga satuan item (Rp)
-        'quantity', // Jumlah barang yang dipesan
-        'image', // URL/Path foto produk
-    ];
-
-    // Casting tipe data kolom
-    protected $casts = [
-        'price' => 'float', // Konversi harga ke desimal/float
-        'quantity' => 'integer', // Konversi kuantitas ke integer
+        'order_id',   // Foreign key ke tabel orders
+        'product_id', // ID unik produk (contoh: "PROD-001")
+        'name',       // Nama produk saat transaksi terjadi
+        'price',      // Harga satuan produk saat transaksi terjadi
+        'quantity',   // Kuantitas porsi yang dibeli
+        'image',      // URL foto produk
     ];
 
     /**
-     * Metode PBO: Menghitung subtotal harga item (Harga x Kuantitas)
+     * Konversi tipe data otomatis.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'price' => 'float',
+        'quantity' => 'integer',
+    ];
+
+    /**
+     * Relasi Many-to-One: Rincian item ini dimiliki oleh satu pesanan induk (Order).
+     *
+     * @return BelongsTo
+     */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'order_id', 'order_id');
+    }
+
+    /**
+     * Relasi Many-to-One: Rincian item ini terhubung ke master data produk (ProductItem).
+     *
+     * @return BelongsTo
+     */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(ProductItem::class, 'product_id', 'item_id');
+    }
+
+    /**
+     * Metode Bisnis PBO: Menghitung total subtotal harga untuk baris item ini (Harga x Kuantitas).
+     *
+     * @return float
      */
     public function getSubtotal(): float
     {
-        // Kalikan harga satuan dengan jumlah item yang dipesan
-        return $this->price * $this->quantity;
+        return (float) ($this->price * $this->quantity);
     }
 }
-
