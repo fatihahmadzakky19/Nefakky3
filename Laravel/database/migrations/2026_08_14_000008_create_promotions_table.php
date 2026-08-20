@@ -7,29 +7,34 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Menjalankan migrasi pembuatan tabel promotions (Banner & Event Promosi)
+     * Menggunakan tipe data: string(length), enum, dateTime, unsignedInteger, unsignedSmallInteger,
+     * boolean, softDeletes, timestamps.
      */
     public function up(): void
     {
         Schema::create('promotions', function (Blueprint $table) {
-            $table->string('promotion_id')->primary(); // Primary Key string (cth: "promo-1")
-            $table->string('title'); // Judul banner promosi
-            $table->string('subtitle')->nullable(); // Sub-judul promosi
-            $table->string('tag')->nullable(); // Tag promo (cth: "Diskon 50%")
-            $table->string('badge', 30)->default('Active'); // Badge status ('Active', 'Scheduled', 'Ended')
-            $table->string('image', 500); // URL foto banner
-            $table->string('duration')->nullable(); // Teks durasi
-            $table->string('type')->default('Banner'); // Jenis promosi
-            $table->integer('used_count')->default(0); // Jumlah digunakan
-            $table->integer('total_limit')->default(1000); // Batas maksimal
-            $table->boolean('is_active')->default(true); // Status aktif
-            $table->softDeletes();
-            $table->timestamps();
+            $table->string('promotion_id', 30)->primary(); // String Primary Key custom (panjang 30)
+            $table->string('title', 150); // String judul banner maks 150 karakter
+            $table->string('subtitle', 255)->nullable(); // String sub-judul maks 255 karakter
+            $table->string('tag', 50)->nullable(); // String tag label promo maks 50 karakter
+            $table->enum('badge', ['Active', 'Scheduled', 'Ended', 'Draft'])->default('Active'); // Tipe Data ENUM status banner
+            $table->enum('type', ['Banner Utama', 'Banner Event', 'Popup Modal', 'Notification Bar'])->default('Banner Utama'); // Tipe Data ENUM jenis banner
+            $table->string('image', 500); // String URL gambar banner maks 500 karakter
+            $table->string('duration', 100)->nullable(); // String teks masa durasi promo
+            $table->dateTime('start_datetime')->nullable(); // Tipe Data DATETIME waktu mulai tampil
+            $table->dateTime('end_datetime')->nullable(); // Tipe Data DATETIME waktu berakhir promo
+            $table->unsignedInteger('used_count')->default(0); // Tipe Data UNSIGNED INTEGER kuota terpakai
+            $table->unsignedInteger('total_limit')->default(1000); // Tipe Data UNSIGNED INTEGER batas kuota promosi
+            $table->unsignedSmallInteger('display_priority')->default(1); // Tipe Data UNSIGNED SMALLINTEGER prioritas urutan tampil
+            $table->boolean('is_active')->default(true); // Tipe Data BOOLEAN switch aktif
+            $table->softDeletes(); // Tipe Data TIMESTAMP untuk soft delete
+            $table->timestamps(); // Tipe Data TIMESTAMP (created_at & updated_at)
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Membalikkan migrasi.
      */
     public function down(): void
     {

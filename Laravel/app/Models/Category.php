@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Model Category
  * 
  * Model Eloquent ini merepresentasikan tabel 'categories' di database.
- * Bertanggung jawab mengelola klasifikasi master kategori menu (Makanan Utama,
- * Minuman, Rice Bowl, Cemilan, Paket Hemat) beserta slug SEO dan status aktif.
+ * Bertanggung jawab mengelola klasifikasi kategori menu (Makanan, Minuman, Paket, Tambahan),
+ * urutan tampilan (unsignedSmallInteger), slug SEO, dan status aktif.
  */
 class Category extends Model
 {
@@ -20,11 +20,13 @@ class Category extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'name',        // Nama kategori (contoh: "Makanan Utama")
-        'slug',        // URL slug yang ramah SEO (contoh: "makanan-utama")
-        'icon',        // Identifier ikon kategori
-        'description', // Deskripsi singkat penjelasan kategori
-        'is_active',   // Status ketersediaan kategori (true/false)
+        'name',          // String (50)
+        'slug',          // String (60) unik
+        'type',          // ENUM: 'Makanan', 'Minuman', 'Paket', 'Tambahan'
+        'display_order', // UNSIGNED SMALLINTEGER
+        'icon',          // String (100)
+        'description',   // TEXT
+        'is_active',     // BOOLEAN
     ];
 
     /**
@@ -33,11 +35,12 @@ class Category extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'display_order' => 'integer',
         'is_active' => 'boolean',
     ];
 
     /**
-     * Relasi One-to-Many: Satu kategori mengelompokkan banyak menu produk (ProductItem).
+     * Relasi One-to-Many ke ProductItem.
      *
      * @return HasMany
      */

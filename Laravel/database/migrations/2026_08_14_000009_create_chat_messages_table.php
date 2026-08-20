@@ -7,29 +7,32 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Menjalankan migrasi pembuatan tabel chat_messages (Live Customer Support)
+     * Menggunakan tipe data: string(length), enum, dateTime, text, boolean, timestamps.
      */
     public function up(): void
     {
         Schema::create('chat_messages', function (Blueprint $table) {
             $table->id();
-            $table->string('chat_id')->index(); // ID pesan (cth: "chat-123")
-            $table->enum('sender', ['user', 'admin'])->default('user'); // Pengirim
-            $table->string('user_email')->index(); // Email pelanggan
-            $table->string('user_name'); // Nama pengirim
-            $table->string('user_avatar', 500)->nullable(); // Foto avatar
-            $table->text('text'); // Isi teks pesan
-            $table->string('timestamp')->nullable(); // Waktu pesan (cth: "10:15 AM")
-            $table->boolean('read_by_admin')->default(false); // Status dibaca admin
-            $table->boolean('read_by_user')->default(false); // Status dibaca pelanggan
-            $table->string('media_url', 500)->nullable(); // URL lampiran gambar/video
-            $table->string('media_type', 20)->nullable(); // 'image' | 'video'
+            $table->string('chat_id', 40)->index(); // String ID percakapan maks 40 karakter
+            $table->enum('sender', ['user', 'admin', 'system'])->default('user'); // Tipe Data ENUM pengirim pesan
+            $table->string('user_email', 150)->index(); // String email pengirim
+            $table->string('user_name', 100); // String nama pengirim
+            $table->string('user_avatar', 500)->nullable(); // URL foto profil
+            $table->text('text'); // Tipe Data TEXT isi pesan percakapan
+            $table->string('timestamp', 50)->nullable(); // String format waktu tampilan ("10:15 WIB")
+            $table->dateTime('sent_datetime')->useCurrent(); // Tipe Data DATETIME waktu pesan dikirim
+            $table->dateTime('read_at')->nullable(); // Tipe Data DATETIME waktu pesan dibaca (Read Receipt)
+            $table->boolean('read_by_admin')->default(false); // Tipe Data BOOLEAN tanda baca admin
+            $table->boolean('read_by_user')->default(false); // Tipe Data BOOLEAN tanda baca pelanggan
+            $table->string('media_url', 500)->nullable(); // URL lampiran foto/media
+            $table->enum('media_type', ['image', 'video', 'document', 'none'])->default('none'); // Tipe Data ENUM jenis media
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Membalikkan migrasi.
      */
     public function down(): void
     {

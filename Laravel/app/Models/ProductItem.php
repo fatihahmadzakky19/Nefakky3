@@ -16,65 +16,69 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ProductItem extends Model
 {
-    // Menggunakan trait SoftDeletes agar penghapusan data bersifat sementara (dapat dipulihkan)
     use SoftDeletes;
 
     // Mengatur Primary Key menggunakan string custom (contoh: "PROD-001")
     protected $primaryKey = 'item_id';
-    // Menandakan bahwa primary key tidak bertipe auto-increment integer
     public $incrementing = false;
-    // Menentukan tipe data dari primary key adalah string
     protected $keyType = 'string';
 
     /**
-     * Daftar kolom tabel yang diizinkan untuk diisi secara massal (Mass Assignment).
+     * Daftar kolom tabel yang diizinkan untuk diisi secara massal.
      *
      * @var list<string>
      */
     protected $fillable = [
-        'item_id',         // ID unik produk (contoh: "PROD-001")
-        'sku',             // Kode Stock Keeping Unit pergudangan (contoh: "NK-AYM-01")
-        'name',            // Nama lengkap menu hidangan
-        'category',        // Nama kategori menu (Makanan Utama, Minuman, Rice Bowl, dll)
-        'price',           // Harga dasar hidangan dalam Rupiah (Rp)
-        'discount',        // Besaran potongan diskon produk dalam persen (%)
-        'stock',           // Sisa jumlah ketersediaan stok fisik produk
-        'visibility',      // Status tampil di etalase katalog pengunjung (true/false)
-        'status',          // Status ketersediaan ("Active", "Low Stock", "Inactive")
-        'rating',          // Nilai rata-rata rating ulasan (1.0 - 5.0)
-        'reviews_count',   // Total akumulasi jumlah ulasan yang diterima
-        'sold_count',      // Label teks akumulasi produk terjual (contoh: "150 Terjual")
-        'image',           // Path URL file gambar utama produk
-        'gallery',         // Array URL foto-foto galeri pendukung (format JSON di DB)
-        'description',     // Deskripsi lengkap cita rasa dan keunggulan hidangan
-        'badge',           // Label lencana promosi ("BEST SELLER", "TERPOPULER", dll)
-        'ingredients',     // Daftar komposisi bahan makanan
-        'usage_advice',    // Saran penyajian atau petunjuk penyimpanan
-        'calories',        // Informasi kandungan kalori makanan (contoh: "420 kcal")
-        'fat',             // Informasi kandungan lemak (contoh: "14g")
-        'sugar',           // Informasi kandungan gula (contoh: "5g")
-        'sat_fat',         // Informasi kandungan lemak jenuh
-        'max_delivery_km', // Batas maksimal jarak antar aman dari Central Kitchen (km)
+        'item_id',             // String (30) Primary Key
+        'sku',                 // String (40) unik
+        'name',                // String (150)
+        'category',            // String (50)
+        'price',               // DECIMAL (12, 2)
+        'discount',            // DECIMAL (5, 2)
+        'stock',               // UNSIGNED INTEGER
+        'visibility',          // BOOLEAN
+        'status',              // ENUM: 'Active', 'Low Stock', 'Inactive'
+        'portion_size',        // ENUM: 'Regular', 'Large', 'Jumbo', 'Family Pack'
+        'rating',              // DECIMAL (3, 2)
+        'reviews_count',       // UNSIGNED INTEGER
+        'sold_units',          // UNSIGNED INTEGER
+        'sold_count',          // String (50)
+        'image',               // String (500)
+        'gallery',             // JSON Array
+        'description',         // TEXT
+        'badge',               // String (50)
+        'ingredients',         // TEXT
+        'usage_advice',        // TEXT
+        'calories',            // String (30)
+        'fat',                 // String (30)
+        'sugar',               // String (30)
+        'sat_fat',             // String (30)
+        'preparation_minutes', // UNSIGNED TINYINTEGER
+        'max_delivery_km',     // UNSIGNED SMALLINTEGER
+        'restocked_at',        // DATETIME
     ];
 
     /**
-     * Konversi tipe data otomatis (Casting) saat membaca data dari database.
+     * Konversi tipe data otomatis (Casting).
      *
      * @var array<string, string>
      */
     protected $casts = [
-        'price' => 'float',             // Mengubah harga ke tipe data desimal float
-        'discount' => 'float',          // Mengubah diskon ke tipe data desimal float
-        'stock' => 'integer',           // Mengubah stok ke tipe data integer
-        'visibility' => 'boolean',      // Mengubah visibilitas ke tipe data boolean
-        'rating' => 'float',            // Mengubah rating ke tipe data desimal float
-        'reviews_count' => 'integer',   // Mengubah jumlah ulasan ke tipe integer
-        'gallery' => 'array',           // Mengubah JSON galeri menjadi array PHP native
-        'max_delivery_km' => 'integer', // Mengubah jarak maksimal ke tipe integer
+        'price' => 'float',
+        'discount' => 'float',
+        'stock' => 'integer',
+        'visibility' => 'boolean',
+        'rating' => 'float',
+        'reviews_count' => 'integer',
+        'sold_units' => 'integer',
+        'preparation_minutes' => 'integer',
+        'max_delivery_km' => 'integer',
+        'gallery' => 'array',
+        'restocked_at' => 'datetime',
     ];
 
     /**
-     * Relasi One-to-Many: Satu produk memiliki banyak ulasan pelanggan (Review).
+     * Relasi One-to-Many ke Review.
      *
      * @return HasMany
      */
@@ -84,7 +88,7 @@ class ProductItem extends Model
     }
 
     /**
-     * Relasi One-to-Many: Satu produk dapat tercatat di banyak rincian pesanan (OrderItem).
+     * Relasi One-to-Many ke OrderItem.
      *
      * @return HasMany
      */
@@ -100,48 +104,49 @@ class ProductItem extends Model
      */
     public function getFinalPrice(): float
     {
-        // Jika produk memiliki persentase diskon di atas 0%
         if ($this->discount > 0) {
-            // Hitung harga diskon dan bulatkan ke bilangan terdekat
             return round($this->price - ($this->price * ($this->discount / 100)));
         }
-        // Jika tidak ada diskon, kembalikan harga dasar asli
         return (float) $this->price;
     }
 
     /**
-     * Metode Bisnis PBO: Mengurangi kuantitas stok produk saat pesanan berhasil dibuat
-     * dan memperbarui status ketersediaan barang secara otomatis.
+     * Metode Bisnis PBO: Mengurangi stok produk saat checkout berhasil.
      *
-     * @param int $quantity Jumlah unit yang dipesan
-     * @return bool True jika pengurangan berhasil, False jika stok tidak mencukupi
+     * @param int $quantity
+     * @return bool
      */
     public function reduceStock(int $quantity): bool
     {
-        // Periksa apakah stok yang ada mencukupi permintaan pesanan
         if ($this->stock >= $quantity) {
             $this->stock -= $quantity;
-            $this->updateStockStatus(); // Perbarui status Active / Low Stock / Inactive
+            $this->sold_units = ($this->sold_units ?? 0) + $quantity;
+            $this->sold_count = "{$this->sold_units} Terjual";
+            $this->updateStockStatus();
             return $this->save();
         }
         return false;
     }
 
     /**
-     * Metode Bisnis PBO: Mengembalikan kuantitas stok produk saat pesanan dibatalkan/direfund.
+     * Metode Bisnis PBO: Memulihkan stok saat pembatalan pesanan.
      *
-     * @param int $quantity Jumlah unit yang dikembalikan
+     * @param int $quantity
      * @return bool
      */
     public function restoreStock(int $quantity): bool
     {
         $this->stock += $quantity;
+        if ($this->sold_units >= $quantity) {
+            $this->sold_units -= $quantity;
+            $this->sold_count = "{$this->sold_units} Terjual";
+        }
         $this->updateStockStatus();
         return $this->save();
     }
 
     /**
-     * Metode Bisnis PBO: Menentukan status kelangkaan stok secara dinamis berdasarkan sisa unit.
+     * Metode Bisnis PBO: Menentukan status kelangkaan stok secara dinamis.
      *
      * @return void
      */
@@ -149,23 +154,21 @@ class ProductItem extends Model
     {
         if ($this->stock <= 0) {
             $this->stock = 0;
-            $this->status = 'Inactive'; // Stok habis, status menjadi Inactive
+            $this->status = 'Inactive';
         } elseif ($this->stock <= 5) {
-            $this->status = 'Low Stock'; // Stok menipis (<= 5 unit), status menjadi Low Stock
+            $this->status = 'Low Stock';
         } else {
-            $this->status = 'Active'; // Stok aman, status menjadi Active
+            $this->status = 'Active';
         }
     }
 
     /**
-     * Metode Bisnis PBO: Menghitung ulang nilai rata-rata rating kepuasan pelanggan
-     * berdasarkan seluruh ulasan yang telah disetujui (Approved / Published).
+     * Metode Bisnis PBO: Menghitung ulang rata-rata rating ulasan produk.
      *
      * @return void
      */
     public function recalculateRating(): void
     {
-        // Ambil ulasan produk yang disetujui
         $approvedReviews = $this->reviews()
             ->where(function ($q) {
                 $q->where('status', 'PUBLISHED')->orWhere('status', 'APPROVED');
@@ -177,7 +180,7 @@ class ProductItem extends Model
             $this->rating = round($approvedReviews->avg('rating'), 1);
             $this->reviews_count = $count;
         } else {
-            $this->rating = 5.0; // Default rating awal 5.0
+            $this->rating = 5.0;
             $this->reviews_count = 0;
         }
         $this->save();

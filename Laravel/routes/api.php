@@ -194,3 +194,11 @@ Route::get('/settings', [StoreSettingController::class, 'index']);
 Route::get('/settings/{key}', [StoreSettingController::class, 'show']);
 // Memperbarui pengaturan operasional toko
 Route::post('/settings', [StoreSettingController::class, 'update']);
+
+// =========================================================================
+// 15. MODUL INSPEKTUR SKEMA & TIPE DATA DATABASE (DATABASE SCHEMA API)
+// =========================================================================
+// Mengambil seluruh struktur skema 12 tabel, daftar kolom, tipe data (ENUM, DATETIME, DECIMAL, dll)
+Route::get('/database/schema', [\App\Http\Controllers\Api\DatabaseSchemaController::class, 'getFullSchema']);
+// Mengambil detail kolom dan sampel data dari satu tabel tertentu
+Route::get('/database/schema/{table}', [\App\Http\Controllers\Api\DatabaseSchemaController::class, 'getTableDetails']);

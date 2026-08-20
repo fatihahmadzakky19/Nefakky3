@@ -49,7 +49,24 @@ Dokumentasi Backend **Nefakky Marketplace**, sistem backend berbasis **Laravel 1
 
 ---
 
-## Struktur Direktori & Pola Desain
+## Spesifikasi Ragam Tipe Data Database (Standar UKK & Enterprise)
+
+Sistem database mengimplementasikan variasi tipe data kolom yang sangat lengkap dengan batasan ukuran dan presisi eksplisit:
+
+| Kategori Tipe Data | Contoh Kolom & Tipe di Migrasi | Kegunaan Bisnis |
+|---|---|---|
+| **ENUM** | `$table->enum('role', ['admin', 'customer', 'staff', 'cashier'])`<br>`$table->enum('status', ['RECEIVED', 'COOKING', 'READY', 'DELIVERING', 'COMPLETED', 'CANCELLED'])`<br>`$table->enum('type', ['percent', 'fixed'])`<br>`$table->enum('status', ['Active', 'Low Stock', 'Inactive'])`<br>`$table->enum('delivery_type', ['STANDARD', 'EXPRESS', 'PICKUP'])` | Membatasi opsi nilai status, hak akses, dan jenis transaksi yang valid |
+| **DATETIME & TIMESTAMP** | `$table->dateTime('order_datetime')`<br>`$table->dateTime('confirmed_at')`<br>`$table->dateTime('paid_at')`<br>`$table->dateTime('last_login_at')`<br>`$table->dateTime('review_date')`<br>`$table->timestamps()` / `$table->softDeletes()` | Pencatatan tanggal dan jam audit transaksi (YYYY-MM-DD HH:MM:SS) |
+| **DATE** | `$table->date('birth_date')`<br>`$table->date('start_date')`<br>`$table->date('period_start')` | Menyimpan tanggal murni tanpa jam (YYYY-MM-DD) |
+| **TIME** | `$table->time('daily_start_time')`<br>`$table->time('daily_end_time')` | Jam operasional dan waktu aktif voucher promo harian (HH:MM:SS) |
+| **DECIMAL (Precision & Scale)** | `$table->decimal('price', 12, 2)`<br>`$table->decimal('discount', 5, 2)`<br>`$table->decimal('subtotal', 12, 2)`<br>`$table->decimal('gross_revenue', 15, 2)`<br>`$table->decimal('latitude', 10, 7)`<br>`$table->decimal('longitude', 10, 7)` | Perhitungan nilai mata uang Rupiah dan koordinat GPS presisi tinggi |
+| **INTEGER (Ukuran Bertingkat)** | `$table->unsignedTinyInteger('rating')` *(0-255)*<br>`$table->unsignedSmallInteger('item_count')` *(0-65.535)*<br>`$table->unsignedSmallInteger('year')`<br>`$table->unsignedInteger('stock')` *(0-4 Milyar)*<br>`$table->unsignedInteger('used_count')` | Efisiensi penyimpanan angka dan jaminan nilai positif (unsigned) |
+| **STRING (Panjang Eksplisit)** | `$table->string('item_id', 30)`<br>`$table->string('order_id', 30)`<br>`$table->string('code', 50)`<br>`$table->string('name', 150)`<br>`$table->string('avatar', 500)` | Pembatasan memori string sesuai standar arsitektur database |
+| **BOOLEAN** | `$table->boolean('is_active')->default(true)`<br>`$table->boolean('customer_confirmed')->default(false)` | Flag status sakelar logika biner |
+| **JSON** | `$table->json('gallery')`<br>`$table->json('photos')`<br>`$table->json('replies')` | Penyimpanan array foto tambahan dan struktur komentar bersarang |
+| **TEXT & LONGTEXT** | `$table->text('description')`<br>`$table->text('ingredients')`<br>`$table->text('address')` | Penyimpanan teks panjang bebas tanpa batas string |
+
+---
 
 ```
 Laravel/

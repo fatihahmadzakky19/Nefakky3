@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Model;
  * Model StoreSetting
  * 
  * Model Eloquent ini merepresentasikan tabel 'store_settings' di database.
- * Berfungsi sebagai penyimpan pasangan kunci-nilai (Key-Value) untuk parameter operasional
- * toko, seperti koordinat GPS Central Kitchen, tarif ongkir dasar, dan tarif pajak PB1.
+ * Menyimpan konfigurasi key-value untuk parameter toko, kelompok pengaturan (enum),
+ * tipe data value (enum), dan flag status publik (boolean).
  */
 class StoreSetting extends Model
 {
@@ -19,18 +19,29 @@ class StoreSetting extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'key',         // Kunci unik konfigurasi (contoh: "kitchen_lat", "base_shipping_fee")
-        'value',       // Nilai data konfigurasi
-        'group',       // Kelompok konfigurasi (general, kitchen, shipping, tax)
-        'description', // Deskripsi penjelasan kegunaan konfigurasi
+        'key',         // String (50) unik
+        'value',       // TEXT
+        'group',       // ENUM: 'general', 'kitchen', 'shipping', 'tax', 'payment', 'system'
+        'type',        // ENUM: 'string', 'number', 'boolean', 'json'
+        'description', // String (255)
+        'is_public',   // BOOLEAN
     ];
 
     /**
-     * Helper Static PBO: Mengambil nilai pengaturan berdasarkan kuncinya dengan nilai bawaan (fallback).
+     * Konversi tipe data otomatis.
      *
-     * @param string $key Kunci pengaturan
-     * @param mixed $default Nilai default jika kunci tidak ditemukan
-     * @return mixed Nilai konfigurasi
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'is_public' => 'boolean',
+    ];
+
+    /**
+     * Helper Static PBO: Mengambil nilai pengaturan berdasarkan kuncinya.
+     *
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
      */
     public static function get(string $key, $default = null)
     {
@@ -39,11 +50,11 @@ class StoreSetting extends Model
     }
 
     /**
-     * Helper Static PBO: Menyimpan atau memperbarui nilai pengaturan secara instan.
+     * Helper Static PBO: Menyimpan atau memperbarui nilai pengaturan.
      *
-     * @param string $key Kunci pengaturan
-     * @param mixed $value Nilai baru yang disimpan
-     * @param string $group Kelompok konfigurasi
+     * @param string $key
+     * @param mixed $value
+     * @param string $group
      * @return self
      */
     public static function set(string $key, $value, string $group = 'general')

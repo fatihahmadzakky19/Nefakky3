@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * 
  * Model Eloquent ini merepresentasikan tabel 'user_addresses' di database.
  * Mengelola buku alamat multi-lokasi pelanggan (Rumah, Kantor, Apartemen),
- * nama dan nomor HP penerima, titik koordinat, serta status alamat utama (default).
+ * nama dan nomor HP penerima, titik koordinat GPS decimal(10, 7), serta status alamat default.
  */
 class UserAddress extends Model
 {
@@ -20,15 +20,18 @@ class UserAddress extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'user_id',        // Foreign key ke tabel users
-        'label',          // Label nama alamat (contoh: "Rumah", "Kantor", "Apartemen")
-        'receiver_name',  // Nama lengkap orang penerima paket
-        'receiver_phone', // Nomor telepon / WhatsApp penerima
-        'address',        // Alamat lengkap detail (jalan, nomor rumah, RT/RW)
-        'latitude',       // Koordinat garis lintang (latitude)
-        'longitude',      // Koordinat garis bujur (longitude)
-        'notes',          // Petunjuk patokan kurir (contoh: "Pagar hitam depan pos satpam")
-        'is_default',     // Boolean: apakah alamat ini merupakan alamat pengiriman utama
+        'user_id',        // Foreign key
+        'label',          // String (50)
+        'label_type',     // ENUM: 'Rumah', 'Kantor', 'Apartemen', 'Kos', 'Lainnya'
+        'receiver_name',  // String (100)
+        'receiver_phone', // String (20)
+        'address',        // TEXT
+        'postal_code',    // String (10)
+        'latitude',       // DECIMAL (10, 7)
+        'longitude',      // DECIMAL (10, 7)
+        'notes',          // String (255)
+        'is_default',     // BOOLEAN
+        'last_used_at',   // DATETIME
     ];
 
     /**
@@ -40,10 +43,11 @@ class UserAddress extends Model
         'is_default' => 'boolean',
         'latitude' => 'float',
         'longitude' => 'float',
+        'last_used_at' => 'datetime',
     ];
 
     /**
-     * Relasi Many-to-One: Alamat ini dimiliki oleh satu akun pengguna (User).
+     * Relasi Many-to-One ke User.
      *
      * @return BelongsTo
      */

@@ -9,9 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * Model Voucher
  * 
  * Model Eloquent ini merepresentasikan tabel 'vouchers' di database.
- * Berfungsi sebagai mesin validasi kupon promo belanja: memverifikasi syarat
- * minimal pembelanjaan, batas maksimal diskon, kuota penggunaan,
- * aturan hari (Weekend vs Weekday), dan auto-reset kuota mingguan (ISO Week).
+ * Mengelola aturan voucher belanja, kalkulasi diskon persen/nominal, batas min spend,
+ * kuota pemakaian, aturan tanggal (date) & jam (time), serta auto-reset mingguan.
  */
 class Voucher extends Model
 {
@@ -28,24 +27,32 @@ class Voucher extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'voucher_id',         // ID unik voucher (contoh: "VOUCH-01")
-        'code',               // Kode kupon unik yang diinputkan pengguna (contoh: "NEFAKKY10")
-        'name',               // Nama/judul promosi voucher
-        'type',               // Jenis potongan: "percent" (persentase) atau "fixed" (nominal tetap)
-        'discount_percent',   // Besaran diskon persen jika type="percent"
-        'discount_value',     // Besaran nominal diskon langsung jika type="fixed"
-        'min_spend',          // Syarat minimal total belanja untuk dapat menggunakan voucher
-        'max_discount',       // Batas nominal diskon maksimal yang bisa didapatkan
-        'used_count',         // Jumlah voucher yang telah berhasil digunakan
-        'total_limit',        // Batas kuota total pemakaian
-        'redemptions',        // Label rasio penggunaan (contoh: "24/500")
-        'expiry',             // Teks keterangan masa berlaku voucher
-        'valid_days',         // Aturan hari berlaku ("Weekend (Sabtu & Minggu)", "All Days", dll)
-        'event',              // Label nama event promosi
-        'status',             // Status operasional ("Active", "Expired")
-        'is_active',          // Status sakelar aktif (true/false)
-        'auto_reset_weekly',  // Boolean: apakah kuota pemakaian di-reset tiap minggu baru
-        'last_reset_week',    // Format minggu ISO saat terakhir di-reset (contoh: "2026-W34")
+        'voucher_id',         // String (30)
+        'code',               // String (50) unik
+        'name',               // String (150)
+        'type',               // ENUM: 'percent', 'fixed'
+        'discount_percent',   // DECIMAL (5, 2)
+        'discount_value',     // DECIMAL (12, 2)
+        'min_spend',          // DECIMAL (12, 2)
+        'max_discount',       // DECIMAL (12, 2)
+        'used_count',         // UNSIGNED INTEGER
+        'total_limit',        // UNSIGNED INTEGER
+        'redemptions',        // String (50)
+        'expiry',             // String (100)
+        'valid_from',         // DATETIME
+        'valid_until',        // DATETIME
+        'start_date',         // DATE
+        'end_date',           // DATE
+        'daily_start_time',   // TIME
+        'daily_end_time',     // TIME
+        'valid_day_type',     // ENUM: 'All Days', 'Weekend Only', 'Weekday Only'
+        'valid_days',         // String (100)
+        'auto_reset_weekly',  // BOOLEAN
+        'last_reset_week',    // String (20)
+        'event',              // String (100)
+        'status',             // ENUM: 'Active', 'Expired', 'Disabled'
+        'is_active',          // BOOLEAN
+        'image_url',          // String (500)
     ];
 
     /**
@@ -60,12 +67,16 @@ class Voucher extends Model
         'max_discount' => 'float',
         'used_count' => 'integer',
         'total_limit' => 'integer',
+        'valid_from' => 'datetime',
+        'valid_until' => 'datetime',
+        'start_date' => 'date',
+        'end_date' => 'date',
         'is_active' => 'boolean',
         'auto_reset_weekly' => 'boolean',
     ];
 
     /**
-     * Helper Static PBO: Mengambil representasi string minggu ISO saat ini (contoh: "2026-W34").
+     * Helper Static PBO: Mengambil representasi minggu ISO saat ini.
      *
      * @return string
      */
@@ -75,8 +86,7 @@ class Voucher extends Model
     }
 
     /**
-     * Metode Bisnis PBO: Memeriksa dan mereset kuota penggunaan voucher secara otomatis
-     * jika opsi auto_reset_weekly aktif dan minggu kalender ISO telah berganti.
+     * Metode Bisnis PBO: Reset kuota mingguan jika auto_reset_weekly aktif.
      *
      * @return void
      */
@@ -94,23 +104,21 @@ class Voucher extends Model
     }
 
     /**
-     * Metode Bisnis PBO: Menghitung nominal diskon yang berhak didapatkan berdasarkan subtotal belanja.
+     * Metode Bisnis PBO: Menghitung nominal diskon.
      *
-     * @param float $subtotal Total belanjaan kotor
-     * @return float Nominal potongan harga
+     * @param float $subtotal
+     * @return float
      */
     public function calculateDiscountAmount(float $subtotal): float
     {
         if ($this->type === 'percent') {
             $discount = ($subtotal * ($this->discount_percent / 100));
-            // Terapkan batas maksimal diskon jika ditentukan
             if ($this->max_discount > 0 && $discount > $this->max_discount) {
                 return (float) $this->max_discount;
             }
             return (float) $discount;
         }
 
-        // Jika type='fixed'
         $discount = (float) $this->discount_value;
         if ($discount > $subtotal) {
             return (float) $subtotal;
@@ -119,16 +127,15 @@ class Voucher extends Model
     }
 
     /**
-     * Metode Bisnis PBO: Memeriksa kelayakan kupon voucher terhadap nominal transaksi dan waktu pemakaian.
+     * Metode Bisnis PBO: Validasi kelayakan voucher.
      *
      * @param float $subtotal
-     * @return array<string, mixed> Hasil validasi [valid, message, discount_amount]
+     * @return array<string, mixed>
      */
     public function checkValidity(float $subtotal): array
     {
         $this->checkAndResetWeekly();
 
-        // 1. Cek status keaktifan voucher
         if (!$this->is_active || $this->status !== 'Active') {
             return [
                 'valid' => false,
@@ -137,7 +144,6 @@ class Voucher extends Model
             ];
         }
 
-        // 2. Cek kuota pemakaian
         if ($this->total_limit > 0 && $this->used_count >= $this->total_limit) {
             return [
                 'valid' => false,
@@ -146,7 +152,6 @@ class Voucher extends Model
             ];
         }
 
-        // 3. Cek syarat minimal belanja
         if ($this->min_spend > 0 && $subtotal < $this->min_spend) {
             $kurang = number_format($this->min_spend - $subtotal, 0, ',', '.');
             return [
@@ -156,10 +161,9 @@ class Voucher extends Model
             ];
         }
 
-        // 4. Cek aturan hari (Weekend vs Weekday)
         if (!empty($this->valid_days) && str_contains(strtolower($this->valid_days), 'weekend')) {
-            $dayOfWeek = (int) date('N'); // 1 (Senin) - 7 (Minggu)
-            if ($dayOfWeek < 6) { // Bukan hari Sabtu (6) atau Minggu (7)
+            $dayOfWeek = (int) date('N');
+            if ($dayOfWeek < 6) {
                 return [
                     'valid' => false,
                     'message' => 'Voucher ini hanya berlaku pada akhir pekan (Sabtu & Minggu).',
@@ -168,7 +172,6 @@ class Voucher extends Model
             }
         }
 
-        // Hitung nominal potongan
         $discountAmount = $this->calculateDiscountAmount($subtotal);
 
         return [

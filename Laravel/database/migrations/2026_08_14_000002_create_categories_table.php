@@ -7,23 +7,26 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Menjalankan migrasi pembuatan tabel categories
+     * Menggunakan tipe data: id, string(length), enum, unsignedSmallInteger, text, boolean, timestamps.
      */
     public function up(): void
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
-            $table->string('slug')->unique();
-            $table->string('icon')->nullable();
-            $table->text('description')->nullable();
-            $table->boolean('is_active')->default(true);
+            $table->string('name', 50)->unique(); // Nama kategori maks 50 karakter
+            $table->string('slug', 60)->unique(); // Slug URL maks 60 karakter
+            $table->enum('type', ['Makanan', 'Minuman', 'Paket', 'Tambahan'])->default('Makanan'); // Tipe Data ENUM
+            $table->unsignedSmallInteger('display_order')->default(1); // Tipe Data UNSIGNED SMALLINTEGER urutan tampil
+            $table->string('icon', 100)->nullable();
+            $table->text('description')->nullable(); // Tipe Data TEXT
+            $table->boolean('is_active')->default(true); // Tipe Data BOOLEAN
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Membalikkan migrasi.
      */
     public function down(): void
     {

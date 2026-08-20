@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -13,9 +12,8 @@ use Laravel\Sanctum\HasApiTokens;
  * Model User
  * 
  * Model Eloquent ini merepresentasikan tabel 'users' di database.
- * Bertanggung jawab mengelola autentikasi pengguna (Admin & Pelanggan),
- * penerbitan Bearer Token via Laravel Sanctum, relasi multi-alamat pengiriman,
- * serta verifikasi role hak akses.
+ * Mengelola autentikasi pengguna (Admin, Staff, Customer), penerbitan Bearer Token Sanctum,
+ * multi-alamat pengiriman, tanggal lahir (date), riwayat login (datetime), dan counter login (unsignedInteger).
  */
 class User extends Authenticatable
 {
@@ -27,16 +25,21 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',     // Nama lengkap pengguna
-        'email',    // Alamat email unik untuk login
-        'password', // Hash kata sandi akun
-        'role',     // Hak akses akun: 'admin' atau 'customer'
-        'phone',    // Nomor WhatsApp / HP pengguna
-        'avatar',   // URL foto profil avatar
+        'name',           // String (100)
+        'email',          // String (150) unik
+        'password',       // String (255)
+        'role',           // ENUM: 'admin', 'customer', 'staff', 'cashier'
+        'gender',         // ENUM: 'Laki-laki', 'Perempuan', 'Lainnya'
+        'birth_date',     // DATE (YYYY-MM-DD)
+        'last_login_at',  // DATETIME (YYYY-MM-DD HH:MM:SS)
+        'phone',          // String (20)
+        'avatar',         // String (500)
+        'is_active',      // BOOLEAN
+        'login_count',    // UNSIGNED INTEGER
     ];
 
     /**
-     * Kolom-kolom yang disembunyikan saat serialisasi JSON (keamanan).
+     * Kolom-kolom yang disembunyikan saat serialisasi JSON.
      *
      * @var list<string>
      */
@@ -54,12 +57,16 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'birth_date' => 'date',
+            'last_login_at' => 'datetime',
+            'is_active' => 'boolean',
+            'login_count' => 'integer',
             'password' => 'hashed',
         ];
     }
 
     /**
-     * Relasi One-to-Many: Satu pengguna dapat menyimpan banyak alamat pengiriman (UserAddress).
+     * Relasi One-to-Many ke UserAddress.
      *
      * @return HasMany
      */
@@ -69,7 +76,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Relasi One-to-Many: Satu pengguna dapat memiliki riwayat banyak transaksi pesanan (Order).
+     * Relasi One-to-Many ke Order.
      *
      * @return HasMany
      */
@@ -79,7 +86,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Metode Bisnis PBO: Memeriksa apakah pengguna memiliki hak akses Administrator.
+     * Metode Bisnis PBO: Cek apakah user adalah admin.
      *
      * @return bool
      */

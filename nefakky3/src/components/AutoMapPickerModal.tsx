@@ -116,9 +116,9 @@ export default function AutoMapPickerModal({
     const haversineValue =
       Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
       Math.cos(lat1 * (Math.PI / 180)) *
-        Math.cos(lat2 * (Math.PI / 180)) *
-        Math.sin(deltaLon / 2) *
-        Math.sin(deltaLon / 2);
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(deltaLon / 2) *
+      Math.sin(deltaLon / 2);
 
     const centralAngle = 2 * Math.atan2(Math.sqrt(haversineValue), Math.sqrt(1 - haversineValue));
     return Number((EARTH_RADIUS_KM * centralAngle).toFixed(1));
@@ -213,7 +213,7 @@ export default function AutoMapPickerModal({
   return (
     <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
       <div className="bg-white rounded-2xl sm:rounded-3xl max-w-xl w-full shadow-2xl border border-stone-200 overflow-hidden flex flex-col max-h-[92vh]">
-        
+
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-stone-100 flex items-center justify-between bg-[#FAF8F5]">
           <div className="flex items-center gap-2.5">
@@ -236,7 +236,7 @@ export default function AutoMapPickerModal({
 
         {/* Modal Body */}
         <div className="p-4 sm:p-5 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
-          
+
           {/* GPS Auto Detect Banner Button */}
           <button
             onClick={handleAutoDetectGps}
@@ -318,11 +318,10 @@ export default function AutoMapPickerModal({
                   key={idx}
                   type="button"
                   onClick={() => handleSelectLocationPreset(p)}
-                  className={`p-2 sm:p-2.5 rounded-xl border text-left text-xs transition-all active:scale-95 ${
-                    coordinates.lat === p.latitude && coordinates.lon === p.longitude
+                  className={`p-2 sm:p-2.5 rounded-xl border text-left text-xs transition-all active:scale-95 ${coordinates.lat === p.latitude && coordinates.lon === p.longitude
                       ? 'bg-[#F5EBE1] border-[#5C3D28] ring-1 ring-[#5C3D28]/30 font-semibold text-[#5C3D28]'
                       : 'bg-white border-stone-200/80 hover:bg-stone-50 text-stone-700 font-medium'
-                  }`}
+                    }`}
                 >
                   <div className="font-semibold text-stone-900 truncate">{p.name}</div>
                   <div className="text-[9px] sm:text-[10px] text-stone-500 mt-0.5">{p.estimatedDistanceKm} km dari Dapur</div>

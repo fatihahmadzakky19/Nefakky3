@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Model ChatMessage
  * 
  * Model Eloquent ini merepresentasikan tabel 'chat_messages' di database.
- * Bertanggung jawab mengelola pesan percakapan langsung (Live Support)
- * antara pelanggan dan tim customer service admin, lengkap dengan tanda baca (Read Receipt).
+ * Mengelola pesan live chat pelanggan dan admin CS, tipe pengirim (enum),
+ * waktu terkirim dan dibaca (datetime), serta lampiran media.
  */
 class ChatMessage extends Model
 {
@@ -20,12 +20,19 @@ class ChatMessage extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'user_id',     // ID pengguna terkait percakapan
-        'sender_type', // Jenis pengirim pesan: 'customer' atau 'admin'
-        'sender_name', // Nama pengirim pesan
-        'message',     // Isi teks pesan percakapan
-        'is_read',     // Boolean: apakah pesan sudah dibaca oleh penerima
-        'attachment',  // URL lampiran file / foto (opsional)
+        'chat_id',       // String (40)
+        'sender',        // ENUM: 'user', 'admin', 'system'
+        'user_email',    // String (150)
+        'user_name',     // String (100)
+        'user_avatar',   // String (500)
+        'text',          // TEXT
+        'timestamp',     // String (50)
+        'sent_datetime', // DATETIME
+        'read_at',       // DATETIME
+        'read_by_admin', // BOOLEAN
+        'read_by_user',  // BOOLEAN
+        'media_url',     // String (500)
+        'media_type',    // ENUM: 'image', 'video', 'document', 'none'
     ];
 
     /**
@@ -34,16 +41,19 @@ class ChatMessage extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'is_read' => 'boolean',
+        'sent_datetime' => 'datetime',
+        'read_at' => 'datetime',
+        'read_by_admin' => 'boolean',
+        'read_by_user' => 'boolean',
     ];
 
     /**
-     * Relasi Many-to-One: Pesan chat terhubung dengan satu akun pengguna (User).
+     * Relasi Many-to-One ke User.
      *
      * @return BelongsTo
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_email', 'email');
     }
 }

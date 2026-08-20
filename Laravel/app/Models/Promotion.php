@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * Model Promotion
  * 
  * Model Eloquent ini merepresentasikan tabel 'promotions' di database.
- * Bertanggung jawab mengelola banner promosi visual, event bazar offline,
- * periode tanggal aktif, serta batas kuota penukaran promosi.
+ * Bertanggung jawab mengelola banner promosi visual, tipe penempatan banner,
+ * periode datetime (start_datetime, end_datetime), serta prioritas tampilan.
  */
 class Promotion extends Model
 {
@@ -27,17 +27,20 @@ class Promotion extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'promotion_id', // ID unik promosi (contoh: "promo-1")
-        'title',        // Judul utama banner kampanye promosi
-        'subtitle',     // Sub-judul atau penjelasan singkat promo
-        'tag',          // Tag kategori banner (contoh: "Spesial Agustus", "Event Bazar")
-        'badge',        // Label status visual ("Active", "Scheduled", "Ended")
-        'image',        // URL file gambar banner promosi
-        'duration',     // Keterangan periode masa aktif promosi
-        'type',         // Tipe penempatan banner ("Banner Utama", "Banner Event", dsb)
-        'used_count',   // Jumlah kuota promosi yang telah diklaim
-        'total_limit',  // Batas maksimal kuota penukaran
-        'is_active',    // Status aktif/tidaknya banner (true/false)
+        'promotion_id',     // String (30)
+        'title',            // String (150)
+        'subtitle',         // String (255)
+        'tag',              // String (50)
+        'badge',            // ENUM: 'Active', 'Scheduled', 'Ended', 'Draft'
+        'type',             // ENUM: 'Banner Utama', 'Banner Event', 'Popup Modal', 'Notification Bar'
+        'image',            // String (500)
+        'duration',         // String (100)
+        'start_datetime',   // DATETIME
+        'end_datetime',     // DATETIME
+        'used_count',       // UNSIGNED INTEGER
+        'total_limit',      // UNSIGNED INTEGER
+        'display_priority', // UNSIGNED SMALLINTEGER
+        'is_active',        // BOOLEAN
     ];
 
     /**
@@ -48,6 +51,9 @@ class Promotion extends Model
     protected $casts = [
         'used_count' => 'integer',
         'total_limit' => 'integer',
+        'display_priority' => 'integer',
+        'start_datetime' => 'datetime',
+        'end_datetime' => 'datetime',
         'is_active' => 'boolean',
     ];
 }

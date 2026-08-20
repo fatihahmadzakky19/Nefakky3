@@ -7,25 +7,33 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Menjalankan migrasi pembuatan tabel sales_reports (Rekapitulasi Omset & Finansial)
+     * Menggunakan tipe data: unsignedSmallInteger, unsignedTinyInteger, unsignedInteger,
+     * string(length), decimal(precision, scale), enum, date, boolean, timestamps.
      */
     public function up(): void
     {
         Schema::create('sales_reports', function (Blueprint $table) {
             $table->id();
-            $table->string('year', 10)->default('2026'); // Tahun laporan (cth: "2026")
-            $table->string('month_year'); // Periode (cth: "Juni 2026", "Agustus 2026 (Live)")
-            $table->decimal('gross_revenue', 15, 2)->default(0.00); // Pendapatan kotor (omset)
-            $table->decimal('net_profit', 15, 2)->default(0.00); // Laba bersih operasional
-            $table->integer('total_orders')->default(0); // Total volume pesanan selesai
-            $table->string('event_tag')->nullable(); // Keterangan event khusus / bazar
-            $table->boolean('is_bazar')->default(false); // Penanda apakah bagian dari event bazar
+            $table->unsignedSmallInteger('year')->default(2026); // Tipe Data UNSIGNED SMALLINTEGER tahun (misal: 2026)
+            $table->unsignedTinyInteger('month_number')->default(1); // Tipe Data UNSIGNED TINYINTEGER bulan (1 - 12)
+            $table->string('month_year', 50); // String nama periode ("Juni 2026", "Agustus 2026 (Live)")
+            $table->decimal('gross_revenue', 15, 2)->default(0.00); // Tipe Data DECIMAL(15, 2) total omset kotor hingga triliunan
+            $table->decimal('net_profit', 15, 2)->default(0.00); // Tipe Data DECIMAL(15, 2) laba bersih
+            $table->decimal('average_order_value', 12, 2)->default(0.00); // Tipe Data DECIMAL(12, 2) rata-rata nilai per pesanan (AOV)
+            $table->unsignedInteger('total_orders')->default(0); // Tipe Data UNSIGNED INTEGER total transaksi pesanan
+            $table->unsignedInteger('total_items_sold')->default(0); // Tipe Data UNSIGNED INTEGER total porsi terjual
+            $table->enum('report_status', ['DRAFT', 'FINAL', 'VERIFIED'])->default('FINAL'); // Tipe Data ENUM status laporan keuangan
+            $table->date('period_start')->nullable(); // Tipe Data DATE awal periode (YYYY-MM-DD)
+            $table->date('period_end')->nullable(); // Tipe Data DATE akhir periode (YYYY-MM-DD)
+            $table->string('event_tag', 150)->nullable(); // String keterangan event bazar / festival kuliner
+            $table->boolean('is_bazar')->default(false); // Tipe Data BOOLEAN penanda event bazar
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Membalikkan migrasi.
      */
     public function down(): void
     {

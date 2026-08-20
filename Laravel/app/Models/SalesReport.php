@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Model;
  * Model SalesReport
  * 
  * Model Eloquent ini merepresentasikan tabel 'sales_reports' di database.
- * Bertanggung jawab mencatat ringkasan omset penjualan bulanan, keuntungan bersih,
- * volume transaksi pesanan, analisis performa bazar kuliner, dan metrik AOV (Average Order Value).
+ * Bertanggung jawab mencatat omset bulanan, laba bersih, total pesanan,
+ * analisis event bazar, tanggal periode (date), dan metrik AOV.
  */
 class SalesReport extends Model
 {
@@ -19,13 +19,19 @@ class SalesReport extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'year',          // Tahun periode laporan (contoh: "2026")
-        'month_year',    // Label bulan dan tahun (contoh: "Juni 2026")
-        'gross_revenue', // Total pendapatan kotor dalam Rupiah (Rp)
-        'net_profit',    // Laba bersih operasional setelah dipotong modal HPP
-        'total_orders',  // Total jumlah pesanan yang berhasil diselesaikan
-        'event_tag',     // Penanda atau nama event bazar khusus
-        'is_bazar',      // Boolean: apakah berasal dari event bazar kuliner
+        'year',                 // UNSIGNED SMALLINTEGER
+        'month_number',         // UNSIGNED TINYINTEGER
+        'month_year',           // String (50)
+        'gross_revenue',        // DECIMAL (15, 2)
+        'net_profit',           // DECIMAL (15, 2)
+        'average_order_value',  // DECIMAL (12, 2)
+        'total_orders',         // UNSIGNED INTEGER
+        'total_items_sold',     // UNSIGNED INTEGER
+        'report_status',        // ENUM: 'DRAFT', 'FINAL', 'VERIFIED'
+        'period_start',         // DATE
+        'period_end',           // DATE
+        'event_tag',            // String (150)
+        'is_bazar',             // BOOLEAN
     ];
 
     /**
@@ -34,16 +40,22 @@ class SalesReport extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'year' => 'integer',
+        'month_number' => 'integer',
         'gross_revenue' => 'float',
         'net_profit' => 'float',
+        'average_order_value' => 'float',
         'total_orders' => 'integer',
+        'total_items_sold' => 'integer',
+        'period_start' => 'date',
+        'period_end' => 'date',
         'is_bazar' => 'boolean',
     ];
 
     /**
-     * Metode Bisnis PBO: Menghitung Average Order Value (AOV) / Nilai rata-rata per transaksi pesanan.
+     * Metode Bisnis PBO: Menghitung Average Order Value (AOV).
      *
-     * @return float Nilai rata-rata omset per pesanan
+     * @return float
      */
     public function getAverageOrderValue(): float
     {
@@ -54,9 +66,9 @@ class SalesReport extends Model
     }
 
     /**
-     * Metode Bisnis PBO: Menghitung persentase margin keuntungan bersih (Net Margin %).
+     * Metode Bisnis PBO: Menghitung persentase margin laba bersih.
      *
-     * @return float Persentase margin laba
+     * @return float
      */
     public function getProfitMarginPercent(): float
     {
