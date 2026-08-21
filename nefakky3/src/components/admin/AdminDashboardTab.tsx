@@ -53,13 +53,9 @@ export default function AdminDashboardTab({
   onExportCSV,
   onPrintPDF
 }: AdminDashboardTabProps) {
-  const { products, vouchers, orders, forceDeleteProduct, forceDeleteVoucher, forceDeleteOrder } = useData();
+  const { products, vouchers, orders } = useData();
   const [chartTimeframe, setChartTimeframe] = useState<'7d' | '1m' | '6m' | '1y'>('6m');
   const [selectedKpiMonth, setSelectedKpiMonth] = useState<string>('ALL');
-
-  const trashedProds = (products || []).filter(p => p.isDeleted);
-  const trashedVouches = (vouchers || []).filter(v => v.isDeleted);
-  const trashedOrds = (orders || []).filter(o => o.isDeleted);
 
   // Manual / Offline Omset State
   const [manualOmsetData, setManualOmsetData] = useState<{
@@ -610,6 +606,19 @@ export default function AdminDashboardTab({
         </div>
 
         <div className="flex flex-wrap gap-2.5 print:hidden">
+          {manualOmsetData && (
+            <button 
+              onClick={() => {
+                if (confirm('Reset / Hapus data input omset manual offline? Data omset akan kembali ke baseline otomatis.')) {
+                  setManualOmsetData(null);
+                  localStorage.removeItem('nefakky_manual_omset');
+                }
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-all text-xs font-bold"
+            >
+              <span>Reset Omset Manual</span>
+            </button>
+          )}
           <button 
             onClick={handleOpenInputOmsetModal}
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-amber-900/15 text-[#1b1c1a] hover:shadow-md transition-all text-xs font-bold"
@@ -1044,87 +1053,6 @@ export default function AdminDashboardTab({
                 </button>
               </div>
             ))}
-          </div>
-        </div>
-      </div>
-
-      {/* WIDGET KELOLA TEMPAT SAMPAH & FORCE DELETE */}
-      <div className="bg-[#25160e] text-white shadow-2xl rounded-3xl p-6 sm:p-8 border border-amber-900/40 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-amber-900/30 pb-4">
-          <div>
-            <div className="flex items-center gap-2 text-rose-400 font-bold text-xs">
-              <Trash2 className="w-4 h-4" />
-              <span>MANAJEMEN TEMPAT SAMPAH (RECYCLE BIN)</span>
-            </div>
-            <h3 className="font-serif text-2xl font-bold text-white mt-1">Ringkasan Tempat Sampah &amp; Force Delete</h3>
-            <p className="text-xs text-amber-200/70 font-light">Pantau item yang terhapus sementara (Soft Delete) dan lakukan hapus permanen dari sistem.</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {manualOmsetData && (
-              <button
-                onClick={() => {
-                  if (confirm('Reset / Hapus data input omset manual offline? Data omset akan kembali ke baseline otomatis.')) {
-                    setManualOmsetData(null);
-                    localStorage.removeItem('nefakky_manual_omset');
-                  }
-                }}
-                className="px-3.5 py-2 bg-rose-900/80 hover:bg-rose-900 text-rose-200 text-xs font-bold rounded-xl border border-rose-700/50 transition-all"
-              >
-                Reset Omset Manual
-              </button>
-            )}
-            {(trashedProds.length > 0 || trashedVouches.length > 0 || trashedOrds.length > 0) && (
-              <button
-                onClick={() => {
-                  if (confirm(`PERINGATAN FORCE DELETE ALL!\nApakah Anda yakin ingin MENGOSONGKAN Tempat Sampah?\n\n- ${trashedProds.length} Produk\n- ${trashedVouches.length} Voucher\n- ${trashedOrds.length} Pesanan\n\nSemua data ini akan dihapus PERMANEN dari sistem!`)) {
-                    trashedProds.forEach(p => forceDeleteProduct(p.id));
-                    trashedVouches.forEach(v => forceDeleteVoucher(v.id));
-                    trashedOrds.forEach(o => forceDeleteOrder(o.id));
-                    alert('Tempat sampah telah dikosongkan secara permanen!');
-                  }
-                }}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Kosongkan Sampah ({trashedProds.length + trashedVouches.length + trashedOrds.length})</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          {/* Product Trash Stat Card */}
-          <div className="bg-[#3c2a21]/90 rounded-2xl p-4 border border-amber-900/30 flex justify-between items-center">
-            <div>
-              <span className="text-stone-400 font-bold block">Produk Terhapus</span>
-              <span className="text-xl font-bold text-rose-400">{trashedProds.length} Item</span>
-            </div>
-            <span className="text-[10px] text-amber-200/80 bg-amber-950 px-2.5 py-1 rounded-full border border-amber-800/40">
-              {trashedProds.length > 0 ? 'Dapat Dipulihkan' : 'Kosong'}
-            </span>
-          </div>
-
-          {/* Voucher Trash Stat Card */}
-          <div className="bg-[#3c2a21]/90 rounded-2xl p-4 border border-amber-900/30 flex justify-between items-center">
-            <div>
-              <span className="text-stone-400 font-bold block">Voucher Terhapus</span>
-              <span className="text-xl font-bold text-rose-400">{trashedVouches.length} Kode</span>
-            </div>
-            <span className="text-[10px] text-amber-200/80 bg-amber-950 px-2.5 py-1 rounded-full border border-amber-800/40">
-              {trashedVouches.length > 0 ? 'Dapat Dipulihkan' : 'Kosong'}
-            </span>
-          </div>
-
-          {/* Orders Trash Stat Card */}
-          <div className="bg-[#3c2a21]/90 rounded-2xl p-4 border border-amber-900/30 flex justify-between items-center">
-            <div>
-              <span className="text-stone-400 font-bold block">Pesanan Terhapus</span>
-              <span className="text-xl font-bold text-rose-400">{trashedOrds.length} Trx</span>
-            </div>
-            <span className="text-[10px] text-amber-200/80 bg-amber-950 px-2.5 py-1 rounded-full border border-amber-800/40">
-              {trashedOrds.length > 0 ? 'Dapat Dipulihkan' : 'Kosong'}
-            </span>
           </div>
         </div>
       </div>

@@ -19,40 +19,31 @@ import { useData, AdminOrder, isVoucherValidNow } from '@/context/DataContext';
 import { rtdb } from '@/lib/firebase';
 import { ref, onValue } from 'firebase/database';
 import Navbar from '@/components/Navbar';
-import LiveCameraModal from '@/components/LiveCameraModal';
 import { 
   ShoppingBag, 
   Truck, 
   Receipt, 
   Tag, 
   Bell, 
-  ArrowLeft,
-  ArrowRight,
-  X,
-  FileText,
-  Clock,
-  CheckCircle2,
-  Phone,
-  MessageSquare,
-  MapPin,
-  Utensils,
-  Check,
-  Camera,
-  UploadCloud,
-  Pencil,
-  AlertTriangle,
-  CreditCard
+  ArrowLeft, 
+  ArrowRight, 
+  X, 
+  FileText, 
+  Clock, 
+  CheckCircle2, 
+  Phone, 
+  MessageSquare, 
+  MapPin, 
+  Utensils, 
+  Check, 
+  CreditCard 
 } from 'lucide-react';
 
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { orders, vouchers, updateOrderStatus, confirmOrderReceived, uploadOrderProofPhoto, uploadOrderPaymentProofPhoto } = useData();
+  const { orders, vouchers, updateOrderStatus } = useData();
   const { totalCartCount } = useCart();
-  const proofInputRef = React.useRef<HTMLInputElement>(null);
-  const paymentProofInputRef = React.useRef<HTMLInputElement>(null);
-  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false);
-  const [cameraTarget, setCameraTarget] = useState<'product' | 'payment'>('product');
 
   const [selectedReceipt, setSelectedReceipt] = useState<AdminOrder | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
@@ -124,18 +115,6 @@ export default function NotificationsPage() {
     });
     return () => unsub();
   }, [activeOrder?.id]);
-
-  const handleProofImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && activeOrder?.id) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        uploadOrderProofPhoto(activeOrder.id, result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const currentStatus = liveRtdbStatus || activeOrder?.status || 'PENDING';
 
@@ -455,260 +434,110 @@ export default function NotificationsPage() {
 
           {/* KOLOM KANAN: BUKTI FOTO PENERIMAAN & DETAIL ALAMAT */}
           <div className="lg:col-span-7 space-y-6">
-            
-            {/* Hidden Input for Product Proof Photo Upload */}
-            <input 
-              type="file" 
-              ref={proofInputRef} 
-              accept="image/*"
-              capture="environment"
-              className="hidden" 
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file && activeOrder?.id) {
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    uploadOrderProofPhoto(activeOrder.id, reader.result as string);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }} 
-            />
 
-            {/* Hidden Input for COD Payment Proof Photo Upload */}
-            <input 
-              type="file" 
-              ref={paymentProofInputRef} 
-              accept="image/*"
-              capture="environment"
-              className="hidden" 
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file && activeOrder?.id) {
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    uploadOrderPaymentProofPhoto(activeOrder.id, reader.result as string);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }} 
-            />
-
-            {/* LIVE CAMERA WEBCAM MODAL */}
-            <LiveCameraModal
-              isOpen={isLiveCameraOpen}
-              onClose={() => setIsLiveCameraOpen(false)}
-              onCapture={(base64Image) => {
-                if (activeOrder?.id) {
-                  if (cameraTarget === 'payment') {
-                    uploadOrderPaymentProofPhoto(activeOrder.id, base64Image);
-                  } else {
-                    uploadOrderProofPhoto(activeOrder.id, base64Image);
-                  }
-                }
-              }}
-              onFallbackToFile={() => {
-                if (cameraTarget === 'payment') {
-                  paymentProofInputRef.current?.click();
-                } else {
-                  proofInputRef.current?.click();
-                }
-              }}
-            />
-
-            {/* BUKTI FOTO PESANAN DITERIMA CARD */}
+            {/* INFORMASI PENGANTARAN & STATUS PEMBAYARAN */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-900/10 shadow-xl space-y-6">
-              
-              {activeOrder.paymentMethod?.toLowerCase().includes('cod') && activeOrder.status !== 'COMPLETED' && (
-                <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-[#934B19] shrink-0 mt-0.5" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2">
+                    <Truck className="w-5 h-5 text-[#934B19]" />
+                    <span>Informasi Pengantaran &amp; Pembayaran</span>
+                  </h3>
+                  <p className="text-xs text-[#4F4540] font-light mt-0.5">
+                    Pesanan Anda diantar langsung oleh staf/kurir resmi toko kami.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 ${
+                    currentStatus === 'COMPLETED'
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : 'bg-amber-100 text-amber-900 border-amber-300'
+                  }`}>
+                    {currentStatus === 'COMPLETED' ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Pesanan Selesai &amp; Diterima</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-3.5 h-3.5 text-amber-700 animate-spin" />
+                        <span>Sedang Diproses Kurir Toko</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* INFO COD JIKA METODE COD */}
+              {activeOrder.paymentMethod?.toLowerCase().includes('cod') && (
+                <div className={`p-4 rounded-2xl border flex items-start gap-3 ${
+                  activeOrder.paymentBadge === 'PAID' || currentStatus === 'COMPLETED'
+                    ? 'bg-emerald-500/10 border-emerald-500/30'
+                    : 'bg-amber-500/10 border-amber-500/30'
+                }`}>
+                  <CreditCard className={`w-5 h-5 shrink-0 mt-0.5 ${
+                    activeOrder.paymentBadge === 'PAID' || currentStatus === 'COMPLETED'
+                      ? 'text-emerald-700'
+                      : 'text-[#934B19]'
+                  }`} />
                   <div className="space-y-1">
-                    <span className="text-xs font-bold text-[#934B19] uppercase tracking-wider block">⚠️ PESANAN COD (BAYAR DI TEMPAT) - PEMBAYARAN BELUM LUNAS</span>
+                    <span className={`text-xs font-bold uppercase tracking-wider block ${
+                      activeOrder.paymentBadge === 'PAID' || currentStatus === 'COMPLETED'
+                        ? 'text-emerald-900'
+                        : 'text-[#934B19]'
+                    }`}>
+                      {activeOrder.paymentBadge === 'PAID' || currentStatus === 'COMPLETED'
+                        ? '✅ PEMBAYARAN TUNAI COD: LUNAS'
+                        : '💵 PESANAN COD (BAYAR DI TEMPAT)'}
+                    </span>
                     <p className="text-xs text-[#25160E] leading-relaxed font-normal">
-                      Pembayaran tunai sebesar <strong>Rp {activeOrder.total.toLocaleString('id-ID')}</strong> dilakukan saat kurir tiba. 
-                      Pembayaran belum dianggap berhasil sampai Anda menerima hidangan &amp; melampirkan <strong>2 Foto Bukti</strong>:
-                      <br />
-                      1. 📸 Foto Bukti Fisik Makanan Diterima
-                      <br />
-                      2. 💵 Foto Bukti Serah Terima Uang / Resi Pembayaran COD ke Kurir
+                      {activeOrder.paymentBadge === 'PAID' || currentStatus === 'COMPLETED'
+                        ? `Pembayaran tunai sebesar Rp ${activeOrder.total.toLocaleString('id-ID')} telah diterima & diverifikasi oleh kurir.`
+                        : `Siapkan uang pas tunai sebesar Rp ${activeOrder.total.toLocaleString('id-ID')} saat kurir toko tiba. Dokumentasi serah terima & bukti pembayaran dicatat langsung oleh kurir.`}
                     </p>
                   </div>
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
-                <div>
-                  <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2">
-                    <Camera className="w-5 h-5 text-[#934B19]" />
-                    <span>1. Bukti Foto Makanan Diterima</span>
-                  </h3>
-                  <p className="text-xs text-[#4F4540] font-light mt-0.5">
-                    Unggah atau ambil foto langsung hidangan/pesanan yang telah Anda terima.
-                  </p>
-                </div>
-
-                {activeOrder.proofPhoto && (
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full border border-emerald-300 flex items-center gap-1 shrink-0">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Foto Makanan Terverifikasi</span>
+              {/* PREVIEW DOKUMENTASI DARI KURIR TOKO (JIKA SUDAH DIUNGGAH OLEH ADMIN) */}
+              {(activeOrder.proofPhoto || activeOrder.paymentProofPhoto) && (
+                <div className="space-y-3 pt-2">
+                  <span className="text-xs font-bold text-[#25160E] block">
+                    Dokumentasi Resmi Pengantaran (Diverifikasi Toko):
                   </span>
-                )}
-              </div>
-
-              {/* PRODUCT PHOTO DISPLAY OR UPLOAD AREA */}
-              {activeOrder.proofPhoto ? (
-                <div className="space-y-4">
-                  <div className="relative w-full h-52 rounded-2xl overflow-hidden border border-amber-900/15 shadow-md bg-stone-900 group">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={activeOrder.proofPhoto} 
-                      alt="Bukti Foto Pesanan Diterima" 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-between p-4 text-white">
-                      <div>
-                        <span className="text-xs font-bold block">Foto Bukti Makanan Diterima #{activeOrder.id}</span>
-                        <span className="text-[10px] text-amber-200">Foto Resmi Hidangan Dikonfirmasi</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => { setCameraTarget('product'); setIsLiveCameraOpen(true); }}
-                          className="px-3 py-1.5 bg-[#934B19] hover:bg-[#783603] backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white shadow"
-                        >
-                          <Camera className="w-3.5 h-3.5" />
-                          <span>Kamera</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setCameraTarget('product'); proofInputRef.current?.click(); }}
-                          className="px-3 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          <span>Galeri</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-amber-900/25 bg-[#FBF9F5] rounded-2xl p-5 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-[#934B19]/10 text-[#934B19] flex items-center justify-center mx-auto">
-                    <UploadCloud className="w-6 h-6" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-[#25160E]">Foto 1: Ambil / Upload Bukti Foto Makanan Diterima</p>
-                    <p className="text-[11px] text-[#4F4540]">Format: Foto sajian hangat makanan yang telah sampai di tempat Anda.</p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => { setCameraTarget('product'); setIsLiveCameraOpen(true); }}
-                      className="w-full sm:w-auto px-4 py-2 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-amber-200" />
-                      <span>📸 Foto Kamera Live</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { setCameraTarget('product'); proofInputRef.current?.click(); }}
-                      className="w-full sm:w-auto px-4 py-2 bg-[#25160E] hover:bg-[#3C2A21] text-amber-300 text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      <UploadCloud className="w-3.5 h-3.5 text-amber-300" />
-                      <span>📁 Pilih dari Galeri</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* CARD KHUSUS BUKTI PEMBAYARAN COD */}
-              {activeOrder.paymentMethod?.toLowerCase().includes('cod') && (
-                <div className="pt-4 border-t border-amber-900/10 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2">
-                        <CreditCard className="w-5 h-5 text-emerald-600" />
-                        <span>2. Bukti Foto Pembayaran Tunai COD</span>
-                      </h3>
-                      <p className="text-xs text-[#4F4540] font-light mt-0.5">
-                        Foto serah terima uang cash / resi pembayaran tunai kepada kurir pengantar.
-                      </p>
-                    </div>
-
-                    {activeOrder.paymentProofPhoto && (
-                      <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full border border-emerald-300 flex items-center gap-1 shrink-0">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Bukti Pembayaran Terverifikasi</span>
-                      </span>
-                    )}
-                  </div>
-
-                  {activeOrder.paymentProofPhoto ? (
-                    <div className="space-y-4">
-                      <div className="relative w-full h-52 rounded-2xl overflow-hidden border border-emerald-600/20 shadow-md bg-stone-900 group">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={activeOrder.paymentProofPhoto} 
-                          alt="Bukti Foto Pembayaran COD" 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-between p-4 text-white">
-                          <div>
-                            <span className="text-xs font-bold block">Bukti Pembayaran COD #{activeOrder.id}</span>
-                            <span className="text-[10px] text-emerald-300">Lunas Rp {activeOrder.total.toLocaleString('id-ID')}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => { setCameraTarget('payment'); setIsLiveCameraOpen(true); }}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white shadow"
-                            >
-                              <Camera className="w-3.5 h-3.5" />
-                              <span>Foto Uang Kamera</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setCameraTarget('payment'); paymentProofInputRef.current?.click(); }}
-                              className="px-3 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-white"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                              <span>Galeri</span>
-                            </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {activeOrder.proofPhoto && (
+                      <div className="space-y-2">
+                        <div className="relative w-full h-44 rounded-2xl overflow-hidden border border-amber-900/15 shadow-sm bg-stone-900 group">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={activeOrder.proofPhoto} 
+                            alt="Bukti Makanan Diterima" 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-3 text-white">
+                            <span className="text-[11px] font-bold">📸 Foto Serah Terima Makanan</span>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-emerald-600/30 bg-emerald-50/50 rounded-2xl p-5 text-center space-y-3">
-                      <div className="w-12 h-12 rounded-2xl bg-emerald-600/10 text-emerald-700 flex items-center justify-center mx-auto">
-                        <CreditCard className="w-6 h-6" />
+                    )}
+                    {activeOrder.paymentProofPhoto && (
+                      <div className="space-y-2">
+                        <div className="relative w-full h-44 rounded-2xl overflow-hidden border border-emerald-600/25 shadow-sm bg-stone-900 group">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={activeOrder.paymentProofPhoto} 
+                            alt="Bukti Pembayaran COD" 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-3 text-white">
+                            <span className="text-[11px] font-bold">💵 Bukti Pembayaran Tunai COD (Lunas)</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-[#25160E]">Foto 2: Ambil / Upload Bukti Foto Pembayaran Tunai COD</p>
-                        <p className="text-[11px] text-[#4F4540]">Format: Foto serah terima uang cash / resi pembayaran tunai Rp {activeOrder.total.toLocaleString('id-ID')} ke kurir.</p>
-                      </div>
-                      <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => { setCameraTarget('payment'); setIsLiveCameraOpen(true); }}
-                          className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                        >
-                          <Camera className="w-3.5 h-3.5 text-emerald-200" />
-                          <span>📸 Foto Uang Kamera Live</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setCameraTarget('payment'); paymentProofInputRef.current?.click(); }}
-                          className="w-full sm:w-auto px-4 py-2 bg-[#25160E] hover:bg-[#3C2A21] text-emerald-300 text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                        >
-                          <UploadCloud className="w-3.5 h-3.5 text-emerald-300" />
-                          <span>📁 Pilih dari Galeri</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -719,55 +548,23 @@ export default function NotificationsPage() {
                 <p className="text-xs text-[#4F4540] font-light leading-relaxed">{activeOrder.address}</p>
               </div>
 
-            </div>
-
-            {/* KONFIRMASI PENERIMAAN PESANAN OLEH PELANGGAN */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-900/10 shadow-xl space-y-4 text-center sm:text-left">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <h3 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2 justify-center sm:justify-start">
-                    <CheckCircle2 className={`w-5 h-5 ${currentStatus === 'COMPLETED' ? 'text-emerald-600' : 'text-[#934B19]'}`} />
-                    <span>Konfirmasi Penerimaan Makanan &amp; Pembayaran</span>
-                  </h3>
-                  <p className="text-xs text-[#4F4540] font-light leading-relaxed">
-                    {currentStatus === 'COMPLETED'
-                      ? 'Pesanan & pembayaran telah resmi dikonfirmasi sampai di tangan Anda.'
-                      : activeOrder.paymentMethod?.toLowerCase().includes('cod')
-                        ? 'Khusus COD: Pembayaran belum berhasil sampai Anda menerima hidangan & mengunggah Foto Bukti Makanan + Foto Pembayaran Tunai.'
-                        : 'Ketika makanan telah sampai di tangan Anda, silakan upload bukti foto & klik konfirmasi.'}
-                  </p>
-                </div>
-
-                {currentStatus === 'COMPLETED' ? (
-                  <div className="px-5 py-3 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-2xl border border-emerald-300 flex items-center gap-2 shrink-0">
-                    <Check className="w-4 h-4 text-emerald-700" />
-                    <span>Pesanan Diterima &amp; Lunas</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      const isCod = activeOrder.paymentMethod?.toLowerCase().includes('cod') || activeOrder.paymentMethod?.toLowerCase().includes('cash on delivery');
-                      if (!activeOrder.proofPhoto) {
-                        alert('⚠️ WAJIB UNGGAH FOTO BUKTI MAKANAN DITERIMA!\n\nSilakan ambil foto makanan dengan kamera live atau pilih dari galeri terlebih dahulu.');
-                        setCameraTarget('product');
-                        setIsLiveCameraOpen(true);
-                        return;
-                      }
-                      if (isCod && !activeOrder.paymentProofPhoto) {
-                        alert('⚠️ WAJIB UNGGAH FOTO BUKTI PEMBAYARAN TUNAI COD!\n\nKhusus metode Cash On Delivery (COD), Anda wajib melampirkan foto serah terima uang cash / resi pembayaran tunai ke kurir!');
-                        setCameraTarget('payment');
-                        setIsLiveCameraOpen(true);
-                        return;
-                      }
-                      confirmOrderReceived(activeOrder.id, activeOrder.proofPhoto, activeOrder.paymentProofPhoto);
-                    }}
-                    className="px-6 py-3.5 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-amber-200" />
-                    <span>Konfirmasi Pesanan {activeOrder.paymentMethod?.toLowerCase().includes('cod') ? 'COD Diterima & Lunas' : 'Diterima'}</span>
-                  </button>
-                )}
+              {/* STATUS AKHIR & CETAK STRUK */}
+              <div className="pt-3 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <p className="text-xs text-[#4F4540] font-light">
+                  {currentStatus === 'COMPLETED'
+                    ? 'Pesanan telah selesai. Terima kasih telah memesan hidangan otentik Nefakky!'
+                    : 'Kurir kami sedang menuju lokasi Anda. Mohon pastikan nomor telepon aktif.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReceipt(activeOrder)}
+                  className="w-full sm:w-auto px-4 py-2.5 bg-[#25160E] hover:bg-[#3C2A21] text-amber-300 text-xs font-bold rounded-2xl shadow transition-all flex items-center justify-center gap-2"
+                >
+                  <Receipt className="w-4 h-4 text-amber-300" />
+                  <span>Lihat Struk Pembelian</span>
+                </button>
               </div>
+
             </div>
 
           </div>

@@ -53,6 +53,8 @@ export interface DetailProduct {
   storage?: string; // Cara penyimpanan
   serving?: string; // Saran penyajian
   thumbnails?: string[]; // Array gambar thumbnail galeri
+  isComingSoon?: boolean; // Status hidangan segera hadir
+  releaseDate?: string; // Estimasi waktu rilis hidangan
   reviews?: {
     id: string;
     author: string;
@@ -211,11 +213,17 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
             {/* Right: Purchase & Details Panel */}
             <div className="lg:col-span-6 space-y-6">
               
-              {/* Category Pill Tag */}
-              <div>
+              {/* Category & Coming Soon Pill Tag */}
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-block px-3.5 py-1 bg-[#F5EBE1] text-[#7A4B29] text-xs font-medium rounded-full">
                   {product.category}
                 </span>
+                {product.isComingSoon && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-500/15 border border-amber-600/30 text-[#934B19] text-xs font-bold rounded-full">
+                    <Sparkles className="w-3 h-3 text-[#934B19]" />
+                    <span>⏳ SEGERA HADIR ({product.releaseDate || 'COMING SOON'})</span>
+                  </span>
+                )}
               </div>
 
               {/* Title & Metadata */}
@@ -230,19 +238,35 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                     <span>{product.rating.toFixed(1)}</span>
                   </div>
                   <span>|</span>
-                  <span>{product.reviewsCount || '1.2k reviews'}</span>
+                  <span>{product.reviewsCount || (product.isComingSoon ? 'Segera Hadir' : '1.2k reviews')}</span>
                   <span>|</span>
-                  <span>{product.soldCount || '850 Terjual'}</span>
-                  <span className="ml-auto text-emerald-700 font-medium flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    Ready Stock
+                  <span>{product.soldCount || (product.isComingSoon ? 'Tahap Persiapan' : '850 Terjual')}</span>
+                  <span className="ml-auto font-medium flex items-center gap-1">
+                    {product.isComingSoon ? (
+                      <span className="text-amber-800 flex items-center gap-1 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                        Akan Hadir
+                      </span>
+                    ) : (
+                      <span className="text-emerald-700 flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        Ready Stock
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>
 
               {/* Price */}
-              <div className="font-serif text-3xl font-bold text-[#5C3D28]">
-                Rp {product.price.toLocaleString('id-ID')}
+              <div className="flex items-center gap-3">
+                <div className="font-serif text-3xl font-bold text-[#5C3D28]">
+                  Rp {product.price.toLocaleString('id-ID')}
+                </div>
+                {product.isComingSoon && (
+                  <span className="text-xs font-semibold text-[#934B19] bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300">
+                    Estimasi Harga Rilis
+                  </span>
+                )}
               </div>
 
               {/* 3 Drink Variants Selector (Khusus Minuman) */}
@@ -307,44 +331,78 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                 </div>
               </div>
 
-              {/* Quantity Selector */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3 bg-[#F5F2EC] px-4 py-2 rounded-full border border-stone-200/60">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-7 h-7 rounded-full bg-white text-stone-800 flex items-center justify-center shadow-sm hover:bg-stone-100"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="text-sm font-bold text-stone-800 min-w-[24px] text-center">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-7 h-7 rounded-full bg-white text-stone-800 flex items-center justify-center shadow-sm hover:bg-stone-100"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
+              {/* Quantity & Action Buttons or Coming Soon Teaser */}
+              {product.isComingSoon ? (
+                <div className="p-5 bg-gradient-to-r from-[#25160E] to-[#934B19] rounded-2xl sm:rounded-3xl text-white shadow-lg space-y-3 text-left">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+                    <div>
+                      <span className="text-xs font-bold text-amber-300 uppercase tracking-wider block">
+                        Menu Segera Hadir (Coming Soon)
+                      </span>
+                      <span className="text-[11px] text-white/80 font-normal">
+                        Estimasi Peluncuran: {product.releaseDate || 'Segera Meluncur'}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/90 font-light leading-relaxed">
+                    Hidangan istimewa ini sedang dipersiapkan dengan kurasi bahan baku dan racikan rempah terbaik oleh koki Dapur Nefakky. Nantikan rilis resminya!
+                  </p>
+                  <div className="pt-2 border-t border-white/15 flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-amber-200 font-semibold">
+                      💡 Pantau halaman ini untuk pembaruan menu
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => alert(`Terima kasih atas antusiasme Anda! Menu "${product.name}" akan segera dapat dipesan saat rilis (${product.releaseDate || 'Segera'}).`)}
+                      className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-[#25160E] text-xs font-bold rounded-xl transition-all shadow active:scale-95 shrink-0"
+                    >
+                      🔔 Ingatkan Saya
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Quantity Selector */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 bg-[#F5F2EC] px-4 py-2 rounded-full border border-stone-200/60">
+                      <button
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-7 h-7 rounded-full bg-white text-stone-800 flex items-center justify-center shadow-sm hover:bg-stone-100"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="text-sm font-bold text-stone-800 min-w-[24px] text-center">
+                        {quantity}
+                      </span>
+                      <button
+                        onClick={() => setQuantity(quantity + 1)}
+                        className="w-7 h-7 rounded-full bg-white text-stone-800 flex items-center justify-center shadow-sm hover:bg-stone-100"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
 
-              {/* Action Buttons: Add to Cart & Buy Now */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                <button
-                  onClick={handleAddToCart}
-                  className="w-full sm:flex-1 py-3.5 bg-[#F7F4EF] hover:bg-[#EFECE6] active:scale-[0.99] text-stone-800 font-medium rounded-full text-xs transition-all border border-stone-200/80 shadow-sm flex items-center justify-center gap-2"
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Add to Cart</span>
-                </button>
-                
-                <button
-                  onClick={handleBuyNow}
-                  className="w-full sm:flex-1 py-3.5 bg-[#3D2512] hover:bg-[#2A180B] active:scale-[0.99] text-white font-medium rounded-full text-xs shadow-md transition-all flex items-center justify-center gap-2"
-                >
-                  <span>Buy Now</span>
-                </button>
-              </div>
+                  {/* Action Buttons: Add to Cart & Buy Now */}
+                  <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                    <button
+                      onClick={handleAddToCart}
+                      className="w-full sm:flex-1 py-3.5 bg-[#F7F4EF] hover:bg-[#EFECE6] active:scale-[0.99] text-stone-800 font-medium rounded-full text-xs transition-all border border-stone-200/80 shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <ShoppingBag className="w-4 h-4" />
+                      <span>Add to Cart</span>
+                    </button>
+                    
+                    <button
+                      onClick={handleBuyNow}
+                      className="w-full sm:flex-1 py-3.5 bg-[#3D2512] hover:bg-[#2A180B] active:scale-[0.99] text-white font-medium rounded-full text-xs shadow-md transition-all flex items-center justify-center gap-2"
+                    >
+                      <span>Buy Now</span>
+                    </button>
+                  </div>
+                </>
+              )}
 
               {addedNotice && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Model ProductItem
@@ -16,8 +15,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ProductItem extends Model
 {
-    use SoftDeletes;
-
     // Mengatur Primary Key menggunakan string custom (contoh: "PROD-001")
     protected $primaryKey = 'item_id';
     public $incrementing = false;
@@ -49,12 +46,15 @@ class ProductItem extends Model
         'badge',               // String (50)
         'ingredients',         // TEXT
         'usage_advice',        // TEXT
+        'origin',              // TEXT
         'calories',            // String (30)
         'fat',                 // String (30)
         'sugar',               // String (30)
         'sat_fat',             // String (30)
         'preparation_minutes', // UNSIGNED TINYINTEGER
         'max_delivery_km',     // UNSIGNED SMALLINTEGER
+        'is_coming_soon',      // BOOLEAN
+        'release_date',        // String (50)
         'restocked_at',        // DATETIME
     ];
 
@@ -68,6 +68,7 @@ class ProductItem extends Model
         'discount' => 'float',
         'stock' => 'integer',
         'visibility' => 'boolean',
+        'is_coming_soon' => 'boolean',
         'rating' => 'float',
         'reviews_count' => 'integer',
         'sold_units' => 'integer',

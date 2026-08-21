@@ -38,6 +38,8 @@ class UpdateProductRequest extends FormRequest
             'sugar' => 'nullable|string|max:30',
             'sat_fat' => 'nullable|string|max:30',
             'max_delivery_km' => 'nullable|integer|min:1',
+            'is_coming_soon' => 'nullable|boolean',
+            'release_date' => 'nullable|string|max:50',
         ];
     }
 }

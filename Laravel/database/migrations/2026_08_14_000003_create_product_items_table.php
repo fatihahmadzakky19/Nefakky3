@@ -34,6 +34,7 @@ return new class extends Migration
             $table->string('badge', 50)->nullable()->default('BEST SELLER'); // String label lencana promo
             $table->text('ingredients')->nullable(); // Tipe Data TEXT komposisi bahan
             $table->text('usage_advice')->nullable(); // Tipe Data TEXT saran penyajian
+            $table->text('origin')->nullable(); // Tipe Data TEXT alamat asal dapur produksi resmi
             $table->string('calories', 30)->default('320 kcal'); // String kalori
             $table->string('fat', 30)->default('12g'); // String kadar lemak
             $table->string('sugar', 30)->default('4g'); // String kadar gula

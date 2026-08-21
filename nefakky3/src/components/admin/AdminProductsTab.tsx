@@ -12,10 +12,9 @@ import {
   Info,
   Image as ImageIcon,
   Apple,
-  RotateCcw,
-  AlertTriangle
+  Search
 } from 'lucide-react';
-import { ProductItem, useData } from '@/context/DataContext';
+import { ProductItem } from '@/context/DataContext';
 
 interface AdminProductsTabProps {
   productList: ProductItem[];
@@ -32,16 +31,31 @@ export default function AdminProductsTab({
   deleteProduct,
   toggleProductVisibility
 }: AdminProductsTabProps) {
-  const { softDeleteProduct, restoreProduct, forceDeleteProduct } = useData();
-  const [viewMode, setViewMode] = useState<'active' | 'trash'>('active');
   const [showProductModal, setShowProductModal] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
   const [productFormTab, setProductFormTab] = useState<'info' | 'media' | 'nutrition'>('info');
   const [prodGallery, setProdGallery] = useState<string[]>(['/images/ayam_bakar.jpg']);
+  const [filterType, setFilterType] = useState<'all' | 'active' | 'comingSoon'>('all');
+  const [searchProdQuery, setSearchProdQuery] = useState<string>('');
+  const [filterCategory, setFilterCategory] = useState<string>('Semua');
 
-  const activeProducts = (productList || []).filter(p => !p.isDeleted);
-  const trashedProducts = (productList || []).filter(p => p.isDeleted);
-  const displayedProducts = viewMode === 'active' ? activeProducts : trashedProducts;
+  const allProducts = productList || [];
+  const comingSoonCount = allProducts.filter(p => p.isComingSoon).length;
+  const activeCount = allProducts.filter(p => !p.isComingSoon && p.status !== 'Inactive').length;
+
+  const displayedProducts = allProducts.filter(p => {
+    if (filterType === 'active' && (p.isComingSoon || p.status === 'Inactive')) return false;
+    if (filterType === 'comingSoon' && !p.isComingSoon) return false;
+    if (filterCategory !== 'Semua' && p.category !== filterCategory) return false;
+    if (searchProdQuery.trim()) {
+      const q = searchProdQuery.toLowerCase();
+      const matchName = p.name.toLowerCase().includes(q);
+      const matchSku = (p.sku || '').toLowerCase().includes(q);
+      const matchCat = (p.category || '').toLowerCase().includes(q);
+      if (!matchName && !matchSku && !matchCat) return false;
+    }
+    return true;
+  });
 
   const [prodForm, setProdForm] = useState({
     name: '',
@@ -53,6 +67,8 @@ export default function AdminProductsTab({
     visibility: true,
     status: 'Active' as 'Active' | 'Low Stock' | 'Inactive',
     badge: '' as 'TERPOPULER' | 'BARU' | 'BEST SELLER' | 'NEW' | '',
+    isComingSoon: false,
+    releaseDate: '',
     image: '/images/ayam_bakar.jpg',
     gallery: '/images/ayam_bakar.jpg',
     description: '',
@@ -80,6 +96,8 @@ export default function AdminProductsTab({
       visibility: true,
       status: 'Active',
       badge: '',
+      isComingSoon: false,
+      releaseDate: '',
       image: '/images/ayam_bakar.jpg',
       gallery: '/images/ayam_bakar.jpg',
       description: '',
@@ -115,6 +133,8 @@ export default function AdminProductsTab({
       visibility: prod.visibility !== false,
       status: prod.status || 'Active',
       badge: (prod.badge || '') as any,
+      isComingSoon: Boolean(prod.isComingSoon),
+      releaseDate: prod.releaseDate || '',
       image: prod.image || '/images/ayam_bakar.jpg',
       gallery: existingPhotos.join(', '),
       description: prod.description || '',
@@ -148,6 +168,8 @@ export default function AdminProductsTab({
       visibility: prodForm.visibility,
       status: prodForm.status,
       badge: prodForm.badge || null,
+      isComingSoon: prodForm.isComingSoon,
+      releaseDate: prodForm.isComingSoon ? (prodForm.releaseDate.trim() || 'Segera Hadir') : '',
       image: mainCover,
       gallery: galleryPayload,
       description: prodForm.description.trim() || 'Hidangan tradisional rumahan otentik khas Nefakky.',
@@ -184,8 +206,8 @@ export default function AdminProductsTab({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-[#25160e]">Katalog Produk & Stok</h1>
-          <p className="text-xs text-[#4f4540]">Tambah hidangan baru, ubah harga porsi, atur stok, dan kelola tempat sampah (soft & force delete).</p>
+          <h1 className="font-serif text-3xl font-bold text-[#25160e]">Katalog Produk &amp; Stok</h1>
+          <p className="text-xs text-[#4f4540]">Tambah hidangan baru, ubah harga porsi, dan kelola ketersediaan stok menu.</p>
         </div>
         <button
           onClick={handleOpenAddProduct}
@@ -196,40 +218,84 @@ export default function AdminProductsTab({
         </button>
       </div>
 
-      <div className="flex items-center gap-3 bg-white p-2.5 rounded-2xl border border-amber-900/10 shadow-md">
-        <button
-          onClick={() => setViewMode('active')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            viewMode === 'active'
-              ? 'bg-[#25160e] text-white shadow-sm'
-              : 'text-[#4f4540] hover:bg-stone-100'
-          }`}
-        >
-          <Apple className="w-4 h-4 text-amber-400" />
-          <span>Katalog Aktif ({activeProducts.length})</span>
-        </button>
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-900/10 shadow-xl space-y-5">
+        
+        {/* FILTER TABS & SEARCH CONTROLS */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+          
+          {/* Status Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
+            <button
+              onClick={() => setFilterType('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                filterType === 'all'
+                  ? 'bg-[#25160e] text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              <span>Semua Menu</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterType === 'all' ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-700'}`}>
+                {allProducts.length}
+              </span>
+            </button>
 
-        <button
-          onClick={() => setViewMode('trash')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            viewMode === 'trash'
-              ? 'bg-rose-950 text-rose-200 border border-rose-800/40 shadow-sm'
-              : 'text-[#4f4540] hover:bg-stone-100'
-          }`}
-        >
-          <Trash2 className="w-4 h-4 text-rose-500" />
-          <span>Tempat Sampah ({trashedProducts.length})</span>
-        </button>
-      </div>
+            <button
+              onClick={() => setFilterType('active')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                filterType === 'active'
+                  ? 'bg-[#25160e] text-white shadow-sm'
+                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              }`}
+            >
+              <span>Menu Aktif</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterType === 'active' ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-700'}`}>
+                {activeCount}
+              </span>
+            </button>
 
-      {viewMode === 'trash' && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
-          <span>Produk di Tempat Sampah tersembunyi dari pelanggan publik. Anda dapat <strong>Pulihkan (Restore)</strong> kembali atau <strong>Hapus Permanen (Force Delete)</strong>.</span>
+            <button
+              onClick={() => setFilterType('comingSoon')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                filterType === 'comingSoon'
+                  ? 'bg-[#934b19] text-white shadow-sm'
+                  : 'bg-amber-50 text-[#934b19] border border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>⏳ Segera Hadir</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterType === 'comingSoon' ? 'bg-white/20 text-white' : 'bg-amber-200 text-[#934B19]'}`}>
+                {comingSoonCount}
+              </span>
+            </button>
+          </div>
+
+          {/* Search Input & Category Dropdown */}
+          <div className="flex items-center gap-2.5 flex-1 lg:max-w-md justify-end">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchProdQuery}
+                onChange={(e) => setSearchProdQuery(e.target.value)}
+                placeholder="Cari nama menu / SKU..."
+                className="w-full pl-9 pr-4 py-2 bg-[#fbf9f5] border border-amber-900/15 rounded-xl text-xs text-[#25160e] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934b19]/30 font-medium"
+              />
+            </div>
+
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="bg-[#fbf9f5] border border-amber-900/15 text-xs text-[#25160e] font-semibold py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#934b19]/30 cursor-pointer shrink-0"
+            >
+              <option value="Semua">Semua Kategori</option>
+              <option value="Makanan Berat">Makanan Berat</option>
+              <option value="Minuman">Minuman</option>
+              <option value="Menu Hemat">Menu Hemat</option>
+            </select>
+          </div>
+
         </div>
-      )}
 
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-amber-900/10 shadow-xl space-y-6">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
@@ -246,22 +312,29 @@ export default function AdminProductsTab({
               {displayedProducts.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-stone-400 font-medium">
-                    {viewMode === 'trash' ? 'Tempat sampah kosong. Belum ada produk yang terhapus sementara.' : 'Belum ada produk aktif.'}
+                    Belum ada produk.
                   </td>
                 </tr>
               ) : (
                 displayedProducts.map((prod) => (
-                  <tr key={prod.id} className={`hover:bg-[#fbf9f5] ${prod.isDeleted ? 'bg-stone-50/80 opacity-85' : ''}`}>
+                  <tr key={prod.id} className="hover:bg-[#fbf9f5]">
                     <td className="py-3.5 px-4">
                       <div
-                        onClick={() => !prod.isDeleted && handleOpenEditProduct(prod)}
-                        className={`flex items-center gap-3 ${!prod.isDeleted ? 'cursor-pointer group' : ''}`}
+                        onClick={() => handleOpenEditProduct(prod)}
+                        className="flex items-center gap-3 cursor-pointer group"
                       >
                         <div className="w-11 h-11 rounded-xl overflow-hidden bg-[#25160e] shrink-0 group-hover:ring-2 group-hover:ring-[#934b19] transition-all">
                           <img src={prod.image} alt={prod.name} className="w-full h-full object-cover" />
                         </div>
                         <div>
-                          <span className="font-bold text-[#25160e] group-hover:text-[#934b19] transition-colors block">{prod.name}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-[#25160e] group-hover:text-[#934b19] transition-colors block">{prod.name}</span>
+                            {prod.isComingSoon && (
+                              <span className="px-2 py-0.5 bg-amber-100 text-[#934B19] text-[9px] font-bold rounded-full border border-amber-300">
+                                ⏳ COMING SOON ({prod.releaseDate || 'Segera'})
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[10px] text-[#4f4540]">SKU: {prod.sku}</span>
                         </div>
                       </div>
@@ -273,16 +346,18 @@ export default function AdminProductsTab({
                         <span className="block text-[10px] text-emerald-600 font-normal">Diskon Rp {prod.discount.toLocaleString('id-ID')}</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 font-bold">{prod.stock} Porsi</td>
-                    <td className="py-3.5 px-4">
-                      {prod.isDeleted ? (
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                          🗑️ Terhapus Sementara
-                        </span>
+                    <td className="py-3.5 px-4 font-bold">
+                      {prod.isComingSoon ? (
+                        <span className="text-amber-800 font-bold text-[11px]">⏳ Segera Rilis</span>
                       ) : (
+                        `${prod.stock} Porsi`
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <button
                           onClick={() => toggleProductVisibility(prod.id)}
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
                             prod.visibility !== false
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : 'bg-stone-100 text-stone-500 border-stone-200'
@@ -290,58 +365,33 @@ export default function AdminProductsTab({
                         >
                           {prod.visibility !== false ? 'Publik' : 'Tersembunyi'}
                         </button>
-                      )}
+                        {prod.isComingSoon && (
+                          <span className="px-2 py-0.5 bg-amber-500/15 text-[#934B19] text-[10px] font-bold rounded-full border border-amber-500/30">
+                            Akan Datang
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {prod.isDeleted ? (
-                          <>
-                            <button
-                              onClick={() => {
-                                restoreProduct(prod.id);
-                                alert(`Produk "${prod.name}" berhasil dipulihkan kembali ke katalog aktif!`);
-                              }}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                              title="Pulihkan Produk ke Katalog Aktif"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              <span>Pulihkan</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm(`PERINGATAN FORCE DELETE!\nApakah Anda YAKIN ingin menghapus produk "${prod.name}" secara PERMANEN?\nData yang dihapus permanen tidak dapat dikembalikan lagi.`)) {
-                                  forceDeleteProduct(prod.id);
-                                }
-                              }}
-                              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                              title="Hapus Permanen (Force Delete)"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Hapus Permanen</span>
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleOpenEditProduct(prod)}
-                              className="p-2 text-[#934b19] hover:bg-amber-100/60 rounded-xl transition-colors"
-                              title="Edit Detail Produk"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm(`Pindahkan produk "${prod.name}" ke Tempat Sampah (Soft Delete)?\nProduk akan disembunyikan dari pelanggan dan dapat dipulihkan kapan saja.`)) {
-                                  softDeleteProduct(prod.id);
-                                }
-                              }}
-                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-                              title="Hapus Sementara (Soft Delete)"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={() => handleOpenEditProduct(prod)}
+                          className="p-2 text-[#934b19] hover:bg-amber-100/60 rounded-xl transition-colors"
+                          title="Edit Detail Produk"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Apakah Anda yakin ingin menghapus produk "${prod.name}"?`)) {
+                              deleteProduct(prod.id);
+                            }
+                          }}
+                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                          title="Hapus Produk"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -527,6 +577,47 @@ export default function AdminProductsTab({
                     >
                       {prodForm.visibility ? 'Dipublikasikan' : 'Disembunyikan'}
                     </button>
+                  </div>
+
+                  {/* PENGATURAN STATUS COMING SOON (SEGERA HADIR) */}
+                  <div className="p-4 bg-gradient-to-r from-amber-500/10 via-amber-600/10 to-amber-900/10 rounded-2xl border border-amber-900/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-[#25160e] flex items-center gap-1.5 text-xs">
+                          <Sparkles className="w-4 h-4 text-[#934B19]" />
+                          Status Menu Segera Hadir (Coming Soon)
+                        </span>
+                        <span className="text-[10px] text-[#4f4540]">
+                          Tandai hidangan ini sebagai menu yang akan datang (pelanggan dapat melihat rincian tanpa tombol beli).
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setProdForm({ ...prodForm, isComingSoon: !prodForm.isComingSoon })}
+                        className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
+                          prodForm.isComingSoon
+                            ? 'bg-[#934B19] text-white shadow-md'
+                            : 'bg-stone-200 text-stone-600'
+                        }`}
+                      >
+                        {prodForm.isComingSoon ? '⏳ Segera Hadir (ON)' : 'Bukan Coming Soon'}
+                      </button>
+                    </div>
+
+                    {prodForm.isComingSoon && (
+                      <div className="pt-2 border-t border-amber-900/15">
+                        <label className="block font-bold text-[#25160e] mb-1">
+                          Estimasi Periode / Tanggal Rilis (contoh: September 2026, Segera Meluncur)
+                        </label>
+                        <input
+                          type="text"
+                          value={prodForm.releaseDate}
+                          onChange={(e) => setProdForm({ ...prodForm, releaseDate: e.target.value })}
+                          placeholder="contoh: September 2026 atau Segera Hadir"
+                          className="w-full px-4 py-2.5 bg-white border border-amber-900/20 rounded-2xl font-semibold text-xs text-[#934B19]"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

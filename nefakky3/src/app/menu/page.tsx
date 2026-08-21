@@ -41,7 +41,7 @@ export default function MenuCatalogPage() {
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  const categories = ['Semua', 'Makanan Berat', 'Minuman', 'Menu Hemat'];
+  const categories = ['Semua', 'Makanan Berat', 'Minuman', 'Menu Hemat', '⏳ Segera Hadir'];
 
   const toggleWishlist = (productId: string) => {
     setFavorites(prev => 
@@ -51,7 +51,12 @@ export default function MenuCatalogPage() {
 
   // Processing products list
   const filteredProducts = products.filter(product => {
-    const matchCategory = activeCategory === 'Semua' || product.category === activeCategory;
+    let matchCategory = true;
+    if (activeCategory === '⏳ Segera Hadir') {
+      matchCategory = Boolean(product.isComingSoon);
+    } else if (activeCategory !== 'Semua') {
+      matchCategory = product.category === activeCategory && !product.isComingSoon;
+    }
     const matchSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                         product.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCategory && matchSearch && product.visibility !== false && !product.isDeleted;
@@ -159,11 +164,13 @@ export default function MenuCatalogPage() {
                     category: product.category,
                     price: product.price,
                     rating: product.rating,
-                    reviewsCount: `${product.reviewsCount || 120} Ulasan`,
+                    reviewsCount: product.isComingSoon ? 'Segera Hadir' : `${product.reviewsCount || 120} Ulasan`,
                     image: product.image,
                     description: product.description,
                     ingredients: product.ingredients || 'Bahan baku koki pilihan.',
-                    storage: product.usageAdvice || 'Santap selagi hangat.'
+                    storage: product.usageAdvice || 'Santap selagi hangat.',
+                    isComingSoon: product.isComingSoon,
+                    releaseDate: product.releaseDate || 'Segera Meluncur'
                   })}
                 >
                   <img
@@ -176,25 +183,40 @@ export default function MenuCatalogPage() {
                   {/* Wishlist Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id); }}
-                    className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md rounded-full shadow-sm text-stone-700 hover:text-rose-500 transition-colors active:scale-95"
+                    className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md rounded-full shadow-sm text-stone-700 hover:text-rose-500 transition-colors active:scale-95 z-10"
                   >
                     <Heart className={`w-4 h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
                   </button>
 
-                  {/* Rating & Sales Badge */}
-                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-[#25160E] flex items-center gap-1 shadow-sm">
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    <span>{product.rating.toFixed(1)}</span>
-                    <span className="text-[10px] text-[#4F4540] font-normal ml-1">• {product.soldCount || '500+ Terjual'}</span>
-                  </div>
+                  {/* Rating & Sales Badge or Coming Soon Badge */}
+                  {product.isComingSoon ? (
+                    <div className="absolute top-3 left-3 bg-[#934B19] text-white px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold flex items-center gap-1 shadow-md">
+                      <Sparkles className="w-3 h-3 text-amber-200 animate-pulse" />
+                      <span>{product.releaseDate || 'Segera Hadir'}</span>
+                    </div>
+                  ) : (
+                    <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-[#25160E] flex items-center gap-1 shadow-sm">
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      <span>{product.rating.toFixed(1)}</span>
+                      <span className="text-[10px] text-[#4F4540] font-normal ml-1">• {product.soldCount || '500+ Terjual'}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Body */}
                 <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3.5 sm:space-y-4">
                   <div className="space-y-1.5">
-                    <span className="text-[10px] font-bold text-[#934B19] uppercase tracking-wider">
-                      {product.category}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-[#934B19] uppercase tracking-wider">
+                        {product.category}
+                      </span>
+                      {product.isComingSoon && (
+                        <span className="text-[9px] bg-amber-100 text-[#934B19] px-2 py-0.5 rounded-full font-bold border border-amber-300">
+                          COMING SOON
+                        </span>
+                      )}
+                    </div>
+
                     <h3 
                       onClick={() => setDetailProduct({
                         id: product.id,
@@ -202,11 +224,13 @@ export default function MenuCatalogPage() {
                         category: product.category,
                         price: product.price,
                         rating: product.rating,
-                        reviewsCount: `${product.reviewsCount || 120} Ulasan`,
+                        reviewsCount: product.isComingSoon ? 'Segera Hadir' : `${product.reviewsCount || 120} Ulasan`,
                         image: product.image,
                         description: product.description,
                         ingredients: product.ingredients || 'Bahan baku koki pilihan.',
-                        storage: product.usageAdvice || 'Santap selagi hangat.'
+                        storage: product.usageAdvice || 'Santap selagi hangat.',
+                        isComingSoon: product.isComingSoon,
+                        releaseDate: product.releaseDate || 'Segera Meluncur'
                       })}
                       className="font-serif text-base sm:text-lg font-bold text-[#25160E] hover:text-[#934B19] cursor-pointer transition-colors line-clamp-1"
                     >
@@ -217,16 +241,39 @@ export default function MenuCatalogPage() {
                     </p>
                   </div>
 
-                  {/* Footer Price & Add To Cart Button */}
+                  {/* Footer Price & Add To Cart Button / Coming Soon Button */}
                   <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
                     <div>
-                      <span className="text-[10px] text-stone-400 font-medium block">Harga Porsi</span>
+                      <span className="text-[10px] text-stone-400 font-medium block">
+                        {product.isComingSoon ? 'Estimasi Harga' : 'Harga Porsi'}
+                      </span>
                       <span className="font-serif text-sm sm:text-base font-bold text-[#25160E]">
                         Rp {product.price.toLocaleString('id-ID')}
                       </span>
                     </div>
 
-                    {cartQty > 0 ? (
+                    {product.isComingSoon ? (
+                      <button
+                        onClick={() => setDetailProduct({
+                          id: product.id,
+                          name: product.name,
+                          category: product.category,
+                          price: product.price,
+                          rating: product.rating,
+                          reviewsCount: 'Segera Hadir',
+                          image: product.image,
+                          description: product.description,
+                          ingredients: product.ingredients || 'Bahan baku koki pilihan.',
+                          storage: product.usageAdvice || 'Nantikan peluncuran resmi menu istimewa ini.',
+                          isComingSoon: true,
+                          releaseDate: product.releaseDate || 'Segera Meluncur'
+                        })}
+                        className="px-3.5 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-[#934B19] to-[#25160E] text-amber-200 text-xs font-bold rounded-xl sm:rounded-2xl shadow transition-all flex items-center gap-1.5 active:scale-95"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Segera Hadir</span>
+                      </button>
+                    ) : cartQty > 0 ? (
                       <div className="flex items-center gap-1.5 sm:gap-2 bg-[#FBF9F5] border border-amber-900/15 p-1 rounded-xl sm:rounded-2xl">
                         <button
                           onClick={() => removeFromCart(product.id)}

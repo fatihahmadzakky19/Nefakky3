@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Model Voucher
@@ -14,8 +13,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Voucher extends Model
 {
-    use SoftDeletes;
-
     // Mengatur Primary Key menggunakan string custom (contoh: "VOUCH-01")
     protected $primaryKey = 'voucher_id';
     public $incrementing = false;

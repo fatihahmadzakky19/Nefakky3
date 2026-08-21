@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Trash2, RotateCcw, Tag, AlertTriangle, Calendar, Users, Sparkles, Check, Gift, Edit3, RefreshCw, Clock, Image as ImageIcon, Upload, Link2, Camera } from 'lucide-react';
+import { Plus, X, Trash2, Tag, Calendar, Users, Sparkles, Check, Gift, Edit3, RefreshCw, Clock, Image as ImageIcon, Upload, Link2, Camera, Receipt, DollarSign, Search } from 'lucide-react';
 import { AdminVoucher, useData } from '@/context/DataContext';
 
 interface AdminPromotionsTabProps {
@@ -19,10 +19,12 @@ export default function AdminPromotionsTab({
   initialVoucherCode = '',
   initialVoucherName = ''
 }: AdminPromotionsTabProps) {
-  const { softDeleteVoucher, restoreVoucher, forceDeleteVoucher, updateVoucher } = useData();
-  const [viewMode, setViewMode] = useState<'active' | 'trash'>('active');
+  const { updateVoucher, orders } = useData();
   const [showVoucherModal, setShowVoucherModal] = useState<boolean>(false);
   const [editingVoucher, setEditingVoucher] = useState<AdminVoucher | null>(null);
+  const [selectedVoucherForUsage, setSelectedVoucherForUsage] = useState<AdminVoucher | null>(null);
+  const [showUsageModal, setShowUsageModal] = useState<boolean>(false);
+  const [voucherSearchQuery, setVoucherSearchQuery] = useState<string>('');
   
   // State Form Voucher
   const [voucherCode, setVoucherCode] = useState<string>(initialVoucherCode);
@@ -42,9 +44,17 @@ export default function AdminPromotionsTab({
   const [voucherImageUrl, setVoucherImageUrl] = useState<string>('');
   const [imageInputTab, setImageInputTab] = useState<'upload' | 'url'>('upload');
 
-  const activeVouchers = (voucherList || []).filter(v => !v.isDeleted);
-  const trashedVouchers = (voucherList || []).filter(v => v.isDeleted);
-  const displayedVouchers = viewMode === 'active' ? activeVouchers : trashedVouchers;
+  const allVouchers = voucherList || [];
+  const displayedVouchers = allVouchers.filter((v) => {
+    if (voucherSearchQuery.trim()) {
+      const q = voucherSearchQuery.toLowerCase();
+      const matchCode = v.code.toLowerCase().includes(q);
+      const matchName = v.name.toLowerCase().includes(q);
+      const matchEvent = (v.event || '').toLowerCase().includes(q);
+      if (!matchCode && !matchName && !matchEvent) return false;
+    }
+    return true;
+  });
 
   // Format Tanggal Indonesia (contoh: 2026-12-31 -> 31 Des 2026)
   const formatDateIndo = (dateStr: string) => {
@@ -209,56 +219,36 @@ export default function AdminPromotionsTab({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-[#25160e]">Kelola Voucher & Promosi</h1>
-          <p className="text-xs text-[#4f4540]">Terbitkan & edit kode diskon khusus, kelola hari aktif (weekend/weekdays), reset kuota mingguan, dan tempat sampah voucher.</p>
+          <h1 className="font-serif text-3xl font-bold text-[#25160e]">Kelola Voucher &amp; Promosi</h1>
+          <p className="text-xs text-[#4f4540]">Terbitkan &amp; edit kode diskon khusus, kelola hari aktif (weekend/weekdays), dan reset kuota mingguan.</p>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-5 py-3 bg-[#934b19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow-lg flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Terbitkan Voucher Baru</span>
-        </button>
-      </div>
 
-      {/* FILTER TAB BAR: ACTIVE VS TRASH */}
-      <div className="flex items-center gap-3 bg-white p-2.5 rounded-2xl border border-amber-900/10 shadow-md">
-        <button
-          onClick={() => setViewMode('active')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            viewMode === 'active'
-              ? 'bg-[#25160e] text-white shadow-sm'
-              : 'text-[#4f4540] hover:bg-stone-100'
-          }`}
-        >
-          <Tag className="w-4 h-4 text-amber-400" />
-          <span>Voucher Aktif ({activeVouchers.length})</span>
-        </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={voucherSearchQuery}
+              onChange={(e) => setVoucherSearchQuery(e.target.value)}
+              placeholder="Cari kode voucher / event..."
+              className="w-full pl-9 pr-4 py-2.5 bg-white border border-amber-900/15 rounded-2xl text-xs text-[#25160e] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934b19]/30 font-medium shadow-xs"
+            />
+          </div>
 
-        <button
-          onClick={() => setViewMode('trash')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            viewMode === 'trash'
-              ? 'bg-rose-950 text-rose-200 border border-rose-800/40 shadow-sm'
-              : 'text-[#4f4540] hover:bg-stone-100'
-          }`}
-        >
-          <Trash2 className="w-4 h-4 text-rose-500" />
-          <span>Tempat Sampah ({trashedVouchers.length})</span>
-        </button>
-      </div>
-
-      {viewMode === 'trash' && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
-          <span>Voucher di Tempat Sampah tidak dapat dipakai pelanggan. Anda dapat <strong>Pulihkan (Restore)</strong> atau <strong>Hapus Permanen (Force Delete)</strong>.</span>
+          <button
+            onClick={handleOpenCreateModal}
+            className="px-5 py-2.5 bg-[#934b19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow-lg flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Terbitkan Voucher</span>
+          </button>
         </div>
-      )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {displayedVouchers.length === 0 ? (
           <div className="col-span-full py-12 text-center text-stone-400 font-medium bg-white rounded-3xl border border-amber-900/10 p-8">
-            {viewMode === 'trash' ? 'Tempat sampah kosong. Belum ada voucher terhapus.' : 'Belum ada voucher aktif.'}
+            Belum ada voucher.
           </div>
         ) : (
           displayedVouchers.map((v) => {
@@ -268,8 +258,13 @@ export default function AdminPromotionsTab({
             const daysSetting = v.validDays || (v.event === 'Promo Akhir Pekan' || v.code?.toUpperCase().includes('WEEKEND') ? 'Weekend' : 'Semua Hari');
             const isAutoReset = v.autoResetWeekly ?? (daysSetting === 'Weekend' || v.event === 'Promo Akhir Pekan');
 
+            const usedOrders = (orders || []).filter(o => 
+              (o.voucherCode && o.voucherCode.toUpperCase().includes(v.code.toUpperCase())) ||
+              (o.appliedPromo && o.appliedPromo.toUpperCase().includes(v.code.toUpperCase()))
+            );
+
             return (
-              <div key={v.id} className={`bg-white rounded-3xl border shadow-xl space-y-0 transition-all duration-200 hover:shadow-2xl overflow-hidden flex flex-col justify-between ${v.isDeleted ? 'border-rose-200 bg-stone-50/80' : 'border-amber-900/10'}`}>
+              <div key={v.id} className="bg-white rounded-3xl border shadow-xl space-y-0 transition-all duration-200 hover:shadow-2xl overflow-hidden flex flex-col justify-between border-amber-900/10">
                 {/* GAMBAR BANNER PROMO HEADER */}
                 <div className="relative h-44 w-full bg-gradient-to-br from-[#25160e] via-[#4a2e1b] to-[#934b19] overflow-hidden group">
                   {v.imageUrl ? (
@@ -304,11 +299,9 @@ export default function AdminPromotionsTab({
                   {/* BADGE STATUS (TOP RIGHT) */}
                   <div className="absolute top-3 right-3">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shadow-md backdrop-blur-md ${
-                      v.isDeleted
-                        ? 'bg-rose-600 text-white border border-rose-400'
-                        : v.status === 'Active' ? 'bg-emerald-600/90 text-white border border-emerald-300' : 'bg-stone-800/90 text-stone-300 border border-stone-600'
+                      v.status === 'Active' ? 'bg-emerald-600/90 text-white border border-emerald-300' : 'bg-stone-800/90 text-stone-300 border border-stone-600'
                     }`}>
-                      {v.isDeleted ? 'Terhapus' : v.status}
+                      {v.status}
                     </span>
                   </div>
 
@@ -343,7 +336,7 @@ export default function AdminPromotionsTab({
                       </span>
                       {daysSetting === 'Weekend' ? (
                         <strong className="text-amber-800 font-bold bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300/70 text-[11px]">
-                          Sabtu & Minggu (Weekend)
+                          Sabtu &amp; Minggu (Weekend)
                         </strong>
                       ) : daysSetting === 'Weekdays' ? (
                         <strong className="text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80 text-[11px]">
@@ -397,64 +390,57 @@ export default function AdminPromotionsTab({
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-stone-100 flex justify-between items-center gap-2">
-                    {v.isDeleted ? (
-                      <>
-                        <button
-                          onClick={() => {
-                            restoreVoucher(v.id);
-                            alert(`Voucher "${v.code}" berhasil dipulihkan!`);
-                          }}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Pulihkan</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`PERINGATAN FORCE DELETE!\nHapus voucher "${v.code}" secara PERMANEN? Data yang dihapus tidak dapat dikembalikan.`)) {
-                              forceDeleteVoucher(v.id);
-                            }
-                          }}
-                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Hapus Permanen</span>
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-3">
-                          {/* TOMBOL EDIT VOUCHER */}
-                          <button
-                            onClick={() => handleOpenEditModal(v)}
-                            className="text-xs font-bold text-amber-800 hover:text-amber-950 hover:underline flex items-center gap-1 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200/60 transition-all"
-                          >
-                            <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-                            <span>Edit</span>
-                          </button>
+                  {/* FOOTER ACTIONS & RIWAYAT PENGGUNA */}
+                  <div className="pt-3 border-t border-stone-100 space-y-2">
+                    {/* TOMBOL LIHAT DAFTAR PENGGUNA PROMO (UNTUK OWNER & ADMIN) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedVoucherForUsage(v);
+                        setShowUsageModal(true);
+                      }}
+                      className="w-full py-2 px-3.5 bg-gradient-to-r from-amber-500/10 via-amber-600/10 to-amber-900/10 hover:from-amber-500/20 hover:to-amber-900/20 text-[#25160e] rounded-xl text-xs font-bold transition-all flex items-center justify-between border border-amber-900/15 shadow-xs group cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5 text-xs text-[#934b19]">
+                        <Users className="w-3.5 h-3.5 text-[#934b19]" />
+                        <span>Lihat Pengguna Promo</span>
+                      </span>
+                      <span className="bg-[#934b19] text-white px-2 py-0.5 rounded-full text-[10px] font-mono font-bold group-hover:scale-105 transition-transform">
+                        {usedOrders.length} Pesanan
+                      </span>
+                    </button>
 
-                          <button
-                            onClick={() => toggleVoucherStatus(v.id)}
-                            className="text-xs font-bold text-[#934b19] hover:underline"
-                          >
-                            {v.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan'}
-                          </button>
-                        </div>
+                    <div className="flex justify-between items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        {/* TOMBOL EDIT VOUCHER */}
+                        <button
+                          onClick={() => handleOpenEditModal(v)}
+                          className="text-xs font-bold text-amber-800 hover:text-amber-950 hover:underline flex items-center gap-1 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200/60 transition-all"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                          <span>Edit</span>
+                        </button>
 
                         <button
-                          onClick={() => {
-                            if (confirm(`Pindahkan voucher "${v.code}" ke Tempat Sampah (Soft Delete)?`)) {
-                              softDeleteVoucher(v.id);
-                            }
-                          }}
-                          className="text-xs font-bold text-rose-600 hover:underline flex items-center gap-1"
+                          onClick={() => toggleVoucherStatus(v.id)}
+                          className="text-xs font-bold text-[#934b19] hover:underline"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Hapus</span>
+                          {v.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan'}
                         </button>
-                      </>
-                    )}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (confirm(`Apakah Anda yakin ingin menghapus voucher "${v.code}"?`)) {
+                            deleteVoucher(v.id);
+                          }
+                        }}
+                        className="text-xs font-bold text-rose-600 hover:underline flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -880,6 +866,187 @@ export default function AdminPromotionsTab({
           </div>
         </div>
       )}
+
+      {/* MODAL DAFTAR PENGGUNA VOUCHER PROMO (UNTUK OWNER & ADMIN) */}
+      {showUsageModal && selectedVoucherForUsage && (() => {
+        const targetVoucherOrders = (orders || []).filter(o => 
+          (o.voucherCode && o.voucherCode.toUpperCase().includes(selectedVoucherForUsage.code.toUpperCase())) ||
+          (o.appliedPromo && o.appliedPromo.toUpperCase().includes(selectedVoucherForUsage.code.toUpperCase()))
+        );
+
+        const totalDiscountGiven = targetVoucherOrders.reduce((sum, o) => sum + (o.discount || 0), 0);
+        const totalNetSales = targetVoucherOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#25160e]/60 backdrop-blur-md animate-fade-in print:hidden overflow-y-auto">
+            <div className="w-full max-w-3xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 border border-amber-900/15 max-h-[90vh] overflow-y-auto">
+              
+              {/* Modal Header */}
+              <div className="flex items-start sm:items-center justify-between border-b border-stone-100 pb-4 gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-black text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-lg border border-amber-300">
+                      {selectedVoucherForUsage.code}
+                    </span>
+                    <span className="text-[10px] font-bold bg-[#934b19] text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Diskon {selectedVoucherForUsage.discountPercent}%
+                    </span>
+                    <span className="text-[10px] text-stone-500 font-medium">
+                      • {selectedVoucherForUsage.event || 'Promo Spesial'}
+                    </span>
+                  </div>
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#25160e]">
+                    Riwayat Pengguna Promo: {selectedVoucherForUsage.name}
+                  </h3>
+                  <p className="text-xs text-[#4f4540]">
+                    Laporan transaksi &amp; daftar pelanggan yang telah mengklaim dan berbelanja menggunakan voucher ini.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowUsageModal(false)} 
+                  className="text-stone-400 hover:text-[#25160e] p-1.5 rounded-xl hover:bg-stone-100 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* 3 KPI SUMMARY CARDS */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div className="bg-[#fbf9f5] border border-amber-900/15 p-4 rounded-2xl space-y-1">
+                  <span className="text-[10px] font-bold text-[#4f4540] uppercase tracking-wider block flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-[#934b19]" />
+                    Total Penggunaan
+                  </span>
+                  <div className="font-serif text-xl font-bold text-[#25160e]">
+                    {targetVoucherOrders.length} Transaksi
+                  </div>
+                  <span className="text-[10px] text-stone-500 block">Klaim belanja berhasil</span>
+                </div>
+
+                <div className="bg-amber-50/80 border border-amber-300/60 p-4 rounded-2xl space-y-1">
+                  <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider block flex items-center gap-1">
+                    <Gift className="w-3.5 h-3.5 text-[#934b19]" />
+                    Total Potongan Diberikan
+                  </span>
+                  <div className="font-serif text-xl font-bold text-[#934b19]">
+                    Rp {totalDiscountGiven.toLocaleString('id-ID')}
+                  </div>
+                  <span className="text-[10px] text-amber-800 font-semibold block">Total subsidi diskon toko</span>
+                </div>
+
+                <div className="bg-emerald-50/80 border border-emerald-300/60 p-4 rounded-2xl space-y-1">
+                  <span className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider block flex items-center gap-1">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-700" />
+                    Omzet Penjualan Bersih
+                  </span>
+                  <div className="font-serif text-xl font-bold text-emerald-950">
+                    Rp {totalNetSales.toLocaleString('id-ID')}
+                  </div>
+                  <span className="text-[10px] text-emerald-800 font-semibold block">Pendapatan masuk toko</span>
+                </div>
+              </div>
+
+              {/* DAFTAR TRANSAKSI PELANGGAN */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-xs text-[#25160e] uppercase tracking-wider flex items-center gap-1.5">
+                    <Receipt className="w-4 h-4 text-[#934b19]" />
+                    Rincian Transaksi Pengguna ({targetVoucherOrders.length})
+                  </h4>
+                  <span className="text-[11px] text-stone-500">
+                    *Tercatat realtime dari pesanan pelanggan
+                  </span>
+                </div>
+
+                {targetVoucherOrders.length === 0 ? (
+                  <div className="py-12 px-4 text-center bg-[#fbf9f5] rounded-2xl border border-dashed border-amber-900/20 space-y-2">
+                    <Users className="w-10 h-10 text-stone-300 mx-auto" />
+                    <h5 className="font-serif font-bold text-sm text-[#25160e]">Belum Ada Pengguna</h5>
+                    <p className="text-xs text-[#4f4540] max-w-md mx-auto font-light">
+                      Voucher <strong>{selectedVoucherForUsage.code}</strong> belum digunakan oleh pelanggan. Begitu ada pesanan masuk yang menggunakan kode ini, rincian pembeli akan otomatis muncul di sini.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                    {targetVoucherOrders.map((ord) => (
+                      <div 
+                        key={ord.id}
+                        className="p-4 bg-[#fbf9f5] border border-amber-900/10 rounded-2xl hover:border-amber-900/30 transition-all space-y-2.5"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-900/10 pb-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-full bg-[#25160e] text-white flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                              {ord.avatar ? (
+                                <img src={ord.avatar} alt={ord.customerName} className="w-full h-full object-cover" />
+                              ) : (
+                                ord.customerName.charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs text-[#25160e]">{ord.customerName}</span>
+                                <span className="font-mono text-[10px] font-bold text-[#934b19] bg-amber-100 px-2 py-0.2 rounded-md">
+                                  #{ord.id}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-stone-500">
+                                {ord.date || 'Waktu Pesanan'} {ord.customerEmail ? `• ${ord.customerEmail}` : ''} {ord.phone ? `• ${ord.phone}` : ''}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-left sm:text-right flex sm:flex-col items-center sm:items-end justify-between gap-1">
+                            <span className="font-serif text-sm font-bold text-[#25160e]">
+                              Rp {ord.total.toLocaleString('id-ID')}
+                            </span>
+                            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+                              Diskon: -Rp {(ord.discount || 0).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Menu Dipesan & Metode Bayar */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[11px] text-stone-500 font-medium">Menu:</span>
+                            {(ord.items || []).map((it, idx) => (
+                              <span key={idx} className="bg-white border border-stone-200 px-2 py-0.5 rounded-lg text-[10px] font-bold text-[#25160e]">
+                                {it.quantity}x {it.name}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] bg-[#25160e] text-amber-200 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                              {ord.status}
+                            </span>
+                            <span className="text-[10px] bg-stone-200 text-stone-700 px-2 py-0.5 rounded-full font-medium">
+                              {ord.paymentMethod?.toLowerCase().includes('cod') ? 'COD (Tunai)' : 'Online Midtrans'}
+                            </span>
+                          </div>
+                        </div>
+
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-3 border-t border-stone-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowUsageModal(false)}
+                  className="px-5 py-2.5 bg-[#25160e] hover:bg-[#3c2a21] text-white text-xs font-bold rounded-2xl shadow transition-all cursor-pointer"
+                >
+                  Tutup Rincian
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

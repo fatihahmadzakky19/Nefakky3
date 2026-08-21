@@ -15,7 +15,11 @@ import {
   UploadCloud,
   X,
   Maximize2,
-  ExternalLink
+  ExternalLink,
+  Ticket,
+  Tag,
+  Sparkles,
+  Search
 } from 'lucide-react';
 import { AdminOrder, useData } from '@/context/DataContext';
 
@@ -30,14 +34,41 @@ export default function AdminOrdersTab({
   updateOrderStatus,
   onPrintPDF
 }: AdminOrdersTabProps) {
-  const { isHighDemand, highDemandMessage, toggleHighDemand, uploadOrderProofPhoto } = useData();
+  const { isHighDemand, highDemandMessage, toggleHighDemand, uploadOrderProofPhoto, uploadOrderPaymentProofPhoto } = useData();
   const [selectedProofPhoto, setSelectedProofPhoto] = useState<string | null>(null);
+  const [uploadTarget, setUploadTarget] = useState<{ orderId: string; type: 'proof' | 'payment' } | null>(null);
+  const adminFileInputRef = React.useRef<HTMLInputElement>(null);
   const [productSearch, setProductSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PENDING' | 'COOKING' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED'>('ALL');
   const [orderDateRangeFilter, setOrderDateRangeFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | '30days' | 'thisMonth' | 'lastMonth' | 'june2026'>('all');
   const [demandMsgInput, setDemandMsgInput] = useState(highDemandMessage);
   const [saveDemandSuccess, setSaveDemandSuccess] = useState(false);
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<AdminOrder | null>(null);
+
+  const handleAdminFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && uploadTarget) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        if (uploadTarget.type === 'proof') {
+          uploadOrderProofPhoto(uploadTarget.orderId, base64);
+        } else {
+          uploadOrderPaymentProofPhoto(uploadTarget.orderId, base64);
+        }
+        setUploadTarget(null);
+        if (adminFileInputRef.current) adminFileInputRef.current.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerUpload = (orderId: string, type: 'proof' | 'payment') => {
+    setUploadTarget({ orderId, type });
+    setTimeout(() => {
+      adminFileInputRef.current?.click();
+    }, 50);
+  };
 
   useEffect(() => {
     setDemandMsgInput(highDemandMessage);
@@ -178,11 +209,20 @@ export default function AdminOrdersTab({
 
   return (
     <div className="space-y-6">
+      {/* Hidden file input for Admin WA proof photo upload */}
+      <input 
+        type="file" 
+        ref={adminFileInputRef} 
+        accept="image/*" 
+        onChange={handleAdminFileUpload} 
+        className="hidden" 
+      />
+
       {/* TOP HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="font-serif text-3xl font-bold text-[#25160e]">Kelola Pesanan Masuk (Orders Desk)</h1>
-          <p className="text-xs text-[#4f4540]">Pantau alur status pesanan 5-tahap dan metode pembayaran secara real-time.</p>
+          <p className="text-xs text-[#4f4540]">Pantau alur status pesanan 5-tahap dan kelola bukti pengantaran/COD dari kurir karyawan.</p>
         </div>
       </div>
 
@@ -325,18 +365,20 @@ export default function AdminOrdersTab({
         </div>
       </div>
 
-      {/* FILTERS BAR */}
-      <div className="bg-white rounded-3xl p-5 border border-amber-900/10 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-          <span className="text-xs font-bold text-[#25160e] flex items-center gap-1.5 shrink-0 pr-2">
+      {/* FILTERS BAR & SEARCH CONTROLS */}
+      <div className="bg-white rounded-3xl p-5 border border-amber-900/10 shadow-xl flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
+        
+        {/* Status Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 no-scrollbar">
+          <span className="text-xs font-bold text-[#25160e] flex items-center gap-1.5 shrink-0 pr-1">
             <Filter className="w-4 h-4 text-[#934b19]" />
-            <span>Filter Status:</span>
+            <span>Status:</span>
           </span>
           {['ALL', 'PENDING', 'COOKING', 'SHIPPING', 'COMPLETED', 'CANCELLED'].map((st) => (
             <button
               key={st}
               onClick={() => setOrderStatusFilter(st as any)}
-              className={`px-3.5 py-2 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap shrink-0 ${
                 orderStatusFilter === st
                   ? 'bg-[#25160e] text-white shadow-md'
                   : 'bg-[#fbf9f5] border border-amber-900/15 text-[#4f4540] hover:bg-stone-100'
@@ -347,23 +389,36 @@ export default function AdminOrdersTab({
           ))}
         </div>
 
-        {/* DATE RANGE PICKER SELECT */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Calendar className="w-4 h-4 text-[#934b19]" />
-          <select
-            value={orderDateRangeFilter}
-            onChange={(e) => setOrderDateRangeFilter(e.target.value as any)}
-            className="bg-[#fbf9f5] border border-amber-900/15 rounded-2xl px-4 py-2 text-xs font-bold text-[#25160e] outline-none cursor-pointer shadow-xs"
-          >
-            <option value="all">📅 Rentang Waktu: Semua Waktu</option>
-            <option value="today">☀️ Hari Ini</option>
-            <option value="yesterday">⌛ Kemarin</option>
-            <option value="7days">🗓️ 7 Hari Terakhir</option>
-            <option value="30days">📊 30 Hari Terakhir</option>
-            <option value="thisMonth">📅 Bulan Ini (Agustus 2026)</option>
-            <option value="lastMonth">📅 Bulan Lalu (Juli 2026)</option>
-            <option value="june2026">📅 Juni 2026</option>
-          </select>
+        {/* Search Input & Date Range Controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 lg:max-w-xl justify-end">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              placeholder="Cari No. Order / Pelanggan / Menu..."
+              className="w-full pl-9 pr-4 py-2 bg-[#fbf9f5] border border-amber-900/15 rounded-xl text-xs text-[#25160e] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934b19]/30 font-medium"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-[#fbf9f5] border border-amber-900/15 rounded-xl px-3 py-2 shrink-0">
+            <Calendar className="w-3.5 h-3.5 text-[#934b19] shrink-0" />
+            <select
+              value={orderDateRangeFilter}
+              onChange={(e) => setOrderDateRangeFilter(e.target.value as any)}
+              className="bg-transparent text-xs font-bold text-[#25160e] outline-none cursor-pointer"
+            >
+              <option value="all">Semua Waktu</option>
+              <option value="today">Hari Ini</option>
+              <option value="yesterday">Kemarin</option>
+              <option value="7days">7 Hari Terakhir</option>
+              <option value="30days">30 Hari Terakhir</option>
+              <option value="thisMonth">Bulan Ini (Agustus 2026)</option>
+              <option value="lastMonth">Bulan Lalu (Juli 2026)</option>
+              <option value="june2026">Juni 2026</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -383,10 +438,21 @@ export default function AdminOrdersTab({
               </div>
               <div className="text-right">
                 <span className="font-serif text-lg font-bold text-[#25160e]">Rp {ord.total.toLocaleString('id-ID')}</span>
-                <div className="mt-1 flex items-center gap-1.5 justify-end">
+                <div className="mt-1 flex items-center gap-1.5 justify-end flex-wrap">
                   <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-200">
                     {ord.paymentMethod} ({ord.paymentBadge})
                   </span>
+
+                  {(ord.voucherCode || ord.appliedPromo || (ord.discount && ord.discount > 0)) ? (
+                    <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 text-[10px] font-bold rounded-full border border-amber-300 flex items-center gap-1">
+                      <Ticket className="w-3 h-3 text-[#934B19]" />
+                      <span>{ord.voucherCode || ord.appliedPromo || 'Promo'} (-Rp {(ord.discount || 0).toLocaleString('id-ID')})</span>
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] font-medium rounded-full border border-stone-200">
+                      Tanpa Promo
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -400,100 +466,161 @@ export default function AdminOrdersTab({
               ))}
             </div>
 
-            {/* SEKSI BUKTI FOTO PENERIMAAN UNTUK ADMIN */}
-            <div className="p-3.5 bg-[#FBF9F5] border border-amber-900/15 rounded-2xl space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-[#25160E] flex items-center gap-1.5">
-                  <Camera className="w-4 h-4 text-[#934B19]" />
-                  Bukti Foto Penerimaan &amp; Pembayaran COD
-                </span>
-
-                {ord.proofPhoto && (
-                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-300 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    Foto Terverifikasi
+            {/* SEKSI BUKTI FOTO PENERIMAAN UNTUK ADMIN (DARI WA KURIR/KARYAWAN) */}
+            <div className="p-4 bg-[#FBF9F5] border border-amber-900/15 rounded-2xl space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-amber-900/10 pb-2.5">
+                <div>
+                  <span className="text-xs font-bold text-[#25160E] flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-[#934B19]" />
+                    Bukti Pengantaran &amp; Pembayaran COD (dari WA Kurir/Karyawan)
                   </span>
-                )}
+                  <p className="text-[10px] text-[#4F4540]">
+                    Karyawan mengirim foto serah terima/COD via WhatsApp. Admin mengunggah bukti ke sistem untuk verifikasi resmi.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {ord.proofPhoto && (
+                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-300 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Foto Makanan Ada
+                    </span>
+                  )}
+                  {ord.paymentProofPhoto && (
+                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-300 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Bukti Uang COD Ada
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* 1. FOTO BUKTI MAKANAN DITERIMA */}
                 {ord.proofPhoto ? (
-                  <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-amber-900/10 shadow-xs">
-                    <div className="flex items-center gap-2.5">
+                  <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-amber-900/15 shadow-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <div 
                         onClick={() => setSelectedProofPhoto(ord.proofPhoto!)}
-                        className="w-12 h-12 rounded-xl overflow-hidden border border-amber-900/20 shadow-xs shrink-0 bg-stone-900 cursor-pointer group relative"
+                        className="w-14 h-14 min-w-[56px] max-w-[56px] min-h-[56px] max-h-[56px] rounded-xl overflow-hidden border border-amber-900/20 shadow-xs shrink-0 bg-stone-900 cursor-pointer group relative"
                         title="Klik untuk Perbesar Foto Makanan"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={ord.proofPhoto} alt="Bukti Makanan" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                        <img src={ord.proofPhoto} alt="Bukti Makanan" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 block" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                           <Maximize2 className="w-3.5 h-3.5" />
                         </div>
                       </div>
 
-                      <div>
-                        <span className="text-[11px] font-bold text-[#25160E] block">1. Bukti Makanan #{ord.id}</span>
-                        <span className="text-[10px] text-[#4F4540]">Terverifikasi Diterima</span>
+                      <div className="min-w-0">
+                        <span className="text-[11px] font-bold text-[#25160E] block truncate">1. Bukti Makanan #{ord.id}</span>
+                        <span className="text-[10px] text-emerald-700 font-semibold block truncate">Tersimpan dari Kurir WA</span>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProofPhoto(ord.proofPhoto!)}
-                      className="px-2.5 py-1 bg-[#934B19] hover:bg-[#783603] text-white text-[11px] font-bold rounded-lg shadow transition-all flex items-center gap-1 shrink-0"
-                    >
-                      <Eye className="w-3 h-3" />
-                      <span>Lihat</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProofPhoto(ord.proofPhoto!)}
+                        className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-[#25160E] text-[11px] font-bold rounded-lg transition-all flex items-center gap-1"
+                        title="Lihat Foto Full Size"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Lihat</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerUpload(ord.id, 'proof')}
+                        className="px-2.5 py-1.5 bg-[#934B19] hover:bg-[#783603] text-white text-[11px] font-bold rounded-lg shadow transition-all flex items-center gap-1"
+                        title="Ganti / Upload Ulang Foto dari WA"
+                      >
+                        <UploadCloud className="w-3 h-3 text-amber-200" />
+                        <span>Ganti Foto</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="p-2.5 bg-stone-50 border border-stone-200 rounded-xl flex items-center justify-between text-[11px] text-[#4F4540]">
-                    <span className="italic">1. Belum ada foto makanan</span>
-                    <span className="px-2 py-0.5 bg-amber-100/70 text-amber-900 border border-amber-300 rounded text-[9px] font-bold shrink-0">
-                      Wajib Pelanggan
-                    </span>
+                  <div className="p-3 bg-white border border-dashed border-amber-900/30 rounded-xl flex items-center justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] font-bold text-[#25160E] block">1. Bukti Serah Terima Makanan</span>
+                      <span className="text-[10px] text-[#4F4540]">Belum diunggah</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => triggerUpload(ord.id, 'proof')}
+                      className="px-3 py-1.5 bg-[#934B19] hover:bg-[#783603] text-white text-[11px] font-bold rounded-lg shadow-sm transition-all flex items-center gap-1.5 shrink-0"
+                    >
+                      <UploadCloud className="w-3.5 h-3.5 text-amber-200" />
+                      <span>+ Upload Foto (WA)</span>
+                    </button>
                   </div>
                 )}
 
                 {/* 2. FOTO BUKTI PEMBAYARAN TUNAI COD */}
                 {ord.paymentProofPhoto ? (
-                  <div className="flex items-center justify-between gap-3 bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-600/20 shadow-xs">
-                    <div className="flex items-center gap-2.5">
+                  <div className="flex items-center justify-between gap-3 bg-emerald-50/60 p-3 rounded-xl border border-emerald-600/25 shadow-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <div 
                         onClick={() => setSelectedProofPhoto(ord.paymentProofPhoto!)}
-                        className="w-12 h-12 rounded-xl overflow-hidden border border-emerald-600/30 shadow-xs shrink-0 bg-stone-900 cursor-pointer group relative"
+                        className="w-14 h-14 min-w-[56px] max-w-[56px] min-h-[56px] max-h-[56px] rounded-xl overflow-hidden border border-emerald-600/30 shadow-xs shrink-0 bg-stone-900 cursor-pointer group relative"
                         title="Klik untuk Perbesar Foto Pembayaran COD"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={ord.paymentProofPhoto} alt="Bukti Pembayaran COD" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                        <img src={ord.paymentProofPhoto} alt="Bukti Pembayaran COD" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 block" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                           <Maximize2 className="w-3.5 h-3.5" />
                         </div>
                       </div>
 
-                      <div>
-                        <span className="text-[11px] font-bold text-emerald-950 block">2. Bukti Uang COD</span>
-                        <span className="text-[10px] text-emerald-800 font-semibold">Struk/Cash Terverifikasi</span>
+                      <div className="min-w-0">
+                        <span className="text-[11px] font-bold text-emerald-950 block truncate">2. Bukti Uang Tunai COD</span>
+                        <span className="text-[10px] text-emerald-800 font-semibold block truncate">Lunas Rp {ord.total.toLocaleString('id-ID')}</span>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProofPhoto(ord.paymentProofPhoto!)}
-                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg shadow transition-all flex items-center gap-1 shrink-0"
-                    >
-                      <Eye className="w-3 h-3" />
-                      <span>Lihat Uang</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProofPhoto(ord.paymentProofPhoto!)}
+                        className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1"
+                        title="Lihat Foto Full Size"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Lihat</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerUpload(ord.id, 'payment')}
+                        className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg shadow transition-all flex items-center gap-1"
+                        title="Ganti / Upload Ulang Foto Uang dari WA"
+                      >
+                        <UploadCloud className="w-3 h-3 text-emerald-200" />
+                        <span>Ganti Uang</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="p-2.5 bg-stone-50 border border-stone-200 rounded-xl flex items-center justify-between text-[11px] text-[#4F4540]">
-                    <span className="italic">2. {ord.paymentMethod?.toLowerCase().includes('cod') ? 'Belum ada bukti uang COD' : 'Non-COD (Online)'}</span>
-                    {ord.paymentMethod?.toLowerCase().includes('cod') && (
-                      <span className="px-2 py-0.5 bg-amber-100/70 text-amber-900 border border-amber-300 rounded text-[9px] font-bold shrink-0">
-                        Wajib COD
+                  <div className="p-3 bg-white border border-dashed border-stone-200 rounded-xl flex items-center justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] font-bold text-[#25160E] block">
+                        2. {ord.paymentMethod?.toLowerCase().includes('cod') ? 'Bukti Uang Tunai COD' : 'Metode Pembayaran Online'}
+                      </span>
+                      <span className="text-[10px] text-[#4F4540]">
+                        {ord.paymentMethod?.toLowerCase().includes('cod') ? 'Kurir menyerahkan uang via WA' : 'Non-COD (Verifikasi Otomatis)'}
+                      </span>
+                    </div>
+                    {ord.paymentMethod?.toLowerCase().includes('cod') ? (
+                      <button
+                        type="button"
+                        onClick={() => triggerUpload(ord.id, 'payment')}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg shadow-sm transition-all flex items-center gap-1.5 shrink-0"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5 text-emerald-200" />
+                        <span>+ Upload Uang (WA)</span>
+                      </button>
+                    ) : (
+                      <span className="px-2.5 py-1 bg-stone-100 text-stone-600 rounded-lg text-[10px] font-bold shrink-0">
+                        Online Midtrans
                       </span>
                     )}
                   </div>
@@ -507,26 +634,39 @@ export default function AdminOrdersTab({
                 <span className="px-3 py-1 bg-[#25160e] text-amber-200 text-xs font-bold rounded-full uppercase">
                   {ord.status}
                 </span>
+                {ord.paymentMethod?.toLowerCase().includes('cod') && (
+                  <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full border ${ord.paymentBadge === 'PAID' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-100 text-amber-900 border-amber-300'}`}>
+                    COD {ord.paymentBadge === 'PAID' ? 'LUNAS' : 'BELUM LUNAS'}
+                  </span>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => updateOrderStatus(ord.id, 'COOKING')}
-                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl"
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
                 >
                   Set Dimasak
                 </button>
                 <button
                   onClick={() => updateOrderStatus(ord.id, 'DELIVERING')}
-                  className="px-3 py-1.5 bg-[#934b19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl"
+                  className="px-3 py-1.5 bg-[#934b19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1"
                 >
-                  Set Diantar
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>Set Diantar</span>
                 </button>
                 <button
-                  onClick={() => updateOrderStatus(ord.id, 'COMPLETED')}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl"
+                  onClick={() => {
+                    const isCod = ord.paymentMethod?.toLowerCase().includes('cod') || ord.paymentMethod?.toLowerCase().includes('cash on delivery');
+                    updateOrderStatus(ord.id, 'COMPLETED');
+                    if (isCod) {
+                      alert(`✅ Pesanan #${ord.id} berhasil ditandai SELESAI dan status COD LUNAS!`);
+                    }
+                  }}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1"
                 >
-                  Set Selesai
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Set Selesai {ord.paymentMethod?.toLowerCase().includes('cod') ? '& Lunas COD' : ''}</span>
                 </button>
                 <button
                   onClick={() => setSelectedReceiptOrder(ord)}
@@ -661,6 +801,16 @@ export default function AdminOrdersTab({
                   <span className="font-bold text-[#934b19]">{selectedReceiptOrder.paymentMethod || 'Online'}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-stone-500">Status Promo:</span>
+                  {(selectedReceiptOrder.voucherCode || selectedReceiptOrder.appliedPromo || (selectedReceiptOrder.discount && selectedReceiptOrder.discount > 0)) ? (
+                    <span className="font-bold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded text-[10px]">
+                      Pakai Promo ({selectedReceiptOrder.voucherCode || selectedReceiptOrder.appliedPromo || 'Voucher'})
+                    </span>
+                  ) : (
+                    <span className="text-stone-500 font-medium">Tanpa Promo (-)</span>
+                  )}
+                </div>
+                <div className="flex justify-between">
                   <span className="text-stone-500">Status Alur:</span>
                   <span className="font-bold text-emerald-800">{selectedReceiptOrder.status}</span>
                 </div>
@@ -691,12 +841,23 @@ export default function AdminOrdersTab({
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between text-stone-600">
                   <span>Subtotal Produk:</span>
-                  <span>Rp {selectedReceiptOrder.total.toLocaleString('id-ID')}</span>
+                  <span>Rp {(selectedReceiptOrder.subtotal || (selectedReceiptOrder.total + (selectedReceiptOrder.discount || 0) - (selectedReceiptOrder.shippingCost || 0))).toLocaleString('id-ID')}</span>
                 </div>
                 <div className="flex justify-between text-stone-600">
                   <span>Ongkos Kirim:</span>
-                  <span>Rp 0</span>
+                  <span>Rp {(selectedReceiptOrder.shippingCost || 0).toLocaleString('id-ID')}</span>
                 </div>
+                {(selectedReceiptOrder.discount && selectedReceiptOrder.discount > 0) ? (
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>Diskon Promo ({selectedReceiptOrder.voucherCode || selectedReceiptOrder.appliedPromo || 'Kupon'}):</span>
+                    <span>- Rp {selectedReceiptOrder.discount.toLocaleString('id-ID')}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-stone-400">
+                    <span>Diskon Promo:</span>
+                    <span>Rp 0 (Tanpa Promo)</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm font-bold text-[#25160e] pt-1.5 border-t border-stone-300">
                   <span>TOTAL BAYAR:</span>
                   <span className="text-[#934b19]">Rp {selectedReceiptOrder.total.toLocaleString('id-ID')}</span>
@@ -709,6 +870,11 @@ export default function AdminOrdersTab({
               <div className="text-center text-[10px] text-stone-500 space-y-1">
                 <p className="font-bold text-[#25160e]">TERIMA KASIH ATAS PESANAN ANDA!</p>
                 <p className="italic">"Selamat Menikmati Kelezatan Kuliner Nefakky"</p>
+                {(selectedReceiptOrder.voucherCode || selectedReceiptOrder.appliedPromo) && (
+                  <p className="text-[9px] text-[#934B19] font-bold font-mono">
+                    *Hemat Rp {(selectedReceiptOrder.discount || 0).toLocaleString('id-ID')} dengan Kupon {selectedReceiptOrder.voucherCode || selectedReceiptOrder.appliedPromo}
+                  </p>
+                )}
                 <p className="text-[9px] text-stone-400 font-mono">Simpan struk ini sebagai bukti pembayaran sah.</p>
               </div>
             </div>

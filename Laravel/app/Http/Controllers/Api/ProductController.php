@@ -51,6 +51,11 @@ class ProductController extends Controller
             $query->where('visibility', filter_var($request->visibility, FILTER_VALIDATE_BOOLEAN));
         }
 
+        // 4.1 Filter Coming Soon
+        if ($request->has('is_coming_soon')) {
+            $query->where('is_coming_soon', filter_var($request->is_coming_soon, FILTER_VALIDATE_BOOLEAN));
+        }
+
         // 5. Pengurutan Data (Sorting)
         $sortBy = $request->query('sort', 'newest');
         switch ($sortBy) {
@@ -154,7 +159,7 @@ class ProductController extends Controller
     }
 
     /**
-     * Menghapus produk (Soft Delete)
+     * Menghapus produk
      */
     public function destroy($id): JsonResponse
     {
@@ -166,39 +171,7 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return $this->successResponse(null, 'Produk berhasil dihapus (Soft Delete)');
-    }
-
-    /**
-     * Memulihkan produk yang dihapus
-     */
-    public function restore($id): JsonResponse
-    {
-        $product = ProductItem::withTrashed()->find($id);
-
-        if (!$product) {
-            return $this->notFoundResponse('Produk tidak ditemukan');
-        }
-
-        $product->restore();
-
-        return $this->successResponse(new ProductResource($product), 'Produk berhasil dipulihkan');
-    }
-
-    /**
-     * Menghapus produk secara permanen
-     */
-    public function forceDelete($id): JsonResponse
-    {
-        $product = ProductItem::withTrashed()->find($id);
-
-        if (!$product) {
-            return $this->notFoundResponse('Produk tidak ditemukan');
-        }
-
-        $product->forceDelete();
-
-        return $this->successResponse(null, 'Produk berhasil dihapus permanen');
+        return $this->successResponse(null, 'Produk berhasil dihapus');
     }
 
     /**

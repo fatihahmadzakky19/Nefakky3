@@ -163,7 +163,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Effect Real-time: Otomatis mencabut promo jika Admin menonaktifkan voucher di DB
+  // Effect Real-time: Otomatis mencabut promo jika Admin menonaktifkan voucher di DB atau jika user sudah pernah menggunakannya
   useEffect(() => {
     if (appliedPromo && vouchers.length > 0) {
       const foundVoucher = vouchers.find(
@@ -171,9 +171,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       );
       
       const { active: isStillActive } = isVoucherValidNow(foundVoucher);
+      const isAlreadyUsed = isVoucherUsedByUser && isVoucherUsedByUser(appliedPromo, user?.uid, user?.email);
 
-      if (!isStillActive) {
-        removePromo(); // Cabut promo jika voucher sudah tidak aktif
+      if (!isStillActive || isAlreadyUsed) {
+        removePromo(); // Cabut promo jika voucher sudah tidak aktif atau sudah pernah dipakai
       } else if (foundVoucher && foundVoucher.discountPercent && foundVoucher.discountPercent !== discountPercent) {
         setDiscountPercent(foundVoucher.discountPercent); // Sinkronisasi persentase diskon terbaru
         if (user?.uid && typeof window !== 'undefined') {
@@ -181,7 +182,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
     }
-  }, [vouchers, appliedPromo, discountPercent, user]);
+  }, [vouchers, appliedPromo, discountPercent, user, isVoucherUsedByUser]);
 
   // Fungsi untuk mengklaim kode promo voucher
   const claimPromo = (code: string) => {

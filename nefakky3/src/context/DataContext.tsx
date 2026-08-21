@@ -41,7 +41,9 @@ export interface ProductItem {
   image: string;
   gallery: string[];
   description: string;
-  badge?: 'TERPOPULER' | 'BARU' | 'BEST SELLER' | 'NEW';
+  badge?: 'TERPOPULER' | 'BARU' | 'BEST SELLER' | 'NEW' | 'COMING SOON' | string;
+  isComingSoon?: boolean;
+  releaseDate?: string;
   ingredients: string;
   usageAdvice: string;
   origin: string;
@@ -383,25 +385,16 @@ interface DataContextType {
   addProduct: (product: Omit<ProductItem, 'id'>) => ProductItem;
   updateProduct: (id: string, updated: Partial<ProductItem>) => void;
   deleteProduct: (id: string) => void;
-  softDeleteProduct: (id: string) => void;
-  restoreProduct: (id: string) => void;
-  forceDeleteProduct: (id: string) => void;
   toggleProductVisibility: (id: string) => void;
   addVoucher: (voucher: Omit<AdminVoucher, 'id'>) => AdminVoucher;
   updateVoucher: (id: string, updated: Partial<AdminVoucher>) => void;
   deleteVoucher: (id: string) => void;
-  softDeleteVoucher: (id: string) => void;
-  restoreVoucher: (id: string) => void;
-  forceDeleteVoucher: (id: string) => void;
   toggleVoucherStatus: (id: string) => void;
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   confirmOrderReceived: (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => void;
   uploadOrderProofPhoto: (id: string, proofPhotoUrl: string) => void;
   deleteOrder: (id: string) => void;
-  softDeleteOrder: (id: string) => void;
-  restoreOrder: (id: string) => void;
-  forceDeleteOrder: (id: string) => void;
   cancelOrder: (id: string, reason?: string) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
   deleteReview: (id: string) => void;
@@ -937,6 +930,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Firestore Realtime Listeners & Auto-Seeding
   useEffect(() => {
+    // Clean up sample coming soon items m7 and m8 from Firestore
+    deleteDoc(doc(db, 'products', 'm7')).catch(() => {});
+    deleteDoc(doc(db, 'products', 'm8')).catch(() => {});
+
     // 1. Products Listener
     const unsubProd = onSnapshot(collection(db, 'products'), (snapshot) => {
       if (snapshot.empty) {
@@ -947,7 +944,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         batch.commit().catch(err => console.error('Error seeding products:', err));
         setProductsState(DEFAULT_PRODUCTS);
       } else {
-        const prods = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as ProductItem);
+        const prods = snapshot.docs
+          .map(d => ({ ...d.data(), id: d.id }) as ProductItem)
+          .filter(p => p.id !== 'm7' && p.id !== 'm8');
         
         // Auto-seed missing default products (e.g. Garang Asam m5 & Jus m6) without altering user-edited items
         const existingIds = new Set(prods.map(p => p.id));
@@ -1164,36 +1163,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const softDeleteProduct = (id: string) => {
-    const deletedAt = new Date().toISOString();
-    setProductsState(prev => prev.map(p => p.id === id ? { ...p, isDeleted: true, deletedAt } : p));
-    try {
-      updateDoc(doc(db, 'products', id), { isDeleted: true, deletedAt }).catch(console.error);
-    } catch (e) {
-      console.warn('Catch softDeleteProduct error:', e);
-    }
-  };
-
-  const restoreProduct = (id: string) => {
-    setProductsState(prev => prev.map(p => p.id === id ? { ...p, isDeleted: false, deletedAt: undefined } : p));
-    try {
-      updateDoc(doc(db, 'products', id), { isDeleted: false, deletedAt: null }).catch(console.error);
-    } catch (e) {
-      console.warn('Catch restoreProduct error:', e);
-    }
-  };
-
-  const forceDeleteProduct = (id: string) => {
+  const deleteProduct = (id: string) => {
     setProductsState(prev => prev.filter(p => p.id !== id));
     try {
       deleteDoc(doc(db, 'products', id)).catch(console.error);
     } catch (e) {
-      console.warn('Catch forceDeleteProduct error:', e);
+      console.warn('Catch deleteProduct error:', e);
     }
-  };
-
-  const deleteProduct = (id: string) => {
-    softDeleteProduct(id);
   };
 
   const toggleProductVisibility = (id: string) => {
@@ -1267,25 +1243,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     updateDoc(doc(db, 'vouchers', id), updated).catch(console.error);
   };
 
-  const softDeleteVoucher = (id: string) => {
-    const deletedAt = new Date().toISOString();
-    setVouchersState(prev => prev.map(v => v.id === id ? { ...v, isDeleted: true, deletedAt } : v));
-    updateDoc(doc(db, 'vouchers', id), { isDeleted: true, deletedAt }).catch(console.error);
-  };
-
-  const restoreVoucher = (id: string) => {
-    setVouchersState(prev => prev.map(v => v.id === id ? { ...v, isDeleted: false, deletedAt: undefined } : v));
-    updateDoc(doc(db, 'vouchers', id), { isDeleted: false, deletedAt: null }).catch(console.error);
-  };
-
-  const forceDeleteVoucher = (id: string) => {
-    setVouchersState(prev => prev.filter(v => v.id !== id));
-    deleteDoc(doc(db, 'vouchers', id)).catch(console.error);
-    deleteDoc(doc(db, 'promotions', id)).catch(console.error);
-  };
-
   const deleteVoucher = (id: string) => {
-    softDeleteVoucher(id);
+    setVouchersState(prev => prev.filter(v => v.id !== id));
+    try {
+      deleteDoc(doc(db, 'vouchers', id)).catch(console.error);
+      deleteDoc(doc(db, 'promotions', id)).catch(console.error);
+    } catch (e) {
+      console.warn('Catch deleteVoucher error:', e);
+    }
   };
 
   const toggleVoucherStatus = (id: string) => {
@@ -1334,10 +1299,27 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateOrderStatus = (id: string, status: AdminOrder['status']) => {
-    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-    updateDoc(doc(db, 'orders', id), { status }).catch(console.error);
-    updateRtdb(ref(rtdb, `orders/${id}`), { status, updatedAt: Date.now() }).catch(console.error);
-    updateRtdb(ref(rtdb, `live_orders/${id}`), { status, updatedAt: Date.now() }).catch(console.error);
+    const target = orders.find(o => o.id === id);
+    const isCod = target?.paymentMethod?.toLowerCase().includes('cod') || target?.paymentMethod?.toLowerCase().includes('cash on delivery');
+    
+    const updates: any = {
+      status,
+      updatedAt: Date.now()
+    };
+
+    if (status === 'COMPLETED') {
+      const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      updates.customerConfirmed = true;
+      updates.confirmedAt = `Hari ini, ${timeStr}`;
+      if (isCod) {
+        updates.paymentBadge = 'PAID';
+      }
+    }
+
+    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+    updateDoc(doc(db, 'orders', id), updates).catch(console.error);
+    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
+    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(console.error);
   };
 
   const updatePaymentStatus = (id: string, badge: AdminOrder['paymentBadge']) => {
@@ -1346,26 +1328,15 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     updateRtdb(ref(rtdb, `orders/${id}`), { paymentBadge: badge, updatedAt: Date.now() }).catch(console.error);
   };
 
-  const softDeleteOrder = (id: string) => {
-    const deletedAt = new Date().toISOString();
-    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, isDeleted: true, deletedAt } : o));
-    updateDoc(doc(db, 'orders', id), { isDeleted: true, deletedAt }).catch(console.error);
-  };
-
-  const restoreOrder = (id: string) => {
-    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, isDeleted: false, deletedAt: undefined } : o));
-    updateDoc(doc(db, 'orders', id), { isDeleted: false, deletedAt: null }).catch(console.error);
-  };
-
-  const forceDeleteOrder = (id: string) => {
-    setOrdersState(prev => prev.filter(o => o.id !== id));
-    deleteDoc(doc(db, 'orders', id)).catch(console.error);
-    removeRtdb(ref(rtdb, `orders/${id}`)).catch(console.error);
-    removeRtdb(ref(rtdb, `live_orders/${id}`)).catch(console.error);
-  };
-
   const deleteOrder = (id: string) => {
-    softDeleteOrder(id);
+    setOrdersState(prev => prev.filter(o => o.id !== id));
+    try {
+      deleteDoc(doc(db, 'orders', id)).catch(console.error);
+      removeRtdb(ref(rtdb, `orders/${id}`)).catch(console.error);
+      removeRtdb(ref(rtdb, `live_orders/${id}`)).catch(console.error);
+    } catch (e) {
+      console.warn('Catch deleteOrder error:', e);
+    }
   };
 
   const cancelOrder = (id: string, reason?: string) => {
@@ -1460,24 +1431,32 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     // 1. Cek dari localStorage per user
     if (typeof window !== 'undefined') {
-      const storageKey = `nefakky_used_vouchers_${userUid || userEmail || 'guest'}`;
-      try {
-        const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        if (existing.includes(codeUpper)) return true;
-      } catch (e) {
-        console.error(e);
+      const keysToCheck = [
+        userUid ? `nefakky_used_vouchers_${userUid}` : null,
+        userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase()}` : null,
+        'nefakky_used_vouchers_guest',
+        'nefakky_used_vouchers_global'
+      ].filter(Boolean) as string[];
+
+      for (const storageKey of keysToCheck) {
+        try {
+          const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          if (existing.some(c => c.trim().toUpperCase() === codeUpper)) return true;
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
 
-    // 2. Cek dari riwayat pemesanan pengguna
+    // 2. Cek dari riwayat pemesanan pengguna di orders
     const userOrders = (orders || []).filter(o => 
       (userUid && o.userId === userUid) || 
-      (userEmail && o.customerEmail?.toLowerCase() === userEmail.toLowerCase())
+      (userEmail && o.customerEmail && o.customerEmail.toLowerCase() === userEmail.toLowerCase())
     );
 
     const hasUsedInOrders = userOrders.some(o => 
-      (o.voucherCode && o.voucherCode.toUpperCase() === codeUpper) ||
-      (o.appliedPromo && o.appliedPromo.toUpperCase() === codeUpper)
+      (o.voucherCode && o.voucherCode.toUpperCase().includes(codeUpper)) ||
+      (o.appliedPromo && o.appliedPromo.toUpperCase().includes(codeUpper))
     );
 
     return hasUsedInOrders;
@@ -1491,15 +1470,22 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Catat ke localStorage user agar langsung tidak dapat digunakan kembali
       if (typeof window !== 'undefined') {
-        const storageKey = `nefakky_used_vouchers_${userUid || userEmail || 'guest'}`;
-        try {
-          const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-          if (!existing.includes(codeUpper)) {
-            existing.push(codeUpper);
-            localStorage.setItem(storageKey, JSON.stringify(existing));
+        const keysToSave = [
+          userUid ? `nefakky_used_vouchers_${userUid}` : null,
+          userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase()}` : null,
+          'nefakky_used_vouchers_global'
+        ].filter(Boolean) as string[];
+
+        for (const storageKey of keysToSave) {
+          try {
+            const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            if (!existing.some(c => c.toUpperCase() === codeUpper)) {
+              existing.push(codeUpper);
+              localStorage.setItem(storageKey, JSON.stringify(existing));
+            }
+          } catch (e) {
+            console.error(e);
           }
-        } catch (e) {
-          console.error(e);
         }
       }
 
@@ -1815,9 +1801,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       addProduct,
       updateProduct,
       deleteProduct,
-      softDeleteProduct,
-      restoreProduct,
-      forceDeleteProduct,
       toggleProductVisibility,
       addPromotion,
       deletePromotion,
@@ -1825,9 +1808,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       addVoucher,
       updateVoucher,
       deleteVoucher,
-      softDeleteVoucher,
-      restoreVoucher,
-      forceDeleteVoucher,
       toggleVoucherStatus,
       claimVoucherRedemption,
       isVoucherUsedByUser,
@@ -1838,9 +1818,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       uploadOrderProofPhoto,
       uploadOrderPaymentProofPhoto,
       deleteOrder,
-      softDeleteOrder,
-      restoreOrder,
-      forceDeleteOrder,
       cancelOrder,
       addReview,
       deleteReview,

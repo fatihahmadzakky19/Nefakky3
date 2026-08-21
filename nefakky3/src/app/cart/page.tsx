@@ -185,11 +185,13 @@ export default function BasketCartPage() {
       subtotal,
       shippingCost,
       discount: calculatedDiscount,
-      total: totalPayment
+      total: totalPayment,
+      voucherCode: appliedPromo || undefined,
+      appliedPromo: appliedPromo ? `${appliedPromo} (Diskon ${discountPercent}%)` : undefined
     });
 
     if (appliedPromo) {
-      claimVoucherRedemption(appliedPromo);
+      claimVoucherRedemption(appliedPromo, user?.uid, user?.email);
     }
 
     cartItems.forEach(item => {
@@ -1125,6 +1127,16 @@ export default function BasketCartPage() {
               <div className="flex justify-between font-mono font-bold text-[#934B19]">
                 <span>ID Transaksi:</span>
                 <span>#{placedOrder.orderId}</span>
+              </div>
+              <div className="flex justify-between text-[#4F4540] items-center">
+                <span>Status Promo:</span>
+                {appliedPromo ? (
+                  <span className="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 text-[10px]">
+                    🎟️ Kupon {appliedPromo} (-Rp {calculatedDiscount.toLocaleString('id-ID')})
+                  </span>
+                ) : (
+                  <span className="text-stone-500 font-medium">Tanpa Promo (-)</span>
+                )}
               </div>
               <div className="flex justify-between text-[#4F4540]">
                 <span>Total Biaya:</span>

@@ -74,10 +74,6 @@ Route::prefix('auth')->group(function () {
 // =========================================================================
 // Mengambil daftar produk aktif untuk etalase katalog publik
 Route::get('/products/visible', [ProductController::class, 'visible']);
-// Memulihkan produk yang sebelumnya dihapus (Soft Delete Restore)
-Route::post('/products/{id}/restore', [ProductController::class, 'restore']);
-// Menghapus produk secara permanen dari database
-Route::delete('/products/{id}/force', [ProductController::class, 'forceDelete']);
 // Mengubah status tampil/sembunyi produk di katalog secara cepat
 Route::post('/products/{id}/toggle-visibility', [ProductController::class, 'toggleVisibility']);
 // Memperbarui kuantitas stok produk secara instan

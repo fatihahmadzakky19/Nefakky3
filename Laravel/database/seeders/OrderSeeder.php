@@ -10,9 +10,9 @@ use Illuminate\Database\Seeder;
 /**
  * Class OrderSeeder
  * 
- * Seeder ini bertanggung jawab untuk membuat data awal transaksi pesanan pelanggan
+ * Seeder ini bertanggung jawab untuk membuat data transaksi pesanan pelanggan awal
  * dengan berbagai kondisi status alur pengiriman (COOKING, DELIVERING, COMPLETED)
- * beserta rincian item produk yang dipesan.
+ * beserta rincian item hidangan otentik yang dipesan.
  */
 class OrderSeeder extends Seeder
 {
@@ -23,7 +23,6 @@ class OrderSeeder extends Seeder
      */
     public function run(): void
     {
-        // Mencari ID akun administrator untuk relasi pesanan contoh
         $user = User::where('email', 'fatihahmadzakky19@gmail.com')->first();
         $userId = $user ? $user->id : null;
 
@@ -39,36 +38,34 @@ class OrderSeeder extends Seeder
                 'phone' => '081234567890',
                 'item_count' => 2,
                 'payment_method' => 'Midtrans QRIS / GoPay',
-                'payment_badge' => 'PAID', // Status pembayaran lunas
+                'payment_badge' => 'PAID',
                 'delivery_type' => 'STANDARD',
-                'status' => 'COOKING', // Tahap alur dapur
-                'subtotal' => 56000,
-                'shipping_cost' => 10000,
-                'discount' => 5600,
-                'total' => 60400,
+                'status' => 'COOKING',
+                'subtotal' => 40000,
+                'shipping_cost' => 8000,
+                'discount' => 4000,
+                'total' => 44000,
                 'customer_confirmed' => false,
                 'voucher_code' => 'NEFAKKY10',
-                'applied_promo' => 'Diskon 10% Spesial Pembeli Baru',
+                'applied_promo' => 'Voucher Pelanggan Baru 10%',
             ]
         );
 
-        // Rincian Item 1 pada Pesanan 1
         OrderItem::updateOrCreate(
-            ['order_id' => $order1->order_id, 'product_id' => 'PROD-001'],
+            ['order_id' => $order1->order_id, 'product_id' => 'm1'],
             [
-                'name' => 'Ayam Bakar Madu Spesial Dapur Nefakky',
-                'price' => 38000,
+                'name' => 'Ayam Bakar',
+                'price' => 35000,
                 'quantity' => 1,
                 'image' => '/images/ayam_bakar.jpg',
             ]
         );
 
-        // Rincian Item 2 pada Pesanan 1
         OrderItem::updateOrCreate(
-            ['order_id' => $order1->order_id, 'product_id' => 'PROD-002'],
+            ['order_id' => $order1->order_id, 'product_id' => 'm6'],
             [
-                'name' => 'Jus Segar 3-Varian',
-                'price' => 18000,
+                'name' => 'Jus Segar (Jambu, Sirsak, Mangga)',
+                'price' => 5000,
                 'quantity' => 1,
                 'image' => '/images/jus_mangga.jpg',
             ]
@@ -84,15 +81,15 @@ class OrderSeeder extends Seeder
                 'avatar' => 'https://ui-avatars.com/api/?name=Nizar+Azzuhra&background=5C3D28&color=ffffff',
                 'address' => 'Jl. Margonda Raya No. 100, Beji, Kota Depok',
                 'phone' => '085712345678',
-                'item_count' => 1,
+                'item_count' => 2,
                 'payment_method' => 'Transfer BCA',
                 'payment_badge' => 'PAID',
                 'delivery_type' => 'EXPRESS',
-                'status' => 'DELIVERING', // Tahap kurir mengantar
-                'subtotal' => 52000,
+                'status' => 'DELIVERING',
+                'subtotal' => 30000,
                 'shipping_cost' => 12000,
-                'discount' => 7800,
-                'total' => 56200,
+                'discount' => 4500,
+                'total' => 37500,
                 'customer_confirmed' => false,
                 'voucher_code' => 'BAZARJUNI',
                 'applied_promo' => 'Voucher Bazar Spesial Kuliner',
@@ -100,12 +97,22 @@ class OrderSeeder extends Seeder
         );
 
         OrderItem::updateOrCreate(
-            ['order_id' => $order2->order_id, 'product_id' => 'PROD-005'],
+            ['order_id' => $order2->order_id, 'product_id' => 'm2'],
             [
-                'name' => 'Paket Hemat Kenyang',
-                'price' => 52000,
+                'name' => 'Nasi Bakar',
+                'price' => 10000,
                 'quantity' => 1,
-                'image' => '/images/paket_hemat.jpg',
+                'image' => '/images/nasi_bakar.jpg',
+            ]
+        );
+
+        OrderItem::updateOrCreate(
+            ['order_id' => $order2->order_id, 'product_id' => 'm3'],
+            [
+                'name' => 'Krecek',
+                'price' => 20000,
+                'quantity' => 1,
+                'image' => '/images/krecek.jpg',
             ]
         );
 
@@ -116,40 +123,40 @@ class OrderSeeder extends Seeder
                 'user_id' => $userId,
                 'customer_name' => 'Siti Rahmawati',
                 'customer_email' => 'siti@example.com',
-                'avatar' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Siti',
+                'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
                 'address' => 'Apartemen Taman Rasuna Tower 8, Kuningan, Jakarta Selatan',
                 'phone' => '081987654321',
                 'item_count' => 2,
                 'payment_method' => 'Midtrans GoPay',
                 'payment_badge' => 'PAID',
                 'delivery_type' => 'STANDARD',
-                'status' => 'COMPLETED', // Status selesai
-                'subtotal' => 67000,
+                'status' => 'COMPLETED',
+                'subtotal' => 45000,
                 'shipping_cost' => 15000,
                 'discount' => 0,
-                'total' => 82000,
-                'customer_confirmed' => true, // Pelanggan telah menekan tombol konfirmasi barang diterima
-                'confirmed_at' => now()->subHours(5), // Timestamp saat pesanan diselesaikan
+                'total' => 60000,
+                'customer_confirmed' => true,
+                'confirmed_at' => now()->subHours(5),
             ]
         );
 
         OrderItem::updateOrCreate(
-            ['order_id' => $order3->order_id, 'product_id' => 'PROD-003'],
+            ['order_id' => $order3->order_id, 'product_id' => 'm1'],
             [
-                'name' => 'Beef Teriyaki Rice Bowl Gurih',
-                'price' => 42000,
+                'name' => 'Ayam Bakar',
+                'price' => 35000,
                 'quantity' => 1,
-                'image' => '/images/beef_teriyaki.jpg',
+                'image' => '/images/ayam_bakar.jpg',
             ]
         );
 
         OrderItem::updateOrCreate(
-            ['order_id' => $order3->order_id, 'product_id' => 'PROD-004'],
+            ['order_id' => $order3->order_id, 'product_id' => 'm4'],
             [
-                'name' => 'Dimsum Ayam Udang Kukus (Isi 4 Pcs)',
-                'price' => 25000,
+                'name' => 'Gudeg',
+                'price' => 10000,
                 'quantity' => 1,
-                'image' => '/images/dimsum_ayam.jpg',
+                'image' => '/images/gudeg.jpg',
             ]
         );
     }

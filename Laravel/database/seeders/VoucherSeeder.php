@@ -8,8 +8,8 @@ use Illuminate\Database\Seeder;
 /**
  * Class VoucherSeeder
  * 
- * Seeder ini bertanggung jawab untuk mengisi data awal kupon promo diskon belanja,
- * aturan batas minimal belanja (min spend), kuota pemakaian, dan promo auto-reset mingguan.
+ * Seeder ini bertanggung jawab untuk mengisi data awal kupon promo diskon belanja
+ * yang tersinkronisasi dengan kode kupon di aplikasi web Nefakky.
  */
 class VoucherSeeder extends Seeder
 {
@@ -20,34 +20,95 @@ class VoucherSeeder extends Seeder
      */
     public function run(): void
     {
-        // Daftar data voucher promo dengan variasi jenis persen, potongan tetap, dan aturan hari
         $vouchers = [
             [
-                'voucher_id' => 'VOUCH-01', // Primary key custom string
-                'code' => 'NEFAKKY10', // Kode kupon promo yang diinputkan pembeli
-                'name' => 'Diskon 10% Spesial Pembeli Baru', // Judul promo
-                'type' => 'percent', // Jenis potongan: persen ('percent')
-                'discount_percent' => 10.00, // Besaran potongan 10%
+                'voucher_id' => 'promo-1',
+                'code' => 'WEEKENDSERU',
+                'name' => 'Weekend Promo Diskon 15%',
+                'type' => 'percent',
+                'discount_percent' => 15.00,
                 'discount_value' => 0.00,
-                'min_spend' => 50000, // Syarat minimal belanja Rp 50.000
-                'max_discount' => 20000, // Batas potongan maksimal Rp 20.000
-                'used_count' => 24, // Jumlah yang telah diklaim / digunakan
-                'total_limit' => 500, // Kuota maksimal pemakaian
-                'redemptions' => '24/500', // Format tampilan rasio penggunaan
-                'expiry' => '31 Des 2026', // Teks masa berlaku promo
-                'event' => 'Pelanggan Baru', // Kategori event promo
-                'status' => 'Active', // Status keaktifan (Active / Expired)
-                'is_active' => true, // Flag sakelar aktif
-                'auto_reset_weekly' => false, // Tidak di-reset tiap minggu
+                'min_spend' => 50000,
+                'max_discount' => 25000,
+                'used_count' => 142,
+                'total_limit' => 500,
+                'redemptions' => '142/500',
+                'expiry' => '01 Mei - 31 Des',
+                'valid_days' => 'Weekend (Sabtu & Minggu)',
+                'event' => 'Promo Akhir Pekan',
+                'status' => 'Active',
+                'is_active' => true,
+                'auto_reset_weekly' => true,
+                'last_reset_week' => Voucher::getCurrentISOWeek(),
+                'image_url' => 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
             ],
             [
-                'voucher_id' => 'VOUCH-02',
+                'voucher_id' => 'promo-2',
+                'code' => 'FLASHSALE',
+                'name' => 'Flash Sale: Gudeg Komplit Jogja',
+                'type' => 'percent',
+                'discount_percent' => 20.00,
+                'discount_value' => 0.00,
+                'min_spend' => 30000,
+                'max_discount' => 20000,
+                'used_count' => 98,
+                'total_limit' => 1000,
+                'redemptions' => '98/1000',
+                'expiry' => 'Akhir Pekan',
+                'valid_days' => 'Weekend Only',
+                'event' => 'Flash Sale',
+                'status' => 'Active',
+                'is_active' => true,
+                'auto_reset_weekly' => true,
+                'last_reset_week' => Voucher::getCurrentISOWeek(),
+                'image_url' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
+            ],
+            [
+                'voucher_id' => 'promo-3',
+                'code' => 'HEMAT50',
+                'name' => 'Hemat Nasi Bakar Cumi (BOGO)',
+                'type' => 'percent',
+                'discount_percent' => 50.00,
+                'discount_value' => 0.00,
+                'min_spend' => 45000,
+                'max_discount' => 25000,
+                'used_count' => 45,
+                'total_limit' => 100,
+                'redemptions' => '45/100',
+                'expiry' => '01 Juni - 31 Des',
+                'event' => 'Tanggal Kembar',
+                'status' => 'Active',
+                'is_active' => true,
+                'auto_reset_weekly' => false,
+                'image_url' => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
+            ],
+            [
+                'voucher_id' => 'v4',
+                'code' => 'NEFAKKY10',
+                'name' => 'Voucher Pelanggan Baru 10%',
+                'type' => 'percent',
+                'discount_percent' => 10.00,
+                'discount_value' => 0.00,
+                'min_spend' => 30000,
+                'max_discount' => 15000,
+                'used_count' => 1,
+                'total_limit' => 500,
+                'redemptions' => '1x Per Pengguna Baru',
+                'expiry' => 'Selamanya',
+                'event' => 'Pelanggan Baru',
+                'status' => 'Active',
+                'is_active' => true,
+                'auto_reset_weekly' => false,
+                'image_url' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
+            ],
+            [
+                'voucher_id' => 'v5',
                 'code' => 'BAZARJUNI',
                 'name' => 'Voucher Bazar Spesial Kuliner',
                 'type' => 'percent',
                 'discount_percent' => 15.00,
                 'discount_value' => 0.00,
-                'min_spend' => 60000,
+                'min_spend' => 50000,
                 'max_discount' => 30000,
                 'used_count' => 88,
                 'total_limit' => 500,
@@ -57,48 +118,10 @@ class VoucherSeeder extends Seeder
                 'status' => 'Active',
                 'is_active' => true,
                 'auto_reset_weekly' => false,
-            ],
-            [
-                'voucher_id' => 'VOUCH-03',
-                'code' => 'WEEKENDHEMAT',
-                'name' => 'Promo Akhir Pekan Ceria (Sabtu & Minggu)',
-                'type' => 'percent',
-                'discount_percent' => 20.00,
-                'discount_value' => 0.00,
-                'min_spend' => 75000,
-                'max_discount' => 35000,
-                'used_count' => 15,
-                'total_limit' => 200,
-                'redemptions' => '15/200',
-                'expiry' => 'Setiap Akhir Pekan',
-                'valid_days' => 'Weekend (Sabtu & Minggu)', // Hanya aktif pada hari Sabtu dan Minggu
-                'event' => 'Akhir Pekan',
-                'status' => 'Active',
-                'is_active' => true,
-                'auto_reset_weekly' => true, // Kuota otomatis di-reset menjadi 0 saat berganti minggu ISO
-                'last_reset_week' => Voucher::getCurrentISOWeek(),
-            ],
-            [
-                'voucher_id' => 'VOUCH-04',
-                'code' => 'POTONGAN10RB',
-                'name' => 'Potongan Langsung Rp 10.000',
-                'type' => 'fixed', // Jenis potongan: nominal tetap ('fixed')
-                'discount_percent' => 0.00,
-                'discount_value' => 10000, // Potongan flat Rp 10.000
-                'min_spend' => 50000,
-                'max_discount' => 10000,
-                'used_count' => 45,
-                'total_limit' => 300,
-                'redemptions' => '45/300',
-                'expiry' => '31 Des 2026',
-                'event' => 'Diskon Langsung',
-                'status' => 'Active',
-                'is_active' => true,
-                'auto_reset_weekly' => false,
+                'image_url' => 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
             ],
         ];
 
-        // Menyimpan data voucher promo ke tabel database
         foreach ($vouchers as $v) {
             Voucher::updateOrCreate(
                 ['voucher_id' => $v['voucher_id']],

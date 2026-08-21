@@ -8,8 +8,8 @@ use Illuminate\Database\Seeder;
 /**
  * Class ReviewSeeder
  * 
- * Seeder ini bertanggung jawab untuk mengisi data ulasan pelanggan awal,
- * penilaian rating bintang (1-5), lencana status pengulas, dan balasan dari penjual.
+ * Seeder ini bertanggung jawab untuk mengisi data ulasan pelanggan awal
+ * untuk hidangan kuliner otentik Nefakky.
  */
 class ReviewSeeder extends Seeder
 {
@@ -20,24 +20,23 @@ class ReviewSeeder extends Seeder
      */
     public function run(): void
     {
-        // Daftar data testimoni pelanggan awal beserta lampiran dan tanggapan admin
         $reviews = [
             [
                 'review_id' => 'REV-001',
-                'product_id' => 'PROD-001', // Terkait ke menu Ayam Bakar Madu
+                'product_id' => 'm1',
                 'author_name' => 'Siti Rahmawati',
                 'author_email' => 'siti@example.com',
-                'author_badge' => 'PLATINUM', // Lencana loyalitas pelanggan
-                'avatar' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Siti',
-                'rating' => 5, // Rating bintang 5
+                'author_badge' => 'PLATINUM',
+                'avatar' => 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+                'rating' => 5,
                 'date' => 'Kemarin',
-                'product_name' => 'Ayam Bakar Madu Spesial Dapur Nefakky',
+                'product_name' => 'Ayam Bakar',
                 'product_image' => '/images/ayam_bakar.jpg',
-                'comment' => 'Daging ayamnya sangat empuk, bumbu madunya meresap sampai ke tulang! Sambalnya juga mantap pedas gurihnya.',
-                'likes_count' => 18, // Jumlah like yang didapatkan ulasan
-                'status' => 'PUBLISHED', // Status tampil di publik
-                'is_pinned' => true, // Di-pin agar selalu berada di posisi paling atas ulasan
-                'photos' => ['/images/ayam_bakar.jpg'], // Foto hidangan yang diunggah pelanggan
+                'comment' => 'Daging ayamnya sangat empuk, bumbu kecap rempahnya meresap sampai ke tulang! Sambalnya juga mantap pedas gurihnya.',
+                'likes_count' => 18,
+                'status' => 'PUBLISHED',
+                'is_pinned' => true,
+                'photos' => ['/images/ayam_bakar.jpg'],
                 'replies' => [
                     [
                         'id' => 'reply-1',
@@ -50,14 +49,14 @@ class ReviewSeeder extends Seeder
             ],
             [
                 'review_id' => 'REV-002',
-                'product_id' => 'PROD-002', // Terkait ke menu Jus Segar
+                'product_id' => 'm6',
                 'author_name' => 'Nizar Azzuhra',
                 'author_email' => 'nizarazzuhra@gmail.com',
                 'author_badge' => 'GOLD',
                 'avatar' => 'https://ui-avatars.com/api/?name=Nizar+Azzuhra&background=5C3D28&color=ffffff',
                 'rating' => 5,
                 'date' => '2 hari yang lalu',
-                'product_name' => 'Jus Segar 3-Varian',
+                'product_name' => 'Jus Segar (Jambu, Sirsak, Mangga)',
                 'product_image' => '/images/jus_mangga.jpg',
                 'comment' => 'Jus mangganya kental dan manisnya pas alami tanpa gula berlebih. Pengiriman express cepat sekali sampai di Depok!',
                 'likes_count' => 9,
@@ -68,17 +67,35 @@ class ReviewSeeder extends Seeder
             ],
             [
                 'review_id' => 'REV-003',
-                'product_id' => 'PROD-004', // Terkait ke menu Dimsum
-                'author_name' => 'Budi Santoso',
-                'author_email' => 'budi.santoso@example.com',
+                'product_id' => 'm4',
+                'author_name' => 'Dimas Pratama',
+                'author_email' => 'dimas@example.com',
                 'author_badge' => 'VERIFIED BUYER',
-                'avatar' => 'https://api.dicebear.com/7.x/avataaars/svg?seed=Budi',
+                'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
                 'rating' => 5,
                 'date' => '3 hari yang lalu',
-                'product_name' => 'Dimsum Ayam Udang Kukus',
-                'product_image' => '/images/dimsum_ayam.jpg',
-                'comment' => 'Dimsumnya garing dan kenyal berasa banget udangnya. Chili oil-nya wangi sekali.',
-                'likes_count' => 5,
+                'product_name' => 'Gudeg',
+                'product_image' => '/images/gudeg.jpg',
+                'comment' => 'Gudeg paling otentik yang pernah saya pesan online. Bumbu kreceknya gurih pedas manis beraroma harum.',
+                'likes_count' => 15,
+                'status' => 'PUBLISHED',
+                'is_pinned' => false,
+                'photos' => ['/images/gudeg.jpg'],
+                'replies' => [],
+            ],
+            [
+                'review_id' => 'REV-004',
+                'product_id' => 'm2',
+                'author_name' => 'Dewi Lestari',
+                'author_email' => 'dewi@example.com',
+                'author_badge' => 'VERIFIED BUYER',
+                'avatar' => 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+                'rating' => 5,
+                'date' => '4 hari yang lalu',
+                'product_name' => 'Nasi Bakar',
+                'product_image' => '/images/nasi_bakar.jpg',
+                'comment' => 'Nasi bakar daun pisang harum wangi bumbu cumi pedas manisnya melimpah! Mengenyangkan sekali.',
+                'likes_count' => 6,
                 'status' => 'PUBLISHED',
                 'is_pinned' => false,
                 'photos' => [],
@@ -86,7 +103,6 @@ class ReviewSeeder extends Seeder
             ],
         ];
 
-        // Menyimpan data ulasan ke tabel database
         foreach ($reviews as $r) {
             Review::updateOrCreate(
                 ['review_id' => $r['review_id']],

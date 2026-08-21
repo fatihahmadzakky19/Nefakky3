@@ -23,17 +23,15 @@ import {
   AlertTriangle,
   Sparkles,
   Flame,
-  Camera
+  Truck
 } from 'lucide-react';
 // Mengimpor tipe data pesanan dari DataContext
 import { AdminOrder } from '@/context/DataContext';
-// Mengimpor modal kamera live untuk bukti penerimaan pesanan
-import LiveCameraModal from '@/components/LiveCameraModal';
 
 /** Interface Properti Komponen Pelacak Pesanan Realtime */
 interface RealtimeOrderTrackerProps {
   order: AdminOrder; // Objek data transaksi pesanan yang dilacak
-  onConfirmReceived: (id: string, proofPhotoUrl?: string) => void; // Callback konfirmasi penerimaan pesanan
+  onConfirmReceived?: (id: string, proofPhotoUrl?: string) => void; // Callback konfirmasi penerimaan pesanan (opsional)
   isHighDemand?: boolean; // Indikator jam sibuk pesanan tinggi
 }
 
@@ -43,8 +41,6 @@ export default function RealtimeOrderTracker({
   onConfirmReceived,
   isHighDemand = false
 }: RealtimeOrderTrackerProps) {
-  const proofInputRef = React.useRef<HTMLInputElement>(null); // Ref input file galeri bukti penerimaan
-  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false); // State buka modal kamera live
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0); // State timer durasi detik berjalan
   const [lastSyncTime, setLastSyncTime] = useState<string>('Baru saja'); // Teks waktu sinkronisasi terakhir
 
@@ -345,35 +341,7 @@ export default function RealtimeOrderTracker({
 
       </div>
 
-      {/* 4. USER ACTION: CONFIRM ORDER RECEIVED & PROOF PHOTO */}
-      <input 
-        type="file" 
-        ref={proofInputRef} 
-        accept="image/*" 
-        capture="environment"
-        className="hidden" 
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const proofUrl = reader.result as string;
-              onConfirmReceived(order.id, proofUrl);
-            };
-            reader.readAsDataURL(file);
-          }
-        }} 
-      />
-
-      <LiveCameraModal
-        isOpen={isLiveCameraOpen}
-        onClose={() => setIsLiveCameraOpen(false)}
-        onCapture={(base64Image) => {
-          onConfirmReceived(order.id, base64Image);
-        }}
-        onFallbackToFile={() => proofInputRef.current?.click()}
-      />
-
+      {/* 4. INFORMASI PENGANTARAN & DOKUMENTASI RESMI */}
       {order.proofPhoto && (
         <div className="p-3.5 bg-[#FBF9F5] border border-amber-900/15 rounded-2xl flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -383,86 +351,29 @@ export default function RealtimeOrderTracker({
             </div>
             <div>
               <span className="text-xs font-bold text-[#25160E] flex items-center gap-1">
-                <Camera className="w-3.5 h-3.5 text-[#934B19]" />
-                Bukti Foto Penerimaan
+                <Truck className="w-3.5 h-3.5 text-[#934B19]" />
+                Dokumentasi Serah Terima Kurir Toko
               </span>
-              <span className="text-[10px] text-emerald-700 font-semibold">Tersimpan Resmi & Terverifikasi</span>
+              <span className="text-[10px] text-emerald-700 font-semibold">Tersimpan Resmi &amp; Terverifikasi</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsLiveCameraOpen(true)}
-              className="px-2.5 py-1.5 bg-[#934B19] text-white text-[11px] font-bold rounded-xl shadow hover:bg-[#783603] transition-all flex items-center gap-1"
-            >
-              <Camera className="w-3 h-3 text-amber-200" />
-              <span>Kamera</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => proofInputRef.current?.click()}
-              className="px-2.5 py-1.5 bg-[#25160E] text-amber-300 text-[11px] font-bold rounded-xl shadow hover:bg-[#3C2A21] transition-all"
-            >
-              Galeri
-            </button>
-          </div>
+          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-lg border border-emerald-300">
+            Terverifikasi
+          </span>
         </div>
       )}
 
       {!isCompleted && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-stone-100">
-          <p className="text-[11px] text-[#4F4540] font-medium text-center sm:text-left">
-            {order.proofPhoto ? (
-              <span className="text-emerald-700 font-bold flex items-center gap-1">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Foto bukti penerimaan terverifikasi. Silakan tekan tombol konfirmasi!</span>
-              </span>
-            ) : (
-              <span className="text-[#934B19] font-bold flex items-center gap-1">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>WAJIB: Ambil foto live / upload galeri bukti makanan sebelum konfirmasi!</span>
-              </span>
-            )}
+        <div className="flex items-center justify-between gap-3 pt-2 border-t border-stone-100">
+          <p className="text-[11px] text-[#4F4540] font-medium">
+            <span className="text-[#934B19] font-bold flex items-center gap-1">
+              <Truck className="w-3.5 h-3.5 text-[#934B19] shrink-0" />
+              <span>Pesanan diantar langsung oleh staf/kurir toko kami. Dokumentasi dicatat saat tiba.</span>
+            </span>
           </p>
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-            {!order.proofPhoto ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setIsLiveCameraOpen(true)}
-                  className="px-3.5 py-2.5 bg-[#934B19] text-white font-bold text-xs rounded-2xl shadow-sm hover:bg-[#783603] transition-all flex items-center gap-1.5 shrink-0"
-                  title="Ambil Foto dengan Kamera Live"
-                >
-                  <Camera className="w-4 h-4 text-amber-200" />
-                  <span>📸 Foto Live</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => proofInputRef.current?.click()}
-                  className="px-3.5 py-2.5 bg-[#25160E] text-amber-300 font-bold text-xs rounded-2xl shadow-sm hover:bg-[#3C2A21] transition-all flex items-center gap-1.5 shrink-0"
-                  title="Upload Foto dari Galeri"
-                >
-                  <span>📁 Galeri</span>
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!order.proofPhoto) {
-                    alert('⚠️ WAJIB UNGGAH FOTO BUKTI PENERIMAAN!\n\nSilakan ambil foto makanan dengan kamera live atau pilih foto dari galeri terlebih dahulu.');
-                    setIsLiveCameraOpen(true);
-                    return;
-                  }
-                  onConfirmReceived(order.id, order.proofPhoto);
-                }}
-                className="flex-1 sm:flex-initial px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>✅ Konfirmasi Pesanan Diterima</span>
-              </button>
-            )}
-          </div>
+          <span className="px-2.5 py-1 bg-amber-100 text-amber-900 text-[10px] font-bold rounded-lg border border-amber-300 shrink-0">
+            Kurir Internal
+          </span>
         </div>
       )}
 

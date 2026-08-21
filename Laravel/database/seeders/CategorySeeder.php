@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
  * Class CategorySeeder
  * 
  * Seeder ini bertanggung jawab untuk mengisi data awal master kategori menu kuliner
- * pada database Nefakky Marketplace saat perintah 'php artisan migrate --seed' dijalankan.
+ * pada database Nefakky Marketplace sesuai kategori di aplikasi frontend.
  */
 class CategorySeeder extends Seeder
 {
@@ -21,46 +21,54 @@ class CategorySeeder extends Seeder
      */
     public function run(): void
     {
-        // Definisi data master kategori menu kuliner default
         $categories = [
             [
-                'name' => 'Makanan Utama',
+                'name' => 'Makanan Berat',
+                'type' => 'Makanan',
+                'display_order' => 1,
                 'icon' => null,
-                'description' => 'Hidangan utama lezat seperti olahan ayam bakar, bebek, dan menu spesial nusantara.',
+                'description' => 'Hidangan utama lezat berenergi seperti Ayam Bakar, Nasi Bakar, dan Gudeg Komplit.',
             ],
             [
                 'name' => 'Minuman',
+                'type' => 'Minuman',
+                'display_order' => 2,
                 'icon' => null,
-                'description' => 'Jus buah segar asli, mocktail, teh dingin, dan aneka minuman penyegar dahaga.',
+                'description' => 'Jus buah segar asli (Mangga, Sirsak, Jambu) dan aneka minuman penyegar dahaga.',
+            ],
+            [
+                'name' => 'Menu Hemat',
+                'type' => 'Paket',
+                'display_order' => 3,
+                'icon' => null,
+                'description' => 'Pilihan hidangan tradisional nikmat dan hemat seperti Krecek pedas gurih dan Garang Asam segar.',
             ],
             [
                 'name' => 'Rice Bowl',
+                'type' => 'Makanan',
+                'display_order' => 4,
                 'icon' => null,
-                'description' => 'Sajian nasi hangat praktis dengan aneka lauk topping gurih dan saus istimewa.',
+                'description' => 'Sajian nasi mangkuk praktis dengan aneka lauk topping gurih dan saus istimewa.',
             ],
             [
                 'name' => 'Cemilan & Snack',
+                'type' => 'Tambahan',
+                'display_order' => 5,
                 'icon' => null,
                 'description' => 'Kudapan ringan renyah dan hidangan pembuka favorit keluarga.',
             ],
-            [
-                'name' => 'Paket Hemat',
-                'icon' => null,
-                'description' => 'Kombinasi makanan dan minuman dengan harga spesial lebih hemat.',
-            ],
         ];
 
-        // Melakukan perulangan untuk menyimpan atau memperbarui data kategori (mencegah duplikasi data)
         foreach ($categories as $cat) {
             Category::updateOrCreate(
-                // Kriteria pencarian record berdasarkan nama kategori unik
                 ['name' => $cat['name']],
-                // Data yang diisi atau diperbarui
                 [
-                    'slug' => Str::slug($cat['name']), // Menghasilkan slug URL yang ramah SEO (cth: "makanan-utama")
-                    'icon' => $cat['icon'], // Identifier icon kategori (disetel null untuk tampilan bersih)
-                    'description' => $cat['description'], // Deskripsi penjelasan kategori
-                    'is_active' => true, // Menandai kategori dalam kondisi aktif
+                    'slug' => Str::slug($cat['name']),
+                    'type' => $cat['type'],
+                    'display_order' => $cat['display_order'],
+                    'icon' => $cat['icon'],
+                    'description' => $cat['description'],
+                    'is_active' => true,
                 ]
             );
         }

@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Model Order
@@ -16,8 +15,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Order extends Model
 {
-    use SoftDeletes;
-
     // Mengatur Primary Key menggunakan string custom (contoh: "ORD-88219")
     protected $primaryKey = 'order_id';
     public $incrementing = false;
@@ -136,6 +133,21 @@ class Order extends Model
         }
 
         return $this->status;
+    }
+
+    /**
+     * Metode Bisnis PBO: Menandai pesanan telah lunas terbayar via Midtrans / Transfer.
+     *
+     * @return bool
+     */
+    public function markAsPaid(): bool
+    {
+        $this->payment_badge = 'PAID';
+        $this->paid_at = now();
+        if ($this->status === 'PENDING') {
+            $this->status = 'RECEIVED';
+        }
+        return $this->save();
     }
 
     /**

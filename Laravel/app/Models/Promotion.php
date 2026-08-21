@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Model Promotion
@@ -14,8 +13,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Promotion extends Model
 {
-    use SoftDeletes;
-
     // Mengatur Primary Key menggunakan string custom (contoh: "promo-1")
     protected $primaryKey = 'promotion_id';
     public $incrementing = false;
