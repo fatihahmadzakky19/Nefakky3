@@ -16,12 +16,21 @@ import {
 } from 'lucide-react';
 import { ProductItem } from '@/context/DataContext';
 
+// ============================================================================
+// KOMPONEN: AdminProductsTab (Manajemen Katalog Produk & Stok)
+// FUNGSI:
+// 1. Menampilkan daftar menu hidangan makanan/minuman dengan filter & pencarian.
+// 2. Menambah produk baru (Create).
+// 3. Mengedit data produk, harga, stok, foto, dan status Coming Soon (Update).
+// 4. Menghapus produk dari katalog (Delete).
+// ============================================================================
+
 interface AdminProductsTabProps {
-  productList: ProductItem[];
-  addProduct: (product: any) => void;
-  updateProduct: (id: string, updatedFields: any) => void;
-  deleteProduct: (id: string) => void;
-  toggleProductVisibility: (id: string) => void;
+  productList: ProductItem[];                               // Daftar seluruh produk dari DataContext
+  addProduct: (product: any) => void;                       // Fungsi tambah produk baru ke database
+  updateProduct: (id: string, updatedFields: any) => void;  // Fungsi update data produk di database
+  deleteProduct: (id: string) => void;                      // Fungsi hapus produk dari database
+  toggleProductVisibility: (id: string) => void;            // Fungsi toggle visibilitas aktif/sembunyi
 }
 
 export default function AdminProductsTab({
@@ -31,18 +40,25 @@ export default function AdminProductsTab({
   deleteProduct,
   toggleProductVisibility
 }: AdminProductsTabProps) {
-  const [showProductModal, setShowProductModal] = useState<boolean>(false);
-  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
-  const [productFormTab, setProductFormTab] = useState<'info' | 'media' | 'nutrition'>('info');
-  const [prodGallery, setProdGallery] = useState<string[]>(['/images/ayam_bakar.jpg']);
-  const [filterType, setFilterType] = useState<'all' | 'active' | 'comingSoon'>('all');
-  const [searchProdQuery, setSearchProdQuery] = useState<string>('');
-  const [filterCategory, setFilterCategory] = useState<string>('Semua');
+  // --------------------------------------------------------------------------
+  // STATE MANAGEMENT KOMPONEN
+  // --------------------------------------------------------------------------
+  const [showProductModal, setShowProductModal] = useState<boolean>(false);       // Kontrol buka/tutup modal form produk
+  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null); // Menyimpan produk yang sedang diedit (null jika tambah baru)
+  const [productFormTab, setProductFormTab] = useState<'info' | 'media' | 'nutrition'>('info'); // Tab navigasi dalam modal
+  const [prodGallery, setProdGallery] = useState<string[]>(['/images/ayam_bakar.jpg']);         // Daftar URL foto galeri
+  const [filterType, setFilterType] = useState<'all' | 'active' | 'comingSoon'>('all');          // Filter status menu
+  const [searchProdQuery, setSearchProdQuery] = useState<string>('');                           // Kata kunci pencarian produk
+  const [filterCategory, setFilterCategory] = useState<string>('Semua');                         // Filter kategori produk
 
+  // --------------------------------------------------------------------------
+  // KALKULASI DATA & PENCARIAN (SEARCH / FILTER)
+  // --------------------------------------------------------------------------
   const allProducts = productList || [];
   const comingSoonCount = allProducts.filter(p => p.isComingSoon).length;
   const activeCount = allProducts.filter(p => !p.isComingSoon && p.status !== 'Inactive').length;
 
+  // Filter produk berdasarkan tab status, kategori, dan query pencarian nama/SKU
   const displayedProducts = allProducts.filter(p => {
     if (filterType === 'active' && (p.isComingSoon || p.status === 'Inactive')) return false;
     if (filterType === 'comingSoon' && !p.isComingSoon) return false;
@@ -57,6 +73,9 @@ export default function AdminProductsTab({
     return true;
   });
 
+  // --------------------------------------------------------------------------
+  // STATE FORMULIR PRODUK
+  // --------------------------------------------------------------------------
   const [prodForm, setProdForm] = useState({
     name: '',
     sku: '',
@@ -82,6 +101,9 @@ export default function AdminProductsTab({
     maxDeliveryKm: '25'
   });
 
+  // --------------------------------------------------------------------------
+  // HANDLER: Membuka Modal Tambah Produk Baru
+  // --------------------------------------------------------------------------
   const handleOpenAddProduct = () => {
     setEditingProduct(null);
     setProductFormTab('info');
@@ -113,16 +135,21 @@ export default function AdminProductsTab({
     setShowProductModal(true);
   };
 
+  // --------------------------------------------------------------------------
+  // HANDLER: Membuka Modal Edit Produk yang Ada
+  // --------------------------------------------------------------------------
   const handleOpenEditProduct = (prod: ProductItem) => {
     setEditingProduct(prod);
     setProductFormTab('info');
 
+    // Ambil galeri foto yang sudah ada atau gunakan gambar utama
     const existingPhotos = Array.isArray(prod.gallery) && prod.gallery.length > 0
       ? prod.gallery.filter(Boolean).slice(0, 5)
       : [prod.image || '/images/ayam_bakar.jpg'];
 
     setProdGallery(existingPhotos.length > 0 ? existingPhotos : ['/images/ayam_bakar.jpg']);
 
+    // Isi state formulir dengan data produk yang dipilih
     setProdForm({
       name: prod.name || '',
       sku: prod.sku || `SKU-${Math.floor(1000 + Math.random() * 9000)}-NFK`,
@@ -150,6 +177,9 @@ export default function AdminProductsTab({
     setShowProductModal(true);
   };
 
+  // --------------------------------------------------------------------------
+  // HANDLER: Menyimpan Data Produk (Tambah Baru / Perbarui yang Ada)
+  // --------------------------------------------------------------------------
   const handleSaveProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prodForm.name.trim()) return;
@@ -158,6 +188,7 @@ export default function AdminProductsTab({
     const mainCover = validPhotos[0] || prodForm.image || '/images/ayam_bakar.jpg';
     const galleryPayload = validPhotos.length > 0 ? validPhotos : [mainCover];
 
+    // Susun objek data produk (payload) yang valid
     const productPayload = {
       name: prodForm.name.trim(),
       sku: prodForm.sku.trim() || `SKU-${Math.floor(1000 + Math.random() * 9000)}-NFK`,
@@ -185,8 +216,10 @@ export default function AdminProductsTab({
 
     try {
       if (editingProduct) {
+        // Jika sedang edit, jalankan updateProduct (UPDATE)
         updateProduct(editingProduct.id, productPayload);
       } else {
+        // Jika tambah baru, jalankan addProduct (CREATE)
         addProduct({
           ...productPayload,
           rating: 5.0,

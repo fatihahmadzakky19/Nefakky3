@@ -244,7 +244,7 @@ export default function AutoMapPickerModal({
             className="w-full py-3 sm:py-3.5 px-4 bg-[#5C3D28] hover:bg-[#472E1E] text-white rounded-xl sm:rounded-2xl text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2 group border border-amber-900/20 active:scale-[0.99]"
           >
             <Navigation className={`w-4 h-4 text-amber-300 ${isDetectingGps ? 'animate-spin' : 'group-hover:rotate-45 transition-transform'}`} />
-            <span>{isDetectingGps ? 'Mendeteksi Koordinat GPS Anda...' : '📍 Deteksi Lokasi GPS Saya Saat Ini (Otomatis)'}</span>
+            <span>{isDetectingGps ? 'Mendeteksi Koordinat GPS Anda...' : 'Deteksi Lokasi GPS Saya Saat Ini (Otomatis)'}</span>
           </button>
 
           {gpsErrorMessage && (

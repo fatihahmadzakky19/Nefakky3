@@ -1,9 +1,9 @@
 # Product Requirement Document (PRD) — Nefakky Marketplace
 
 **Nama Produk**: Nefakky - Artisanal Food & Culinary Marketplace  
-**Versi**: 3.0.0 (Enterprise Architecture: Laravel 12 REST Backend, Next.js 14 App Router, Google Stitch AI UI System, Dual Firebase Architecture, Live Camera & Storybook Suite)  
-**Tanggal Terakhir Diperbarui**: 18 Agustus 2026  
-**Status**: Production / Live  
+**Versi**: 3.5.0 (Enterprise Architecture: Laravel 12 REST Backend, Next.js 14 App Router, Google Stitch AI UI System, Midtrans Sandbox Payment Gateway & Simulator Polling, Dual Firebase Architecture, Live Camera Studio & Storybook Suite)  
+**Tanggal Terakhir Diperbarui**: 22 Agustus 2026  
+**Status**: Production Standard (100% Passed Test Suite)  
 **Penulis / Team**: Tim Pengembang Nefakky (Fatih Ahmad Zakky) & Google Stitch AI Design System  
 
 ---
@@ -11,206 +11,151 @@
 ## 1. Ringkasan Eksekutif & Visi Produk
 
 ### 1.1 Visi Produk
-**Nefakky** adalah platform *artisanal e-commerce* dan marketplace kuliner premium berteknologi modern yang menghubungkan penikmat kuliner (*epicureans*) dengan hidangan tradisional khas Indonesia berkualitas tinggi. Platform ini menggabungkan pengalaman belanja digital yang hangat, estetik, dan responsif dengan integrasi gerbang pembayaran *real-time* eksklusif (**Midtrans Snap API**), pemetaan lokasi pengiriman otomatis berbasis GPS (**Auto Map Picker & Haversine Distance Engine**), modul pengambilan foto secara langsung (**Live Camera Capture System**), suite komponen UI terisolasi (**Storybook 10 Suite**), arsitektur ganda database awan *real-time* (**Firebase Cloud Firestore DB & Firebase Realtime Database `asia-southeast1`**), backend berkinerja tinggi (**Laravel 12 REST API Engine**), serta sistem pengelolaan operasional toko terpadu (**Enterprise Admin Command Center**).
+**Nefakky** adalah platform *artisanal e-commerce* dan marketplace kuliner premium berteknologi modern yang menghubungkan penikmat kuliner (*epicureans*) dengan hidangan tradisional khas Nusantara berkualitas tinggi. Platform ini menggabungkan pengalaman belanja digital yang hangat, estetik, dan responsif dengan integrasi gerbang pembayaran *real-time* (**Midtrans Core API & Snap Engine** dengan integrasi resmi Midtrans Sandbox Simulator), sistem kalkulasi ongkos kirim berbasis jarak (**Distance-Based Shipping Engine**), pemetaan armada kurir visual (**Animated SVG Live Courier Fleet Map**), modul pengambilan foto 3 arah (**3-Way Photo Studio Picker: Galeri, Kamera Langsung, Google SSO**), arsitektur ganda database awan *real-time* (**Firebase Cloud Firestore DB & Firebase Realtime Database `asia-southeast1`**), backend berkinerja tinggi (**Laravel 12 REST API Engine**), serta sistem pengelolaan operasional toko terpadu (**Enterprise Admin Command Center**).
 
 ### 1.2 Tujuan Utama & Value Proposition
 * **Direct-to-Consumer (D2C) Premium**: Menyediakan pemesanan hidangan khas langsung dari dapur Nefakky tanpa perantara komisi yang memotong margin usaha.
 * **Alamat Produksi Resmi**: Seluruh produk diproduksi secara otentik di lokasi terpusat: *Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia*.
-* **Google Stitch AI UI System**: Menerapkan skema warna resmi Google Stitch Palette (`#25160E` Espresso, `#3C2A21` Coffee, `#934B19` Terracotta, `#FFA26A` Soft Amber, `#FBF9F5` Warm Cream) untuk menghasilkan tampilan mewah, bersih, dan estetik.
-* **Pemilihan 3 Varian Rasa Jus Interaktif 1 Halaman**: Khusus kategori Minuman Jus (`m6`), pengguna dapat memilih 3 varian rasa (*Mangga Aromanis, Sirsak Madu, Jambu Merah*) langsung dalam 1 halaman/modal yang sama dengan galeri dinamis tanpa berpindah tautan.
-* **Live Camera Capture & Image Upload Modal**: Fitur kamera bawaan peramban (`LiveCameraModal`) untuk pengambilan foto ulasan kuliner atau bukti profil secara langsung dengan dukungan toggle kamera depan/belakang dan fallback unggah berkas.
-* **Auto Map Picker & Preset Jabodetabek**: Modal pemeta lokasi GPS interaktif (`AutoMapPickerModal`) lengkap dengan opsi pencarian lokasi OpenStreetMap Nominatim, preset area populer Jabodetabek, dan kalkulasi otomatis jarak Haversine ke Dapur Pusat.
-* **Pelacakan Status Pesanan Real-time 5-Tahap & Firebase RTDB Sync**: Menyediakan pelacakan status pesanan secara *live* (`1. Diterima` $\rightarrow$ `2. Dimasak` $\rightarrow$ `3. Siap` $\rightarrow$ `4. Diantar` $\rightarrow$ `5. Diterima Pelanggan`) yang tersinkronisasi otomatis via **Firebase Realtime Database** (`rtdb`), hitung mundur waktu estimasi real-time, tab navigasi antar-pesanan aktif, dan konfirmasi penerimaan dari pembeli.
-* **Alur Checkout Multi-Step 4-Tahap & Midtrans Sandbox Simulator Engine**: Alur checkout terstruktur (`Cart` $\rightarrow$ `Checkout & GPS` $\rightarrow$ `Payment Midtrans` $\rightarrow$ `Success`) dengan token resmi Midtrans Snap dan panduan integrasi ke Midtrans Payment Simulator Sandbox.
-* **Enterprise Admin Command Center & Export Engine**: Dashboard manajemen toko multi-tab (Dashboard KPI, Orders, Products, Promotions, Reviews, Settings, CS Chat) dilengkapi dengan generator ekspor laporan ke format Microsoft Excel (.xls/.csv), PDF, dan Print resmi (`exportUtils.ts`).
-* **Analitik Penjualan Riil & Custom Grafik Manager**: Grafik tren omset kotor dan laba bersih yang dimulai dari Juni 2026 (Event Bazar >10 Juta) dengan fitur **Edit Data Grafik** per bulan dan modal input transaksi offline/POS manual yang detail.
+* **Midtrans Sandbox Simulator & Live Status Polling**: Mengintegrasikan API Midtrans resmi (`MIDTRANS_SERVER_KEY` & `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY`) untuk menghasilkan Virtual Account (BCA/BNI/BRI/Permata), Mandiri Bill, dan QRIS secara riil. Aplikasi menyediakan tautan 1-klik ke [Midtrans Payment Simulator](https://simulator.sandbox.midtrans.com/bca/va/index), melakukan *background polling* otomatis setiap 2,5 detik, dan memicu notifikasi sukses instan saat pelunasan terjadi.
+* **Formula Ongkos Kirim Berbasis Jarak**:
+  $$\text{Ongkir} = \begin{cases} \text{Rp } 10.000 & \text{jika } \text{jarak} \le 10\text{ km} \\ \text{Rp } 10.000 + \lceil\frac{\text{jarak} - 10}{2}\rceil \times \text{Rp } 2.500 & \text{jika } \text{jarak} > 10\text{ km} \end{cases}$$
+* **Pelacakan 5-Tahap & Konfirmasi Pelanggan**: Alur status pesanan terstruktur (`1. Diterima` $\rightarrow$ `2. Dimasak` $\rightarrow$ `3. Menunggu Kurir` $\rightarrow$ `4. Dalam Perjalanan` $\rightarrow$ `5. Selesai`). Pelanggan wajib mengonfirmasi kedatangan pesanan melalui kartu **"✅ Konfirmasi Pesanan Telah Sampai (Tiba Tepat Waktu)"** yang seketika memberitahu admin dan kurir.
+* **Kewajiban Bukti Antar Kurir**: Kurir pengantar (*"Karyawan Nefakky"*) wajib mengirimkan bukti foto pesanan telah tiba via WhatsApp (ditambah bukti penerimaan uang tunai jika transaksi menggunakan Cash on Delivery / COD).
+* **Riwayat Pesanan Realtime (Newest-First)**: Daftar riwayat pesanan disortir dari yang paling baru ke yang paling lama dan terhubung langsung secara *live* dengan Firestore `onSnapshot`.
+* **3-Way Photo Studio Picker**: Pengguna dapat mengubah foto profil melalui unggah galeri, jepretan kamera langsung (*webcam video stream & canvas snapshot*), atau sinkronisasi otomatis avatar Google SSO.
+* **Siklus Data Profil & Alamat**: Pengguna baru yang mendaftar via form memiliki nomor telepon terisi; login via Google membiarkan nomor telepon kosong sampai diisi. Alamat dimulai dari kosong dan otomatis terisi di profil saat pengguna memasukkan alamat pada proses checkout pertama.
+* **Enterprise Admin Command Center**: Dashboard pengelolaan pesanan dapur, visualisasi grafik omset interaktif SVG (dimulai dari Juni 2026 >10 Juta), pencatatan omset manual bazar/offline multi-item, dan ekspor laporan ke Excel (.xls), CSV, serta PDF.
 
 ---
 
-## 2. Target Pengguna (User Personas)
+## 2. Target Pengguna & Personas
 
 ### 2.1 Pelanggan (*Customer / Consumer*)
-* **Profil**: Penikmat kuliner tradisional, pekerja kantoran, keluarga, atau mahasiswa yang membutuhkan pemesanan makanan berkualitas tinggi secara daring dengan jaminan kesegaran dan kecepatan pengiriman.
+* **Profil**: Penikmat kuliner tradisional, pekerja kantoran, keluarga, atau mahasiswa yang membutuhkan pemesanan makanan berkualitas tinggi secara daring.
 * **Kebutuhan Utama**:
-  * Katalog menu interaktif dengan 3 kategori bersih (*Makanan Berat*, *Minuman*, *Menu Hemat*), rincian bahan, kalori, dan ketersediaan stok *live*.
-  * Interaksi pemilihan 3 varian jus minuman (*Mangga, Sirsak, Jambu*) dalam 1 tampilan halaman.
-  * Pemilihan lokasi pengiriman otomatis via GPS Pinpoint Map (**Auto Map Picker Modal**) atau preset area Jabodetabek.
-  * Modul foto kamera langsung (**Live Camera Capture**) untuk ulasan hidangan dan profil.
-  * Pembayaran digital aman via **Midtrans Snap Engine** (QRIS, GoPay, ShopeePay, Virtual Account BCA/Mandiri/BNI, Kartu Kredit).
-  * Pelacakan status pengiriman 5-tahap secara *real-time* via **Firebase Realtime Database** (`rtdb`) dengan estimasi waktu tiba, tab switcher untuk multi-checkout, dan tombol konfirmasi terima barang.
-  * Widget pelacak pesanan mengambang (*Floating Realtime Order Tracker*) di seluruh halaman.
-  * Seksi **Riwayat Pemesanan Permanen** dan modal cetak **Struk Pembayaran Resmi (PDF)** via `window.print()`.
-  * Live Chat CS interaktif *real-time* langsung dari halaman profil.
+  * Katalog menu interaktif dengan 3 kategori (*Makanan Berat*, *Minuman*, *Menu Hemat*) dan modal pemilihan 3 varian jus (Mangga, Sirsak, Jambu) dalam 1 tampilan.
+  * Checkout 4-tahap dengan kalkulasi ongkos kirim berbasis jarak yang transparan dan akurat.
+  * Pembayaran online via Midtrans Sandbox dengan nomor Virtual Account / QRIS riil, tombol salin instan, dan tautan langsung ke simulator Midtrans.
+  * Pilihan transaksi Cash on Delivery (COD) tanpa pembayaran online awal.
+  * Pelacakan live status 5-tahap dan visualisasi pergerakan kurir pada peta animasi SVG.
+  * Tombol konfirmasi penerimaan barang dan cetak nota resmi PDF.
+  * Pengaturan profil fleksibel dengan 3 pilihan foto profil (Galeri, Kamera, Google).
 
-### 2.2 Administrator (*Admin / Store Manager*)
-* **Profil**: Pemilik usaha (*Fatih Ahmad Zakky*) dan staf operasional toko yang mengelola persediaan menu, alur dapur pesanan, promosi, serta laporan keuangan harian.
+### 2.2 Administrator & Staf Operasional (*Admin & Kitchen*)
+* **Profil**: Pemilik usaha (*Fatih Ahmad Zakky*) dan kurir dapur (*Karyawan Nefakky*).
 * **Kebutuhan Utama**:
-  * Dashboard analitik bisnis riil (Omset Kotor, Omset Bersih 40%, Total Pesanan, AOV, serta peringkat Makanan Terlaris & Kurang Laris).
-  * Ekspor laporan lengkap ke Excel (.xls), CSV, dan PDF dengan kop resmi Nefakky.
-  * Grafik omset penjualan yang dapat diedit secara langsung (*Edit Data Grafik Modal*) dan disimpan secara permanen.
-  * Modal Input Omset Manual yang detail untuk penjualan offline/bazar dengan pemilihan multi-item menu terlaris & kurang laris.
-  * Manajemen operasional dapur real-time (perubahan status `RECEIVED` $\rightarrow$ `COOKING` $\rightarrow$ `READY` $\rightarrow$ `SHIPPING` $\rightarrow$ `COMPLETED`).
-  * Manajemen katalog produk secara fleksibel (CRUD, harga, stok, diskon, galeri foto, deskripsi, alamat produksi resmi, dan visibilitas).
-  * Generator kode kupon voucher promo dengan batasan *Minimum Spend*, kuota penggunaan, dan fitur *Auto-Expire*.
-  * Moderasi ulasan pelanggan (penyematan ulasan terbaik, balasan pesan ulasan, dan analisis sentimen).
-  * Meja Pelayanan Live Customer Service (*CS Support Desk*) dengan notifikasi suara dan badge belum dibaca.
+  * Dashboard analitik bisnis riil (Omset Kotor, Laba Bersih 40%, Total Pesanan, AOV).
+  * Pengelolaan alur pesanan dapur 5-tahap dengan tombol pembaruan status 1-klik.
+  * Notifikasi instan saat pelanggan mengonfirmasi penerimaan barang tepat waktu.
+  * Verifikasi bukti foto makanan dan bukti uang tunai COD dari kurir via WhatsApp.
+  * Editor grafik omset bulanan SVG dan modal input omset manual untuk bazar offline.
+  * Ekspor laporan keuangan ke format Excel (.xls) berstandar korporat dan PDF.
 
 ---
 
-## 3. Lingkup Produk & Modul Fitur Utama (Product Scope & Features)
+## 3. Spesifikasi Kebutuhan Fungsional (Functional Requirements)
 
-### 3.1 Modul Pelanggan (*Customer Facing*)
+### 3.1 Modul Pembayaran Digital Midtrans Sandbox (`/cart` & `/api/midtrans/*`)
+* **FR-PAY-01**: Sistem harus menyediakan metode pembayaran: *Virtual Account BCA, Virtual Account Mandiri, Virtual Account BNI, QRIS Instant, E-Wallet (GoPay/ShopeePay), Kartu Kredit*, dan *Cash on Delivery (COD)*.
+* **FR-PAY-02**: Endpoint `POST /api/midtrans/charge` harus memanggil Midtrans Sandbox Core API menggunakan `MIDTRANS_SERVER_KEY` dan menghasilkan nomor VA / kode transaksi riil.
+* **FR-PAY-03**: Sistem harus menampilkan modal konsol pembayaran interaktif yang memuat:
+  - Nomor Virtual Account / QRIS string.
+  - Tombol 1-klik untuk menyalin kode ke clipboard.
+  - Tombol eksternal **"🌐 Buka Midtrans Payment Simulator ↗"** yang mengarahkan ke `https://simulator.sandbox.midtrans.com/bca/va/index` di tab baru.
+* **FR-PAY-04**: Sistem harus melakukan polling otomatis ke `GET /api/midtrans/status?orderId={orderId}` setiap 2.500 ms di latar belakang.
+* **FR-PAY-05**: Ketika status transaksi berubah menjadi `settlement` atau `capture`, sistem harus seketika:
+  - Menutup modal pembayaran dan menghentikan polling.
+  - Menampilkan pop-up dialog perayaan **"🎉 Pembayaran Berhasil!"**.
+  - Menyimpan pesanan ke database dengan badge `PAID` dan status `RECEIVED`.
+  - Mengosongkan keranjang belanja dan mengarahkan pengguna ke langkah Sukses / Pelacakan Pesanan.
+* **FR-PAY-06**: Transaksi COD harus langsung dibuat tanpa memanggil API pembayaran online, dengan status badge `AWAITING` (Menunggu Pembayaran).
 
-#### 1. Autentikasi & Pengelolaan Sesi (`AuthContext`)
-* **Multi-Provider Auth**: Login & pendaftaran akun via Email/Password serta Google OAuth Single Sign-On (SSO).
-* **Penanganan Error Terstruktur**: Pesan kegagalan login/registrasi yang informatif dalam Bahasa Indonesia.
-* **Keamanan Sesi Lintas Tab**: Sinkronisasi status autentikasi secara otomatis antar-tab peramban.
+### 3.2 Modul Formula Ongkos Kirim Berdasarkan Jarak
+* **FR-SHP-01**: Ongkos kirim dihitung berdasarkan jarak kurir pengantaran dengan rumus:
+  - Jarak $\le 10$ km: Flat **Rp 10.000**.
+  - Jarak $> 10$ km: **Rp 10.000 + $\lceil(\text{jarak} - 10)/2\rceil \times \text{Rp } 2.500$**.
+* **FR-SHP-02**: Rincian biaya pada Keranjang, Checkout, Pembayaran, Pelacakan Pesanan, dan Struk Nota harus 100% identik dan transparan tanpa ada biaya tersembunyi.
+* **FR-SHP-03**: Semua label `(EXPRESS)` dihapus dan disatukan menjadi layanan pengantaran resmi **"Kurir Nefakky"**.
 
-#### 2. Katalog Produk 3 Kategori & Varian 3-Jus (`/menu` & `/page.tsx`)
-* **3 Kategori Utama**: *Makanan Berat*, *Minuman*, dan *Menu Hemat*.
-* **Varian 3-Jus 1 Halaman**: Dukungan pemilihan rasa jus (Mangga, Sirsak, Jambu) dengan visualisasi gambar utama & thumbnail instan.
-* **Alamat Produksi Resmi**: Seluruh card produk menampilkan lokasi produksi terpusat: *Puri Bojong Lestari AF No 41, Bojong Gede, Bogor*.
-* **Detail Modal Produk**: Menampilkan galeri foto produk high-res, daftar bahan utama, panduan konsumsi, asal hidangan, serta informasi nilai gizi.
+### 3.3 Modul Pelacakan Pesanan & Verifikasi Pengiriman (`/notifications`)
+* **FR-TRK-01**: Halaman pelacakan pesanan harus menggunakan layout 2-kolom responsif:
+  - Kolom Kiri (`lg:col-span-7`): Header estimasi waktu, stepper 5-tahap vertikal dengan timestamp riil, dan kartu konfirmasi pelanggan.
+  - Kolom Kanan (`lg:col-span-5`): Peta animasi SVG kurir bergerak, badge nama kurir (*"Karyawan Nefakky"*), dan rincian pesanan.
+* **FR-TRK-02**: Stepper 5-Tahap mencakup:
+  1. *Pesanan Diterima* (`RECEIVED`)
+  2. *Sedang Dimasak* (`COOKING`)
+  3. *Menunggu Kurir* (`READY`)
+  4. *Dalam Perjalanan* (`SHIPPING` / `ON_DELIVERY`)
+  5. *Pesanan Selesai* (`COMPLETED` / `DELIVERED`)
+* **FR-TRK-03**: Ketika admin menetapkan status pesanan telah diantar ke pelanggan, pelanggan wajib menekan tombol **"✅ Konfirmasi Pesanan Telah Sampai (Tiba Tepat Waktu)"**.
+* **FR-TRK-04**: Konfirmasi pelanggan seketika menghentikan animasi kurir di tujuan, menandai pesanan sebagai `COMPLETED`, dan memunculkan notifikasi realtime di dashboard admin.
+* **FR-TRK-05**: Kurir pengantar (*"Karyawan Nefakky"*) wajib mengirimkan bukti pengiriman via WhatsApp:
+  - Bukti foto hidangan telah tiba (Wajib untuk semua metode pembayaran).
+  - Bukti penerimaan uang tunai (Wajib khusus metode pembayaran Cash on Delivery / COD).
 
-#### 3. Checkout Multi-Step 4-Tahap & Auto Map Picker (`CartContext` & `/cart`)
-* **Tahap 1 (Cart)**: Ringkasan porsi menu, klaim voucher promo diskon persentase, dan kalkulasi subtotal.
-* **Tahap 2 (Checkout)**: Pengisian alamat penerima, lokasi GPS map via **Auto Map Picker Modal** (`AutoMapPickerModal.tsx`), catatan masakan dapur, dan rincian ongkir Haversine.
-* **Tahap 3 (Payment Midtrans)**: Pembayaran eksklusif **Midtrans Snap Engine** (VA Bank, GoPay/ShopeePay, QRIS, Credit Card 3D Secure).
-* **Tahap 4 (Success)**: Konfirmasi pembayaran berhasil dan tombol pelacakan live status.
+### 3.4 Modul Riwayat Pesanan Realtime (Newest-First)
+* **FR-HIST-01**: Riwayat pesanan di bagian bawah halaman pelacakan harus diurutkan dari yang paling baru ke yang paling lama berdasarkan timestamp transaksi.
+* **FR-HIST-02**: Mengklik kartu riwayat mana pun akan otomatis memuat dan menampilkan rincian pesanan tersebut pada Live Tracker di bagian atas halaman.
+* **FR-HIST-03**: Setiap kartu riwayat memiliki tombol **"Struk"** untuk membuka modal nota digital resmi siap cetak via `window.print()`.
 
-#### 4. Live Camera Capture System (`LiveCameraModal.tsx`)
-* **Akses Kamera Langsung**: Mengambil foto ulasan hidangan atau gambar profil secara *real-time* via `getUserMedia` Web API.
-* **Toggle Kamera Front/Rear**: Pengalihan lensa kamera (`environment` / `user`).
-* **Fallback Upload Berkas**: Opsi fleksibel unggah berkas foto dari penyimpanan lokal jika akses kamera ditolak.
-
-#### 5. Pelacakan Pesanan Real-time 5-Tahap (`/notifications` & `RealtimeOrderTracker.tsx`)
-* **Firebase Realtime Database (RTDB)**: Sinkronisasi status pesanan secara instan dari region `asia-southeast1`.
-* **Visual Stepper Live 5-Tahap**: Progress bar bergerak (`RECEIVED` $\rightarrow$ `COOKING` $\rightarrow$ `READY` $\rightarrow$ `SHIPPING` $\rightarrow$ `COMPLETED`).
-* **Multi-Order Selector Tabs**: Tab navigasi antar-pesanan jika pelanggan memiliki beberapa transaksi checkout aktif bersamaan.
-* **Printable Receipt Modal**: Modal struk bukti pembayaran resmi Midtrans dengan tombol cetak PDF (`window.print()`).
-* **Floating Mini-Tracker Widget**: Widget pemantau pesanan aktif mengambang di seluruh halaman pelanggan.
-
-#### 6. Profil, Riwayat Pesanan & Live CS Chat (`/profile`)
-* **Pengaturan Profil**: Edit identitas, nomor WhatsApp, alamat utama, dan avatar.
-* **Riwayat Pesanan**: Daftar transaksi masa lalu lengkap dengan rincian pesanan dan tombol pesan ulang (*Re-order*).
-* **Live CS Chat**: Ruang obrolan langsung dengan admin toko secara real-time via Firebase RTDB (`chat_messages`).
-
-#### 7. Ulasan Rasa & Komentar Komunitas (`/comments`)
-* **Feed Ulasan Kuliner**: Grid ulasan lengkap dengan filter rating bintang, foto bukti hidangan, dan balasan admin toko.
-* **Helper Ulasan Otomatis (`reviews.ts`)**: Generator konteks ulasan rasa khas hidangan tradisional Nusantara.
-
----
-
-### 3.2 Modul Administrator (*Admin Control Panel - /admin*)
-
-#### 1. Dashboard Eksekutif & Editable Sales Chart (`AdminDashboardTab.tsx`)
-* **5 Metrik KPI Utama**: Total Omset Kotor, Estimasi Margin Laba Bersih 40%, Total Pesanan Selesai, Average Order Value (AOV), dan Rating Kepuasan Pelanggan.
-* **Grafik Omset Juni 2026**: Visualisasi omset kotor dan laba bersih yang dimulai dari Juni 2026 (Event Bazar >10 Juta).
-* **Edit Data Grafik Modal**: Tombol `✏️ Edit Data Grafik` untuk mengubah nominal omset kotor, laba bersih, status event bazar, dan badge tooltip per bulan secara real-time.
-* **Export Engine (`exportUtils.ts`)**: Tombol ekspor laporan lengkap ke Microsoft Excel (.xls) berformat resmi, CSV, dan PDF Print.
-
-#### 2. Operasional Dapur & Manajemen Pesanan (`AdminOrdersTab.tsx`)
-* **Kitchen Command Center**: Pengendalian status pengiriman 5-tahap (`RECEIVED` $\rightarrow$ `COOKING` $\rightarrow$ `READY` $\rightarrow$ `SHIPPING` $\rightarrow$ `COMPLETED`) dan pembayaran (`PAID`, `UNPAID`, `REFUNDED`).
-* **Automatic RTDB Push**: Setiap perubahan status pesanan di-push ke node `live_orders/` di Realtime Database dan Laravel REST API.
-* **Filter & Pencarian Pesanan**: Tab filter status pesanan dan modal rincian transaksi lengkap dengan fungsi cetak struk PDF.
-
-#### 3. Manajemen Katalog Produk (`AdminProductsTab` / `/admin/products`)
-* **Manajemen Produk (CRUD)**: Tambah, sunting harga, atur diskon persentase, kelola stok persediaan, ubah kategori, dan foto utama.
-* **Alamat Produksi Terpusat**: Seluruh item terikat ke alamat resmi dapur pusat.
-
-#### 4. Manajemen Promosi & Voucher Diskon (`AdminPromotionsTab.tsx`)
-* **Voucher Manager**: Pengaturan kode voucher (cth: `WEEKENDSERU`), persentase diskon, syarat *Minimum Spend*, kuota penggunaan, dan tanggal berlaku.
-* **Fitur Auto-Expiry**: Voucher otomatis berstatus *Expired* ketika batas kuota habis atau masa berlaku terlampaui.
-* **Live Banner Preview**: Pratinjau visual banner promo yang akan ditampilkan di aplikasi pelanggan.
-
-#### 5. Moderasi Ulasan & Testimoni Pelanggan (`AdminReviewsTab.tsx`)
-* **Review Moderation**: Sematkan ulasan terbaik (*Pin Review*), balas ulasan pelanggan secara publik, dan sembunyikan/hapus ulasan tidak pantas.
-* **Statistik Sentimen**: Distribusi bintang ulasan dan rekapitulasi kepuasan pembeli.
-
-#### 6. Pengaturan Toko & Meja CS Chat (`AdminSettingsTab.tsx`)
-* **Konfigurasi Restoran**: Pengaturan nama toko, jam operasional, nomor WhatsApp darurat, radius pengiriman, dan biaya ongkir dasar.
-* **Customer Service Live Chat Desk**: Panel percakapan interaktif dengan pelanggan, indikator belum dibaca, dan notifikasi audio lonceng pesan masuk.
+### 3.5 Modul Profil Pengguna & 3-Way Photo Studio (`/profile`)
+* **FR-PRF-01**: Pengguna dapat memperbarui foto profil melalui 3 cara:
+  1. *Galeri*: Unggah file gambar lokal.
+  2. *Ambil Foto Sendiri*: Live webcam snapshot via WebRTC stream dan canvas capture.
+  3. *Google SSO*: Sinkronisasi otomatis avatar akun Google.
+* **FR-PRF-02**: Pengguna baru yang mendaftar via email/password memiliki nomor telepon terisi; registrasi/login via Google membiarkan nomor telepon kosong sampai pengguna mengisinya.
+* **FR-PRF-03**: Alamat dimulai dari kosong untuk pengguna baru. Saat pengguna memasukkan alamat pada transaksi checkout pertama, alamat tersebut otomatis tersimpan ke daftar alamat profil sebagai alamat default.
 
 ---
 
-## 4. Arsitektur Teknologi & Struktur Project
+## 4. Arsitektur Data & Model Database
 
-### 4.1 Ringkasan Komponen Arsitektur
-* **Frontend Application**: **Next.js 14 (App Router)**, React 18, Tailwind CSS v3, TypeScript (Strict Mode), Lucide React Icons.
-* **UI Testing Suite**: **Storybook 10**, Vitest Browser Runner, Playwright Integration (`.storybook/`, `*.stories.tsx`).
-* **Backend REST API**: **Laravel 12 REST API Framework** (PHP 8.2+) dengan arsitektur Model-View-Controller (MVC), Eloquent ORM, Seeders, dan Migrations terintegrasi.
-* **Dual Database Architecture**:
-  - **Firebase Cloud Firestore DB**: Penyimpanan dokumen persistent (Koleksi: `products`, `orders`, `vouchers`, `reviews`, `sales_reports`, `settings`, `chat_messages`).
-  - **Firebase Realtime Database (RTDB)**: Low-latency real-time state sync (Region: `asia-southeast1`, node: `live_orders/`, `chat_messages/`).
-* **Payment Gateway Engine**: **Midtrans Snap API** & Midtrans Payment Simulator Sandbox.
-* **Geolocation & Geocoding Engine**: OpenStreetMap Nominatim Geocoding API & **Haversine Distance Formula**.
-
-### 4.2 Struktur Direktori Proyek
-```
-UKK/
-├── Laravel/                          # Backend API Engine (Laravel 12)
-│   ├── app/
-│   │   ├── Http/Controllers/Api/     # REST API Controllers (Product, Order, Voucher, Review, SalesReport, Midtrans, Haversine)
-│   │   └── Models/                   # Eloquent Models (ProductItem, Voucher, Order, OrderItem, Review, SalesReport, User)
-│   ├── database/
-│   │   ├── migrations/               # Database Migrations Schema
-│   │   └── seeders/                  # Master Data Seeders
-│   └── routes/
-│       └── api.php                   # API Endpoints Definition
-└── nefakky3/                         # Frontend Application (Next.js 14 App Router)
-    ├── .storybook/                   # Storybook 10 Configuration
-    ├── scripts/
-    │   └── run-tests.mjs             # Automated Test Runner Suite
-    ├── src/
-    │   ├── app/                      # Next.js App Router Pages
-    │   │   ├── page.tsx              # Beranda & Hero Section
-    │   │   ├── menu/                 # Katalog Menu & Detail Varian
-    │   │   ├── cart/                 # Multi-step 4-Tahap Checkout
-    │   │   ├── notifications/        # Live 5-Tahap Order Tracking (RTDB)
-    │   │   ├── profile/              # Profil Pengguna, Riwayat & CS Chat
-    │   │   ├── comments/             # Komunitas Ulasan & Testimoni
-    │   │   └── admin/                # Enterprise Command Center (/admin)
-    │   │       ├── orders/           # Tab Pesanan Masuk
-    │   │       ├── products/         # Tab Katalog Produk
-    │   │       ├── promotions/       # Tab Voucher & Promo
-    │   │       ├── reviews/          # Tab Moderasi Ulasan
-    │   │       └── settings/         # Tab Pengaturan & CS Desk
-    │   ├── components/               # Reusable UI & Modal Components
-    │   │   ├── admin/                # Komponen Khusus Admin (Dashboard, Orders, Promotions, Reviews, Settings, Header, Sidebar)
-    │   │   ├── Navbar.tsx            # Header Navigation Bar
-    │   │   ├── MenuDetailModal.tsx   # Modal Detail & 3-Jus Variant
-    │   │   ├── AutoMapPickerModal.tsx# Modal Pemeta Lokasi GPS Haversine
-    │   │   ├── LiveCameraModal.tsx   # Modal Tangkap Foto Kamera
-    │   │   └── RealtimeOrderTracker.tsx # Floating Live Tracker Widget
-    │   ├── context/                  # Global React State Providers
-    │   │   ├── AuthContext.tsx       # Auth Firebase & Google SSO
-    │   │   ├── CartContext.tsx       # Cart, Checkout & Ongkir State
-    │   │   └── DataContext.tsx       # Dual Backend Data Sync
-    │   └── lib/                      # Helper Utilities & API Clients
-    │       ├── exportUtils.ts        # Excel, CSV, PDF Export Engine
-    │       ├── firebase.ts           # Inisialisasi Firebase Cloud
-    │       ├── laravelApi.ts         # REST Client Laravel Backend
-    │       └── reviews.ts            # Helper Ulasan Rasa Indonesia
-    ├── DESIGN.md                     # Master Design System Index
-    ├── DESIGN_USER.md                # UI/UX Guideline Aplikasi Pelanggan
-    ├── DESIGN_ADMIN.md               # UI/UX Guideline Admin Command Center
-    ├── PRD.md                        # Product Requirement Document
-    ├── README.md                     # Dokumentasi Utama Proyek
-    └── TEST_REPORT.md                # Laporan Hasil Pengujian Otomatis
+### 4.1 Entitas Pesanan (`orders` di Firestore & RTDB)
+```typescript
+export interface AdminOrder {
+  id: string;                      // Contoh: "ORD-9281" atau "NFK-892102"
+  userId?: string;                 // UID Pengguna terautentikasi
+  customerName: string;            // Nama lengkap pelanggan
+  customerEmail: string;           // Alamat email pelanggan
+  avatar?: string;                 // URL foto profil pelanggan
+  address: string;                 // Alamat pengantaran lengkap
+  phone: string;                   // Nomor WhatsApp / Telepon aktif
+  items: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image: string;
+    variant?: string;              // Rasa jus khusus m6 (Mangga/Sirsak/Jambu)
+  }>;
+  itemCount: number;               // Total porsi makanan
+  paymentMethod: string;           // "Virtual Account BCA", "QRIS", "Cash on Delivery (COD)"
+  paymentBadge: 'PAID' | 'AWAITING'; // Status pelunasan
+  deliveryType: string;            // "KURIR NEFAKKY"
+  distance?: string;               // Estimasi jarak pengantaran (misal: "4.2 Km")
+  status: 'RECEIVED' | 'COOKING' | 'READY' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED';
+  subtotal: number;                // Subtotal harga menu
+  shippingCost: number;            // Ongkos kirim berbasis jarak
+  discount: number;                // Potongan diskon voucher promo
+  total: number;                   // Total nominal yang harus dibayar
+  voucherCode?: string;            // Kode kupon promo terpakai
+  customerConfirmed?: boolean;     // Penanda konfirmasi penerimaan dari pelanggan
+  confirmedAt?: string;            // Waktu konfirmasi (misal: "Hari ini, 13:05")
+  date: string;                    // Waktu pesanan dibuat
+  createdAt?: number;              // Timestamp milidetik untuk pengurutan Newest-First
+}
 ```
 
-### 4.3 Dokumen Desain Terpisah
-* 🛒 **[DESIGN_USER.md](file:///f:/UKK/nefakky3/DESIGN_USER.md)** — Spesifikasi UI/UX Lengkap Aplikasi Pelanggan.
-* 🏢 **[DESIGN_ADMIN.md](file:///f:/UKK/nefakky3/DESIGN_ADMIN.md)** — Spesifikasi UI/UX Lengkap Enterprise Admin Command Center.
-* 📑 **[DESIGN.md](file:///f:/UKK/nefakky3/DESIGN.md)** — Master Index Dokumentasi Desain.
-
 ---
 
-## 5. Persyaratan Non-Fungsional (Non-Functional Requirements)
+## 5. Kebutuhan Non-Fungsional & Keamanan (Non-Functional Requirements)
 
-* **Performa (Performance)**: First Contentful Paint (FCP) $< 1.5$ detik, skor Google Lighthouse $> 90$, response time REST API $< 100$ ms.
-* **Estetika UI/UX**: Google Stitch AI Design System dengan palet warna natural yang konsisten (`#25160E`, `#3C2A21`, `#934B19`, `#FFA26A`, `#FBF9F5`).
-* **Keamanan (Security)**: Pengamanan API Key via `.env.local`, enkripsi 256-bit Midtrans Snap, HTTPS SSL, sanitasi input XSS, dan validasi server-side.
-* **Ketahanan Data & Sinkronisasi Ganda (Resilience)**: Fallback otomatis antara Laravel REST API dan Firebase Cloud Database jika salah satu koneksi terputus.
-* **Integritas Tipe (TypeScript Strict Mode)**: `npx tsc --noEmit` lulus 100% dengan 0 error kompilasi.
-* **Aksesibilitas (A11y)**: Semantic HTML5, kontras warna WCAG AA, dan navigasi keyboard yang ramah pengguna.
+1. **Keamanan & Kredensial**:
+   - `MIDTRANS_SERVER_KEY` tersimpan aman di environment server (`.env.local`) dan tidak pernah dikirimkan ke client-side.
+   - Menggunakan sanitasi payload Firestore (`cleanForFirestore`) untuk mencegah penyimpanan nilai `undefined`.
+2. **Kinerja & Skalabilitas**:
+   - Polling status Midtrans dihentikan segera setelah pembayaran terverifikasi untuk menghemat sumber daya jaringan.
+   - Waktu respons API charge dan status Midtrans $< 300$ ms.
+3. **Kualitas Kode & Testing**:
+   - 100% lolos pengecekan tipe TypeScript (`npx tsc --noEmit` $\rightarrow$ 0 error).
+   - 100% lolos seluruh suite pengujian otomatis (`npm test` $\rightarrow$ 6/6 PASS).

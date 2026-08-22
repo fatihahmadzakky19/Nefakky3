@@ -89,7 +89,6 @@ export default function RealtimeOrderTracker({
     if (isCompleted) {
       return {
         etaText: 'Tiba (0 Menit)',
-        etaIcon: '🥳',
         title: 'Pesanan Telah Tiba & Selesai',
         desc: 'Pesanan telah berhasil sampai di lokasi Anda. Selamat menikmati hidangan otentik Nefakky!',
         badgeBg: 'bg-emerald-600 text-white border-emerald-700',
@@ -102,7 +101,6 @@ export default function RealtimeOrderTracker({
         case 1:
           return {
             etaText: '~60 - 90 Menit',
-            etaIcon: '⚠️',
             title: 'Diterima • Resto Membludak (Lonjakan Pesanan)',
             desc: 'Dapur dalam antrean tinggi. Pesanan Anda berada dalam antrean masak utama.',
             badgeBg: 'bg-[#934B19] text-white border-amber-900',
@@ -111,7 +109,6 @@ export default function RealtimeOrderTracker({
         case 2:
           return {
             etaText: '~45 - 60 Menit',
-            etaIcon: '🍳',
             title: 'Sedang Dimasak oleh Koki Dapur',
             desc: 'Bumbu rempah otentik sedang meresap ke dalam olahan sajian segar Anda.',
             badgeBg: 'bg-[#934B19] text-white border-amber-900',
@@ -120,7 +117,6 @@ export default function RealtimeOrderTracker({
         case 3:
           return {
             etaText: '~25 - 45 Menit',
-            etaIcon: '📦',
             title: 'Selesai Dimasak & Dikemas',
             desc: 'Hidangan selesai dimasak dan dikemas rapi, menunggu penjemputan oleh kurir.',
             badgeBg: 'bg-[#3C2A21] text-amber-200 border-amber-900/30',
@@ -129,7 +125,6 @@ export default function RealtimeOrderTracker({
         case 4:
           return {
             etaText: '~10 - 25 Menit',
-            etaIcon: '🛵',
             title: 'Kurir Sedang Meluncur ke Lokasi Anda',
             desc: 'Kurir dalam perjalanan mengantarkan hidangan hangat ke alamat pengiriman.',
             badgeBg: 'bg-[#934B19] text-white border-amber-900 animate-pulse',
@@ -138,7 +133,6 @@ export default function RealtimeOrderTracker({
         default:
           return {
             etaText: '0 Menit',
-            etaIcon: '🎉',
             title: 'Pesanan Selesai',
             desc: 'Pesanan telah diterima.',
             badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
@@ -150,7 +144,6 @@ export default function RealtimeOrderTracker({
         case 1:
           return {
             etaText: '~45 - 60 Menit',
-            etaIcon: '📥',
             title: 'Pesanan Diterima Dapur',
             desc: 'Pesanan sudah masuk dan diverifikasi oleh tim resto Nefakky.',
             badgeBg: 'bg-[#3C2A21] text-amber-200 border-amber-900/20',
@@ -159,7 +152,6 @@ export default function RealtimeOrderTracker({
         case 2:
           return {
             etaText: '~30 - 45 Menit',
-            etaIcon: '🍳',
             title: 'Sedang Dimasak oleh Koki Dapur',
             desc: 'Tim dapur sedang mengolah hidangan segar Anda dengan bumbu rempah pilihan.',
             badgeBg: 'bg-[#934B19] text-white border-amber-900',
@@ -168,7 +160,6 @@ export default function RealtimeOrderTracker({
         case 3:
           return {
             etaText: '~15 - 30 Menit',
-            etaIcon: '📦',
             title: 'Pesanan Siap & Dikemas',
             desc: 'Makanan telah selesai dimasak & dikemas rapi higienis siap diantar.',
             badgeBg: 'bg-[#3C2A21] text-amber-200 border-amber-900/20',
@@ -177,7 +168,6 @@ export default function RealtimeOrderTracker({
         case 4:
           return {
             etaText: '~5 - 15 Menit',
-            etaIcon: '🛵',
             title: 'Kurir Sedang Di Jalan',
             desc: 'Kurir kami sedang meluncur membawa hidangan hangat ke alamat Anda!',
             badgeBg: 'bg-[#934B19] text-white border-amber-900 animate-pulse',
@@ -186,7 +176,6 @@ export default function RealtimeOrderTracker({
         default:
           return {
             etaText: 'Tiba (0 Menit)',
-            etaIcon: '🎉',
             title: 'Pesanan Selesai',
             desc: 'Pesanan telah sampai di tujuan. Selamat menikmati!',
             badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
@@ -207,41 +196,30 @@ export default function RealtimeOrderTracker({
   ];
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-amber-900/10 shadow-xl shadow-amber-950/5 space-y-4 sm:space-y-5 hover:shadow-2xl transition-all">
-      
-      {/* 1. TOP HEADER INFO & REALTIME SYNC BADGE */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3 sm:pb-3.5">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#3C2A21] text-amber-200 flex items-center justify-center font-bold text-xs shrink-0 border border-amber-900/20 shadow-sm">
-            #{order.id.slice(-4)}
+    <div className="space-y-4 text-left">
+      {/* 1. STATUS HEADER WITH METADATA */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-stone-200/80">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-xs sm:text-sm text-neutral-900">
+              ID Pesanan: #{order.id.slice(-6).toUpperCase()}
+            </span>
+            <span className="text-[10px] font-semibold bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full">
+              {order.paymentMethod?.toUpperCase() || 'QRIS'}
+            </span>
           </div>
-          <div>
-            <h3 className="font-bold text-xs sm:text-sm text-[#25160E] flex items-center gap-2">
-              <span>Pesanan #{order.id}</span>
-              <span className="text-[10px] text-[#4F4540] font-normal">• {order.date}</span>
-            </h3>
-            <p className="text-[11px] text-[#4F4540] font-medium line-clamp-1">
-              {order.items.map(i => `${i.name} (${i.quantity}x)`).join(', ')}
-            </p>
-          </div>
+          <span className="text-[11px] text-stone-400 font-light block mt-0.5">
+            Dipesan: {order.date || 'Hari ini'}
+          </span>
         </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-3 text-right">
-          <div className="text-left sm:text-right">
-            <span className="font-serif text-sm font-black text-[#25160E] block">
-              Rp {order.total.toLocaleString('id-ID')}
-            </span>
-            <span className="text-[9px] text-[#4F4540]">
-              {order.paymentMethod} • {order.paymentBadge === 'PAID' ? 'LUNAS' : order.paymentBadge}
-            </span>
-          </div>
-
-          <span className={`px-3 py-1 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-bold shadow-sm shrink-0 ${
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
             isCompleted 
               ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
               : 'bg-[#934B19] text-white border border-amber-900 animate-pulse'
           }`}>
-            {isCompleted ? '✅ SELESAI' : '🔥 PROSES DAHULU'}
+            {isCompleted ? 'SELESAI' : 'PROSES DAHULU'}
           </span>
         </div>
       </div>
@@ -257,7 +235,7 @@ export default function RealtimeOrderTracker({
                 <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isCompleted ? 'bg-emerald-500' : 'bg-[#934B19]'}`} />
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#4F4540]">
-                🔴 LIVE TRACKING REALTIME • Update: {lastSyncTime}
+                LIVE TRACKING REALTIME • Update: {lastSyncTime}
               </span>
             </div>
 
@@ -271,7 +249,7 @@ export default function RealtimeOrderTracker({
 
           <div className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl text-xs font-bold border shrink-0 flex flex-col items-start sm:items-end gap-0.5 shadow-sm ${eta.badgeBg}`}>
             <div className="flex items-center gap-1.5">
-              <span>{eta.etaIcon}</span>
+              <Clock className="w-3.5 h-3.5 text-current shrink-0" />
               <span>Estimasi: <strong>{eta.etaText}</strong></span>
             </div>
             {!isCompleted && (

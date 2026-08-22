@@ -1,32 +1,62 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+/**
+ * ============================================================================
+ * HALAMAN: Detail Menu Hidangan (src/app/menu/[id]/page.tsx)
+ * DESKRIPSI: Rincian lengkap hidangan otentik Nefakky. Khusus menu jus,
+ *            menyediakan 3 opsi gambar galeri dan selector 3 varian rasa
+ *            (Mangga, Sirsak, Jambu), sedangkan menu makanan berat tetap
+ *            menampilkan 1 foto tunggal dari database.
+ *            Dilengkapi dengan bagian Ulasan Komunitas REALTIME dari DataContext.
+ * DESAIN: Artisanal Luxury Editorial sesuai referensi desain Nefakky.
+ * ============================================================================
+ */
+
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart, MASTER_PRODUCTS } from '@/context/CartContext';
-import { useData } from '@/context/DataContext';
-import { getProductSpecificReviews } from '@/lib/reviews';
+import { useData, sortReviewsNewestFirst } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { 
-  Search, 
   ShoppingBag, 
-  User, 
   Star, 
   Heart, 
   Plus, 
   Minus, 
   ArrowLeft,
+  Share2,
   CheckCircle2,
-  MapPin,
-  MessageCircle
+  Store,
+  Check,
+  Lock
 } from 'lucide-react';
 
 const DRINK_VARIANTS = [
-  { id: 'Mangga', name: 'Jus Mangga Segar', tag: 'Fresh & Manis', desc: 'Mangga Harum Manis alami kaya akan Vitamin C & A', image: '/images/jus_mangga.jpg' },
-  { id: 'Sirsak', name: 'Jus Sirsak Segar', tag: 'Asam Manis', desc: 'Sirsak murni dengan cita rasa khas asam manis alami', image: '/images/jus_sirsak.jpg' },
-  { id: 'Jambu', name: 'Jus Jambu Biji', tag: 'Super Vitamin C', desc: 'Jambu biji merah segar untuk imunitas dan kesegaran harian', image: '/images/jus_jambu.jpg' }
+  { 
+    id: 'Mangga', 
+    name: 'Jus Mangga Segar', 
+    tag: 'FRESH & MANIS', 
+    benefit: 'Kaya Vitamin C & A', 
+    image: '/images/jus_mangga.jpg' 
+  },
+  { 
+    id: 'Sirsak', 
+    name: 'Jus Sirsak Segar', 
+    tag: 'ASAM SEGAR', 
+    benefit: 'Antioksidan tinggi', 
+    image: '/images/jus_sirsak.jpg' 
+  },
+  { 
+    id: 'Jambu', 
+    name: 'Jus Jambu Biji', 
+    tag: 'MANIS & KENTAL', 
+    benefit: 'Meningkatkan imun', 
+    image: '/images/jus_jambu.jpg' 
+  }
 ];
 
 export default function MenuDetailPage() {
@@ -34,52 +64,123 @@ export default function MenuDetailPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { addToCart } = useCart();
-  const { reviews } = useData();
+  const { products, reviews } = useData();
 
   const productId = params?.id as string;
-  const product = MASTER_PRODUCTS.find(p => p.id === productId) || MASTER_PRODUCTS[1]; // Default Rendang Daging Premium
+  // Temukan produk dari database atau fallback ke master products
+  const product = products.find(p => p.id === productId) || 
+                  MASTER_PRODUCTS.find(p => p.id === productId) || 
+                  MASTER_PRODUCTS[0];
 
+  const isDrink = product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus');
+
+  // State
   const [quantity, setQuantity] = useState<number>(1);
   const [isWishlist, setIsWishlist] = useState<boolean>(false);
-
-  // Realtime Product Reviews filtered from Ulasan Rasa DataContext
-  const liveProductReviews = React.useMemo(() => {
-    if (!product || !reviews) return [];
-    
-    // Find reviews matching this dish
-    const matched = reviews.filter(r => {
-      if (r.isHidden || r.status === 'REJECTED') return false;
-      if (!r.productName) return false;
-      const rName = r.productName.toLowerCase();
-      const pName = product.name.toLowerCase();
-      return rName.includes(pName) || pName.includes(rName);
-    });
-
-    if (matched.length > 0) return matched;
-    // Fallback to top approved reviews if no direct product match yet
-    return reviews.filter(r => !r.isHidden && r.status !== 'REJECTED');
-  }, [reviews, product]);
   const [activeTab, setActiveTab] = useState<'description' | 'ingredients' | 'storage' | 'serving'>('description');
-  const [selectedImage, setSelectedImage] = useState<string>('');
   const [selectedVariant, setSelectedVariant] = useState<string>('Mangga');
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [addedNotice, setAddedNotice] = useState<boolean>(false);
+  const [shareNotice, setShareNotice] = useState<boolean>(false);
 
-  const isDrink = product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus');
   const activeDrinkVariant = DRINK_VARIANTS.find(v => v.id === selectedVariant) || DRINK_VARIANTS[0];
 
+  // Foto Utama: Jika menu jus, ikuti varian aktif. Jika makanan, gunakan foto dari database
   const currentMainImage = isDrink 
-    ? (selectedImage || activeDrinkVariant.image) 
-    : (selectedImage || product.image);
+    ? activeDrinkVariant.image 
+    : (product.image || '/images/ayam_bakar.jpg');
 
-  const productThumbnails = isDrink
-    ? DRINK_VARIANTS.map(v => v.image)
-    : [product.image];
+  const totalPrice = product.price * quantity;
 
-  const handleSelectVariant = (variantId: string, imgUrl: string) => {
-    setSelectedVariant(variantId);
-    setSelectedImage(imgUrl);
-  };
+  // Realtime Reviews dari DataContext
+  const communityReviews = useMemo(() => {
+    const rawList = Array.isArray(reviews) ? reviews : [];
+    const validReviews = rawList.filter(rev => {
+      if (rev.isHidden) return false;
+      if (rev.status && rev.status !== 'PUBLISHED' && rev.status !== 'APPROVED') return false;
+      if (rev.productName) {
+        const revProd = rev.productName.toLowerCase();
+        const curProd = product.name.toLowerCase();
+        return revProd.includes(curProd) || curProd.includes(revProd) || (isDrink && (revProd.includes('jus') || revProd.includes('minuman')));
+      }
+      return true;
+    });
+
+    const sorted = sortReviewsNewestFirst(validReviews.length > 0 ? validReviews : rawList);
+    
+    if (sorted.length > 0) {
+      const avatarBgs = ['bg-[#1E293B] text-white', 'bg-[#BFDBFE] text-[#1E3A8A]', 'bg-[#292524] text-white', 'bg-[#0F766E] text-white'];
+      return sorted.slice(0, 3).map((r, idx) => {
+        const name = r.authorName || 'Pelanggan Nefakky';
+        const initials = name
+          .split(' ')
+          .map(w => w[0])
+          .filter(Boolean)
+          .join('')
+          .toUpperCase()
+          .slice(0, 2) || 'NF';
+
+        return {
+          id: r.id || `realtime-rev-${idx}`,
+          author: name,
+          initials,
+          avatarBg: avatarBgs[idx % avatarBgs.length],
+          rating: typeof r.rating === 'number' ? r.rating : 5,
+          date: r.date || 'Baru saja',
+          comment: r.comment || '',
+          photo: r.photoUrl || r.photo || r.image || (r.photos && r.photos[0]) || null
+        };
+      });
+    }
+
+    // Fallback default jika data review kosong
+    return [
+      {
+        id: 'rev-1',
+        author: 'Andi W.',
+        initials: 'AW',
+        avatarBg: 'bg-[#1E293B] text-white',
+        rating: 5,
+        date: '3 hari lalu',
+        comment: isDrink 
+          ? 'Jus mangganya kental banget dan manisnya alami tanpa gula berlebih, segar pol!' 
+          : 'Bumbunya meresap sampai ke tulang! Madunya berasa banget tapi gak bikin eneg. Sambalnya juara, pedasnya pas.',
+        photo: isDrink ? '/images/jus_mangga.jpg' : '/images/ayam_bakar.jpg'
+      },
+      {
+        id: 'rev-2',
+        author: 'Siti N.',
+        initials: 'SN',
+        avatarBg: 'bg-[#BFDBFE] text-[#1E3A8A]',
+        rating: 4,
+        date: '1 minggu lalu',
+        comment: isDrink
+          ? 'Varian jus sirsaknya mantap asam manis seimbang, cocok dinikmati dingin.'
+          : 'Ayamnya empuk banget, gampang lepas dari tulang. Porsinya pas dan bumbunya nendang.',
+        photo: null
+      },
+      {
+        id: 'rev-3',
+        author: 'Deni R.',
+        initials: 'DR',
+        avatarBg: 'bg-[#292524] text-white',
+        rating: 5,
+        date: '2 minggu lalu',
+        comment: isDrink
+          ? 'Jus jambunya wangi dan fresh, botolnya higienis gampang dibawa kemana-mana.'
+          : 'Selalu pesan ini kalau lagi ngidam masakan nusantara. Kualitas konsisten dan kemasan rapi.',
+        photo: isDrink ? '/images/jus_jambu.jpg' : '/images/nasi_bakar.jpg'
+      }
+    ];
+  }, [reviews, product.name, isDrink]);
+
+  const totalReviewsCount = useMemo(() => {
+    if (Array.isArray(reviews) && reviews.length > 0) {
+      const matching = reviews.filter(r => !r.isHidden && (r.status === 'PUBLISHED' || r.status === 'APPROVED' || !r.status));
+      return matching.length > 0 ? matching.length : (isDrink ? 140 : 120);
+    }
+    return isDrink ? 140 : 120;
+  }, [reviews, isDrink]);
 
   const handleAddToCart = () => {
     if (!user) {
@@ -90,7 +191,7 @@ export default function MenuDetailPage() {
       addToCart(product.id, isDrink ? selectedVariant : undefined);
     }
     setAddedNotice(true);
-    setTimeout(() => setAddedNotice(false), 2000);
+    setTimeout(() => setAddedNotice(false), 2500);
   };
 
   const handleBuyNow = () => {
@@ -104,35 +205,80 @@ export default function MenuDetailPage() {
     router.push('/cart');
   };
 
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: product.name,
+        text: `Nikmati hidangan otentik ${product.name} di Nefakky!`,
+        url: window.location.href
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      setShareNotice(true);
+      setTimeout(() => setShareNotice(false), 2000);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-3 border-stone-300 border-t-[#5C3D28] rounded-full animate-spin mb-4" />
+      <div className="min-h-screen bg-[#FBF9F5] flex flex-col items-center justify-center p-4">
+        <div className="w-8 h-8 border-2 border-stone-300 border-t-black rounded-full animate-spin mb-3" />
         <p className="text-xs text-stone-500 font-medium">Memuat Detail Menu...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-stone-800 font-sans selection:bg-[#5C3D28]/10 selection:text-[#5C3D28] pb-20 lg:pb-0">
+    <div className="min-h-screen bg-[#FBF9F5] text-stone-900 font-sans selection:bg-stone-900 selection:text-white pb-28">
       
-      {/* 1. TOP NAVBAR HEADER */}
+      {/* 1. BILAH NAVIGASI UTAMA */}
       <Navbar />
 
-      {/* 2. MAIN DETAIL CONTAINER */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-12 py-6 sm:py-10 space-y-6 sm:space-y-12">
+      {/* 2. MAIN CONTAINER */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 space-y-8">
         
-        <Link href="/menu" className="inline-flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-700 transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Kembali ke Katalog Menu</span>
-        </Link>
+        {/* Top Action Bar: Back, Wishlist & Share */}
+        <div className="flex items-center justify-between">
+          <Link
+            href="/menu"
+            className="w-10 h-10 rounded-full bg-white border border-stone-200 text-stone-700 hover:text-black flex items-center justify-center shadow-xs transition-colors"
+            title="Kembali ke Katalog"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
 
-        {/* TOP GRID: Product Gallery & Purchase Info */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsWishlist(!isWishlist)}
+              className="w-10 h-10 rounded-full bg-white border border-stone-200 text-stone-700 hover:text-rose-500 flex items-center justify-center shadow-xs transition-colors active:scale-95"
+              title="Tambah ke Favorit"
+            >
+              <Heart className={`w-4 h-4 ${isWishlist ? 'fill-rose-500 text-rose-500' : ''}`} />
+            </button>
+
+            <button
+              onClick={handleShare}
+              className="w-10 h-10 rounded-full bg-white border border-stone-200 text-stone-700 hover:text-black flex items-center justify-center shadow-xs transition-colors active:scale-95"
+              title="Bagikan Menu"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {shareNotice && (
+          <div className="p-3 bg-neutral-900 text-white text-xs rounded-xl text-center animate-fade-in font-medium max-w-xs mx-auto">
+            Tautan menu berhasil disalin ke clipboard!
+          </div>
+        )}
+
+        {/* 3. PRODUCT HERO GRID (2 Columns) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
-          {/* Left Column: Image Gallery */}
-          <div className="lg:col-span-6 space-y-4">
-            <div className="relative w-full h-[380px] sm:h-[450px] rounded-[32px] overflow-hidden bg-stone-100 shadow-md border border-stone-200/60">
+          {/* SISI KIRI: Foto Utama (1 Foto untuk Makanan, 3 Opsi Thumbnail Khusus Jus) */}
+          <div className="lg:col-span-6 space-y-3.5">
+            {/* Foto Utama */}
+            <div className="relative w-full h-[320px] sm:h-[420px] lg:h-[460px] rounded-2xl sm:rounded-3xl overflow-hidden bg-stone-900 border border-stone-200/80 shadow-sm">
               <Image
                 src={currentMainImage}
                 alt={product.name}
@@ -142,112 +288,106 @@ export default function MenuDetailPage() {
               />
             </div>
 
-            {/* Thumbnails Row */}
-            <div className="flex items-center gap-3">
-              {productThumbnails.map((imgUrl, idx) => {
-                const matchingVariant = isDrink ? DRINK_VARIANTS[idx] : null;
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      if (matchingVariant) {
-                        handleSelectVariant(matchingVariant.id, imgUrl);
-                      } else {
-                        setSelectedImage(imgUrl);
-                      }
-                    }}
-                    className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-stone-100 ${
-                      currentMainImage === imgUrl ? 'border-[#5C3D28] ring-2 ring-[#5C3D28]/20 scale-105' : 'border-transparent opacity-75 hover:opacity-100'
-                    }`}
-                  >
-                    <Image src={imgUrl} alt={`Thumbnail ${idx}`} fill className="object-cover" />
-                    {matchingVariant && (
-                      <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-semibold text-center py-0.5">
-                        {matchingVariant.id}
+            {/* KHUSUS MENU MINUMAN/JUS: 3 Opsi Thumbnail Pilihan Varian */}
+            {isDrink && (
+              <div className="grid grid-cols-3 gap-3">
+                {DRINK_VARIANTS.map((v) => {
+                  const isSelected = selectedVariant === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setSelectedVariant(v.id)}
+                      className={`relative aspect-square rounded-2xl overflow-hidden bg-stone-100 border-2 transition-all group ${
+                        isSelected 
+                          ? 'border-neutral-900 ring-2 ring-neutral-900/20 scale-[1.02]' 
+                          : 'border-stone-200/80 opacity-75 hover:opacity-100'
+                      }`}
+                    >
+                      <Image
+                        src={v.image}
+                        alt={v.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white py-1 text-[10px] font-bold text-center">
+                        {v.id}
                       </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Right Column: Details & Purchase Actions */}
+          {/* SISI KANAN: Rincian Produk, Tab Box & Kartu Dapur */}
           <div className="lg:col-span-6 space-y-6">
             
-            <div>
-              <span className="inline-block px-3.5 py-1 bg-[#F5EBE1] text-[#7A4B29] text-xs font-medium rounded-full">
-                {product.category}
+            {/* Category & Rating */}
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1 bg-stone-100 text-stone-700 text-xs font-semibold rounded-full uppercase tracking-wider">
+                {product.category || (isDrink ? 'MINUMAN' : 'MAKANAN BERAT')}
               </span>
-            </div>
-
-            <div className="space-y-2">
-              <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-[#2D231C]">
-                {isDrink ? `Jus Segar (${activeDrinkVariant.id})` : product.name}
-              </h1>
-              
-              <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500 font-light">
-                <div className="flex items-center gap-1 font-semibold text-stone-800">
-                  <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
-                  <span>5.0</span>
-                </div>
-                <span>|</span>
-                <span>1.2k reviews</span>
-                <span>|</span>
-                <span>850 Terjual</span>
-                <span className="ml-auto text-emerald-700 font-medium flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Ready Stock
+              <div className="flex items-center gap-1 text-xs font-semibold text-neutral-800">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span>{(product as any).rating ? (product as any).rating.toFixed(1) : (isDrink ? '4.7' : '4.9')}</span>
+                <span className="text-stone-400 font-normal">
+                  ({totalReviewsCount} Ulasan)
                 </span>
               </div>
             </div>
 
-            <div className="font-serif text-3xl font-bold text-[#5C3D28]">
-              Rp {product.price.toLocaleString('id-ID')}
+            {/* Title & Price */}
+            <div className="space-y-1">
+              <h1 className="font-serif text-3xl sm:text-4xl font-bold text-neutral-900 tracking-tight">
+                {isDrink ? `Jus Segar (${activeDrinkVariant.name})` : product.name}
+              </h1>
+              <div className="font-serif text-2xl sm:text-3xl font-bold text-neutral-900 pt-1">
+                Rp {product.price.toLocaleString('id-ID')}
+              </div>
             </div>
 
-            {/* 3 Drink Variants Selector (Khusus Minuman) */}
+            {/* KHUSUS MENU MINUMAN/JUS: Selector 3 Kartu Varian Pembelian */}
             {isDrink && (
-              <div className="space-y-3 p-4 bg-[#FAF5F0] border border-[#8A6337]/25 rounded-2xl shadow-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#5C3D28] flex items-center gap-1.5">
-                    🍹 Pilih Varian Rasa Jus (3 Pilihan):
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-neutral-900 tracking-wider uppercase">
+                    PILIH VARIAN JUS
                   </span>
-                  <span className="text-[10px] text-[#7A4B29] font-medium bg-[#EADCCF] px-2 py-0.5 rounded-full">
-                    Varian: {selectedVariant}
+                  <span className="text-stone-500 font-medium">
+                    Varian: {activeDrinkVariant.name}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {DRINK_VARIANTS.map((v) => {
                     const isSelected = selectedVariant === v.id;
                     return (
                       <button
                         key={v.id}
                         type="button"
-                        onClick={() => handleSelectVariant(v.id, v.image)}
-                        className={`relative p-2.5 rounded-xl border-2 text-left transition-all flex flex-col items-center text-center gap-1.5 ${
+                        onClick={() => setSelectedVariant(v.id)}
+                        className={`relative p-3 rounded-2xl border text-left transition-all flex flex-col justify-between space-y-2 ${
                           isSelected
-                            ? 'bg-white border-[#5C3D28] ring-2 ring-[#5C3D28]/20 shadow-md scale-[1.02]'
-                            : 'bg-white/60 border-stone-200 hover:bg-white hover:border-stone-300 opacity-80 hover:opacity-100'
+                            ? 'bg-white border-neutral-900 ring-1 ring-neutral-900 shadow-sm'
+                            : 'bg-stone-50/80 border-stone-200 hover:bg-white hover:border-stone-300'
                         }`}
                       >
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-stone-200">
-                          <Image src={v.image} alt={v.name} fill className="object-cover" />
-                        </div>
-                        <div>
-                          <div className="text-[11px] font-bold text-[#2D231C] leading-tight">
-                            {v.name.replace(' Segar', '')}
-                          </div>
-                          <div className="text-[9px] text-stone-500 font-light mt-0.5">
-                            {v.tag}
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <span className="absolute top-1 right-1 w-4 h-4 bg-[#5C3D28] text-white rounded-full flex items-center justify-center text-[10px]">
-                            ✓
+                        <div className="flex items-start justify-between gap-1">
+                          <span className="text-xs font-bold text-neutral-900 leading-tight">
+                            {v.name}
                           </span>
-                        )}
+                          {isSelected ? (
+                            <span className="w-4 h-4 rounded-full bg-neutral-900 text-white flex items-center justify-center shrink-0 mt-0.5">
+                              <Check className="w-2.5 h-2.5" />
+                            </span>
+                          ) : (
+                            <span className="w-4 h-4 rounded-full border border-stone-300 shrink-0 mt-0.5" />
+                          )}
+                        </div>
+                        <span className="inline-block text-[9px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded uppercase">
+                          {v.tag}
+                        </span>
                       </button>
                     );
                   })}
@@ -255,107 +395,138 @@ export default function MenuDetailPage() {
               </div>
             )}
 
-            {/* Production Origin Address Card */}
-            <div className="p-3.5 bg-[#FAF6F0] border border-[#8A6337]/30 rounded-2xl flex items-start gap-3 text-xs text-stone-700">
-              <MapPin className="w-4 h-4 text-[#8A6337] shrink-0 mt-0.5" />
-              <div>
-                <span className="text-[10px] text-[#7A4B29] font-bold uppercase tracking-wider block mb-0.5">
-                  🏭 ALAMAT &amp; DAERAH PRODUKSI:
-                </span>
-                <span className="font-semibold text-stone-900 leading-relaxed block">
-                  {(product as any).origin || 'Puri Bojong Lestari AF No 41, Rt 10 Rw 14, Kel. Pabuaran, Kec. Bojong Gede, Kabupaten Bogor, Provinsi Jawa Barat, Indonesia'}
-                </span>
-              </div>
-            </div>
-
-            {/* Quantity Selector */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 bg-[#F5F2EC] px-4 py-2 rounded-full border border-stone-200/60">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-7 h-7 rounded-full bg-white text-stone-800 flex items-center justify-center shadow-sm hover:bg-stone-100"
-                >
-                  <Minus className="w-3.5 h-3.5" />
-                </button>
-                <span className="text-sm font-bold text-stone-800 min-w-[24px] text-center">
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="w-7 h-7 rounded-full bg-white text-stone-800 flex items-center justify-center shadow-sm hover:bg-stone-100"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Buttons: Add to Cart & Buy Now */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-              <button
-                onClick={handleAddToCart}
-                className="w-full sm:flex-1 py-3.5 bg-[#F7F4EF] hover:bg-[#EFECE6] active:scale-[0.99] text-stone-800 font-medium rounded-full text-xs transition-all border border-stone-200/80 shadow-sm flex items-center justify-center gap-2"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span>Add to Cart</span>
-              </button>
+            {/* Kotak Tab Rincian Terstruktur */}
+            <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-4">
               
-              <button
-                onClick={handleBuyNow}
-                className="w-full sm:flex-1 py-3.5 bg-[#3D2512] hover:bg-[#2A180B] active:scale-[0.99] text-white font-medium rounded-full text-xs shadow-md transition-all flex items-center justify-center gap-2"
-              >
-                <span>Buy Now</span>
-              </button>
-            </div>
-
-            {addedNotice && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>{quantity}x {isDrink ? `Jus Segar (${selectedVariant})` : product.name} ditambahkan ke keranjang belanja!</span>
-              </div>
-            )}
-
-            {/* Tabs */}
-            <div className="border-t border-stone-200/80 pt-6">
-              <div className="flex items-center gap-6 border-b border-stone-200/60 pb-2 text-xs font-medium text-stone-500">
+              {/* Tab Navigation Row */}
+              <div className="flex items-center gap-6 border-b border-stone-100 pb-2.5 text-xs font-semibold tracking-wider">
                 <button
+                  type="button"
                   onClick={() => setActiveTab('description')}
-                  className={`pb-2 transition-colors ${activeTab === 'description' ? 'text-[#5C3D28] font-semibold border-b-2 border-[#5C3D28]' : 'hover:text-stone-800'}`}
+                  className={`pb-2 transition-colors relative ${
+                    activeTab === 'description'
+                      ? 'text-neutral-900 border-b-2 border-neutral-900'
+                      : 'text-stone-400 hover:text-stone-700'
+                  }`}
                 >
-                  Description
+                  Deskripsi
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('ingredients')}
-                  className={`pb-2 transition-colors ${activeTab === 'ingredients' ? 'text-[#5C3D28] font-semibold border-b-2 border-[#5C3D28]' : 'hover:text-stone-800'}`}
+                  className={`pb-2 transition-colors relative ${
+                    activeTab === 'ingredients'
+                      ? 'text-neutral-900 border-b-2 border-neutral-900'
+                      : 'text-stone-400 hover:text-stone-700'
+                  }`}
                 >
-                  Ingredients
+                  Komposisi
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('storage')}
-                  className={`pb-2 transition-colors ${activeTab === 'storage' ? 'text-[#5C3D28] font-semibold border-b-2 border-[#5C3D28]' : 'hover:text-stone-800'}`}
+                  className={`pb-2 transition-colors relative ${
+                    activeTab === 'storage'
+                      ? 'text-neutral-900 border-b-2 border-neutral-900'
+                      : 'text-stone-400 hover:text-stone-700'
+                  }`}
                 >
-                  Storage
+                  Penyimpanan
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('serving')}
-                  className={`pb-2 transition-colors ${activeTab === 'serving' ? 'text-[#5C3D28] font-semibold border-b-2 border-[#5C3D28]' : 'hover:text-stone-800'}`}
+                  className={`pb-2 transition-colors relative ${
+                    activeTab === 'serving'
+                      ? 'text-neutral-900 border-b-2 border-neutral-900'
+                      : 'text-stone-400 hover:text-stone-700'
+                  }`}
                 >
-                  Serving
+                  Sajian
                 </button>
               </div>
 
-              <div className="pt-4 text-xs text-stone-600 font-light leading-relaxed">
+              {/* Tab Content Display */}
+              <div className="text-xs sm:text-sm text-stone-600 font-light leading-relaxed">
                 {activeTab === 'description' && (
-                  <p>{product.description || "Slow-cooked beef for 12 hours in traditional Padang spices and rich coconut milk. Tender, flavorful, and authentic. A masterpiece of Indonesian culinary heritage delivered to your doorstep."}</p>
+                  <p>
+                    {isDrink
+                      ? 'Aneka pilihan jus buah segar alami berkualitas premium: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis. Dibuat murni tanpa pemanis buatan untuk menjaga kesegaran dan vitamin alaminya.'
+                      : (product.description || 'Ayam bakar otentik dengan olesan madu murni pilihan, dipanggang perlahan di atas arang batok kelapa untuk menghasilkan aroma smokey yang khas dan karamelisasi sempurna.')}
+                  </p>
                 )}
                 {activeTab === 'ingredients' && (
-                  <p>Daging sapi pilihan, rempah-rempah alami (lengkuas, kunyit, serai, daun jeruk), santan kelapa murni, bawang merah, bawang putih, cabai merah premium.</p>
+                  <p>
+                    {isDrink
+                      ? 'Buah segar matang pohon (Mangga/Sirsak/Jambu), air mineral higienis, dan sedikit madu alami tanpa pengawet sintesis.'
+                      : ((product as any).ingredients || 'Daging ayam pejantan segar, madu murni, kecap kedelai manis alami, lengkuas, ketumbar sangrai, serai, daun jeruk purut, bawang merah, bawang putih, dan cabai rawit merah segar.')}
+                  </p>
                 )}
                 {activeTab === 'storage' && (
-                  <p>Simpan di dalam kulkas pada suhu 4°C (tahan hingga 7 hari) atau dalam freezer -18°C (tahan hingga 1 bulan).</p>
+                  <p>
+                    {isDrink
+                      ? 'Simpan dalam chiller kulkas pada suhu 4°C (tahan 4 hari) untuk kenikmatan kesegaran maksimal.'
+                      : ((product as any).storage || (product as any).usageAdvice || 'Simpan dalam chiller kulkas pada suhu 4°C (tahan 3 hari) atau simpan beku dalam freezer pada suhu -18°C (tahan hingga 1 bulan).')}
+                  </p>
                 )}
                 {activeTab === 'serving' && (
-                  <p>Panaskan dalam microwave selama 2-3 menit atau di atas wajan dengan api kecil selama 5 menit sebelum disajikan hangat.</p>
+                  <p>
+                    {isDrink
+                      ? 'Kocok perlahan sebelum diminum dan nikmati selagi dingin bersama es batu sesuai selera.'
+                      : ((product as any).serving || 'Hangatkan dalam microwave selama 2 menit atau panggang kembali di atas teflon dengan api kecil selama 3-5 menit sebelum disantap bersama nasi hangat.')}
+                  </p>
                 )}
+              </div>
+            </div>
+
+            {/* Kartu Dapur Utama Nefakky & Map Graphic */}
+            <div className="bg-[#F6F5F2] border border-stone-200/90 rounded-2xl p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-stone-200 flex items-center justify-center text-[#934B19] shrink-0">
+                    <Store className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-neutral-900">
+                        Dapur Utama &amp; Lokasi Pembuatan
+                      </h4>
+                      <span className="bg-amber-100 text-[#934B19] text-[9px] font-semibold px-2 py-0.5 rounded-full">
+                        Admin &amp; Produksi
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-stone-600 font-light mt-0.5 leading-relaxed">
+                      Puri Bojong Lestari 1 Blok AF 41, RT 10 / RW 14, Kel. Pabuaran, Kec. Bojong Gede, Kab. Bogor, Prov. Jawa Barat
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Embedded Google Maps Mini View */}
+              <div className="relative w-full h-36 rounded-xl border border-stone-200 overflow-hidden bg-white shadow-2xs">
+                <iframe
+                  title="Peta Lokasi Dapur Utama Nefakky"
+                  src="https://maps.google.com/maps?q=Puri+Bojong+Lestari+1+Blok+AF+41+Pabuaran+Bojong+Gede+Bogor&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                  allowFullScreen
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[10px] text-stone-500 font-medium flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Dapur Produksi Aktif (08.00 - 21.00 WIB)</span>
+                </span>
+
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=Puri+Bojong+Lestari+1+Blok+AF+41+Pabuaran+Bojong+Gede+Bogor"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-bold text-[#934B19] hover:underline flex items-center gap-1"
+                >
+                  <span>Buka Google Maps &rarr;</span>
+                </a>
               </div>
             </div>
 
@@ -363,143 +534,182 @@ export default function MenuDetailPage() {
 
         </div>
 
-        {/* BOTTOM SECTION: What Our Foodies Say (Realtime Reviews & Comments) */}
+        {/* 4. ULASAN KOMUNITAS (Realtime Community Reviews) */}
         <div className="border-t border-stone-200/80 pt-10 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-[#2D231C] flex items-center gap-2">
-                <span>What Our Foodies Say</span>
-                <span className="px-2.5 py-0.5 bg-amber-100 text-[#934B19] text-[10px] font-bold rounded-full border border-amber-300">
-                  Realtime Ulasan Rasa
-                </span>
+              <h2 className="font-serif text-xl sm:text-2xl font-bold text-neutral-900">
+                Ulasan Komunitas
               </h2>
               <p className="text-xs text-stone-500 font-light mt-0.5">
-                Ulasan jujur cita rasa langsung dari pengikmat {product.name}
+                Dari pelanggan yang telah menikmati hidangan ini.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Link
-                href={`/comments?dish=${encodeURIComponent(product.name)}`}
-                className="px-3.5 py-2 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-2xl shadow transition-all flex items-center gap-1.5 shrink-0"
-              >
-                <MessageCircle className="w-3.5 h-3.5 text-amber-200" />
-                <span>✍️ Tulis Ulasan Rasa</span>
-              </Link>
-              <Link 
-                href="/comments" 
-                className="text-xs font-semibold text-[#7A4B29] hover:underline shrink-0"
-              >
-                Lihat Semua ({reviews?.length || 0}) &rarr;
-              </Link>
-            </div>
+            <Link
+              href="/comments"
+              className="text-xs font-bold text-neutral-900 hover:underline"
+            >
+              Lihat Semua ({totalReviewsCount}) &rarr;
+            </Link>
           </div>
 
-          {/* Realtime Review Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {liveProductReviews.slice(0, 3).map((rev) => {
-              const authorName = rev.authorName || (rev as any).author || 'Gourmet Foodie';
-              const avatarUrl = rev.authorAvatar || rev.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=25160E&color=ffffff&bold=true`;
-              const commentText = rev.comment || (rev as any).text || '';
-              const foodPhoto = rev.photos?.[0] || rev.productImage || (rev as any).image;
-
-              return (
-                <div 
-                  key={rev.id} 
-                  className="bg-white rounded-3xl p-6 border border-amber-900/10 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-3">
-                    {/* User Header */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 bg-stone-100 border border-stone-200 shadow-xs">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={avatarUrl} alt={authorName} className="w-full h-full object-cover" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-stone-900 leading-snug">{authorName}</h4>
-                          <div className="flex items-center gap-0.5 text-amber-500 text-xs">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`w-3 h-3 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200 fill-stone-200'}`} 
-                              />
-                            ))}
-                          </div>
-                        </div>
+          {/* 3 Realtime Review Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {communityReviews.map((rev) => (
+              <div
+                key={rev.id}
+                className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs flex flex-col justify-between space-y-3.5"
+              >
+                <div className="space-y-3">
+                  {/* Author Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${rev.avatarBg}`}>
+                        {rev.initials}
                       </div>
-
-                      {rev.productName && (
-                        <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-[#934B19] text-[9px] font-bold rounded-full truncate max-w-[100px]">
-                          {rev.productName}
+                      <div>
+                        <h4 className="text-xs font-bold text-neutral-900 leading-none">
+                          {rev.author}
+                        </h4>
+                        <span className="text-[10px] text-stone-400 font-light">
+                          {rev.date}
                         </span>
-                      )}
+                      </div>
                     </div>
 
-                    {/* Review Comment Text */}
-                    <p className="text-xs text-stone-700 font-light italic leading-relaxed">
-                      "{commentText}"
-                    </p>
-
-                    {/* Replies List (CS Admin / User Replies) */}
-                    {rev.replies && rev.replies.length > 0 && (
-                      <div className="pt-2 border-t border-stone-100 space-y-2">
-                        {rev.replies.slice(0, 2).map((reply) => (
-                          <div key={reply.id} className="p-2.5 bg-[#FBF9F5] border border-amber-900/10 rounded-xl space-y-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-[10px] font-bold text-[#25160E] flex items-center gap-1">
-                                {reply.authorName}
-                                {reply.authorName.toLowerCase().includes('admin') && (
-                                  <span className="px-1.5 py-0.2 bg-[#934B19] text-white text-[8px] rounded font-bold">CS ADMIN</span>
-                                )}
-                              </span>
-                              <span className="text-[9px] text-stone-400">{reply.date}</span>
-                            </div>
-                            <p className="text-[11px] text-[#4F4540]">{reply.comment}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex items-center text-amber-400 text-xs">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-3 h-3 ${
+                            i < rev.rating
+                              ? 'fill-amber-400 text-amber-400'
+                              : 'text-stone-200 fill-stone-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Optional Food Photo Proof */}
-                  {foodPhoto && (
-                    <div className="relative w-full h-36 rounded-2xl overflow-hidden border border-stone-100 bg-stone-900 shadow-xs">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={foodPhoto} alt="Foto ulasan masakan" className="w-full h-full object-cover" />
-                    </div>
-                  )}
+                  {/* Comment */}
+                  <p className="text-xs text-stone-600 font-light leading-relaxed">
+                    {rev.comment}
+                  </p>
                 </div>
-              );
-            })}
+
+                {/* Optional Photo Thumbnail */}
+                {rev.photo && (
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-stone-200">
+                    <Image
+                      src={rev.photo}
+                      alt="Foto Ulasan"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
       </main>
 
-      {/* GUEST AUTH MODAL */}
+      {/* 5. FOOTER */}
+      <Footer />
+
+      {/* 6. STICKY BOTTOM PURCHASE BAR */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 py-3.5 px-4 sm:px-8 lg:px-16 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          
+          {/* Total Price Left */}
+          <div>
+            <span className="text-[10px] text-stone-400 uppercase tracking-wider block font-medium">
+              Total Harga
+            </span>
+            <span className="font-serif text-lg sm:text-xl font-bold text-neutral-900">
+              Rp {totalPrice.toLocaleString('id-ID')}
+            </span>
+          </div>
+
+          {/* Stepper & Action Buttons Right */}
+          <div className="flex items-center gap-2.5 sm:gap-4">
+            
+            {/* Quantity Stepper */}
+            <div className="flex items-center justify-between bg-stone-100 border border-stone-200 rounded-xl px-2 py-1.5 w-24 sm:w-28 shrink-0">
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="w-6 h-6 rounded hover:bg-white flex items-center justify-center text-stone-600 transition-colors"
+                aria-label="Kurang"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="text-xs sm:text-sm font-bold text-neutral-900">
+                {quantity}
+              </span>
+              <button
+                onClick={() => setQuantity(quantity + 1)}
+                className="w-6 h-6 rounded hover:bg-white flex items-center justify-center text-stone-600 transition-colors"
+                aria-label="Tambah"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Tambah ke Keranjang Button */}
+            <button
+              onClick={handleAddToCart}
+              className="py-2.5 px-3.5 sm:px-5 bg-white border border-stone-300 hover:bg-stone-50 active:scale-[0.99] text-stone-900 font-medium text-xs sm:text-sm rounded-xl shadow-xs transition-all flex items-center gap-2"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span className="hidden sm:inline">Tambah ke Keranjang</span>
+            </button>
+
+            {/* Beli Langsung Button */}
+            <button
+              onClick={handleBuyNow}
+              className="py-2.5 px-4 sm:px-6 bg-black hover:bg-neutral-800 active:scale-[0.99] text-white font-medium text-xs sm:text-sm rounded-xl shadow-sm transition-all whitespace-nowrap"
+            >
+              Beli Langsung
+            </button>
+
+          </div>
+
+        </div>
+      </div>
+
+      {/* Success Notification Alert */}
+      {addedNotice && (
+        <div className="fixed top-20 right-6 z-50 p-4 bg-white border border-emerald-300 rounded-2xl shadow-xl flex items-center gap-3 animate-fade-in text-xs font-semibold text-emerald-900">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span>{quantity}x {isDrink ? `Jus Segar (${selectedVariant})` : product.name} berhasil ditambahkan ke keranjang!</span>
+        </div>
+      )}
+
+      {/* Guest Auth Modal */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
-            <div className="w-14 h-14 bg-amber-100 text-[#5C3D28] rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
-              🔒
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 bg-stone-100 text-stone-900 rounded-full flex items-center justify-center mx-auto">
+              <Lock className="w-5 h-5 text-neutral-800" />
             </div>
-            <div className="space-y-2">
-              <h3 className="font-serif text-xl font-bold text-stone-900">Silakan Masuk Terlebih Dahulu</h3>
-              <p className="text-xs text-stone-600 font-light leading-relaxed">
-                Anda perlu masuk atau mendaftar akun untuk menambahkan makanan ini ke keranjang atau membeli.
+            <div className="space-y-1">
+              <h3 className="font-serif text-lg font-bold text-neutral-900">Silakan Masuk Terlebih Dahulu</h3>
+              <p className="text-xs text-stone-500 font-light leading-relaxed">
+                Masuk atau buat akun baru untuk memesan hidangan lezat ini.
               </p>
             </div>
             <div className="flex flex-col gap-2 pt-2">
               <button
                 onClick={() => router.push('/login')}
-                className="w-full py-3 bg-[#5C3D28] hover:bg-[#472B17] text-white font-medium text-xs rounded-full shadow transition-all"
+                className="w-full py-2.5 bg-black hover:bg-neutral-800 text-white font-medium text-xs rounded-xl shadow transition-all"
               >
-                Masuk ke Akun Saya
+                Masuk ke Akun
               </button>
               <button
                 onClick={() => router.push('/register')}
-                className="w-full py-3 border border-[#5C3D28] text-[#5C3D28] hover:bg-[#5C3D28]/5 font-medium text-xs rounded-full transition-all"
+                className="w-full py-2.5 border border-stone-300 hover:bg-stone-50 text-stone-700 font-medium text-xs rounded-xl transition-all"
               >
                 Daftar Akun Baru
               </button>
@@ -507,12 +717,13 @@ export default function MenuDetailPage() {
                 onClick={() => setShowAuthModal(false)}
                 className="text-xs text-stone-400 hover:text-stone-600 font-light pt-1"
               >
-                Lanjutkan Melihat Menu
+                Kembali
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

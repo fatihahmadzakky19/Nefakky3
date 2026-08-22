@@ -10,11 +10,11 @@
 | Parameter | Hasil |
 | :--- | :--- |
 | **Status Keseluruhan** | **PASSED ✅** |
-| **Waktu Eksekusi** | 21/8/2026, 10.16.17 WIB |
-| **Total Pengujian** | 6 Tes |
-| **Berhasil (Passed)** | **6** ✅ |
+| **Waktu Eksekusi** | 22/8/2026, 19.01.59 WIB |
+| **Total Pengujian** | 8 Tes |
+| **Berhasil (Passed)** | **8** ✅ |
 | **Gagal (Failed)** | **0** ❌ |
-| **Durasi Eksekusi** | 2989 ms |
+| **Durasi Eksekusi** | 4894 ms |
 
 ---
 
@@ -23,13 +23,13 @@
 
 ### 1. 1. TypeScript Compilation — tsc --noEmit type check
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 2984 ms
+- **Waktu Eksekusi**: 4887 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
 ### 2. 2. Route Integrity — Core application routes existence
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 2 ms
+- **Waktu Eksekusi**: 3 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
@@ -52,6 +52,18 @@
 
 
 ### 6. 6. Firebase Configuration — Firebase app initialization in lib/firebase.ts
+- **Status**: ✅ PASS
+- **Waktu Eksekusi**: 0 ms
+- **Keterangan**: Pengujian berhasil tanpa masalah.
+
+
+### 7. 7. Midtrans Sandbox API Integrity — Charge & Status API Routes (/api/midtrans/*)
+- **Status**: ✅ PASS
+- **Waktu Eksekusi**: 1 ms
+- **Keterangan**: Pengujian berhasil tanpa masalah.
+
+
+### 8. 8. Distance Shipping Engine — Distance shipping calculation logic (<=10km flat 10k, >10km +2.5k/2km)
 - **Status**: ✅ PASS
 - **Waktu Eksekusi**: 0 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.

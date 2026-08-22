@@ -6,47 +6,41 @@
  * DESKRIPSI: Otentikasi pengguna berbasis Firebase (Google SSO & Email/Password).
  *            Dilengkapi pengalihan otomatis peran (Role-based redirect):
  *            Admin -> /admin, Customer -> / (Beranda).
+ * DESAIN: Editorial Minimalist Luxury (Clean Split Layout, White Canvas & Black CTA).
  * ============================================================================
  */
 
-// Mengimpor React dan hook useState untuk manajemen state form login
-import React, { useState } from 'react';
-// Mengimpor Link untuk navigasi ke halaman registrasi & lupa password
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-// Mengimpor Next Image untuk optimasi logo
 import Image from 'next/image';
-// Mengimpor hook useRouter untuk navigasi halaman setelah login berhasil
 import { useRouter } from 'next/navigation';
-// Mengimpor AuthContext untuk memanggil fungsi login Firebase
 import { useAuth } from '@/context/AuthContext';
-// Mengimpor ikon-ikon modern dari Lucide React
-import { Mail, Lock, Eye, EyeOff, LockKeyhole } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
-// Komponen Utama Halaman Login
 export default function LoginPage() {
   const router = useRouter();
   const { user, login, loginWithGoogle, loading } = useAuth();
 
-  // State Lokal Formulir Login
-  const [email, setEmail] = useState(''); // Input alamat email
-  const [password, setPassword] = useState(''); // Input kata sandi
-  const [showPassword, setShowPassword] = useState(false); // Toggle lihat/sembunyikan password
-  const [rememberMe, setRememberMe] = useState(false); // Flag ingat saya
-  const [errorMessage, setErrorMessage] = useState(''); // Pesan error login
-  const [isSubmitting, setIsSubmitting] = useState(false); // Status loading submit
+  // State Formulir Login
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Effect: Otomatis alihkan (redirect) jika pengguna sudah dalam sesi login
-  React.useEffect(() => {
+  // Effect: Pengalihan otomatis bila sesi aktif
+  useEffect(() => {
     if (!loading && user) {
       if (user.role === 'admin') {
-        router.push('/admin'); // Alihkan akun admin ke Dashboard Admin
+        router.push('/admin');
       } else {
-        router.push('/'); // Alihkan pelanggan ke Beranda
+        router.push('/');
       }
     }
   }, [user, loading, router]);
 
-  // Handler Submit Form Login Manual (Email & Password)
+  // Handler Submit Form Login Manual
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -99,153 +93,176 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen w-full bg-[#25160E] p-3 sm:p-6 md:p-10 flex items-center justify-center font-sans">
-      {/* Outer Card Container (Google Stitch Design Tokens) */}
-      <div className="w-full max-w-[1020px] bg-[#FBF9F5] rounded-3xl overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-2 border border-amber-900/20 my-auto">
+    <main className="min-h-screen w-full bg-[#1A1A1A] flex items-center justify-center p-0 sm:p-4 md:p-6 lg:p-10 font-sans">
+      {/* Outer Split Card Container */}
+      <div className="w-full max-w-[1100px] min-h-[640px] lg:min-h-[720px] bg-white sm:rounded-3xl overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-2">
         
-        {/* LEFT PANEL: Authentic Ayam Bakar Photo */}
-        <div className="relative min-h-[240px] sm:min-h-[280px] lg:min-h-[620px] w-full bg-[#25160E] overflow-hidden flex flex-col justify-end p-6 sm:p-8 md:p-12 text-white">
+        {/* LEFT PANEL: Artisanal Culinary Photography */}
+        <div className="relative min-h-[260px] sm:min-h-[320px] lg:min-h-full w-full bg-neutral-900 overflow-hidden flex flex-col justify-end p-6 sm:p-10 lg:p-14 text-white">
           <Image
             src="/images/ayam_bakar.jpg"
             alt="Artisanal Ayam Bakar khas Nefakky disajikan di tampah bambu tradisional dengan sambal dan lalapan segar"
             fill
-            className="object-cover object-center brightness-[0.85] contrast-[1.05]"
+            className="object-cover object-center brightness-[0.88] contrast-[1.05]"
             priority
           />
-          {/* Subtle Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#25160E]/95 via-[#25160E]/40 to-transparent" />
+          {/* Subtle Dark Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
           
-          <div className="relative z-10 space-y-2 sm:space-y-3">
-            <span className="text-[9px] sm:text-[10px] tracking-[0.25em] font-semibold text-amber-200 uppercase block">
-              Nefakky Artisanal Marketplace
+          <div className="relative z-10 space-y-2">
+            <span className="text-[10px] sm:text-[11px] tracking-[0.25em] font-semibold text-amber-200/90 uppercase block">
+              NEFAKKY ARTISANAL MARKETPLACE
             </span>
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight leading-tight text-white">
-              Kemewahan Rasa Tradisional Otentik
+            <h2 className="font-serif text-2xl sm:text-3xl lg:text-[40px] font-normal leading-[1.15] text-white tracking-tight">
+              Kemewahan Rasa<br />Tradisional Otentik
             </h2>
-            <p className="text-[11px] sm:text-xs text-amber-100/80 font-light leading-relaxed max-w-sm">
-              Masuk ke akun Anda untuk melacak pengiriman 5-tahap, klaim voucher diskon, dan menikmati kuliner rumahan otentik.
-            </p>
           </div>
         </div>
 
-        {/* RIGHT PANEL: Form Login */}
-        <div className="p-6 sm:p-10 md:p-14 flex flex-col justify-center space-y-6 bg-[#FBF9F5]">
-          
-          <div className="space-y-1.5 text-left">
-            <span className="text-[10px] font-bold tracking-wider text-[#934B19] uppercase block">Selamat Datang Kembali</span>
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#25160E] tracking-tight">Masuk ke Akun</h1>
-            <p className="text-xs text-[#4F4540]">Silakan masukkan email dan kata sandi Anda.</p>
-          </div>
-
-          {/* Error Alert Box */}
-          {errorMessage && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-2xl flex items-center gap-2 animate-fade-in font-medium">
-              <span className="text-sm">⚠️</span>
-              <span>{errorMessage}</span>
-            </div>
-          )}
-
-          {/* Form Login Utama */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {/* RIGHT PANEL: Minimalist Editorial Auth Form */}
+        <div className="flex flex-col justify-center items-center p-6 sm:p-10 lg:p-12 bg-white">
+          <div className="w-full max-w-[380px] space-y-6">
             
-            {/* Field Email */}
-            <div className="space-y-1 text-left">
-              <label className="block text-xs font-bold text-[#25160E]">Alamat Email</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="contoh: nama@email.com"
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-amber-900/15 rounded-2xl text-xs text-[#1B1C1A] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] shadow-sm transition-all"
-                  required
-                />
-              </div>
+            {/* Header */}
+            <div className="text-center space-y-1.5">
+              <Link href="/" className="inline-block">
+                <span className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">
+                  Nefakky.
+                </span>
+              </Link>
+              <h1 className="text-lg sm:text-xl font-bold text-neutral-900 tracking-tight">
+                Masuk ke Akun Anda
+              </h1>
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                Selamat datang kembali. Masuk untuk melanjutkan pesanan.
+              </p>
             </div>
 
-            {/* Field Password */}
-            <div className="space-y-1 text-left">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-[#25160E]">Kata Sandi</label>
-                <Link href="/forgot-password" className="text-[11px] font-semibold text-[#934B19] hover:underline">
-                  Lupa kata sandi?
-                </Link>
-              </div>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-3 bg-white border border-amber-900/15 rounded-2xl text-xs text-[#1B1C1A] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] shadow-sm transition-all"
-                  required
-                />
+            {/* Form Card */}
+            <div className="bg-white border border-stone-200/90 rounded-2xl p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-4">
+              
+              {/* Error Alert Box */}
+              {errorMessage && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2 animate-fade-in font-medium">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                
+                {/* Field Email */}
+                <div className="space-y-1.5 text-left">
+                  <label className="block text-xs font-semibold text-neutral-700">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="nama@perusahaan.com"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Field Password */}
+                <div className="space-y-1.5 text-left">
+                  <label className="block text-xs font-semibold text-neutral-700">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-2.5 bg-white border border-stone-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 transition-all"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors"
+                      aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Options Row: Remember Me & Forgot Password */}
+                <div className="flex items-center justify-between text-xs pt-0.5">
+                  <label className="flex items-center gap-2 cursor-pointer text-neutral-600 select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 accent-neutral-900 w-3.5 h-3.5 cursor-pointer"
+                    />
+                    <span>Ingat saya</span>
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-neutral-600 hover:text-neutral-900 hover:underline font-medium"
+                  >
+                    Lupa password?
+                  </Link>
+                </div>
+
+                {/* Tombol Submit Login */}
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-2.5 sm:py-3 bg-black hover:bg-neutral-800 text-white font-medium text-xs sm:text-sm rounded-xl shadow-sm transition-all duration-200 active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {isSubmitting ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Masuk'
+                  )}
                 </button>
+              </form>
+
+              {/* Divider Atau */}
+              <div className="relative my-3 flex items-center justify-center">
+                <div className="w-full border-t border-stone-200"></div>
+                <span className="relative px-3 bg-white text-[11px] text-neutral-400 font-normal lowercase">
+                  atau
+                </span>
               </div>
+
+              {/* Tombol Google OAuth */}
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isSubmitting}
+                className="w-full py-2.5 bg-white border border-stone-200 hover:bg-stone-50 active:scale-[0.99] text-neutral-700 text-xs sm:text-sm font-medium rounded-xl shadow-sm transition-all duration-200 flex items-center justify-center gap-2.5 disabled:opacity-60"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span>Masuk dengan Google</span>
+              </button>
+
             </div>
 
-            {/* Checkbox Ingat Saya */}
-            <div className="flex items-center justify-between text-xs text-[#4F4540] pt-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-amber-900/30 text-[#934B19] focus:ring-[#934B19]"
-                />
-                <span>Ingat saya di perangkat ini</span>
-              </label>
+            {/* Footer Navigation */}
+            <div className="text-center text-xs text-neutral-500">
+              Belum punya akun?{' '}
+              <Link href="/register" className="font-semibold text-neutral-900 hover:underline">
+                Daftar sekarang
+              </Link>
             </div>
 
-            {/* Tombol Submit Login */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3.5 bg-[#25160E] hover:bg-[#3C2A21] text-white font-bold text-xs rounded-2xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-wider disabled:opacity-60"
-            >
-              {isSubmitting ? 'Memproses Login...' : 'Masuk Sekarang'}
-            </button>
-          </form>
-
-          {/* Divider Atau */}
-          <div className="flex items-center gap-3 py-1">
-            <div className="flex-1 h-px bg-amber-900/10" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#4F4540]">Atau Masuk Dengan</span>
-            <div className="flex-1 h-px bg-amber-900/10" />
           </div>
-
-          {/* Tombol Google OAuth */}
-          <button
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={isSubmitting}
-            className="w-full py-3 bg-white border border-amber-900/15 hover:bg-stone-50 text-[#1B1C1A] text-xs font-bold rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-            </svg>
-            <span>Masuk dengan Google</span>
-          </button>
-
-          {/* Link Pendaftaran Akun */}
-          <div className="text-center pt-2 text-xs text-[#4F4540]">
-            Belum memiliki akun?{' '}
-            <Link href="/register" className="font-bold text-[#934B19] hover:underline">
-              Daftar Akun Baru
-            </Link>
-          </div>
-
         </div>
 
       </div>

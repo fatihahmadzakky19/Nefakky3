@@ -1,5 +1,6 @@
 // Mengimpor tipe Metadata dari Next.js untuk konfigurasi SEO dan Meta Tags
 import type { Metadata } from 'next';
+import Script from 'next/script';
 // Mengimpor file stylesheet global TailwindCSS & Custom Glassmorphism
 import './globals.css';
 // Mengimpor AuthProvider untuk manajemen sesi autentikasi pengguna
@@ -26,6 +27,12 @@ export default function RootLayout({
     <html lang="id">
       {/* Body dengan background krem hangat (#FAF8F5), font sans antialiased, dan warna seleksi kustom */}
       <body className="bg-[#FAF8F5] text-stone-800 antialiased font-sans selection:bg-[#8A6337]/20 selection:text-[#8A6337]">
+        {/* Skrip Resmi Midtrans Snap Sandbox */}
+        <Script
+          src="https://app.sandbox.midtrans.com/snap/snap.js"
+          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'Mid-client-8T4q9uw1fIGB-pla'}
+          strategy="lazyOnload"
+        />
         {/* Provider Autentikasi Pengguna */}
         <AuthProvider>
           {/* Provider Data Master & Firebase/Laravel Sync */}

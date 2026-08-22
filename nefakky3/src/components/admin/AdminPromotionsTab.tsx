@@ -2,13 +2,21 @@ import React, { useState } from 'react';
 import { Plus, X, Trash2, Tag, Calendar, Users, Sparkles, Check, Gift, Edit3, RefreshCw, Clock, Image as ImageIcon, Upload, Link2, Camera, Receipt, DollarSign, Search } from 'lucide-react';
 import { AdminVoucher, useData } from '@/context/DataContext';
 
+// ============================================================================
+// KOMPONEN: AdminPromotionsTab (Manajemen Voucher & Promo Toko)
+// FUNGSI:
+// 1. Menerbitkan kode voucher diskon baru dengan kuota, min belanja, & hari aktif.
+// 2. Mengedit dan menghapus voucher promo dari katalog.
+// 3. Melacak riwayat pelanggan yang menggunakan voucher (Voucher Usage Tracker).
+// ============================================================================
+
 interface AdminPromotionsTabProps {
-  voucherList: AdminVoucher[];
-  addVoucher: (voucher: any) => void;
-  deleteVoucher: (id: string) => void;
-  toggleVoucherStatus: (id: string) => void;
-  initialVoucherCode?: string;
-  initialVoucherName?: string;
+  voucherList: AdminVoucher[];                              // Daftar seluruh voucher dari DataContext
+  addVoucher: (voucher: any) => void;                       // Fungsi terbitkan voucher baru ke database
+  deleteVoucher: (id: string) => void;                      // Fungsi hapus voucher dari database
+  toggleVoucherStatus: (id: string) => void;                // Fungsi ubah status aktif/non-aktif
+  initialVoucherCode?: string;                              // Kode voucher awal (opsional)
+  initialVoucherName?: string;                              // Nama voucher awal (opsional)
 }
 
 export default function AdminPromotionsTab({
@@ -19,20 +27,23 @@ export default function AdminPromotionsTab({
   initialVoucherCode = '',
   initialVoucherName = ''
 }: AdminPromotionsTabProps) {
+  // --------------------------------------------------------------------------
+  // STATE MANAGEMENT & MODAL CONTROL
+  // --------------------------------------------------------------------------
   const { updateVoucher, orders } = useData();
-  const [showVoucherModal, setShowVoucherModal] = useState<boolean>(false);
-  const [editingVoucher, setEditingVoucher] = useState<AdminVoucher | null>(null);
-  const [selectedVoucherForUsage, setSelectedVoucherForUsage] = useState<AdminVoucher | null>(null);
-  const [showUsageModal, setShowUsageModal] = useState<boolean>(false);
-  const [voucherSearchQuery, setVoucherSearchQuery] = useState<string>('');
+  const [showVoucherModal, setShowVoucherModal] = useState<boolean>(false);       // Kontrol modal form voucher
+  const [editingVoucher, setEditingVoucher] = useState<AdminVoucher | null>(null); // Voucher yang sedang diedit
+  const [selectedVoucherForUsage, setSelectedVoucherForUsage] = useState<AdminVoucher | null>(null); // Voucher untuk modal riwayat pengguna
+  const [showUsageModal, setShowUsageModal] = useState<boolean>(false);           // Kontrol modal daftar pengguna promo
+  const [voucherSearchQuery, setVoucherSearchQuery] = useState<string>('');       // Query pencarian voucher
   
-  // State Form Voucher
+  // State Form Formulir Voucher
   const [voucherCode, setVoucherCode] = useState<string>(initialVoucherCode);
   const [voucherName, setVoucherName] = useState<string>(initialVoucherName);
   const [voucherDiscount, setVoucherDiscount] = useState<string>('30');
   const [voucherMinSpend, setVoucherMinSpend] = useState<string>('50000');
   
-  // Custom Fields: Event, Hari Berlaku, Auto-Reset Mingguan, Tanggal Kedaluwarsa, Batas Pengguna & Gambar Banner
+  // Bidang Kustom: Event, Hari Berlaku, Auto-Reset Mingguan, Masa Berlaku, Batas Kuota
   const [voucherEvent, setVoucherEvent] = useState<string>('Pelanggan Baru');
   const [customEvent, setCustomEvent] = useState<string>('');
   const [validDays, setValidDays] = useState<string>('Semua Hari');
@@ -44,6 +55,9 @@ export default function AdminPromotionsTab({
   const [voucherImageUrl, setVoucherImageUrl] = useState<string>('');
   const [imageInputTab, setImageInputTab] = useState<'upload' | 'url'>('upload');
 
+  // --------------------------------------------------------------------------
+  // FILTERING & PENCARIAN VOUCHER
+  // --------------------------------------------------------------------------
   const allVouchers = voucherList || [];
   const displayedVouchers = allVouchers.filter((v) => {
     if (voucherSearchQuery.trim()) {
@@ -56,7 +70,9 @@ export default function AdminPromotionsTab({
     return true;
   });
 
-  // Format Tanggal Indonesia (contoh: 2026-12-31 -> 31 Des 2026)
+  // --------------------------------------------------------------------------
+  // HELPER: Format Tanggal Indonesia (contoh: 2026-12-31 -> 31 Des 2026)
+  // --------------------------------------------------------------------------
   const formatDateIndo = (dateStr: string) => {
     if (!dateStr) return '31 Des 2026';
     try {

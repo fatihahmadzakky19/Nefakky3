@@ -55,8 +55,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State buka/tutup drawer mobile
 
   // Tentukan nama untuk avatar dan foto profil pengguna
-  const nameForAvatar = user?.displayName || user?.email || 'Gourmet User';
-  const userAvatar = user?.photoURL;
+  const userAvatar = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=25160E&color=ffffff&bold=true` : (user?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.split('@')[0])}&background=25160E&color=ffffff&bold=true` : null));
 
   // Status pengecekan rute aktif untuk styling link aktif
   const isHomeActive = pathname === '/';
@@ -87,8 +86,8 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#25160e] text-[#fbf9f5] flex items-center justify-center font-bold font-serif text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform">
                 N
               </div>
-              <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#25160e] group-hover:text-[#934b19] transition-colors">
-                Nefakky
+              <span className="font-serif text-xl sm:text-2xl font-bold tracking-wider text-[#25160e] group-hover:text-[#934b19] transition-colors uppercase">
+                NEFAKKY
               </span>
             </Link>
           </div>

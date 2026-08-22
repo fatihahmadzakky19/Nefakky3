@@ -20,12 +20,19 @@
   --text-muted: #4F4540;
 }
 
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 body {
   color: var(--text-dark);
   background: var(--surface-cream);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Google Stitch Styled Components */
@@ -49,20 +56,11 @@ body {
   @apply bg-white/90 backdrop-blur-md border border-amber-900/10 shadow-xl shadow-amber-950/5 rounded-3xl;
 }
 
-/* Custom Scrollbar */
+/* Hide Default Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #FBF9F5;
-}
-::-webkit-scrollbar-thumb {
-  background: #D3C3BD;
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #934B19;
+  display: none;
+  width: 0px;
+  height: 0px;
 }
 
 /* Animations */

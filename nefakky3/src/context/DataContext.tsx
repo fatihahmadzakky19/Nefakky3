@@ -251,8 +251,9 @@ export interface AdminOrder {
   itemCount: number;
   paymentMethod: string;
   paymentBadge: 'PAID' | 'AWAITING' | 'REFUNDED' | 'FAILED';
-  deliveryType: 'EXPRESS' | 'STANDARD' | 'SAME DAY' | 'PB1 (10%)' | string;
-  status: 'RECEIVED' | 'COOKING' | 'READY' | 'DELIVERING' | 'COMPLETED' | 'PENDING' | 'SHIPPING' | 'EXPIRED' | 'CANCELLED';
+  deliveryType: 'KURIR NEFAKKY' | 'EXPRESS' | 'STANDARD' | 'SAME DAY' | 'PB1 (10%)' | string;
+  distance?: string;
+  status: 'RECEIVED' | 'COOKING' | 'READY' | 'DELIVERING' | 'ON_DELIVERY' | 'DELIVERED' | 'COMPLETED' | 'PENDING' | 'SHIPPING' | 'EXPIRED' | 'CANCELLED';
   subtotal: number;
   shippingCost: number;
   discount: number;
@@ -260,6 +261,7 @@ export interface AdminOrder {
   date: string;
   customerConfirmed?: boolean;
   confirmedAt?: string;
+  receivedOnTime?: boolean;
   proofPhoto?: string;
   paymentProofPhoto?: string;
   voucherCode?: string;
@@ -287,6 +289,7 @@ export interface UserReview {
   rating: number;
   date: string;
   createdAt?: number;
+  productId?: string;
   productName?: string;
   productImage?: string;
   comment: string;
@@ -393,7 +396,9 @@ interface DataContextType {
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   confirmOrderReceived: (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => void;
+  customerConfirmOrder: (id: string) => void;
   uploadOrderProofPhoto: (id: string, proofPhotoUrl: string) => void;
+  uploadOrderPaymentProofPhoto: (id: string, paymentProofPhotoUrl: string) => void;
   deleteOrder: (id: string) => void;
   cancelOrder: (id: string, reason?: string) => void;
   addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
@@ -675,7 +680,7 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     itemCount: 4,
     paymentMethod: 'QRIS / GoPay',
     paymentBadge: 'PAID',
-    deliveryType: 'EXPRESS',
+    deliveryType: 'KURIR NEFAKKY',
     status: 'DELIVERING', // Status: Pesanan Diantar / Di Jalan
     subtotal: 100000,
     shippingCost: 12000,
@@ -698,7 +703,7 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     itemCount: 5,
     paymentMethod: 'Midtrans Credit Card',
     paymentBadge: 'PAID',
-    deliveryType: 'SAME DAY',
+    deliveryType: 'KURIR NEFAKKY',
     status: 'COMPLETED',
     subtotal: 161000,
     shippingCost: 15000,
@@ -722,7 +727,7 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     itemCount: 4,
     paymentMethod: 'Transfer Bank BCA',
     paymentBadge: 'PAID',
-    deliveryType: 'STANDARD',
+    deliveryType: 'KURIR NEFAKKY',
     status: 'COOKING',
     subtotal: 94000,
     shippingCost: 10000,
@@ -745,7 +750,7 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     itemCount: 2,
     paymentMethod: 'ShopeePay',
     paymentBadge: 'PAID',
-    deliveryType: 'EXPRESS',
+    deliveryType: 'KURIR NEFAKKY',
     status: 'READY',
     subtotal: 57000,
     shippingCost: 10000,
@@ -781,6 +786,7 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
 export const DEFAULT_REVIEWS: UserReview[] = [
   {
     id: 'rev-1',
+    productId: 'm1',
     authorName: 'Ahmad Zakky',
     authorEmail: 'ahmad@example.com',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
@@ -792,7 +798,7 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     comment: 'Ayam bakarnya sangat empuk dan bumbu kecap rempahnya meresap sempurna sampai ke dalam tulang. Pengiriman super cepat!',
     likesCount: 12,
     status: 'PUBLISHED',
-    photos: ['https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=800&q=80'],
+    photos: ['/images/ayam_bakar.jpg'],
     replies: [
       {
         id: 'rep-1',
@@ -804,7 +810,23 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     ]
   },
   {
+    id: 'rev-1b',
+    productId: 'm1',
+    authorName: 'Ratna Sari',
+    authorEmail: 'ratna@example.com',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '3 hari lalu',
+    productName: 'Ayam Bakar',
+    productImage: '/images/ayam_bakar.jpg',
+    comment: 'Porsi ayam bakar madunya pas, sambal terasinya mantap pedas gurih. Bumbunya benar-benar khas!',
+    likesCount: 7,
+    status: 'PUBLISHED'
+  },
+  {
     id: 'rev-2',
+    productId: 'm4',
     authorName: 'Siti Rahmawati',
     authorEmail: 'siti@example.com',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
@@ -816,10 +838,26 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     comment: 'Gudeg paling otentik yang pernah saya pesan online. Bumbu kreceknya gurih pedas manis beraroma harum.',
     likesCount: 8,
     status: 'PUBLISHED',
-    photos: ['https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80']
+    photos: ['/images/gudeg.jpg']
+  },
+  {
+    id: 'rev-2b',
+    productId: 'm4',
+    authorName: 'Eko Prasetyo',
+    authorEmail: 'eko@example.com',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '4 hari lalu',
+    productName: 'Gudeg',
+    productImage: '/images/gudeg.jpg',
+    comment: 'Nangka mudanya legit dan manisnya pas khas Jogja, telur bacem dan kuah arehnya kental mantap.',
+    likesCount: 5,
+    status: 'PUBLISHED'
   },
   {
     id: 'rev-3',
+    productId: 'm2',
     authorName: 'Dimas Pratama',
     authorEmail: 'dimas@example.com',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
@@ -830,10 +868,27 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     productImage: '/images/nasi_bakar.jpg',
     comment: 'Nasi bakar daun pisang harum wangi bumbu cumi pedas manisnya melimpah! Mengenyangkan sekali.',
     likesCount: 15,
+    status: 'PUBLISHED',
+    photos: ['/images/nasi_bakar.jpg']
+  },
+  {
+    id: 'rev-3b',
+    productId: 'm2',
+    authorName: 'Anita Putri',
+    authorEmail: 'anita@example.com',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '5 hari lalu',
+    productName: 'Nasi Bakar',
+    productImage: '/images/nasi_bakar.jpg',
+    comment: 'Aroma bakaran daun pisangnya menggugah selera, isian suwir ayam kemangi pedasnya mantap!',
+    likesCount: 8,
     status: 'PUBLISHED'
   },
   {
     id: 'rev-4',
+    productId: 'm5',
     authorName: 'Dewi Lestari',
     authorEmail: 'dewi@example.com',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
@@ -844,10 +899,27 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     productImage: '/images/garang_asam.jpg',
     comment: 'Kuah garang asamnya menyegarkan dada, ayam kampung empuk dikukus rapi dengan daun pisang.',
     likesCount: 6,
+    status: 'PUBLISHED',
+    photos: ['/images/garang_asam.jpg']
+  },
+  {
+    id: 'rev-4b',
+    productId: 'm5',
+    authorName: 'Hendra Gunawan',
+    authorEmail: 'hendra@example.com',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '6 hari lalu',
+    productName: 'Garang Asam',
+    productImage: '/images/garang_asam.jpg',
+    comment: 'Rasa belimbing wuluh dan tomat hijaunya segar berpadu dengan santan gurih. Sangat lezat saat hangat.',
+    likesCount: 4,
     status: 'PUBLISHED'
   },
   {
     id: 'rev-5',
+    productId: 'm3',
     authorName: 'Budi Hartono',
     authorEmail: 'budi@example.com',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
@@ -858,10 +930,27 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     productImage: '/images/krecek.jpg',
     comment: 'Krecek kulit sapinya sangat lembut dan gurih pedas. Kacang tolonya menambah cita rasa tradisional.',
     likesCount: 9,
+    status: 'PUBLISHED',
+    photos: ['/images/krecek.jpg']
+  },
+  {
+    id: 'rev-5b',
+    productId: 'm3',
+    authorName: 'Tari Kusuma',
+    authorEmail: 'tari@example.com',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '1 minggu lalu',
+    productName: 'Krecek',
+    productImage: '/images/krecek.jpg',
+    comment: 'Pedasnya pas dan kuah santannya medok bumbu rempah. Cocok banget disantap dengan nasi hangat.',
+    likesCount: 6,
     status: 'PUBLISHED'
   },
   {
     id: 'rev-6',
+    productId: 'm6',
     authorName: 'Amanda Rizky',
     authorEmail: 'amanda@example.com',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
@@ -872,7 +961,24 @@ export const DEFAULT_REVIEWS: UserReview[] = [
     productImage: '/images/jus_mangga.jpg',
     comment: 'Jus buahnya murni kental dari buah asli segar tanpa banyak pemanis buatan. Sangat segar!',
     likesCount: 10,
-    status: 'PUBLISHED'
+    status: 'PUBLISHED',
+    photos: ['/images/jus_mangga.jpg']
+  },
+  {
+    id: 'rev-6b',
+    productId: 'm6',
+    authorName: 'Kevin Sanjaya',
+    authorEmail: 'kevin@example.com',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+    authorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+    rating: 5,
+    date: '1 minggu lalu',
+    productName: 'Jus (Jambu, Sirsak, Mangga)',
+    productImage: '/images/jus_sirsak.jpg',
+    comment: 'Jus sirsak dan mangganya juara! Dinginnya tahan lama dalam kemasan botol higienis.',
+    likesCount: 7,
+    status: 'PUBLISHED',
+    photos: ['/images/jus_sirsak.jpg']
   }
 ];
 
@@ -1286,8 +1392,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     // Immediate local React state update so order appears 100% reliably
     setOrdersState(prev => [newOrder, ...prev.filter(o => o.id !== newId)]);
 
-    setDoc(doc(db, 'orders', newId), newOrder).catch(console.error);
-    setRtdb(ref(rtdb, `orders/${newId}`), newOrder).catch(console.error);
+    const cleanOrder = cleanForFirestore(newOrder);
+    setDoc(doc(db, 'orders', newId), cleanOrder).catch(console.error);
+    setRtdb(ref(rtdb, `orders/${newId}`), cleanOrder).catch(console.error);
     setRtdb(ref(rtdb, `live_orders/${newId}`), {
       id: newId,
       status: newOrder.status,
@@ -1354,22 +1461,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const confirmOrderReceived = (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => {
+  const customerConfirmOrder = (id: string) => {
     const targetOrder = orders.find(o => o.id === id);
     const isCod = targetOrder?.paymentMethod?.toLowerCase().includes('cod') || targetOrder?.paymentMethod?.toLowerCase().includes('cash on delivery');
-
-    const activeProofPhoto = proofPhotoUrl || targetOrder?.proofPhoto;
-    const activePaymentProofPhoto = paymentProofPhotoUrl || targetOrder?.paymentProofPhoto;
-
-    if (!activeProofPhoto) {
-      alert('⚠️ GAGAL KONFIRMASI:\n\nFoto bukti penerimaan pesanan/produk wajib diunggah terlebih dahulu sebelum mengonfirmasi pesanan.');
-      return;
-    }
-
-    if (isCod && !activePaymentProofPhoto) {
-      alert('⚠️ GAGAL KONFIRMASI PESANAN COD:\n\nKhusus pembayaran Cash On Delivery (COD), pembayaran belum dianggap berhasil karena Anda WAJIB mengirimkan foto bukti pembayaran tunai / resi serah terima uang kepada kurir!');
-      return;
-    }
 
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const dateStr = `Hari ini, ${timeStr}`;
@@ -1377,23 +1471,66 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       status: 'COMPLETED' as AdminOrder['status'],
       customerConfirmed: true,
       confirmedAt: dateStr,
-      proofPhoto: activeProofPhoto,
+      receivedOnTime: true,
       updatedAt: Date.now()
     };
 
     if (isCod) {
       updates.paymentBadge = 'PAID';
-      if (activePaymentProofPhoto) {
-        updates.paymentProofPhoto = activePaymentProofPhoto;
-      }
     }
 
-    // Local state sync using correct setter setOrdersState
+    const cleanUpdates = cleanForFirestore(updates);
     setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+    updateDoc(doc(db, 'orders', id), cleanUpdates).catch(console.error);
+    updateRtdb(ref(rtdb, `orders/${id}`), cleanUpdates).catch(console.error);
+    updateRtdb(ref(rtdb, `live_orders/${id}`), {
+      id,
+      status: 'COMPLETED',
+      customerConfirmed: true,
+      confirmedAt: dateStr,
+      receivedOnTime: true,
+      customerName: targetOrder?.customerName || 'Pelanggan',
+      paymentBadge: isCod ? 'PAID' : (targetOrder?.paymentBadge || 'PAID'),
+      updatedAt: Date.now()
+    }).catch(console.error);
+  };
 
-    updateDoc(doc(db, 'orders', id), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'COMPLETED', paymentBadge: isCod ? 'PAID' : targetOrder?.paymentBadge, proofPhoto: activeProofPhoto, paymentProofPhoto: activePaymentProofPhoto || null, updatedAt: Date.now() }).catch(console.error);
+  const confirmOrderReceived = (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => {
+    const targetOrder = orders.find(o => o.id === id);
+    const isCod = targetOrder?.paymentMethod?.toLowerCase().includes('cod') || targetOrder?.paymentMethod?.toLowerCase().includes('cash on delivery');
+
+    const activeProofPhoto = proofPhotoUrl || targetOrder?.proofPhoto;
+    const activePaymentProofPhoto = paymentProofPhotoUrl || targetOrder?.paymentProofPhoto;
+
+    const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = `Hari ini, ${timeStr}`;
+    const updates: any = {
+      status: 'COMPLETED' as AdminOrder['status'],
+      customerConfirmed: true,
+      confirmedAt: dateStr,
+      receivedOnTime: true,
+      updatedAt: Date.now()
+    };
+
+    if (activeProofPhoto) updates.proofPhoto = activeProofPhoto;
+    if (activePaymentProofPhoto) updates.paymentProofPhoto = activePaymentProofPhoto;
+    if (isCod) updates.paymentBadge = 'PAID';
+
+    const cleanUpdates = cleanForFirestore(updates);
+    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+    updateDoc(doc(db, 'orders', id), cleanUpdates).catch(console.error);
+    updateRtdb(ref(rtdb, `orders/${id}`), cleanUpdates).catch(console.error);
+    updateRtdb(ref(rtdb, `live_orders/${id}`), {
+      id,
+      status: 'COMPLETED',
+      customerConfirmed: true,
+      confirmedAt: dateStr,
+      receivedOnTime: true,
+      paymentBadge: isCod ? 'PAID' : (targetOrder?.paymentBadge || 'PAID'),
+      proofPhoto: activeProofPhoto || null,
+      paymentProofPhoto: activePaymentProofPhoto || null,
+      updatedAt: Date.now()
+    }).catch(console.error);
   };
 
   const uploadOrderProofPhoto = (id: string, proofPhotoUrl: string) => {
@@ -1815,6 +1952,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       updateOrderStatus,
       updatePaymentStatus,
       confirmOrderReceived,
+      customerConfirmOrder,
       uploadOrderProofPhoto,
       uploadOrderPaymentProofPhoto,
       deleteOrder,

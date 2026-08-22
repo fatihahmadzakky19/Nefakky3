@@ -23,10 +23,19 @@ import {
 } from 'lucide-react';
 import { AdminOrder, useData } from '@/context/DataContext';
 
+// ============================================================================
+// KOMPONEN: AdminOrdersTab (Manajemen Pesanan Masuk / Kitchen Orders Desk)
+// FUNGSI:
+// 1. Memantau seluruh pesanan masuk dari pelanggan secara realtime.
+// 2. Mengubah status alur pesanan (Pending -> Dimasak -> Diantar -> Selesai).
+// 3. Mengunggah bukti foto pengantaran & bukti pembayaran uang tunai COD.
+// 4. Mencetak struk belanja / nota thermal kasir resmi.
+// ============================================================================
+
 interface AdminOrdersTabProps {
-  orderList: AdminOrder[];
-  updateOrderStatus: (orderId: string, newStatus: any) => void;
-  onPrintPDF: () => void;
+  orderList: AdminOrder[];                                  // Daftar seluruh pesanan dari database
+  updateOrderStatus: (orderId: string, newStatus: any) => void; // Fungsi update status alur pesanan
+  onPrintPDF: () => void;                                   // Fungsi trigger cetak laporan PDF
 }
 
 export default function AdminOrdersTab({
@@ -34,17 +43,23 @@ export default function AdminOrdersTab({
   updateOrderStatus,
   onPrintPDF
 }: AdminOrdersTabProps) {
+  // --------------------------------------------------------------------------
+  // DATA CONTEXT & STATE MANAGEMENT
+  // --------------------------------------------------------------------------
   const { isHighDemand, highDemandMessage, toggleHighDemand, uploadOrderProofPhoto, uploadOrderPaymentProofPhoto } = useData();
-  const [selectedProofPhoto, setSelectedProofPhoto] = useState<string | null>(null);
-  const [uploadTarget, setUploadTarget] = useState<{ orderId: string; type: 'proof' | 'payment' } | null>(null);
-  const adminFileInputRef = React.useRef<HTMLInputElement>(null);
-  const [productSearch, setProductSearch] = useState('');
-  const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PENDING' | 'COOKING' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED'>('ALL');
-  const [orderDateRangeFilter, setOrderDateRangeFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | '30days' | 'thisMonth' | 'lastMonth' | 'june2026'>('all');
-  const [demandMsgInput, setDemandMsgInput] = useState(highDemandMessage);
-  const [saveDemandSuccess, setSaveDemandSuccess] = useState(false);
-  const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<AdminOrder | null>(null);
+  const [selectedProofPhoto, setSelectedProofPhoto] = useState<string | null>(null);             // URL foto bukti yang sedang dizoom full-size
+  const [uploadTarget, setUploadTarget] = useState<{ orderId: string; type: 'proof' | 'payment' } | null>(null); // Target upload foto admin
+  const adminFileInputRef = React.useRef<HTMLInputElement>(null);                                // Referensi input file tersembunyi
+  const [productSearch, setProductSearch] = useState('');                                        // Query pencarian pesanan (nama/ID/menu)
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PENDING' | 'COOKING' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED'>('ALL'); // Filter tab status
+  const [orderDateRangeFilter, setOrderDateRangeFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | '30days' | 'thisMonth' | 'lastMonth' | 'june2026'>('all'); // Filter rentang waktu
+  const [demandMsgInput, setDemandMsgInput] = useState(highDemandMessage);                       // Input teks pengumuman resto ramai
+  const [saveDemandSuccess, setSaveDemandSuccess] = useState(false);                             // Notifikasi sukses simpan pengumuman
+  const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<AdminOrder | null>(null);     // Pesanan yang dipilih untuk cetak struk kasir
 
+  // --------------------------------------------------------------------------
+  // HANDLER: Unggah Foto Bukti dari WhatsApp Kurir Toko
+  // --------------------------------------------------------------------------
   const handleAdminFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && uploadTarget) {
@@ -52,8 +67,10 @@ export default function AdminOrdersTab({
       reader.onloadend = () => {
         const base64 = reader.result as string;
         if (uploadTarget.type === 'proof') {
+          // Simpan foto bukti serah terima makanan
           uploadOrderProofPhoto(uploadTarget.orderId, base64);
         } else {
+          // Simpan foto bukti pembayaran uang tunai COD
           uploadOrderPaymentProofPhoto(uploadTarget.orderId, base64);
         }
         setUploadTarget(null);
@@ -365,6 +382,34 @@ export default function AdminOrdersTab({
         </div>
       </div>
 
+      {/* BANNER NOTIFIKASI REALTIME: KONFIRMASI PENERIMAAN DARI PELANGGAN */}
+      {realOrders.some(o => o.customerConfirmed) && (
+        <div className="bg-emerald-50 border-2 border-emerald-400 rounded-3xl p-4 sm:p-5 shadow-lg flex items-center justify-between gap-4 animate-fade-in">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+              <Bell className="w-5 h-5 animate-bounce" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-bold text-xs uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                <span>Notifikasi Realtime Penerimaan Pesanan</span>
+                <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded-full text-[10px]">Tepat Waktu ⏱️</span>
+              </span>
+              <p className="text-xs text-emerald-800 font-medium truncate mt-0.5">
+                Pesanan <strong>#{realOrders.find(o => o.customerConfirmed)?.id}</strong> telah dikonfirmasi sampai dengan baik oleh <strong>{realOrders.find(o => o.customerConfirmed)?.customerName}</strong> ({realOrders.find(o => o.customerConfirmed)?.confirmedAt || 'Hari ini'}).
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setOrderStatusFilter('COMPLETED');
+            }}
+            className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs shrink-0 cursor-pointer transition-all"
+          >
+            Lihat Pesanan Selesai
+          </button>
+        </div>
+      )}
+
       {/* FILTERS BAR & SEARCH CONTROLS */}
       <div className="bg-white rounded-3xl p-5 border border-amber-900/10 shadow-xl flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
         
@@ -451,6 +496,14 @@ export default function AdminOrdersTab({
                   ) : (
                     <span className="px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] font-medium rounded-full border border-stone-200">
                       Tanpa Promo
+                    </span>
+                  )}
+
+                  {/* BADGE KONFIRMASI TIBA DARI PELANGGAN */}
+                  {ord.customerConfirmed && (
+                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-300 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Dikonfirmasi Pelanggan (Tepat Waktu • {ord.confirmedAt || 'Hari ini'})
                     </span>
                   )}
                 </div>
@@ -644,16 +697,23 @@ export default function AdminOrdersTab({
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => updateOrderStatus(ord.id, 'COOKING')}
-                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl shadow-xs transition-all ${ord.status === 'COOKING' ? 'bg-amber-600 text-white ring-2 ring-amber-300' : 'bg-amber-500 hover:bg-amber-600 text-white'}`}
                 >
                   Set Dimasak
                 </button>
                 <button
                   onClick={() => updateOrderStatus(ord.id, 'DELIVERING')}
-                  className="px-3 py-1.5 bg-[#934b19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1"
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1 ${ord.status === 'DELIVERING' || ord.status === 'SHIPPING' ? 'bg-[#783603] text-white ring-2 ring-amber-300' : 'bg-[#934b19] hover:bg-[#783603] text-white'}`}
                 >
                   <Truck className="w-3.5 h-3.5" />
-                  <span>Set Diantar</span>
+                  <span>Set Diantar (Kurir Meluncur)</span>
+                </button>
+                <button
+                  onClick={() => updateOrderStatus(ord.id, 'DELIVERED')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1 ${ord.status === 'DELIVERED' ? 'bg-blue-700 text-white ring-2 ring-blue-300' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Set Sampai di Lokasi</span>
                 </button>
                 <button
                   onClick={() => {
@@ -663,7 +723,7 @@ export default function AdminOrdersTab({
                       alert(`✅ Pesanan #${ord.id} berhasil ditandai SELESAI dan status COD LUNAS!`);
                     }
                   }}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1"
+                  className={`px-3.5 py-1.5 text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1 ${ord.status === 'COMPLETED' ? 'bg-emerald-700 text-white ring-2 ring-emerald-300' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Set Selesai {ord.paymentMethod?.toLowerCase().includes('cod') ? '& Lunas COD' : ''}</span>

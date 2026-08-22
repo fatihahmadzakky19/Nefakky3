@@ -72,6 +72,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<{ success: boolean; role: 'admin' | 'customer'; error?: string }>;
   logout: () => Promise<void>;
   updatePhoto: (photoURL: string) => void;
+  updateProfile: (data: { displayName?: string; phoneNumber?: string; photoURL?: string }) => void;
   addAddress: (newAddr: Omit<UserAddress, 'id'>) => Promise<void>;
   updateAddress: (id: string, updatedAddr: Partial<UserAddress>) => Promise<void>;
   deleteAddress: (id: string) => Promise<void>;
@@ -89,15 +90,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Helper to ensure addresses exist (Demo addresses ONLY attached for Admin account)
+  // Helper to ensure addresses exist
   const ensureUserAddresses = (u: UserProfile): UserProfile => {
-    const isAdminAccount = u.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || u.role === 'admin';
     let addrs = u.addresses || [];
-    
-    if (addrs.length === 0 && isAdminAccount) {
-      addrs = DEFAULT_INITIAL_ADDRESSES;
-    }
-
     let activeId = u.activeAddressId || addrs.find(a => a.isDefault)?.id || addrs[0]?.id || '';
     return {
       ...u,
@@ -366,7 +361,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password: pass,
         role: isOwnerAdmin ? 'admin' : 'customer',
         authProvider: 'password',
-        addresses: isOwnerAdmin ? DEFAULT_INITIAL_ADDRESSES : []
+        addresses: existingIndex >= 0 && registeredUsers[existingIndex].addresses ? registeredUsers[existingIndex].addresses : []
       };
 
       if (existingIndex >= 0) {
@@ -385,6 +380,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         displayName: name,
         phoneNumber: phone,
         role: isOwnerAdmin ? 'admin' : 'customer',
+        addresses: [],
         authProvider: 'password'
       });
       setUser(userProf);
@@ -401,6 +397,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         displayName: name,
         phoneNumber: phone,
         role: isOwnerAdmin ? 'admin' : 'customer',
+        addresses: [],
         authProvider: 'password'
       });
       setUser(userProf);
@@ -421,12 +418,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const isOwnerAdmin = userEmail === ADMIN_EMAIL.toLowerCase();
       const role: 'admin' | 'customer' = isOwnerAdmin ? 'admin' : 'customer';
 
+      let matchedPhone: string | undefined = undefined;
+      let matchedAddresses: UserAddress[] = [];
+
+      if (typeof window !== 'undefined' && userEmail) {
+        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        const existing = registeredUsers.find(
+          (u: any) => u.email && u.email.trim().toLowerCase() === userEmail
+        );
+        if (existing) {
+          matchedPhone = existing.phoneNumber || existing.phone;
+          matchedAddresses = existing.addresses || [];
+        }
+      }
+
       const userProf: UserProfile = ensureUserAddresses({
         uid: cred.user.uid,
         email: cred.user.email,
         displayName: cred.user.displayName || (isOwnerAdmin ? 'Fatih Ahmad Zakky (Admin)' : 'Pengguna Google'),
         photoURL: cred.user.photoURL,
         role: role,
+        phoneNumber: matchedPhone,
+        addresses: matchedAddresses,
         authProvider: 'google'
       });
 
@@ -444,8 +458,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             email: userEmail,
             photoURL: cred.user.photoURL,
             role: role,
+            phoneNumber: undefined,
             authProvider: 'google',
-            addresses: userProf.addresses
+            addresses: []
           });
           localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
         }
@@ -554,15 +569,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(false);
   };
 
-  // Update Profile Photo
-  const updatePhoto = (photoURL: string) => {
+  // Update Complete Profile (Name, Phone, Photo)
+  const updateProfile = (data: { displayName?: string; phoneNumber?: string; photoURL?: string }) => {
     if (user) {
-      const updatedUser = { ...user, photoURL };
+      const updatedUser: UserProfile = {
+        ...user,
+        ...(data.displayName !== undefined ? { displayName: data.displayName } : {}),
+        ...(data.phoneNumber !== undefined ? { phoneNumber: data.phoneNumber } : {}),
+        ...(data.photoURL !== undefined ? { photoURL: data.photoURL } : {})
+      };
       setUser(updatedUser);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(updatedUser));
+        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+        if (storedUsersStr) {
+          try {
+            const registeredUsers = JSON.parse(storedUsersStr);
+            const idx = registeredUsers.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === (user.email || '').trim().toLowerCase());
+            if (idx >= 0) {
+              if (data.displayName !== undefined) {
+                registeredUsers[idx].displayName = data.displayName;
+                registeredUsers[idx].name = data.displayName;
+              }
+              if (data.phoneNumber !== undefined) {
+                registeredUsers[idx].phoneNumber = data.phoneNumber;
+                registeredUsers[idx].phone = data.phoneNumber;
+              }
+              if (data.photoURL !== undefined) {
+                registeredUsers[idx].photoURL = data.photoURL;
+              }
+              localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
+            }
+          } catch (e) {
+            console.error("Failed to sync profile update", e);
+          }
+        }
       }
     }
+  };
+
+  // Update Profile Photo Shortcut
+  const updatePhoto = (photoURL: string) => {
+    updateProfile({ photoURL });
   };
 
   // Address Management Methods
@@ -714,6 +762,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       loginWithGoogle,
       logout,
       updatePhoto,
+      updateProfile,
       addAddress,
       updateAddress,
       deleteAddress,

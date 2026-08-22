@@ -2,545 +2,684 @@
 
 /**
  * ============================================================================
- * HALAMAN: Dashboard Utama Pelanggan (User Homepage - /)
- * DESKRIPSI: Presisi 100% sesuai Google Stitch Design System & HTML Layout
- *            (Primary Espresso #25160E, Secondary Terracotta #934B19, Canvas #FBF9F5).
- * FITUR: Hero Showcase Slider, Floating Category Pills, Featured Menu Grid,
- *        Filosofi Rasa Split Section, Modal Detail Nutrisi.
+ * HALAMAN: Beranda Utama (User Homepage - src/app/page.tsx)
+ * DESKRIPSI: Dikonversikan secara presisi 100% dari ekspor Stitch MCP HTML/Tailwind
+ *            (Dynamic Hero Showcase Slider, Floating Category Pills, Active
+ *            Voucher Strip, 6 Featured Menu Cards Grid, Coming Soon Teaser,
+ *            Filosofi Rasa Split Panel, dan Footer Editorial 4-Kolom).
  * ============================================================================
  */
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useData, isVoucherValidNow } from '@/context/DataContext';
-import Navbar from '@/components/Navbar';
-import { 
-  Search, 
-  ShoppingBag, 
-  Bell, 
-  User, 
-  Star, 
-  Utensils, 
-  Cookie, 
-  Coffee, 
-  Gift, 
-  ArrowRight,
-  ShieldCheck,
-  LogOut,
-  Ticket,
-  Plus,
-  Minus,
-  X,
-  CheckCircle2,
-  Sparkles,
-  Flame,
-  ChevronRight,
-  Flame as FireIcon,
-  ChefHat,
-  Leaf,
-  Sparkle
-} from 'lucide-react';
 import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
+import { 
+  Star, 
+  Search, 
+  Bell, 
+  ShoppingBag, 
+  Heart,
+  ArrowRight, 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Minus,
+  UtensilsCrossed,
+  Hourglass,
+  Leaf,
+  Sparkles,
+  CheckCircle2,
+  Ticket,
+  User
+} from 'lucide-react';
 
-export default function UserHomePage() {
+export default function HomePage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
-  const { products, vouchers, isVoucherUsedByUser } = useData();
-  const { cart, totalCartCount, addToCart, removeFromCart, cartItems, subtotal, claimPromo } = useCart();
+  const { user } = useAuth();
+  const { vouchers, products } = useData();
+  const { cartItems, totalCartCount, addToCart, removeFromCart, claimPromo } = useCart();
 
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [heroIndex, setHeroIndex] = useState<number>(0);
+  const [selectedVoucherCode, setSelectedVoucherCode] = useState<string | null>(null);
+  const [claimedNotice, setClaimedNotice] = useState<string | null>(null);
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
-  // Filter visible products from DataContext
-  const visibleProducts = products.filter(p => p.visibility !== false && !p.isDeleted);
-  const regularProducts = visibleProducts.filter(p => !p.isComingSoon);
-  const comingSoonProducts = visibleProducts.filter(p => p.isComingSoon);
+  const toggleWishlist = (productId: string) => {
+    setFavorites(prev => 
+      prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
+    );
+  };
 
-  // Dynamic Hero Slides from Google Stitch Specification (only regular active products)
-  const heroSlides = regularProducts.length > 0 
-    ? regularProducts.slice(0, 5).map((p, idx) => ({
+  // Saring semua voucher aktif yang dibuat oleh Admin
+  const activeVouchers = (vouchers || []).filter(v => isVoucherValidNow(v).active);
+  const currentVoucher = 
+    activeVouchers.find(v => v.code === selectedVoucherCode) || 
+    activeVouchers[0] || 
+    (vouchers && vouchers[0]);
+
+  const categories = ['Semua', 'Makanan Berat', 'Minuman', 'Menu Hemat'];
+
+  // Sinkronisasi data Hero Slider dengan database produk aktif
+  const dynamicHeroSlides = useMemo(() => {
+    const defaultSlides = [
+      {
+        id: 'm1',
+        rating: '4.9/5',
+        reviewCount: '(156+ Ulasan Pelanggan)',
+        title: 'Ayam Bakar Madu Rempah Nusantara',
+        subtitle: 'Ayam pejantan pilihan dibakar dengan lumuran bumbu kecap rempah tradisional yang meresap sempurna hingga ke tulang, disajikan dengan sambal terasi khas.',
+        image: '/images/ayam_bakar.jpg',
+        price: 35000,
+        category: 'Makanan Berat',
+        product: undefined
+      },
+      {
+        id: 'm4',
+        rating: '5.0/5',
+        reviewCount: '(312+ Ulasan Pelanggan)',
+        title: 'Gudeg Komplit Tradisional Khas Jogja',
+        subtitle: 'Nangka muda dimasak perlahan berjam-jam dengan santan kental dan gula kelapa alami, disajikan lengkap dengan telur bacem, suwiran ayam, dan krecek gurih.',
+        image: '/images/gudeg.jpg',
+        price: 10000,
+        category: 'Makanan Berat',
+        product: undefined
+      },
+      {
+        id: 'm2',
+        rating: '4.8/5',
+        reviewCount: '(98+ Ulasan Pelanggan)',
+        title: 'Aroma Wangi Gurih Nasi Bakar Daun Pisang Tradisional',
+        subtitle: 'Nasi gurih dibungkus daun pisang segar dengan isian suwir ayam dan cumi pedas, dibakar di atas arang batok kelapa hingga harum merebak.',
+        image: '/images/nasi_bakar.jpg',
+        price: 10000,
+        category: 'Makanan Berat',
+        product: undefined
+      },
+      {
+        id: 'm5',
+        rating: '4.8/5',
+        reviewCount: '(88+ Ulasan Pelanggan)',
+        title: 'Garang Asam Ayam Kampung Belimbing Wuluh',
+        subtitle: 'Potongan ayam kampung segar dikukus dalam bungkus daun pisang dengan kuah santan asam segar, belimbing wuluh alami, dan cabai rawit utuh.',
+        image: '/images/garang_asam.jpg',
+        price: 10000,
+        category: 'Menu Hemat',
+        product: undefined
+      },
+      {
+        id: 'm6',
+        rating: '4.9/5',
+        reviewCount: '(145+ Ulasan Pelanggan)',
+        title: 'Kesegaran Alami Aneka Jus Buah Tropis',
+        subtitle: '100% buah segar alami pilihan: Mangga Harum Manis, Sirsak Segar, dan Jambu Biji Merah tanpa tambahan pemanis buatan, diproses higienis.',
+        image: '/images/jus_mangga.jpg',
+        price: 5000,
+        category: 'Minuman',
+        product: undefined
+      }
+    ];
+
+    if (!products || products.length === 0) return defaultSlides;
+    const active = products.filter(p => p.visibility !== false && !p.isDeleted);
+    if (active.length === 0) return defaultSlides;
+
+    return active.map((p) => {
+      const isJuice = p.category === 'Minuman' || p.name.toLowerCase().includes('jus');
+      return {
         id: p.id,
-        name: p.name,
-        tagline: p.description,
-        rating: `${p.rating.toFixed(1)}/5`,
-        reviews: `${p.reviewsCount || 100}+ Ulasan`,
-        price: `Rp ${p.price.toLocaleString('id-ID')}`,
+        rating: `${p.rating || 4.9}/5`,
+        reviewCount: `(${p.reviewsCount || 100}+ Ulasan Pelanggan)`,
+        title: p.name === 'Ayam Bakar'
+          ? 'Ayam Bakar Madu Rempah Nusantara'
+          : p.name === 'Nasi Bakar'
+          ? 'Aroma Wangi Gurih Nasi Bakar Daun Pisang'
+          : p.name === 'Gudeg'
+          ? 'Gudeg Komplit Tradisional Khas Jogja'
+          : p.name === 'Garang Asam'
+          ? 'Garang Asam Ayam Kampung Belimbing Wuluh'
+          : p.name === 'Krecek'
+          ? 'Sambal Goreng Krecek Gurih Pedas Santan'
+          : isJuice
+          ? 'Kesegaran Alami Aneka Jus Buah Tropis'
+          : p.name,
+        subtitle: p.description || 'Kelezatan otentik kuliner nusantara diproses dengan resep warisan terbaik.',
         image: p.image || '/images/ayam_bakar.jpg',
-        badgeText: p.badge ? `🔥 ${p.badge}` : idx === 0 ? '🌟 BEST SELLER' : idx === 1 ? '👨‍🍳 SIGNATURE CHEF' : '✨ BARU'
-      }))
-    : [
-        {
-          id: 'm1',
-          name: 'Ayam Bakar',
-          tagline: 'Kurasi rasa terbaik dari warisan dapur Nusantara, disajikan dengan sentuhan modern untuk penikmat sejati.',
-          rating: '4.9/5',
-          reviews: '2.500+ Ulasan',
-          price: 'Rp 35.000',
-          image: '/images/ayam_bakar.jpg',
-          badgeText: '🌟 EDISI SPESIAL CHEF'
-        }
-      ];
-
-  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+        price: p.price,
+        category: p.category,
+        product: p
+      };
+    });
+  }, [products]);
 
   useEffect(() => {
-    if (heroSlides.length === 0) return;
     const timer = setInterval(() => {
-      setHeroSlideIndex((prev) => (prev + 1) % heroSlides.length);
-    }, 4500);
+      setHeroIndex((prev) => (prev + 1) % dynamicHeroSlides.length);
+    }, 6000);
     return () => clearInterval(timer);
-  }, [heroSlides.length]);
+  }, [dynamicHeroSlides.length]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#fbf9f5] flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-3 border-stone-300 border-t-[#25160e] rounded-full animate-spin mb-3" />
-        <p className="text-xs text-[#4f4540] font-medium tracking-wide">Memuat Nefakky Marketplace...</p>
-      </div>
-    );
-  }
+  const handleClaimVoucher = (code: string) => {
+    claimPromo(code);
+    setClaimedNotice(`Voucher ${code} berhasil diklaim ke keranjang!`);
+    setTimeout(() => setClaimedNotice(null), 3000);
+  };
 
-  // Quick categories matching exact 3 categories requirement
-  const categoriesList = [
-    { name: 'Makanan Berat', icon: Utensils, catKey: 'Makanan Berat' },
-    { name: 'Minuman', icon: Coffee, catKey: 'Minuman' },
-    { name: 'Menu Hemat', icon: Gift, catKey: 'Menu Hemat' },
-  ];
+  // Mengambil daftar produk aktif langsung dari backend / database DataContext
+  const activeProducts = (products && products.length > 0)
+    ? products.filter(p => p.visibility !== false && !p.isDeleted)
+    : [];
 
-  const filteredProducts = regularProducts.filter(item => {
-    const matchCat = activeCategory === 'Semua' || item.category === activeCategory;
-    const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCat && matchSearch;
+  const displayedFavorites = activeProducts.filter(item => {
+    if (activeCategory === 'Semua') return true;
+    return item.category?.toLowerCase() === activeCategory.toLowerCase();
   });
 
-  const activeVouchers = (vouchers || []).filter(v => {
-    if (!isVoucherValidNow(v).active || v.isDeleted) return false;
-    const isUsed = isVoucherUsedByUser && isVoucherUsedByUser(v.code, user?.uid, user?.email);
-    if (isUsed) return false;
-    return true;
-  });
+  const openDetailModal = (item: any) => {
+    setDetailProduct({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      price: item.price,
+      rating: item.rating || 4.9,
+      reviewsCount: `${item.reviewsCount || 150}+ Ulasan`,
+      image: item.image || '/images/ayam_bakar.jpg',
+      description: item.description,
+      ingredients: item.ingredients || 'Bahan baku pilihan alami 100% berkualitas.',
+      storage: item.usageAdvice || 'Santap selagi hangat untuk kenikmatan maksimal.',
+      isComingSoon: Boolean(item.isComingSoon)
+    });
+  };
+
+  const currentSlide = dynamicHeroSlides[heroIndex % dynamicHeroSlides.length] || dynamicHeroSlides[0];
+  const userAvatar = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=25160E&color=ffffff&bold=true` : (user?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.split('@')[0])}&background=25160E&color=ffffff&bold=true` : null));
 
   return (
-    <div className="min-h-screen bg-[#fbf9f5] text-[#1b1c1a] font-sans selection:bg-[#934b19]/10 selection:text-[#934b19] pb-28 lg:pb-12">
+    <div className="bg-[#fcf8fa] font-sans text-[#1b1b1d] min-h-screen selection:bg-stone-900 selection:text-white flex flex-col justify-between">
       
-      {/* 1. GOOGLE STITCH NAVBAR */}
-      <Navbar />
+      {/* 1. HEADER / NAVBAR SESUAI STITCH MCP */}
+      <header className="fixed top-0 w-full z-50 bg-[#fcf8fa]/90 backdrop-blur-xl border-b border-stone-200 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+        <div className="h-20 max-w-7xl mx-auto px-6 flex items-center justify-between">
+          
+          {/* Brand Wordmark (Left) */}
+          <div className="flex-1 flex items-center font-serif text-2xl tracking-widest text-black font-bold">
+            <Link href="/">NEFAKKY</Link>
+          </div>
 
-      {/* 2. DYNAMIC HERO SHOWCASE SLIDER (Google Stitch Exact Specification) */}
-      <section className="relative w-full h-[480px] sm:h-[600px] lg:h-[720px] min-h-[440px] overflow-hidden bg-[#25160e]">
-        
-        {/* Active Hero Image Background */}
-        {heroSlides.map((slide, index) => {
-          const isActive = index === heroSlideIndex;
-          return (
-            <div
-              key={slide.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                isActive ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-105 pointer-events-none z-0'
-              }`}
+          {/* Desktop Nav Links (Centered) */}
+          <nav className="hidden md:flex items-center gap-8 flex-1 justify-center">
+            <Link 
+              href="/" 
+              className="text-black font-bold text-sm transition-colors"
             >
-              <Image
-                src={slide.image}
-                alt={slide.name}
-                fill
-                className="object-cover object-center brightness-[0.72] contrast-[1.05]"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#25160e] via-[#25160e]/50 to-transparent" />
-            </div>
-          );
-        })}
+              Beranda
+            </Link>
+            <Link 
+              href="/menu" 
+              className="text-stone-600 hover:text-black font-medium text-sm transition-colors"
+            >
+              Menu
+            </Link>
+            <Link 
+              href="/comments" 
+              className="text-stone-600 hover:text-black font-medium text-sm transition-colors"
+            >
+              Ulasan Rasa
+            </Link>
+            <Link 
+              href="/notifications" 
+              className="text-stone-600 hover:text-black font-medium text-sm transition-colors"
+            >
+              Pesanan
+            </Link>
+          </nav>
 
-        {/* Hero Content Overlay */}
-        <div className="absolute inset-0 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 flex flex-col justify-end pb-12 sm:pb-16 z-20">
-          <div className="max-w-2xl space-y-3.5 sm:space-y-6">
-            
-            {/* Main Headline */}
-            <h1 className="font-serif text-2xl sm:text-4xl lg:text-[50px] text-white font-bold leading-[1.2] lg:leading-[1.15] tracking-tight">
-              Nikmati Kelezatan Kuliner Otentik Tradisional Khas Nusantara
-            </h1>
-
-            {/* Subtitle */}
-            <p className="text-xs sm:text-sm lg:text-base text-white/85 font-light max-w-xl leading-relaxed">
-              Kurasi rasa terbaik dari warisan dapur Nusantara, disajikan dengan sentuhan modern untuk penikmat sejati.
-            </p>
-
-            {/* CTA Button */}
-            <div className="pt-1 sm:pt-2">
-              <Link
-                href="/menu"
-                className="inline-flex items-center justify-center gap-2.5 sm:gap-3 bg-[#934b19] text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-full font-bold text-xs sm:text-sm hover:bg-[#ffa26a] hover:text-[#783603] transition-all shadow-[0_4px_24px_rgba(147,75,25,0.4)] group active:scale-95"
-              >
-                <span>Eksplorasi Menu</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          {/* Right Action Icons & Profile (Right) */}
+          <div className="flex-1 flex items-center justify-end gap-6">
+            <div className="relative flex items-center">
+              <Link href="/cart" className="text-stone-600 hover:text-black transition-colors" title="Keranjang Belanja">
+                <ShoppingBag className="w-5 h-5" />
               </Link>
+              {totalCartCount > 0 && (
+                <span className="absolute -top-1 -right-2 flex items-center justify-center min-w-[16px] h-4 px-1 bg-black text-white text-[10px] font-bold rounded-full">
+                  {totalCartCount}
+                </span>
+              )}
             </div>
 
+            {/* Profile Avatar Link */}
+            <Link 
+              href={user ? "/profile" : "/login"}
+              className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white hover:bg-neutral-800 transition-colors overflow-hidden cursor-pointer"
+            >
+              {userAvatar ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img 
+                  alt="Profile" 
+                  className="w-full h-full object-cover" 
+                  src={userAvatar}
+                />
+              ) : (
+                <User className="w-4 h-4" />
+              )}
+            </Link>
           </div>
+
         </div>
+      </header>
 
-        {/* Slider Controls */}
-        <div className="absolute right-4 sm:right-6 lg:right-16 bottom-6 sm:bottom-16 flex items-center gap-2 sm:gap-3 z-30">
-          <button 
-            onClick={() => setHeroSlideIndex((prev) => (prev === 0 ? heroSlides.length - 1 : prev - 1))}
-            className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/30 transition-colors shadow-md text-sm sm:text-base active:scale-95"
-            aria-label="Previous Slide"
-          >
-            ‹
-          </button>
-          <button 
-            onClick={() => setHeroSlideIndex((prev) => (prev + 1) % heroSlides.length)}
-            className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/30 transition-colors shadow-md text-sm sm:text-base active:scale-95"
-            aria-label="Next Slide"
-          >
-            ›
-          </button>
-        </div>
+      {/* 2. MAIN CONTENT AREA */}
+      <main className="w-full pt-20">
+        <div className="flex flex-col w-full">
 
-      </section>
+          {/* DYNAMIC HERO SHOWCASE SLIDER (Crisp 2-Column Food Showcase) */}
+          <section className="relative w-full bg-[#fcf8fa] overflow-hidden border-b border-stone-200/60">
+            {/* Ambient Background Glow */}
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-amber-100/25 to-transparent pointer-events-none"></div>
 
-      {/* 3. QUICK CATEGORY PILLS (Google Stitch Floating Card) */}
-      <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 w-full -mt-6 sm:-mt-8 relative z-30">
-        <div className="bg-[#fbf9f5]/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(69,26,3,0.08)] border border-amber-900/10 p-3.5 sm:p-5 lg:p-6 flex items-center justify-start sm:justify-center gap-2.5 sm:gap-4 lg:gap-8 overflow-x-auto no-scrollbar">
-          {categoriesList.map((cat) => {
-            const Icon = cat.icon;
-            const isActive = activeCategory === cat.catKey;
-            return (
-              <div
-                key={cat.name}
-                onClick={() => setActiveCategory(cat.catKey)}
-                className={`flex items-center gap-2 sm:gap-3 px-4 py-2.5 sm:px-6 sm:py-3 rounded-full cursor-pointer transition-all shrink-0 group ${
-                  isActive
-                    ? 'bg-[#25160e] text-white shadow-md scale-[1.02]'
-                    : 'bg-[#25160e]/5 hover:bg-[#25160e]/10 text-[#25160e]'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-amber-300' : 'text-[#934b19]'} group-hover:scale-110 transition-transform`} />
-                <span className="font-semibold text-xs whitespace-nowrap">{cat.name}</span>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 4. ACTIVE VOUCHERS PROMO STRIP */}
-      {activeVouchers.length > 0 && (
-        <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 pt-6 sm:pt-10">
-          <div className="bg-gradient-to-r from-[#25160e] via-[#3c2a21] to-[#934b19] rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-xl border border-amber-900/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 sm:gap-6">
-            <div className="space-y-1">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-400/20 text-amber-300 text-[10px] font-bold rounded-full uppercase tracking-wider mb-1 border border-amber-400/30">
-                <Ticket className="w-3.5 h-3.5" />
-                Voucher Diskon Spesial
-              </div>
-              <h3 className="font-serif text-lg sm:text-2xl font-bold text-white">Gunakan Kode Promo Nefakky</h3>
-              <p className="text-xs text-white/80 font-light">Klaim kupon belanja diskon hingga 50% untuk setiap pemesanan hari ini.</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full md:w-auto">
-              {activeVouchers.map((v) => {
-                const isUsed = isVoucherUsedByUser && isVoucherUsedByUser(v.code, user?.uid, user?.email);
-
-                return (
-                  <div key={v.id} className="bg-white/10 backdrop-blur-md border border-white/20 p-3 sm:p-3.5 rounded-2xl text-left flex items-center gap-3 hover:bg-white/15 transition-all shadow-md">
-                    {v.imageUrl ? (
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden shrink-0 border border-white/30 shadow-xs">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={v.imageUrl} alt={v.name} className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0 font-bold font-mono text-xs">
-                        {v.discountPercent}%
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-mono font-extrabold text-amber-300 flex items-center gap-1.5">
-                        <span>{v.code}</span>
-                        <span className="text-[9px] bg-amber-400/30 px-1.5 py-0.5 rounded-full text-amber-200 font-sans font-bold">{v.discountPercent}% OFF</span>
-                      </div>
-                      <div className="text-[10px] text-white font-bold line-clamp-1 mt-0.5">{v.name}</div>
-                      <div className="text-[9px] text-white/70 font-light">Min. Rp {v.minSpend.toLocaleString('id-ID')}</div>
-                      
-                      {isUsed ? (
-                        <button
-                          disabled
-                          className="mt-1.5 px-3 py-1 bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 text-[10px] font-bold rounded-lg cursor-not-allowed block text-center shadow-xs w-full"
-                        >
-                          ✅ Terpakai (Sudah Dipakai)
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            const res = claimPromo(v.code);
-                            if (res.success) {
-                              alert(`Voucher ${v.code} berhasil diklaim!`);
-                            } else {
-                              alert(res.message);
-                            }
-                          }}
-                          className="mt-1.5 px-3 py-1 bg-amber-400 text-[#25160e] text-[10px] font-bold rounded-lg hover:bg-amber-300 transition-colors block text-center shadow-xs w-full active:scale-95"
-                        >
-                          Klaim Kupon
-                        </button>
-                      )}
-                    </div>
+            <div className="relative max-w-7xl mx-auto px-6 py-10 sm:py-14 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+              
+              {/* Left Column: Content */}
+              <div className="lg:col-span-7 flex flex-col justify-center text-left z-10">
+                
+                {/* 5-Star Rating Badge */}
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center text-[#934B19]">
+                    <Star className="w-4 h-4 fill-current" />
+                    <Star className="w-4 h-4 fill-current" />
+                    <Star className="w-4 h-4 fill-current" />
+                    <Star className="w-4 h-4 fill-current" />
+                    <Star className="w-4 h-4 fill-current" />
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* 5. FEATURED MENU GRID (Google Stitch Koleksi Terpopuler) */}
-      <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 w-full py-8 sm:py-12 relative">
-        <div className="flex justify-between items-end mb-6 sm:mb-8 gap-4">
-          <div className="max-w-xl">
-            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#25160e] mb-1 sm:mb-2 flex items-center gap-2.5 sm:gap-3">
-              <span className="w-8 sm:w-12 h-[2px] bg-[#934b19] hidden sm:block"></span>
-              Koleksi Terpopuler
-            </h2>
-            <p className="text-xs text-[#4f4540] font-normal">
-              Pilihan favorit para pencinta kuliner yang diolah dengan resep rahasia turun-temurun.
-            </p>
-          </div>
-          <Link href="/menu" className="text-[#934b19] font-bold text-xs flex items-center gap-1 hover:text-[#25160e] transition-colors shrink-0">
-            <span>Lihat Semua</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {filteredProducts.slice(0, 6).map((product) => {
-            const inCart = cartItems.find(i => i.id === product.id);
-            const cartQty = inCart?.quantity || 0;
-
-            return (
-              <article 
-                key={product.id}
-                className="group cursor-pointer rounded-2xl sm:rounded-3xl bg-white shadow-[0_4px_24px_rgba(69,26,3,0.05)] hover:shadow-[0_12px_48px_rgba(69,26,3,0.12)] transition-all duration-500 overflow-hidden relative flex flex-col h-full hover:-translate-y-1.5 border border-amber-900/10"
-              >
-                <div 
-                  className="relative w-full aspect-[16/10] sm:aspect-[4/3] overflow-hidden bg-[#25160e]"
-                  onClick={() => setDetailProduct({
-                    id: product.id,
-                    name: product.name,
-                    category: product.category,
-                    price: product.price,
-                    rating: product.rating,
-                    reviewsCount: `${product.reviewsCount || 120} Ulasan`,
-                    image: product.image,
-                    description: product.description,
-                    ingredients: product.ingredients || 'Bahan baku koki pilihan.',
-                    storage: product.usageAdvice || 'Santap selagi hangat.'
-                  })}
-                >
-                  <img 
-                    src={product.image || '/images/ayam_bakar.jpg'}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out" 
-                  />
-                  <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-[#25160E] flex items-center gap-1 shadow-sm">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span>{product.rating.toFixed(1)}</span>
-                  </div>
+                  <span className="font-semibold text-xs sm:text-sm text-[#1b1b1d]">{currentSlide.rating}</span>
+                  <span className="text-xs text-stone-500 font-light">{currentSlide.reviewCount}</span>
                 </div>
 
-                <div className="p-4 sm:p-6 flex flex-col flex-grow justify-between space-y-3.5 sm:space-y-4">
-                  <div className="space-y-1.5 sm:space-y-2">
-                    <div className="flex justify-between items-start gap-2">
-                      <h3 
-                        onClick={() => setDetailProduct({
-                          id: product.id,
-                          name: product.name,
-                          category: product.category,
-                          price: product.price,
-                          rating: product.rating,
-                          reviewsCount: `${product.reviewsCount || 120} Ulasan`,
-                          image: product.image,
-                          description: product.description,
-                          ingredients: product.ingredients || 'Bahan baku koki pilihan.',
-                          storage: product.usageAdvice || 'Santap selagi hangat.'
-                        })}
-                        className="font-serif text-lg sm:text-xl font-bold text-[#25160e] group-hover:text-[#934b19] transition-colors line-clamp-1"
-                      >
-                        {product.name}
-                      </h3>
-                      <span className="font-bold text-xs text-[#25160e] bg-[#25160e]/5 px-2.5 py-1 rounded-full whitespace-nowrap">
-                        Rp {product.price.toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#4f4540] line-clamp-2 leading-relaxed font-light">
-                      {product.description}
-                    </p>
-                  </div>
+                {/* Headline Title */}
+                <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#1b1b1d] leading-[1.15] mb-4">
+                  {currentSlide.title}
+                </h1>
 
-                  <button 
-                    onClick={() => addToCart(product.id)}
-                    className="w-full py-3 px-4 rounded-xl text-[#25160e] border border-[#25160e]/20 font-bold text-xs group-hover:bg-[#25160e] group-hover:text-white transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95"
-                  >
-                    <ShoppingBag className="w-4 h-4" />
-                    <span>{cartQty > 0 ? `Tambah Porsi (${cartQty})` : 'Tambah ke Keranjang'}</span>
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 5.5 SEKSI KHUSUS: SEGERA HADIR DI NEFAKKY (COMING SOON TEASER) */}
-      {comingSoonProducts.length > 0 && (
-        <section className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 w-full py-8 sm:py-10 relative">
-          <div className="bg-gradient-to-br from-[#25160E] via-[#3C2A21] to-[#25160E] rounded-3xl p-6 sm:p-10 text-white shadow-2xl border border-amber-900/30 relative overflow-hidden">
-            {/* Background Glow Effect */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-[#934B19]/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-end justify-between gap-4 mb-8">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-amber-400/20 text-amber-300 text-xs font-bold rounded-full border border-amber-400/30 uppercase tracking-wider">
-                  <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-300" />
-                  <span>Segera Hadir di Nefakky (Coming Soon)</span>
-                </div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                  Koleksi Menu Baru yang Segera Meluncur
-                </h2>
-                <p className="text-xs sm:text-sm text-stone-300 font-light max-w-xl leading-relaxed">
-                  Inovasi resep rahasia terbaru yang sedang disempurnakan oleh koki kami. Nantikan tanggal peluncuran resminya!
+                {/* Subtitle */}
+                <p className="text-xs sm:text-sm lg:text-base text-stone-600 font-light leading-relaxed mb-6 sm:mb-8 max-w-xl">
+                  {currentSlide.subtitle}
                 </p>
+
+                {/* CTA Buttons, Price Tag, & Slide Navigation */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <Link 
+                      href="/menu" 
+                      className="bg-[#934B19] hover:bg-[#7a3e14] text-white font-semibold text-xs sm:text-sm px-6 py-3.5 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-[#934B19]/15 active:scale-[0.99]"
+                    >
+                      <span>Eksplorasi Menu</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+
+                    <button
+                      onClick={() => {
+                        const targetProd = currentSlide.product || activeProducts.find(p => p.id === currentSlide.id) || activeProducts[0];
+                        if (targetProd) openDetailModal(targetProd);
+                      }}
+                      className="bg-white hover:bg-stone-50 text-stone-800 border border-stone-300 font-semibold text-xs sm:text-sm px-5 py-3.5 rounded-xl transition-all shadow-xs active:scale-[0.99] cursor-pointer"
+                    >
+                      Lihat Detail
+                    </button>
+                  </div>
+
+                  {/* Indicator Dots for Slides */}
+                  <div className="flex items-center gap-2 sm:ml-auto">
+                    {dynamicHeroSlides.map((_item: any, i: number) => (
+                      <button
+                        key={i}
+                        onClick={() => setHeroIndex(i)}
+                        className={`h-2 rounded-full transition-all cursor-pointer ${
+                          i === (heroIndex % dynamicHeroSlides.length) ? 'w-6 bg-[#934B19]' : 'w-2 bg-stone-300 hover:bg-stone-400'
+                        }`}
+                        aria-label={`Ke slide ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
               </div>
 
-              <Link 
-                href="/menu" 
-                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl text-xs font-bold text-amber-200 transition-all flex items-center gap-2 shrink-0"
-              >
-                <span>Jelajahi Semua Menu</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-              {comingSoonProducts.map((prod) => (
+              {/* Right Column: Crisp, Synchronized Food Showcase Card */}
+              <div className="lg:col-span-5 relative flex flex-col items-center lg:items-end">
                 <div 
-                  key={prod.id}
-                  onClick={() => setDetailProduct({
-                    id: prod.id,
-                    name: prod.name,
-                    category: prod.category,
-                    price: prod.price,
-                    rating: prod.rating,
-                    reviewsCount: 'Segera Hadir',
-                    image: prod.image,
-                    description: prod.description,
-                    ingredients: prod.ingredients || 'Bahan baku alami berkualitas tinggi.',
-                    storage: prod.usageAdvice || 'Nantikan peluncuran resmi menu istimewa ini.',
-                    isComingSoon: true,
-                    releaseDate: prod.releaseDate || 'Segera Meluncur'
-                  })}
-                  className="group bg-white/10 backdrop-blur-md border border-white/15 hover:border-amber-400/50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 transition-all duration-300 hover:bg-white/15 cursor-pointer flex flex-col sm:flex-row items-center gap-4 sm:gap-6 shadow-lg"
+                  onClick={() => {
+                    const targetProd = currentSlide.product || activeProducts.find(p => p.id === currentSlide.id) || activeProducts[0];
+                    if (targetProd) openDetailModal(targetProd);
+                  }}
+                  className="relative w-full max-w-sm lg:max-w-md h-[320px] sm:h-[380px] lg:h-[400px] rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-stone-100 group cursor-pointer"
                 >
-                  <div className="relative w-full sm:w-40 h-44 sm:h-36 rounded-2xl overflow-hidden shrink-0 bg-stone-900 border border-white/20 shadow-md">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={prod.image || '/images/ayam_bakar.jpg'} 
-                      alt={prod.name} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                    />
-                    <span className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-[#934B19] text-white text-[10px] font-bold rounded-lg shadow uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-amber-200" />
-                      <span>{prod.releaseDate || 'Segera'}</span>
+                  {/* Real Food Image */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    alt={currentSlide.title} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                    src={currentSlide.image}
+                  />
+
+                  {/* Top Floating Badge: Category & Price */}
+                  <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none">
+                    <span className="backdrop-blur-md bg-black/60 text-white text-[11px] font-semibold px-3 py-1 rounded-full border border-white/20">
+                      {currentSlide.category || 'Kuliner Nusantara'}
+                    </span>
+                    <span className="backdrop-blur-md bg-[#934B19] text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+                      Rp {(currentSlide.price || 35000).toLocaleString('id-ID')}
                     </span>
                   </div>
 
-                  <div className="flex-1 min-w-0 space-y-2 text-center sm:text-left">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <span className="text-[11px] text-amber-300 font-bold uppercase tracking-wider">
-                        {prod.category}
-                      </span>
-                      <span className="text-xs text-stone-300 font-medium">
-                        Estimasi: Rp {prod.price.toLocaleString('id-ID')}
-                      </span>
-                    </div>
-
-                    <h3 className="font-serif text-lg sm:text-xl font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-1">
-                      {prod.name}
-                    </h3>
-                    <p className="text-xs text-stone-300 font-light line-clamp-2 leading-relaxed">
-                      {prod.description}
-                    </p>
-
-                    <div className="pt-2 flex items-center justify-between gap-2 border-t border-white/10">
-                      <span className="text-[11px] text-amber-200 font-bold flex items-center gap-1">
-                        ⏳ Tahap Kurasi Resep
-                      </span>
-                      <span className="text-[11px] font-bold text-white bg-white/10 group-hover:bg-amber-400 group-hover:text-[#25160E] px-3 py-1.5 rounded-xl transition-all flex items-center gap-1">
-                        <span>Lihat Rincian</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
+                  {/* Bottom Floating Overlay */}
+                  <div className="absolute bottom-4 left-4 right-4 text-white flex items-center justify-between pointer-events-none">
+                    <div className="backdrop-blur-md bg-black/40 px-3.5 py-1.5 rounded-full border border-white/20">
+                      <span className="text-[11px] font-medium tracking-wide">Pilihan Otentik Nefakky</span>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
 
-          </div>
-        </section>
-      )}
-
-      {/* 6. SPLIT PANEL: ART OF COOKING / FILOSOFI RASA (Google Stitch Specification) */}
-      <section className="w-full bg-[#25160e] text-white mt-8 sm:mt-12 py-10 sm:py-16 relative overflow-hidden">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          
-          <div className="order-2 lg:order-1 space-y-4">
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <div 
-                className="w-full aspect-[4/5] bg-cover bg-center rounded-2xl shadow-xl border border-white/10" 
-                style={{ backgroundImage: `url('/images/krecek.jpg')` }}
-              />
-              <div 
-                className="w-full aspect-[4/5] bg-cover bg-center rounded-2xl shadow-xl border border-white/10" 
-                style={{ backgroundImage: `url('/images/gudeg.jpg')` }}
-              />
-            </div>
-            <div className="w-full p-4 sm:p-5 bg-[#3c2a21] rounded-2xl border border-amber-900/20 text-center sm:text-left">
-              <h4 className="font-serif text-xl sm:text-2xl font-bold text-amber-300 mb-0.5">100% Rempah Alami</h4>
-              <p className="text-xs text-white/80 font-medium">Warisan Resep Tradisional Otentik Nusantara</p>
-            </div>
-          </div>
-
-          <div className="order-1 lg:order-2 space-y-4 sm:space-y-6">
-            <div className="inline-block border border-amber-300/30 rounded-full px-3.5 py-1">
-              <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">Filosofi Rasa</span>
-            </div>
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight text-white">
-              Seni Memasak yang Merawat Tradisi Kuliner
-            </h2>
-            <p className="text-xs lg:text-sm text-white/80 font-light leading-relaxed max-w-lg">
-              Kami percaya bahwa setiap hidangan adalah cerita. Menggunakan resep otentik dan metode memasak tradisional yang perlahan, kami memastikan setiap suapan membawa Anda pada perjalanan nostalgia rasa yang mendalam.
-            </p>
-            <div className="grid grid-cols-2 gap-4 pt-1">
-              <div className="space-y-1 bg-white/5 p-3 rounded-2xl border border-white/10">
-                <ChefHat className="w-6 h-6 text-[#ffa26a] mb-1" />
-                <h4 className="font-bold text-xs text-white">Slow Cooked</h4>
-                <p className="text-[11px] text-white/60">Tekstur lembut & bumbu meresap</p>
+                {/* Slider Prev / Next Controls Under Card */}
+                <div className="flex items-center justify-between w-full max-w-sm lg:max-w-md mt-3 px-1">
+                  <span className="text-xs text-stone-400 font-mono">
+                    0{(heroIndex % dynamicHeroSlides.length) + 1} / 0{dynamicHeroSlides.length}
+                  </span>
+                  
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setHeroIndex((heroIndex - 1 + dynamicHeroSlides.length) % dynamicHeroSlides.length)}
+                      className="w-9 h-9 flex items-center justify-center rounded-full bg-white text-[#1b1b1d] border border-stone-300 shadow-xs hover:bg-stone-100 transition-all cursor-pointer"
+                      aria-label="Slide Sebelumnya"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setHeroIndex((heroIndex + 1) % dynamicHeroSlides.length)}
+                      className="w-9 h-9 flex items-center justify-center rounded-full bg-[#25160E] text-white border border-[#25160E] shadow-xs hover:bg-black transition-all cursor-pointer"
+                      aria-label="Slide Berikutnya"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1 bg-white/5 p-3 rounded-2xl border border-white/10">
-                <Leaf className="w-6 h-6 text-[#ffa26a] mb-1" />
-                <h4 className="font-bold text-xs text-white">Bahan Segar</h4>
-                <p className="text-[11px] text-white/60">Dipilih segar setiap hari</p>
-              </div>
+
             </div>
-          </div>
+          </section>
+
+          {/* FLOATING QUICK CATEGORY PILLS */}
+          <section className="sticky top-20 z-40 bg-[#fcf8fa]/90 backdrop-blur-md border-b border-stone-200 py-3">
+            <div className="max-w-7xl mx-auto px-6 flex items-center gap-3 overflow-x-auto no-scrollbar">
+              {categories.map((cat) => {
+                const isActive = activeCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-6 py-2 rounded-full font-semibold text-xs whitespace-nowrap transition-colors ${
+                      isActive
+                        ? 'bg-[#25160E] text-white'
+                        : 'bg-[#fcf8fa] text-[#1b1b1d] border border-stone-200 hover:bg-stone-100'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* ACTIVE VOUCHER STRIP (DINAMIS DARI DATA ADMIN) */}
+          {currentVoucher && (
+            <section className="max-w-7xl mx-auto px-6 py-6 w-full">
+              <div className="bg-gradient-to-r from-[#25160E] to-[#3a2316] rounded-xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-md border border-[#4a2e1d] text-white">
+                <div className="flex items-center gap-4 text-white">
+                  <div className="w-12 h-12 rounded bg-white/10 flex items-center justify-center backdrop-blur-sm shrink-0">
+                    <Ticket className="w-6 h-6 text-amber-300" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-serif text-lg font-bold text-white">
+                        Special Offer: {currentVoucher.code} ({currentVoucher.discountPercent}% OFF)
+                      </h3>
+                      {currentVoucher.event && (
+                        <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] font-bold rounded-full border border-amber-400/30 uppercase">
+                          {currentVoucher.event}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-white/80 font-light mt-0.5">
+                      {currentVoucher.name} • Min. belanja Rp {(currentVoucher.minSpend || 0).toLocaleString('id-ID')}. Berlaku: {currentVoucher.expiry || 'Aktif'}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {activeVouchers.length > 1 && (
+                    <div className="hidden sm:flex items-center gap-1 bg-black/30 p-1 rounded-lg border border-white/10">
+                      {activeVouchers.map((v) => (
+                        <button
+                          key={v.id || v.code}
+                          type="button"
+                          onClick={() => setSelectedVoucherCode(v.code)}
+                          className={`px-2 py-1 text-[10px] font-mono font-bold rounded transition-colors ${
+                            (currentVoucher?.code === v.code) 
+                              ? 'bg-amber-400 text-black shadow-xs' 
+                              : 'text-stone-300 hover:text-white'
+                          }`}
+                          title={`Pilih voucher ${v.code}`}
+                        >
+                          {v.code}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={() => handleClaimVoucher(currentVoucher.code)}
+                    className="bg-[#934B19] text-white font-semibold text-xs px-6 py-3 rounded whitespace-nowrap hover:bg-[#7a3e14] active:scale-95 transition-all shadow-sm cursor-pointer"
+                  >
+                    Klaim Kupon
+                  </button>
+                </div>
+              </div>
+
+              {claimedNotice && (
+                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{claimedNotice}</span>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* FEATURED MENU GRID (PILIHAN FAVORIT) */}
+          <section className="max-w-7xl mx-auto px-6 py-6 w-full">
+            <div className="flex items-end justify-between mb-6 border-b border-stone-200 pb-3">
+              <div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#1b1b1d]">Pilihan Favorit</h2>
+                <p className="text-xs text-stone-500 font-light mt-1">Curated bestsellers based on authentic taste.</p>
+              </div>
+              <Link 
+                href="/menu" 
+                className="font-semibold text-xs text-[#934B19] flex items-center gap-1 hover:underline"
+              >
+                <span>Lihat Semua</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            {/* Grid 6 Kartu Produk (Desain Presisi Sesuai Katalog) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayedFavorites.map((product) => {
+                const inCart = cartItems.find(i => i.id === product.id);
+                const cartQty = inCart?.quantity || 0;
+                const isFav = favorites.includes(product.id);
+                const isBestSeller = (product.soldCount && (product.soldCount.includes('1.') || product.soldCount.includes('2.') || product.soldCount.includes('3.'))) || product.rating >= 4.8;
+
+                return (
+                  <article 
+                    key={product.id}
+                    onClick={() => openDetailModal(product)}
+                    className="group flex flex-col bg-white border border-stone-200 rounded-2xl overflow-hidden hover:shadow-md transition-all cursor-pointer justify-between"
+                  >
+                    {/* Image Container */}
+                    <div className="relative w-full aspect-[4/3] bg-stone-100 overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
+                        alt={product.name} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
+                        src={product.image}
+                      />
+
+                      {/* Wishlist Heart Button */}
+                      <div className="absolute top-3 right-3 z-10">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id); }}
+                          aria-label="Tambah ke Favorit" 
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm text-stone-600 hover:text-rose-500 transition-colors shadow-sm active:scale-95 cursor-pointer"
+                        >
+                          <Heart className={`w-4 h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
+                        </button>
+                      </div>
+
+                      {/* Rating & Sold Badge */}
+                      <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-lg text-xs font-semibold text-[#1b1b1d] border border-stone-200 flex items-center gap-1 shadow-2xs">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>{product.rating.toFixed(1)}</span>
+                        <span className="text-stone-400 text-[10px] ml-0.5">({product.soldCount || '3.5k Terjual'})</span>
+                      </div>
+
+                      {/* Best Seller Tag */}
+                      {isBestSeller && (
+                        <div className="absolute bottom-3 left-3">
+                          <span className="bg-[#934B19] text-white px-2.5 py-0.5 rounded font-bold text-[10px] tracking-wider uppercase shadow-xs">
+                            BEST SELLER
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="p-4 sm:p-5 flex flex-col gap-2 flex-1 justify-between">
+                      <div>
+                        <h3 className="font-serif text-base sm:text-lg font-bold text-[#1b1b1d] leading-snug group-hover:text-[#934B19] transition-colors line-clamp-1">
+                          {product.name}
+                        </h3>
+                        <p className="text-xs text-stone-500 font-light line-clamp-2 mt-1 leading-relaxed">
+                          {product.description}
+                        </p>
+                      </div>
+
+                      {/* Footer Row: Category & Price & Add Action */}
+                      <div className="mt-auto pt-3 border-t border-stone-100 flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-stone-700 bg-stone-100 px-2.5 py-1 rounded-md">
+                          {product.category || 'Makanan Berat'}
+                        </span>
+
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <span className="font-serif text-base font-bold text-[#1b1b1d]">
+                            Rp {product.price.toLocaleString('id-ID')}
+                          </span>
+
+                          {cartQty > 0 ? (
+                            <div className="flex items-center gap-1 bg-stone-100 p-0.5 rounded-lg border border-stone-200">
+                              <button
+                                onClick={() => removeFromCart(product.id)}
+                                className="w-6 h-6 bg-white text-stone-800 rounded flex items-center justify-center font-bold hover:bg-stone-200 transition-colors"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="text-xs font-bold text-neutral-900 px-1">{cartQty}</span>
+                              <button
+                                onClick={() => addToCart(product.id)}
+                                className="w-6 h-6 bg-black text-white rounded flex items-center justify-center font-bold hover:bg-neutral-800 transition-colors"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => addToCart(product.id)}
+                              className="w-8 h-8 rounded-lg bg-black hover:bg-neutral-800 text-white flex items-center justify-center transition-all shadow-2xs active:scale-95"
+                              title="Tambah ke Keranjang"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+
+
+          {/* SPLIT PANEL (FILOSOFI RASA) */}
+          <section className="max-w-7xl mx-auto px-6 py-12 w-full border-t border-stone-200 mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              
+              {/* Left: 2 Overlapping Photography Cards */}
+              <div className="relative h-[480px] sm:h-[560px] w-full">
+                <div 
+                  className="absolute top-0 left-0 w-2/3 h-2/3 bg-cover bg-center rounded-2xl border border-stone-200 z-10 shadow-md" 
+                  style={{ backgroundImage: "url('/images/ayam_bakar.jpg')" }}
+                ></div>
+                <div 
+                  className="absolute bottom-0 right-0 w-2/3 h-2/3 bg-cover bg-center rounded-2xl border border-stone-200 z-20 -ml-16 shadow-xl" 
+                  style={{ backgroundImage: "url('/images/gudeg.jpg')" }}
+                ></div>
+              </div>
+
+              {/* Right: Content */}
+              <div className="flex flex-col space-y-4 text-left">
+                <span className="font-mono text-xs text-[#934B19] font-bold uppercase tracking-widest block">
+                  Filosofi Rasa
+                </span>
+                <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1b1b1d] leading-tight">
+                  Seni Memasak yang Merawat Tradisi Kuliner
+                </h2>
+                <p className="text-xs sm:text-sm text-stone-600 font-light leading-relaxed">
+                  Di Nefakky, kami meyakini bahwa kelezatan otentik tidak dapat terburu-buru. Kami merawat resep warisan leluhur nusantara dengan bumbu rempah alami, teknik ungkep tradisional, serta ketelitian penuh rasa demi menyajikan hidangan terbaik untuk Anda.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-1">
+                    <Hourglass className="w-6 h-6 text-[#934B19] mb-1" />
+                    <h4 className="font-semibold text-xs text-[#1b1b1d]">Ungkep Perlahan</h4>
+                    <p className="text-[11px] text-stone-500 font-light leading-relaxed">
+                      Kesabaran adalah bumbu utama kami. Daging dan rempah diolah berjam-jam agar bumbu meresap sempurna hingga ke serat terdalam.
+                    </p>
+                  </div>
+                  <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-1">
+                    <Leaf className="w-6 h-6 text-[#934B19] mb-1" />
+                    <h4 className="font-semibold text-xs text-[#1b1b1d]">Bahan Segar Alami</h4>
+                    <p className="text-[11px] text-stone-500 font-light leading-relaxed">
+                      Dipasok segar setiap hari dari hasil tani lokal terbaik tanpa pengawet buatan, menjaga kemurnian dan kesegaran cita rasa.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </section>
 
         </div>
-      </section>
+      </main>
 
-      {/* 7. MODAL DETAIL PRODUK */}
+
+
+      {/* MODAL DETAIL PRODUK */}
       {detailProduct && (
         <MenuDetailModal
           product={detailProduct}

@@ -146,6 +146,37 @@ runTest('6. Firebase Configuration', 'Firebase app initialization in lib/firebas
   }
 });
 
+// 7. SUITE: Midtrans Sandbox Payment API Integrity
+runTest('7. Midtrans Sandbox API Integrity', 'Charge & Status API Routes (/api/midtrans/*)', () => {
+  const chargePath = path.join(rootDir, 'src/app/api/midtrans/charge/route.ts');
+  const statusPath = path.join(rootDir, 'src/app/api/midtrans/status/route.ts');
+
+  if (!fs.existsSync(chargePath) || !fs.existsSync(statusPath)) {
+    throw new Error('Midtrans API routes (charge/route.ts or status/route.ts) are missing');
+  }
+
+  const chargeContent = fs.readFileSync(chargePath, 'utf-8');
+  const statusContent = fs.readFileSync(statusPath, 'utf-8');
+
+  if (!chargeContent.includes('MIDTRANS_SERVER_KEY') || !chargeContent.includes('simulator.sandbox.midtrans.com')) {
+    throw new Error('Charge API missing MIDTRANS_SERVER_KEY or simulator link mapping');
+  }
+
+  if (!statusContent.includes('api.sandbox.midtrans.com/v2/')) {
+    throw new Error('Status API missing Midtrans Sandbox endpoint integration');
+  }
+});
+
+// 8. SUITE: Distance-Based Shipping Calculation Rule
+runTest('8. Distance Shipping Engine', 'Distance shipping calculation logic (<=10km flat 10k, >10km +2.5k/2km)', () => {
+  const cartPagePath = path.join(rootDir, 'src/app/cart/page.tsx');
+  const cartContent = fs.readFileSync(cartPagePath, 'utf-8');
+
+  if (!cartContent.includes('calculateShippingByDistance') || !cartContent.includes('10000') || !cartContent.includes('2500')) {
+    throw new Error('Distance shipping formula missing in src/app/cart/page.tsx');
+  }
+});
+
 // Calculate statistics
 const totalMs = Date.now() - startTime;
 const totalTests = results.length;
