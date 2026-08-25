@@ -23,7 +23,7 @@ export interface GoogleCalendarEventOptions {
  */
 const formatGCalDate = (date: Date, isAllDay: boolean = false): string => {
   const pad = (n: number) => String(n).padStart(2, '0');
-  
+
   const year = date.getUTCFullYear();
   const month = pad(date.getUTCMonth() + 1);
   const day = pad(date.getUTCDate());
@@ -46,13 +46,13 @@ const formatGCalDate = (date: Date, isAllDay: boolean = false): string => {
 export const createGoogleCalendarUrl = (options: GoogleCalendarEventOptions): string => {
   const start = new Date(options.startTime);
   const isAllDay = options.allDay === true;
-  
+
   // Jika endTime tidak ditentukan, default ke 1.5 jam setelah startTime
-  const end = options.endTime 
-    ? new Date(options.endTime) 
-    : isAllDay 
-    ? new Date(start.getTime() + 24 * 60 * 60 * 1000) 
-    : new Date(start.getTime() + 90 * 60 * 1000);
+  const end = options.endTime
+    ? new Date(options.endTime)
+    : isAllDay
+      ? new Date(start.getTime() + 24 * 60 * 60 * 1000)
+      : new Date(start.getTime() + 90 * 60 * 1000);
 
   const startStr = formatGCalDate(start, isAllDay);
   const endStr = formatGCalDate(end, isAllDay);
@@ -81,7 +81,7 @@ export const createOrderCalendarUrl = (order: any): string => {
     .join('\n');
 
   const title = `[Nefakky] Pengiriman Pesanan #${orderId} - ${customer}`;
-  
+
   const description = `
 DETAIL PESANAN NEFAKKY MARKETPLACE:
 =========================================
@@ -121,7 +121,7 @@ Sistem Otomasi Dapur Nefakky
  */
 export const createBazarCalendarUrl = (bazarName: string, dateInfo: string, targetOmset: number, note: string): string => {
   const title = `[Nefakky Event] ${bazarName} - Penjualan & Bazar`;
-  
+
   const description = `
 AGENDA EVENT BAZAR NEFAKKY:
 =========================================
@@ -154,7 +154,7 @@ Nefakky Store Management
  */
 export const createPromoCalendarUrl = (promoTitle: string, voucherCode: string, expiryInfo: string): string => {
   const title = `[Nefakky Promo] Masa Berlaku Voucher ${voucherCode} (${promoTitle})`;
-  
+
   const description = `
 PENGINGAT PROMOSI NEFAKKY:
 =========================================
