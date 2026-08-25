@@ -200,7 +200,7 @@ export default function CommentsPage() {
         </header>
 
         {/* 2. MAIN CONTENT AREA */}
-        <main className="w-full pt-20 bg-[#fcf8fa] min-h-screen">
+        <main className="w-full pt-20 bg-[#fcf8fa] min-h-screen pb-28 lg:pb-12">
           <div className="flex flex-col w-full px-4 md:px-6 lg:px-8 py-8 space-y-8 max-w-7xl mx-auto">
             
             {/* Hero Section */}

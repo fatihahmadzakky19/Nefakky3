@@ -75,6 +75,12 @@ class DatabaseSchemaController extends Controller
             'description' => 'Rekap omset kotor decimal(15,2), laba bersih, metrik AOV, tanggal periode date, dan status enum.',
             'model' => \App\Models\SalesReport::class,
         ],
+        'weekly_sales_recaps' => [
+            'name' => 'weekly_sales_recaps',
+            'label' => 'Rekap Penjualan Mingguan & Bazar (Weekly Sales Recaps)',
+            'description' => 'Rekapitulasi penjualan mingguan, kategori bazar/reguler, omset kotor, laba bersih, dan rincian status makanan.',
+            'model' => \App\Models\WeeklySalesRecap::class,
+        ],
         'promotions' => [
             'name' => 'promotions',
             'label' => 'Banner Promosi (Promotions)',

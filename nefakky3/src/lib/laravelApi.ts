@@ -110,6 +110,145 @@ export interface LaravelSalesReport {
   is_bazar?: boolean;
 }
 
+export interface WeeklySalesRecapItem {
+  id?: number | string;
+  year: number;
+  month: 'Juli' | 'Agustus' | string;
+  week_number: number;
+  week_label: string;
+  sales_category: string;
+  gross_revenue: number;
+  net_profit: number;
+  operational_details?: string;
+  is_total_row?: boolean;
+}
+
+export const DEFAULT_JULI_WEEKLY_RECAP: WeeklySalesRecapItem[] = [
+  {
+    id: 1,
+    year: 2026,
+    month: 'Juli',
+    week_number: 1,
+    week_label: 'Minggu 1',
+    sales_category: 'Bazar (1x) + Reguler',
+    gross_revenue: 2750000,
+    net_profit: 875000,
+    operational_details: 'Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb',
+    is_total_row: false,
+  },
+  {
+    id: 2,
+    year: 2026,
+    month: 'Juli',
+    week_number: 2,
+    week_label: 'Minggu 2',
+    sales_category: 'Bazar (1x) + Reguler',
+    gross_revenue: 2750000,
+    net_profit: 875000,
+    operational_details: 'Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb',
+    is_total_row: false,
+  },
+  {
+    id: 3,
+    year: 2026,
+    month: 'Juli',
+    week_number: 3,
+    week_label: 'Minggu 3',
+    sales_category: 'Bazar (1x) + Reguler',
+    gross_revenue: 2750000,
+    net_profit: 875000,
+    operational_details: 'Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb',
+    is_total_row: false,
+  },
+  {
+    id: 4,
+    year: 2026,
+    month: 'Juli',
+    week_number: 4,
+    week_label: 'Minggu 4',
+    sales_category: 'Bazar (1x) + Reguler',
+    gross_revenue: 2750000,
+    net_profit: 875000,
+    operational_details: 'Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb',
+    is_total_row: false,
+  },
+  {
+    id: 5,
+    year: 2026,
+    month: 'Juli',
+    week_number: 5,
+    week_label: 'TOTAL JULI',
+    sales_category: '4x Bazar + 4x Reguler',
+    gross_revenue: 11000000,
+    net_profit: 3500000,
+    operational_details: 'Total 300 Cup Jus Terjual (@ Rp5.000)',
+    is_total_row: true,
+  },
+];
+
+export const DEFAULT_AGUSTUS_WEEKLY_RECAP: WeeklySalesRecapItem[] = [
+  {
+    id: 6,
+    year: 2026,
+    month: 'Agustus',
+    week_number: 1,
+    week_label: 'Minggu 1',
+    sales_category: 'Bazar Event 1',
+    gross_revenue: 3500000,
+    net_profit: 1433333,
+    operational_details: 'Habis Terjual (0% Sisa)',
+    is_total_row: false,
+  },
+  {
+    id: 7,
+    year: 2026,
+    month: 'Agustus',
+    week_number: 2,
+    week_label: 'Minggu 2',
+    sales_category: 'Bazar Event 2',
+    gross_revenue: 3500000,
+    net_profit: 1433333,
+    operational_details: 'Habis Terjual (0% Sisa)',
+    is_total_row: false,
+  },
+  {
+    id: 8,
+    year: 2026,
+    month: 'Agustus',
+    week_number: 3,
+    week_label: 'Minggu 3',
+    sales_category: 'Bazar Event 3',
+    gross_revenue: 3500000,
+    net_profit: 1433334,
+    operational_details: 'Habis Terjual (0% Sisa)',
+    is_total_row: false,
+  },
+  {
+    id: 9,
+    year: 2026,
+    month: 'Agustus',
+    week_number: 4,
+    week_label: 'Minggu 4',
+    sales_category: 'Jualan Biasa (Tanpa Bazar)',
+    gross_revenue: 1500000,
+    net_profit: 700000,
+    operational_details: 'Penjualan Toko Reguler',
+    is_total_row: false,
+  },
+  {
+    id: 10,
+    year: 2026,
+    month: 'Agustus',
+    week_number: 5,
+    week_label: 'TOTAL AGUSTUS',
+    sales_category: '3x Bazar + 1x Reguler',
+    gross_revenue: 12000000,
+    net_profit: 5000000,
+    operational_details: 'Margin Keuntungan: 41,67%',
+    is_total_row: true,
+  },
+];
+
 export interface LaravelProduct {
   id: string;
   item_id?: string;
@@ -690,3 +829,60 @@ export async function logoutLaravel() {
     return { status: 'success', message: 'Logout lokal berhasil.' };
   }
 }
+
+// =========================================================================
+// 13. MODUL LAPORAN REKAP MINGGUAN & BAZAR (WEEKLY RECAPI API)
+// =========================================================================
+export async function fetchLaravelWeeklyRecaps(month?: string, year: string = '2026'): Promise<{
+  all: WeeklySalesRecapItem[];
+  juli: WeeklySalesRecapItem[];
+  agustus: WeeklySalesRecapItem[];
+}> {
+  // Check localStorage first
+  let localData: { all?: WeeklySalesRecapItem[]; juli?: WeeklySalesRecapItem[]; agustus?: WeeklySalesRecapItem[] } = {};
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('nefakky_weekly_recaps');
+    if (saved) {
+      try { localData = JSON.parse(saved); } catch (e) {}
+    }
+  }
+
+  try {
+    const url = month 
+      ? `${LARAVEL_API_URL}/weekly-recaps/month/${encodeURIComponent(month)}?year=${year}`
+      : `${LARAVEL_API_URL}/weekly-recaps?year=${year}`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.status === 'success' && json.data) {
+        return {
+          all: json.data.all || [...DEFAULT_JULI_WEEKLY_RECAP, ...DEFAULT_AGUSTUS_WEEKLY_RECAP],
+          juli: json.data.juli || DEFAULT_JULI_WEEKLY_RECAP,
+          agustus: json.data.agustus || DEFAULT_AGUSTUS_WEEKLY_RECAP,
+        };
+      }
+    }
+  } catch (error) {
+    // Fallback to local storage or defaults
+  }
+
+  return {
+    all: localData.all || [...DEFAULT_JULI_WEEKLY_RECAP, ...DEFAULT_AGUSTUS_WEEKLY_RECAP],
+    juli: localData.juli || DEFAULT_JULI_WEEKLY_RECAP,
+    agustus: localData.agustus || DEFAULT_AGUSTUS_WEEKLY_RECAP,
+  };
+}
+
+export async function saveLaravelWeeklyRecap(item: Partial<WeeklySalesRecapItem>) {
+  try {
+    const res = await fetch(`${LARAVEL_API_URL}/weekly-recaps`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(item),
+    });
+    return await res.json();
+  } catch (error) {
+    return { status: 'error', message: 'Gagal menyimpan data rekap ke Laravel.' };
+  }
+}
+

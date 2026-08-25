@@ -5,6 +5,7 @@ from .views import (
     OrderViewSet, 
     VoucherViewSet, 
     ReviewViewSet, 
+    WeeklySalesRecapViewSet,
     MidtransSnapTokenView,
     HaversineDistanceView
 )
@@ -19,12 +20,13 @@ from .views import (
 # - PUT /api/products/{id}/     -> Mengedit/mengubah data produk
 # - DELETE /api/products/{id}/  -> Menghapus produk
 #
-# Begitu pula untuk endpoint orders, vouchers, dan reviews!
+# Begitu pula untuk endpoint orders, vouchers, reviews, dan weekly-recaps!
 router = DefaultRouter()
 router.register(r'products', ProductViewSet, basename='product')
 router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'vouchers', VoucherViewSet, basename='voucher')
 router.register(r'reviews', ReviewViewSet, basename='review')
+router.register(r'weekly-recaps', WeeklySalesRecapViewSet, basename='weekly-recap')
 
 # ==============================================================================
 # URL PATTERNS APLIKASI RESTORAN NEFAKKY

@@ -2,13 +2,14 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import ProductCategory, ProductItem, AdminOrder, OrderItem, AdminVoucher, UserReview
+from .models import ProductCategory, ProductItem, AdminOrder, OrderItem, AdminVoucher, UserReview, WeeklySalesRecap
 from .serializers import (
     ProductCategorySerializer, 
     ProductItemSerializer, 
     AdminOrderSerializer, 
     AdminVoucherSerializer, 
-    UserReviewSerializer
+    UserReviewSerializer,
+    WeeklySalesRecapSerializer
 )
 from .services import MidtransPaymentService, HaversineDistanceCalculator
 from .utils import (
@@ -213,4 +214,23 @@ class HaversineDistanceView(APIView):
             "estimated_delivery": estimated_time,
             "is_safe_range": distance_km <= 15.0
         })
+
+
+# ==============================================================================
+# VIEWSET 5: REKAPITULASI PENJUALAN MINGGUAN & BAZAR (WeeklySalesRecapViewSet)
+# ==============================================================================
+class WeeklySalesRecapViewSet(viewsets.ModelViewSet):
+    """
+    OOP Class-Based ViewSet untuk Laporan Rekapitulasi Penjualan Mingguan & Bazar Kuliner.
+    """
+    queryset = WeeklySalesRecap.objects.all().order_by('month', 'week_number')
+    serializer_class = WeeklySalesRecapSerializer
+
+    @action(detail=False, methods=['get'])
+    def by_month(self, request):
+        month_query = request.query_params.get('month', 'Juli')
+        recaps = WeeklySalesRecap.objects.filter(month__iexact=month_query).order_by('week_number')
+        serializer = self.get_serializer(recaps, many=True)
+        return Response(serializer.data)
+
 

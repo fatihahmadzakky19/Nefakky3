@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 @tailwind base;
 @tailwind components;
@@ -114,4 +115,53 @@ body {
 
 .animate-spin-slow {
   animation: spinSlow 25s linear infinite;
+}
+
+@keyframes chartTransactionGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.8), 0 0 0 0 rgba(16, 185, 129, 0.8);
+    transform: scaleY(1);
+  }
+  35% {
+    box-shadow: 0 0 25px 8px rgba(217, 119, 6, 0.9), 0 0 45px 18px rgba(16, 185, 129, 0.6);
+    transform: scaleY(1.05);
+  }
+  70% {
+    box-shadow: 0 0 15px 4px rgba(217, 119, 6, 0.6), 0 0 25px 8px rgba(16, 185, 129, 0.3);
+    transform: scaleY(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0), 0 0 0 0 rgba(16, 185, 129, 0);
+    transform: scaleY(1);
+  }
+}
+
+@keyframes floatPop {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-8px) scale(1.06);
+  }
+  40% {
+    transform: translateY(-14px) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-16px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(0.92);
+  }
+}
+
+.animate-chart-pulse {
+  animation: chartTransactionGlow 1.2s infinite ease-in-out;
+}
+
+.animate-float-pop {
+  animation: floatPop 3.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

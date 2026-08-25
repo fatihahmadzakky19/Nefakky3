@@ -3,16 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard,
-  ShoppingBag,
-  Box,
-  Ticket,
-  Star,
-  Settings,
-  Store,
-  X
-} from 'lucide-react';
+import { Store, X } from 'lucide-react';
 
 interface AdminSidebarProps {
   pendingOrdersCount?: number;
@@ -36,6 +27,45 @@ export default function AdminSidebar({
     return pathname.startsWith(path);
   };
 
+  const navItems = [
+    {
+      href: '/admin',
+      label: 'Business Overview',
+      icon: 'analytics',
+      badge: null
+    },
+    {
+      href: '/admin/products',
+      label: 'Product Catalog',
+      icon: 'inventory_2',
+      badge: null
+    },
+    {
+      href: '/admin/orders',
+      label: 'Kitchen Desk',
+      icon: 'countertops',
+      badge: pendingOrdersCount > 0 ? pendingOrdersCount : null
+    },
+    {
+      href: '/admin/promotions',
+      label: 'Promotions',
+      icon: 'campaign',
+      badge: null
+    },
+    {
+      href: '/admin/reviews',
+      label: 'Reviews',
+      icon: 'reviews',
+      badge: null
+    },
+    {
+      href: '/admin/settings',
+      label: 'Store Settings',
+      icon: 'settings',
+      badge: unreadChatCount > 0 ? unreadChatCount : null
+    }
+  ];
+
   return (
     <>
       {/* Mobile Backdrop Overlay */}
@@ -46,26 +76,25 @@ export default function AdminSidebar({
         />
       )}
 
-      <aside className={`fixed left-0 top-0 h-full w-72 bg-[#f5f3ef] z-50 flex flex-col pt-8 border-r border-amber-900/10 shadow-xl print:hidden transition-transform duration-300 ${
+      <aside className={`fixed left-0 top-0 h-full w-72 bg-[#25160E] z-50 flex flex-col pt-8 pb-8 border-r border-white/10 shadow-2xl print:hidden transition-transform duration-300 ${
         isOpenOnMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         
         {/* Sidebar Brand Header */}
-        <div className="px-6 sm:px-8 flex items-center justify-between gap-3 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#25160e] text-white flex items-center justify-center font-bold font-serif text-xl shadow-md">
+        <div className="px-8 mb-10 flex items-center justify-between">
+          <Link href="/admin" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 text-white flex items-center justify-center font-bold font-serif text-xl border border-white/15 shadow-sm group-hover:scale-105 transition-transform">
               N
             </div>
-            <div>
-              <span className="font-serif text-2xl font-bold tracking-tight text-[#25160e] block leading-none">Nefakky</span>
-              <span className="text-[10px] text-[#934b19] font-bold uppercase tracking-widest block mt-1">Admin Command Desk</span>
-            </div>
-          </div>
+            <span className="font-['Playfair_Display'] text-[22px] font-bold tracking-tight text-white uppercase block">
+              Nefakky Admin
+            </span>
+          </Link>
 
           {/* Close button for mobile */}
           <button 
             onClick={onCloseMobile}
-            className="p-1.5 rounded-xl text-[#4f4540] hover:bg-[#eae8e4] lg:hidden"
+            className="p-1.5 rounded-xl text-white/70 hover:bg-white/10 lg:hidden cursor-pointer"
             aria-label="Close Admin Sidebar"
           >
             <X className="w-5 h-5" />
@@ -73,108 +102,49 @@ export default function AdminSidebar({
         </div>
 
         {/* Sidebar Nav Links */}
-        <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
-          <Link
-            href="/admin"
-            onClick={onCloseMobile}
-            className={`w-full flex items-center px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              isNavActive('/admin')
-                ? 'bg-[#3c2a21] text-amber-200 shadow-md'
-                : 'text-[#4f4540] hover:bg-[#eae8e4] hover:text-[#25160e]'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4 mr-3.5 shrink-0" />
-            <span>Ringkasan Bisnis</span>
-          </Link>
+        <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto" data-active-classes="bg-white/10 text-white font-bold">
+          {navItems.map((item) => {
+            const active = isNavActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onCloseMobile}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all text-xs font-semibold ${
+                  active
+                    ? 'bg-white/10 text-white font-bold shadow-xs'
+                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-[20px]">
+                    {item.icon}
+                  </span>
+                  <span className="font-label-caps uppercase tracking-wider text-[11px]">
+                    {item.label}
+                  </span>
+                </div>
 
-          <Link
-            href="/admin/orders"
-            onClick={onCloseMobile}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              isNavActive('/admin/orders')
-                ? 'bg-[#3c2a21] text-amber-200 shadow-md'
-                : 'text-[#4f4540] hover:bg-[#eae8e4] hover:text-[#25160e]'
-            }`}
-          >
-            <div className="flex items-center">
-              <ShoppingBag className="w-4 h-4 mr-3.5 shrink-0" />
-              <span>Pesanan Masuk</span>
-            </div>
-            {pendingOrdersCount > 0 && (
-              <span className="px-2 py-0.5 bg-[#934b19] text-white text-[10px] rounded-full font-bold">
-                {pendingOrdersCount}
-              </span>
-            )}
-          </Link>
-
-          <Link
-            href="/admin/products"
-            onClick={onCloseMobile}
-            className={`w-full flex items-center px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              isNavActive('/admin/products')
-                ? 'bg-[#3c2a21] text-amber-200 shadow-md'
-                : 'text-[#4f4540] hover:bg-[#eae8e4] hover:text-[#25160e]'
-            }`}
-          >
-            <Box className="w-4 h-4 mr-3.5 shrink-0" />
-            <span>Katalog Produk</span>
-          </Link>
-
-          <Link
-            href="/admin/promotions"
-            onClick={onCloseMobile}
-            className={`w-full flex items-center px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              isNavActive('/admin/promotions')
-                ? 'bg-[#3c2a21] text-amber-200 shadow-md'
-                : 'text-[#4f4540] hover:bg-[#eae8e4] hover:text-[#25160e]'
-            }`}
-          >
-            <Ticket className="w-4 h-4 mr-3.5 shrink-0" />
-            <span>Voucher &amp; Promo</span>
-          </Link>
-
-          <Link
-            href="/admin/reviews"
-            onClick={onCloseMobile}
-            className={`w-full flex items-center px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              isNavActive('/admin/reviews')
-                ? 'bg-[#3c2a21] text-amber-200 shadow-md'
-                : 'text-[#4f4540] hover:bg-[#eae8e4] hover:text-[#25160e]'
-            }`}
-          >
-            <Star className="w-4 h-4 mr-3.5 shrink-0" />
-            <span>Moderasi Ulasan</span>
-          </Link>
-
-          <Link
-            href="/admin/settings"
-            onClick={onCloseMobile}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              isNavActive('/admin/settings')
-                ? 'bg-[#3c2a21] text-amber-200 shadow-md'
-                : 'text-[#4f4540] hover:bg-[#eae8e4] hover:text-[#25160e]'
-            }`}
-          >
-            <div className="flex items-center">
-              <Settings className="w-4 h-4 mr-3.5 shrink-0" />
-              <span>Pengaturan &amp; CS Chat</span>
-            </div>
-            {unreadChatCount > 0 && (
-              <span className="px-2 py-0.5 bg-rose-600 text-white text-[10px] rounded-full font-bold animate-pulse shadow-sm">
-                {unreadChatCount}
-              </span>
-            )}
-          </Link>
+                {item.badge !== null && (
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                    item.href === '/admin/settings' ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-500 text-black'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Sidebar Footer Link */}
-        <div className="p-5 border-t border-amber-900/10">
+        <div className="px-6 pt-5 border-t border-white/10">
           <Link 
             href="/" 
-            className="flex items-center gap-2 text-xs font-bold text-[#934b19] hover:underline"
+            className="flex items-center gap-2 text-xs font-bold text-amber-300 hover:text-amber-200 transition-colors"
           >
             <Store className="w-4 h-4" />
-            <span>Kembali ke Toko</span>
+            <span className="font-label-caps uppercase tracking-wider text-[11px]">Kembali ke Toko</span>
           </Link>
         </div>
       </aside>

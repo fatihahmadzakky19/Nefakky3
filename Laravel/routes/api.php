@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MidtransController;
 use App\Http\Controllers\Api\HaversineController;
 use App\Http\Controllers\Api\StoreSettingController;
+use App\Http\Controllers\Api\WeeklySalesRecapController;
 
 /*
 |--------------------------------------------------------------------------
@@ -132,7 +133,7 @@ Route::post('/reviews/{id}/moderate', [ReviewController::class, 'moderate']);
 Route::apiResource('reviews', ReviewController::class);
 
 // =========================================================================
-// 8. MODUL LAPORAN OMSET & KEUANGAN (SALES REPORTS API)
+// 8. MODUL LAPORAN OMSET & KEUANGAN (SALES REPORTS & WEEKLY RECAP API)
 // =========================================================================
 // Mengambil daftar tahun yang memiliki catatan laporan omset
 Route::get('/reports/sales/years', [SalesReportController::class, 'years']);
@@ -142,6 +143,10 @@ Route::get('/reports/sales', [SalesReportController::class, 'index']);
 Route::post('/reports/sales', [SalesReportController::class, 'store']);
 // Menghapus data baris laporan omset bulanan
 Route::delete('/reports/sales/{id}', [SalesReportController::class, 'destroy']);
+
+// Laporan Rekap Penjualan Mingguan & Bazar (Juli & Agustus 2026)
+Route::get('/weekly-recaps/month/{month}', [WeeklySalesRecapController::class, 'byMonth']);
+Route::apiResource('weekly-recaps', WeeklySalesRecapController::class);
 
 // =========================================================================
 // 9. MODUL BANNER & EVENT PROMOSI (PROMOTIONS API)

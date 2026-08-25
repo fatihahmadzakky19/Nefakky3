@@ -1,5 +1,5 @@
-// Mengimpor tipe Metadata dari Next.js untuk konfigurasi SEO dan Meta Tags
-import type { Metadata } from 'next';
+// Mengimpor tipe Metadata dan Viewport dari Next.js untuk konfigurasi SEO dan responsivitas mobile
+import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 // Mengimpor file stylesheet global TailwindCSS & Custom Glassmorphism
 import './globals.css';
@@ -9,6 +9,15 @@ import { AuthProvider } from '@/context/AuthContext';
 import { DataProvider } from '@/context/DataContext';
 // Mengimpor CartProvider untuk pengolahan keranjang belanja & diskon promo
 import { CartProvider } from '@/context/CartContext';
+
+// Konfigurasi Viewport untuk tampilan mobile responsif presisi tinggi
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: '#25160E',
+};
 
 // Objek Metadata global untuk SEO halaman utama Nefakky Marketplace
 export const metadata: Metadata = {

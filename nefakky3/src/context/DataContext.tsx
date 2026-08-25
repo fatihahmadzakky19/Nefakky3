@@ -22,6 +22,7 @@ import {
 } from 'firebase/firestore';
 import { ref, set as setRtdb, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
 import { db, rtdb } from '@/lib/firebase';
+import { formatCurrentRealtimeOrderDate } from '@/lib/orderTimeUtils';
 
 
 /** Interface Data Produk Utama */
@@ -686,7 +687,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     shippingCost: 12000,
     discount: 10000,
     total: 102000,
-    date: 'Hari ini, 12:45',
+    date: 'Senin, 24 Agu 2026 • 12:45:00 WIB',
+    createdAt: 1787575500000,
     customerConfirmed: false
   },
   {
@@ -709,9 +711,10 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     shippingCost: 15000,
     discount: 15000,
     total: 161000,
-    date: 'Hari ini, 10:15',
+    date: 'Minggu, 23 Agu 2026 • 10:15:00 WIB',
+    createdAt: 1787480100000,
     customerConfirmed: true,
-    confirmedAt: 'Hari ini, 11:30'
+    confirmedAt: 'Minggu, 23 Agu 2026 • 11:30:00 WIB'
   },
   {
     id: 'ORD-88217',
@@ -733,7 +736,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     shippingCost: 10000,
     discount: 0,
     total: 104000,
-    date: 'Hari ini, 13:10',
+    date: 'Kamis, 20 Agu 2026 • 13:10:00 WIB',
+    createdAt: 1787224200000,
     customerConfirmed: false
   },
   {
@@ -756,7 +760,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     shippingCost: 10000,
     discount: 5000,
     total: 62000,
-    date: 'Hari ini, 13:20',
+    date: 'Selasa, 18 Agu 2026 • 13:20:00 WIB',
+    createdAt: 1787052000000,
     customerConfirmed: false
   },
   {
@@ -778,7 +783,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     shippingCost: 10000,
     discount: 0,
     total: 48000,
-    date: 'Hari ini, 13:30',
+    date: 'Sabtu, 15 Agu 2026 • 13:30:00 WIB',
+    createdAt: 1786793400000,
     customerConfirmed: false
   }
 ];
@@ -1381,12 +1387,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const addOrder = (orderData: Omit<AdminOrder, 'id' | 'date'>): AdminOrder => {
     const orderNum = Math.floor(1000 + Math.random() * 9000);
     const newId = `ORD-${orderNum}`;
-    const nowStr = `Hari ini, ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+    const now = new Date();
+    const nowStr = formatCurrentRealtimeOrderDate(now);
     const newOrder: AdminOrder = {
       ...orderData,
       id: newId,
       date: nowStr,
-      createdAt: orderData.createdAt || Date.now()
+      createdAt: orderData.createdAt || now.getTime()
     };
 
     // Immediate local React state update so order appears 100% reliably

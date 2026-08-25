@@ -13,7 +13,7 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-[#FAF8F5] border-t border-stone-200/80 pt-12 pb-8 px-4 sm:px-8 lg:px-16 text-stone-700 font-sans">
+    <footer className="w-full bg-[#FAF8F5] border-t border-stone-200/80 pt-12 pb-24 lg:pb-8 px-4 sm:px-8 lg:px-16 text-stone-700 font-sans">
       <div className="max-w-7xl mx-auto space-y-10">
         
         {/* Main Content Grid */}

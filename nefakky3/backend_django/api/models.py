@@ -300,3 +300,26 @@ class UserReview(models.Model):
     def __str__(self):
         return f"Ulasan oleh {self.author_name} ({self.rating} ⭐)"
 
+
+# ==============================================================================
+# MODEL 7: REKAPITULASI PENJUALAN MINGGUAN & BAZAR (WeeklySalesRecap)
+# ==============================================================================
+class WeeklySalesRecap(models.Model):
+    """
+    OOP Model Rekapitulasi Penjualan Mingguan & Bazar Kuliner (Juli & Agustus 2026).
+    """
+    year = models.IntegerField(default=2026)
+    month = models.CharField(max_length=30)  # 'Juli' / 'Agustus'
+    week_number = models.IntegerField(default=1)  # 1, 2, 3, 4, 5
+    week_label = models.CharField(max_length=50)  # 'Minggu 1', 'TOTAL JULI', 'TOTAL AGUSTUS'
+    sales_category = models.CharField(max_length=100)  # 'Bazar (1x) + Reguler', 'Bazar Event 1'
+    gross_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
+    net_profit = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
+    operational_details = models.TextField(blank=True, default='')  # Rincian Operasional / Status Makanan
+    is_total_row = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.month} - {self.week_label}: {self.sales_category}"
+
+

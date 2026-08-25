@@ -134,7 +134,7 @@ export default function MenuCatalogPage() {
 
         {/* 2. MAIN CONTENT AREA */}
         <main className="w-full pt-20 bg-[#fcf8fa]">
-          <div className="flex flex-col w-full min-h-screen">
+          <div className="flex flex-col w-full min-h-screen pb-28 lg:pb-12">
             
             {/* Page Header Section with Real Food Showcase */}
             <section className="w-full bg-[#25160E] px-6 py-10 sm:py-14 text-white rounded-b-3xl relative overflow-hidden shadow-xl border-b border-stone-800">

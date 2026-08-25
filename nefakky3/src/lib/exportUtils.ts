@@ -27,9 +27,8 @@ export function exportNefakkyExcelReport(
   const selectedPeriodText = options?.selectedMonthLabel || `Periode Tahun ${yearStr}`;
 
   const chartMonths = options?.customChartMonths || [
-    { label: `Juni ${yearStr}`, gross: 10500000, net: 4750000, isBazar: true, badge: 'Event Bazar Pembukaan Juni (>10Jt Omset)' },
-    { label: `Juli ${yearStr}`, gross: 11200000, net: 5100000, isBazar: true, badge: 'Event Bazar Kuliner Juli (>10Jt Omset)' },
-    { label: `Agustus ${yearStr} (Live)`, gross: 13800000, net: 6900000, isBazar: true, badge: 'Event Bazar Merdeka + Live Web Realtime' },
+    { label: `Juli ${yearStr}`, gross: 11000000, net: 3500000, isBazar: true, badge: '4x Bazar + 4x Reguler (300 Cup Jus Terjual)' },
+    { label: `Agustus ${yearStr} (Bulan Ini)`, gross: 12000000, net: 5000000, isBazar: true, badge: '3x Bazar Event + 1x Jualan Biasa (Margin: 41,67%)' },
     { label: `September ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
     { label: `Oktober ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
     { label: `November ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
@@ -150,7 +149,7 @@ export function exportNefakkyExcelReport(
     </tr>
     <tr bgcolor="#FFFBEB" style="background-color: #FFFBEB;">
       <td style="font-weight: bold; border: 1px solid #D3C3BD;">Rating Kepuasan Pelanggan</td>
-      <td style="font-weight: bold; text-align: center; color: #D97706; border: 1px solid #D3C3BD;">4.9 / 5.0 ⭐⭐⭐⭐⭐</td>
+      <td style="font-weight: bold; text-align: center; color: #D97706; border: 1px solid #D3C3BD;">4.9 / 5.0 (Sangat Puas)</td>
       <td style="border: 1px solid #D3C3BD; color: #92400E;">Evaluasi skor ulasan cita rasa &amp; pelayanan dari pembeli</td>
     </tr>
   </table>
@@ -189,6 +188,112 @@ export function exportNefakkyExcelReport(
     </tr>
       `;
     }).join('')}
+  </table>
+
+  <br />
+
+  <!-- SEKSI 3: REKAP PENJUALAN MINGGUAN BULAN JULI 2026 -->
+  <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1.5px solid #047857; margin-bottom: 24px;">
+    <tr bgcolor="#047857" style="background-color: #047857;">
+      <td colspan="5" bgcolor="#047857" style="background-color: #047857; color: #FFFFFF; font-size: 12pt; font-weight: bold; padding: 10px 14px;">
+        3. LAPORAN REKAP BULAN JULI 2026
+      </td>
+    </tr>
+    <tr bgcolor="#F1F5F9" style="background-color: #F1F5F9; color: #1E293B;">
+      <th style="border: 1px solid #CBD5E1;">Minggu</th>
+      <th style="border: 1px solid #CBD5E1;">Kategori Penjualan</th>
+      <th style="border: 1px solid #CBD5E1; text-align: right;">Omset (Kotor)</th>
+      <th style="border: 1px solid #CBD5E1; text-align: right;">Laba Bersih</th>
+      <th style="border: 1px solid #CBD5E1;">Rincian Operasional</th>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #E2E8F0; font-weight: bold;">Minggu 1</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar (1x) + Reguler</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp2.750.000</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp875.000</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb</td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #E2E8F0; font-weight: bold;">Minggu 2</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar (1x) + Reguler</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp2.750.000</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp875.000</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb</td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #E2E8F0; font-weight: bold;">Minggu 3</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar (1x) + Reguler</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp2.750.000</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp875.000</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb</td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #E2E8F0; font-weight: bold;">Minggu 4</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar (1x) + Reguler</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp2.750.000</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp875.000</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb</td>
+    </tr>
+    <tr bgcolor="#E6F9ED" style="background-color: #E6F9ED; color: #047857; font-weight: bold;">
+      <td style="border: 1.5px solid #047857;">TOTAL JULI</td>
+      <td style="border: 1.5px solid #047857;">4x Bazar + 4x Reguler</td>
+      <td style="border: 1.5px solid #047857; text-align: right;">Rp11.000.000</td>
+      <td style="border: 1.5px solid #047857; text-align: right;">Rp3.500.000</td>
+      <td style="border: 1.5px solid #047857;">Total 300 Cup Jus Terjual (@ Rp5.000)</td>
+    </tr>
+  </table>
+
+  <br />
+
+  <!-- SEKSI 4: REKAP PENJUALAN MINGGUAN BULAN AGUSTUS 2026 -->
+  <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1.5px solid #934B19;">
+    <tr bgcolor="#934B19" style="background-color: #934B19;">
+      <td colspan="5" bgcolor="#934B19" style="background-color: #934B19; color: #FFFFFF; font-size: 12pt; font-weight: bold; padding: 10px 14px;">
+        4. LAPORAN REKAP BULAN AGUSTUS 2026
+      </td>
+    </tr>
+    <tr bgcolor="#F1F5F9" style="background-color: #F1F5F9; color: #1E293B;">
+      <th style="border: 1px solid #CBD5E1;">Periode</th>
+      <th style="border: 1px solid #CBD5E1;">Jenis Penjualan</th>
+      <th style="border: 1px solid #CBD5E1; text-align: right;">Omset (Kotor)</th>
+      <th style="border: 1px solid #CBD5E1; text-align: right;">Laba Bersih</th>
+      <th style="border: 1px solid #CBD5E1;">Status Makanan</th>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #E2E8F0; font-weight: bold;">Minggu 1</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar Event 1</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp3.500.000</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp1.433.333</td>
+      <td style="border: 1px solid #E2E8F0;">Habis Terjual (0% Sisa)</td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #E2E8F0; font-weight: bold;">Minggu 2</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar Event 2</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp3.500.000</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp1.433.333</td>
+      <td style="border: 1px solid #E2E8F0;">Habis Terjual (0% Sisa)</td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #E2E8F0; font-weight: bold;">Minggu 3</td>
+      <td style="border: 1px solid #E2E8F0;">Bazar Event 3</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp3.500.000</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp1.433.334</td>
+      <td style="border: 1px solid #E2E8F0;">Habis Terjual (0% Sisa)</td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #E2E8F0; font-weight: bold;">Minggu 4</td>
+      <td style="border: 1px solid #E2E8F0;">Jualan Biasa (Tanpa Bazar)</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp1.500.000</td>
+      <td style="border: 1px solid #E2E8F0; text-align: right;">Rp700.000</td>
+      <td style="border: 1px solid #E2E8F0;">Penjualan Toko Reguler</td>
+    </tr>
+    <tr bgcolor="#E6F9ED" style="background-color: #E6F9ED; color: #047857; font-weight: bold;">
+      <td style="border: 1.5px solid #047857;">TOTAL AGUSTUS</td>
+      <td style="border: 1.5px solid #047857;">3x Bazar + 1x Reguler</td>
+      <td style="border: 1.5px solid #047857; text-align: right;">Rp12.000.000</td>
+      <td style="border: 1.5px solid #047857; text-align: right;">Rp5.000.000</td>
+      <td style="border: 1.5px solid #047857;">Margin Keuntungan: 41,67%</td>
+    </tr>
   </table>
 </body>
 </html>
@@ -300,6 +405,106 @@ export function exportNefakkyPDFReport(
           <td>${m.badge}</td>
         </tr>
       `).join('')}
+    </tbody>
+  </table>
+
+  <h3 style="font-family: Georgia, serif; color: #047857; margin-top: 24px; margin-bottom: 8px;">Laporan Rekap Bulan Juli 2026</h3>
+  <table>
+    <thead>
+      <tr style="background: #047857; color: white;">
+        <th>Minggu</th>
+        <th>Kategori Penjualan</th>
+        <th class="text-right">Omset (Kotor)</th>
+        <th class="text-right">Laba Bersih</th>
+        <th>Rincian Operasional</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight: bold;">Minggu 1</td>
+        <td>Bazar (1x) + Reguler</td>
+        <td class="text-right">Rp2.750.000</td>
+        <td class="text-right">Rp875.000</td>
+        <td>Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">Minggu 2</td>
+        <td>Bazar (1x) + Reguler</td>
+        <td class="text-right">Rp2.750.000</td>
+        <td class="text-right">Rp875.000</td>
+        <td>Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">Minggu 3</td>
+        <td>Bazar (1x) + Reguler</td>
+        <td class="text-right">Rp2.750.000</td>
+        <td class="text-right">Rp875.000</td>
+        <td>Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">Minggu 4</td>
+        <td>Bazar (1x) + Reguler</td>
+        <td class="text-right">Rp2.750.000</td>
+        <td class="text-right">Rp875.000</td>
+        <td>Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb</td>
+      </tr>
+      <tr style="background: #E6F9ED; color: #047857; font-weight: bold;">
+        <td>TOTAL JULI</td>
+        <td>4x Bazar + 4x Reguler</td>
+        <td class="text-right">Rp11.000.000</td>
+        <td class="text-right">Rp3.500.000</td>
+        <td>Total 300 Cup Jus Terjual (@ Rp5.000)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="font-family: Georgia, serif; color: #934B19; margin-top: 24px; margin-bottom: 8px;">Laporan Rekap Bulan Agustus 2026</h3>
+  <table>
+    <thead>
+      <tr style="background: #934B19; color: white;">
+        <th>Periode</th>
+        <th>Jenis Penjualan</th>
+        <th class="text-right">Omset (Kotor)</th>
+        <th class="text-right">Laba Bersih</th>
+        <th>Status Makanan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight: bold;">Minggu 1</td>
+        <td>Bazar Event 1</td>
+        <td class="text-right">Rp3.500.000</td>
+        <td class="text-right">Rp1.433.333</td>
+        <td>Habis Terjual (0% Sisa)</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">Minggu 2</td>
+        <td>Bazar Event 2</td>
+        <td class="text-right">Rp3.500.000</td>
+        <td class="text-right">Rp1.433.333</td>
+        <td>Habis Terjual (0% Sisa)</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">Minggu 3</td>
+        <td>Bazar Event 3</td>
+        <td class="text-right">Rp3.500.000</td>
+        <td class="text-right">Rp1.433.334</td>
+        <td>Habis Terjual (0% Sisa)</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">Minggu 4</td>
+        <td>Jualan Biasa (Tanpa Bazar)</td>
+        <td class="text-right">Rp1.500.000</td>
+        <td class="text-right">Rp700.000</td>
+        <td>Penjualan Toko Reguler</td>
+      </tr>
+      <tr style="background: #E6F9ED; color: #047857; font-weight: bold;">
+        <td>TOTAL AGUSTUS</td>
+        <td>3x Bazar + 1x Reguler</td>
+        <td class="text-right">Rp12.000.000</td>
+        <td class="text-right">Rp5.000.000</td>
+        <td>Margin Keuntungan: 41,67%</td>
+      </tr>
     </tbody>
   </table>
 

@@ -356,9 +356,9 @@ export default function UserProfilePage() {
         </header>
 
         {/* 2. MAIN PROFILE CONTENT */}
-        <main className="w-full pt-20 bg-[#fcf8fa]">
+        <main className="w-full pt-20 bg-[#fcf8fa] pb-28 lg:pb-12">
           <div className="flex flex-col w-full">
-            <div className="w-full max-w-7xl mx-auto px-6 py-8 flex flex-col gap-8 text-left">
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-8 text-left">
               
               {/* ========================================================================= */}
               {/* BANNER PROFIL UTAMA ROUNDED-[32PX] */}

@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             OrderSeeder::class,        // 5. Riwayat Transaksi Pesanan & Items
             ReviewSeeder::class,       // 6. Ulasan, Rating & Balasan Penjual
             SalesReportSeeder::class,  // 7. Laporan Finansial & Omset Bulanan
+            WeeklySalesRecapSeeder::class, // 7b. Rekapitulasi Penjualan Mingguan & Bazar
             PromotionSeeder::class,    // 8. Banner Promosi & Event Bazar
             StoreSettingSeeder::class, // 9. Konfigurasi Toko & Dapur Utama
         ]);

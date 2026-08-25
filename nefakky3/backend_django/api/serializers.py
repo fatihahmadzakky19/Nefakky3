@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ProductCategory, ProductItem, AdminOrder, OrderItem, AdminVoucher, UserReview
+from .models import ProductCategory, ProductItem, AdminOrder, OrderItem, AdminVoucher, UserReview, WeeklySalesRecap
 
 # ==============================================================================
 # SERIALIZER: KATEGORI PRODUK
@@ -79,4 +79,17 @@ class UserReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserReview
         fields = '__all__'
+
+
+# ==============================================================================
+# SERIALIZER: REKAPITULASI PENJUALAN MINGGUAN & BAZAR
+# ==============================================================================
+class WeeklySalesRecapSerializer(serializers.ModelSerializer):
+    """
+    Serializer untuk laporan rekapitulasi penjualan mingguan dan event bazar.
+    """
+    class Meta:
+        model = WeeklySalesRecap
+        fields = '__all__'
+
 

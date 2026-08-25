@@ -39,7 +39,9 @@ import {
   Navigation,
   Bike,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Layers,
+  Compass
 } from 'lucide-react';
 
 export default function NotificationsPage() {
@@ -51,6 +53,7 @@ export default function NotificationsPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
   const [selectedReceipt, setSelectedReceipt] = useState<AdminOrder | null>(null);
   const [showDeliveryMapModal, setShowDeliveryMapModal] = useState<boolean>(false);
+  const [mapViewMode, setMapViewMode] = useState<'openstreetmap' | 'illustration'>('openstreetmap');
   const [countdownMinutes, setCountdownMinutes] = useState<number>(18);
   const [countdownSeconds, setCountdownSeconds] = useState<number>(45);
 
@@ -201,7 +204,7 @@ export default function NotificationsPage() {
 
         {/* 2. MAIN TRACKING CONTENT ATAU EMPTY STATE */}
         <main className="w-full pt-20">
-          <div className="flex flex-col w-full bg-[#fcf8fa] text-[#1b1b1d]">
+          <div className="flex flex-col w-full bg-[#fcf8fa] text-[#1b1b1d] pb-28 lg:pb-12">
             
             {!hasOrders || !activeOrder ? (
               /* EMPTY STATE: Muncul jika akun belum melakukan pembelian / uji coba checkout */
@@ -243,7 +246,7 @@ export default function NotificationsPage() {
               /* REALTIME ORDER TRACKING DASHBOARD */
               <>
                 {/* 1. TOP HEADER: ESTIMATED ARRIVAL & TITLE */}
-                <div className="max-w-7xl mx-auto px-6 w-full pt-8 pb-4 text-left">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full pt-6 sm:pt-8 pb-4 text-left">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-stone-200 pb-5">
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-2">
@@ -293,7 +296,7 @@ export default function NotificationsPage() {
                 </div>
 
                 {/* 2. GRID 2-KOLOM (KIRI: STATUS PESANAN, KANAN: PETA, RINCIAN, PEMBAYARAN) */}
-                <div className="max-w-7xl mx-auto px-6 w-full py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                   
                   {/* Kolom Kiri: Live Tracking Status & Stepper 5-Tahap */}
                   <div className="lg:col-span-7 flex flex-col gap-6 text-left">
@@ -484,71 +487,120 @@ export default function NotificationsPage() {
                         )}
                       </div>
 
-                      {/* Mini Map Canvas Animasi yang Selaras dengan Web */}
-                      <div className="relative w-full h-44 sm:h-48 rounded-xl overflow-hidden border border-stone-200/90 bg-[#FDFBF7] shadow-inner">
-                        <svg className="w-full h-full" viewBox="0 0 500 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          {/* Warm Street Grid */}
-                          <rect width="500" height="200" fill="#FAF7F2" />
-                          <path d="M0,40 H500 M0,80 H500 M0,120 H500 M0,160 H500" stroke="#EFE9E0" strokeWidth="1" strokeDasharray="4 4" />
-                          <path d="M50,0 V200 M125,0 V200 M200,0 V200 M275,0 V200 M350,0 V200 M425,0 V200" stroke="#EFE9E0" strokeWidth="1" strokeDasharray="4 4" />
+                      {/* Mini Map Canvas: OpenStreetMap Live Engine & Rute Realtime */}
+                      <div className="relative w-full h-48 sm:h-52 rounded-xl overflow-hidden border border-stone-200/90 bg-[#FDFBF7] shadow-inner">
+                        {mapViewMode === 'openstreetmap' ? (
+                          <>
+                            <iframe
+                              title="OpenStreetMap Live Delivery Route"
+                              width="100%"
+                              height="100%"
+                              frameBorder="0"
+                              scrolling="no"
+                              marginHeight={0}
+                              marginWidth={0}
+                              src="https://www.openstreetmap.org/export/embed.html?bbox=106.76%2C-6.27%2C106.92%2C-6.16&layer=mapnik&marker=-6.2088%2C106.8456"
+                              className="w-full h-full filter contrast-[1.02] brightness-[0.98]"
+                            />
+                            
+                            {/* Floating Destination Pin Pill */}
+                            <div className="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-stone-200 shadow-xs flex items-center gap-2 text-[10px] sm:text-xs font-semibold text-stone-800">
+                              <MapPin className="w-3.5 h-3.5 text-[#934B19]" />
+                              <span className="truncate max-w-[200px]">Tujuan: <strong>{activeOrder.address || 'Alamat Anda'}</strong></span>
+                            </div>
+                          </>
+                        ) : (
+                          <svg className="w-full h-full" viewBox="0 0 500 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            {/* Warm Street Grid */}
+                            <rect width="500" height="200" fill="#FAF7F2" />
+                            <path d="M0,40 H500 M0,80 H500 M0,120 H500 M0,160 H500" stroke="#EFE9E0" strokeWidth="1" strokeDasharray="4 4" />
+                            <path d="M50,0 V200 M125,0 V200 M200,0 V200 M275,0 V200 M350,0 V200 M425,0 V200" stroke="#EFE9E0" strokeWidth="1" strokeDasharray="4 4" />
 
-                          {/* Route Road Canvas */}
-                          <path d="M 60,150 C 130,80 180,160 260,80 C 330,10 390,130 440,60" stroke="#E8D8C8" strokeWidth="10" strokeLinecap="round" />
-                          <path d="M 60,150 C 130,80 180,160 260,80 C 330,10 390,130 440,60" stroke="#934B19" strokeWidth="4" strokeLinecap="round" />
-                          <path d="M 60,150 C 130,80 180,160 260,80 C 330,10 390,130 440,60" stroke="#FDE68A" strokeWidth="1.5" strokeDasharray="6 4" strokeLinecap="round" />
+                            {/* Route Road Canvas */}
+                            <path d="M 60,150 C 130,80 180,160 260,80 C 330,10 390,130 440,60" stroke="#E8D8C8" strokeWidth="10" strokeLinecap="round" />
+                            <path d="M 60,150 C 130,80 180,160 260,80 C 330,10 390,130 440,60" stroke="#934B19" strokeWidth="4" strokeLinecap="round" />
+                            <path d="M 60,150 C 130,80 180,160 260,80 C 330,10 390,130 440,60" stroke="#FDE68A" strokeWidth="1.5" strokeDasharray="6 4" strokeLinecap="round" />
 
-                          {/* Start Node: Dapur Utama */}
-                          <g transform="translate(60, 150)">
-                            <circle r="16" fill="#934B19" fillOpacity="0.2" className={isOrderCompleted ? '' : 'animate-ping'} />
-                            <circle r="12" fill="#25160E" stroke="#F59E0B" strokeWidth="2" />
-                            <text y="3" textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="bold">Dapur</text>
-                          </g>
-                          <text x="60" y="180" textAnchor="middle" fill="#25160E" fontSize="9" fontWeight="bold" fontFamily="sans-serif">Dapur Utama</text>
+                            {/* Start Node: Dapur Utama */}
+                            <g transform="translate(60, 150)">
+                              <circle r="16" fill="#934B19" fillOpacity="0.2" className={isOrderCompleted ? '' : 'animate-ping'} />
+                              <circle r="12" fill="#25160E" stroke="#F59E0B" strokeWidth="2" />
+                              <text y="3" textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="bold">Dapur</text>
+                            </g>
+                            <text x="60" y="180" textAnchor="middle" fill="#25160E" fontSize="9" fontWeight="bold" fontFamily="sans-serif">Dapur Utama</text>
 
-                          {/* End Node: Customer Destination */}
-                          <g transform="translate(440, 60)">
-                            <circle r="16" fill="#10B981" fillOpacity="0.2" className={isOrderCompleted ? '' : 'animate-ping'} />
-                            <circle r="12" fill="#064E3B" stroke="#34D399" strokeWidth="2" />
-                            <text y="3" textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="bold">Tujuan</text>
-                          </g>
-                          <text x="440" y="88" textAnchor="middle" fill="#064E3B" fontSize="9" fontWeight="bold" fontFamily="sans-serif">Alamat Anda</text>
-
-                          {/* Courier Icon: Bergerak saat proses, Diam di tujuan saat selesai */}
-                          {isOrderCompleted ? (
+                            {/* End Node: Customer Destination */}
                             <g transform="translate(440, 60)">
-                              <circle r="18" fill="#10B981" fillOpacity="0.25" />
-                              <circle r="13" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
-                              <g transform="translate(-6, -6) scale(0.5)">
-                                <path d="M20 6L9 17l-5-5" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                              </g>
+                              <circle r="16" fill="#10B981" fillOpacity="0.2" className={isOrderCompleted ? '' : 'animate-ping'} />
+                              <circle r="12" fill="#064E3B" stroke="#34D399" strokeWidth="2" />
+                              <text y="3" textAnchor="middle" fill="#FFFFFF" fontSize="8" fontWeight="bold">Tujuan</text>
                             </g>
-                          ) : (
-                            <g>
-                              <animateMotion 
-                                dur="6s" 
-                                repeatCount="indefinite" 
-                                rotate="auto"
-                                path="M 60,150 C 130,80 180,160 260,80 C 330,10 390,130 440,60" 
-                              />
-                              <circle r="14" fill="#F59E0B" fillOpacity="0.3" className="animate-ping" />
-                              <circle r="10" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="1.5" />
-                              <g transform="translate(-5, -5) scale(0.45)">
-                                <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v4c0 .6.4 1 1 1h1" fill="none" stroke="#1A1816" strokeWidth="3" strokeLinecap="round" />
-                                <circle cx="7" cy="17" r="3.5" fill="#1A1816" />
-                                <circle cx="17" cy="17" r="3.5" fill="#1A1816" />
+                            <text x="440" y="88" textAnchor="middle" fill="#064E3B" fontSize="9" fontWeight="bold" fontFamily="sans-serif">Alamat Anda</text>
+
+                            {/* Courier Icon: Bergerak saat proses, Diam di tujuan saat selesai */}
+                            {isOrderCompleted ? (
+                              <g transform="translate(440, 60)">
+                                <circle r="18" fill="#10B981" fillOpacity="0.25" />
+                                <circle r="13" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
+                                <g transform="translate(-6, -6) scale(0.5)">
+                                  <path d="M20 6L9 17l-5-5" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                                </g>
                               </g>
-                            </g>
-                          )}
-                        </svg>
+                            ) : (
+                              <g>
+                                <animateMotion 
+                                  dur="6s" 
+                                  repeatCount="indefinite" 
+                                  rotate="auto" 
+                                  path="M 60,150 C 130,80 180,160 260,80 C 330,10 390,130 440,60" 
+                                />
+                                <circle r="14" fill="#F59E0B" fillOpacity="0.3" className="animate-ping" />
+                                <circle r="10" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="1.5" />
+                                <g transform="translate(-5, -5) scale(0.45)">
+                                  <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v4c0 .6.4 1 1 1h1" fill="none" stroke="#1A1816" strokeWidth="3" strokeLinecap="round" />
+                                  <circle cx="7" cy="17" r="3.5" fill="#1A1816" />
+                                  <circle cx="17" cy="17" r="3.5" fill="#1A1816" />
+                                </g>
+                              </g>
+                            )}
+                          </svg>
+                        )}
+
+                        {/* Top-Right Mode Switcher Pill */}
+                        <div className="absolute top-2.5 right-2.5 bg-white/95 backdrop-blur-md p-1 rounded-xl border border-stone-200 shadow-xs flex items-center gap-1 z-10">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setMapViewMode('openstreetmap'); }}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                              mapViewMode === 'openstreetmap'
+                                ? 'bg-black text-white shadow-xs'
+                                : 'text-stone-600 hover:text-black'
+                            }`}
+                          >
+                            <Layers className="w-3 h-3 text-emerald-400" />
+                            <span>OpenStreetMap</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setMapViewMode('illustration'); }}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                              mapViewMode === 'illustration'
+                                ? 'bg-black text-white shadow-xs'
+                                : 'text-stone-600 hover:text-black'
+                            }`}
+                          >
+                            <span>Rute Dapur</span>
+                          </button>
+                        </div>
 
                         {/* Floating live speed / Completed status */}
                         {isOrderCompleted ? (
-                          <div className="absolute bottom-2.5 left-2.5 bg-emerald-50/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-800 shadow-2xs">
+                          <div className="absolute bottom-2.5 left-2.5 bg-emerald-50/95 backdrop-blur-md px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-800 shadow-2xs z-10">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>Pesanan Telah Tiba & Diterima</span>
+                            <span>Pesanan Telah Tiba &amp; Diterima</span>
                           </div>
                         ) : (
-                          <div className="absolute bottom-2.5 left-2.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-stone-200/80 flex items-center gap-1.5 text-[10px] font-semibold text-neutral-700 shadow-2xs">
+                          <div className="absolute bottom-2.5 left-2.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-stone-200/80 flex items-center gap-1.5 text-[10px] font-semibold text-neutral-700 shadow-2xs z-10">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#934B19] animate-pulse" />
                             <span>Kurir OTW (~35 km/j)</span>
                           </div>
@@ -676,7 +728,7 @@ export default function NotificationsPage() {
 
                 {/* 3. GRID RIWAYAT PESANAN TERAKHIR (HISTORY GRID) */}
                 <div className="w-full bg-[#f6f3f5] py-12 border-t border-stone-200 mt-8">
-                  <div className="max-w-7xl mx-auto px-6 flex flex-col gap-6 text-left">
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col gap-6 text-left">
                     
                     <div className="flex justify-between items-end">
                       <div>
@@ -866,82 +918,131 @@ export default function NotificationsPage() {
               </button>
             </div>
 
-            {/* Canvas Animasi SVG Rute Perjalanan Kurir yang Terang & Elegan */}
-            <div className="relative w-full rounded-2xl overflow-hidden border border-stone-200 bg-[#FDFBF7] shadow-inner">
-              <svg className="w-full h-72 sm:h-80" viewBox="0 0 600 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Street Grid Background */}
-                <rect width="600" height="300" fill="#FAF7F2" />
-                <path d="M0,50 H600 M0,100 H600 M0,150 H600 M0,200 H600 M0,250 H600" stroke="#EFE9E0" strokeWidth="1" strokeDasharray="4 4" />
-                <path d="M50,0 V300 M150,0 V300 M250,0 V300 M350,0 V300 M450,0 V300 M550,0 V300" stroke="#EFE9E0" strokeWidth="1" strokeDasharray="4 4" />
+            {/* Canvas OpenStreetMap & Animasi Rute Modal Penuh */}
+            <div className="relative w-full rounded-2xl overflow-hidden border border-stone-200 bg-[#FDFBF7] shadow-inner h-80 sm:h-96">
+              {mapViewMode === 'openstreetmap' ? (
+                <>
+                  <iframe
+                    title="OpenStreetMap Full Screen Route"
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    scrolling="no"
+                    marginHeight={0}
+                    marginWidth={0}
+                    src="https://www.openstreetmap.org/export/embed.html?bbox=106.74%2C-6.28%2C106.94%2C-6.14&layer=mapnik&marker=-6.2088%2C106.8456"
+                    className="w-full h-full filter contrast-[1.02] brightness-[0.98]"
+                  />
+                  
+                  {/* Floating Route Information */}
+                  <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-stone-200 shadow-sm flex flex-col gap-0.5 text-xs text-stone-900 z-10">
+                    <span className="text-[10px] font-bold uppercase text-[#934B19] tracking-wider">Titik Awal: Dapur Utama Nefakky</span>
+                    <span className="font-semibold truncate max-w-[280px]">Tujuan: {activeOrder.address || 'Alamat Anda'}</span>
+                  </div>
+                </>
+              ) : (
+                <svg className="w-full h-full" viewBox="0 0 600 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Street Grid Background */}
+                  <rect width="600" height="300" fill="#FAF7F2" />
+                  <path d="M0,50 H600 M0,100 H600 M0,150 H600 M0,200 H600 M0,250 H600" stroke="#EFE9E0" strokeWidth="1" strokeDasharray="4 4" />
+                  <path d="M50,0 V300 M150,0 V300 M250,0 V300 M350,0 V300 M450,0 V300 M550,0 V300" stroke="#EFE9E0" strokeWidth="1" strokeDasharray="4 4" />
 
-                {/* Highway Road Base */}
-                <path d="M 80,220 C 160,140 220,240 320,130 C 400,40 480,180 520,80" stroke="#E8D8C8" strokeWidth="14" strokeLinecap="round" />
-                <path d="M 80,220 C 160,140 220,240 320,130 C 400,40 480,180 520,80" stroke="#934B19" strokeWidth="6" strokeLinecap="round" />
-                <path d="M 80,220 C 160,140 220,240 320,130 C 400,40 480,180 520,80" stroke="#FDE68A" strokeWidth="2" strokeDasharray="8 6" strokeLinecap="round" />
+                  {/* Highway Road Base */}
+                  <path d="M 80,220 C 160,140 220,240 320,130 C 400,40 480,180 520,80" stroke="#E8D8C8" strokeWidth="14" strokeLinecap="round" />
+                  <path d="M 80,220 C 160,140 220,240 320,130 C 400,40 480,180 520,80" stroke="#934B19" strokeWidth="6" strokeLinecap="round" />
+                  <path d="M 80,220 C 160,140 220,240 320,130 C 400,40 480,180 520,80" stroke="#FDE68A" strokeWidth="2" strokeDasharray="8 6" strokeLinecap="round" />
 
-                {/* Start Node: Dapur Utama */}
-                <g transform="translate(80, 220)">
-                  <circle r="22" fill="#934B19" fillOpacity="0.2" className="animate-ping" />
-                  <circle r="16" fill="#25160E" stroke="#F59E0B" strokeWidth="2.5" />
-                  <text y="4" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="bold">Dapur</text>
-                </g>
-                <text x="80" y="260" textAnchor="middle" fill="#25160E" fontSize="11" fontWeight="bold" fontFamily="sans-serif">Dapur Utama Nefakky</text>
-                <text x="80" y="275" textAnchor="middle" fill="#78716C" fontSize="9" fontFamily="sans-serif">Puri Bojong Lestari 1</text>
+                  {/* Start Node: Dapur Utama */}
+                  <g transform="translate(80, 220)">
+                    <circle r="22" fill="#934B19" fillOpacity="0.2" className="animate-ping" />
+                    <circle r="16" fill="#25160E" stroke="#F59E0B" strokeWidth="2.5" />
+                    <text y="4" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="bold">Dapur</text>
+                  </g>
+                  <text x="80" y="260" textAnchor="middle" fill="#25160E" fontSize="11" fontWeight="bold" fontFamily="sans-serif">Dapur Utama Nefakky</text>
+                  <text x="80" y="275" textAnchor="middle" fill="#78716C" fontSize="9" fontFamily="sans-serif">Puri Bojong Lestari 1</text>
 
-                {/* End Node: Customer Destination */}
-                <g transform="translate(520, 80)">
-                  <circle r="22" fill="#10B981" fillOpacity="0.2" className="animate-ping" />
-                  <circle r="16" fill="#064E3B" stroke="#34D399" strokeWidth="2.5" />
-                  <text y="4" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="bold">Tujuan</text>
-                </g>
-                <text x="520" y="118" textAnchor="middle" fill="#064E3B" fontSize="11" fontWeight="bold" fontFamily="sans-serif">Alamat Anda</text>
-                <text x="520" y="132" textAnchor="middle" fill="#78716C" fontSize="9" fontFamily="sans-serif">{activeOrder.address ? activeOrder.address.slice(0, 22) + '...' : 'Lokasi Pengiriman'}</text>
+                  {/* End Node: Customer Destination */}
+                  <g transform="translate(520, 80)">
+                    <circle r="22" fill="#10B981" fillOpacity="0.2" className="animate-ping" />
+                    <circle r="16" fill="#064E3B" stroke="#34D399" strokeWidth="2.5" />
+                    <text y="4" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="bold">Tujuan</text>
+                  </g>
+                  <text x="520" y="118" textAnchor="middle" fill="#064E3B" fontSize="11" fontWeight="bold" fontFamily="sans-serif">Alamat Anda</text>
+                  <text x="520" y="132" textAnchor="middle" fill="#78716C" fontSize="9" fontFamily="sans-serif">{activeOrder.address ? activeOrder.address.slice(0, 22) + '...' : 'Lokasi Pengiriman'}</text>
 
-                          {/* Animated Courier / Delivery Driver Moving Along Route ATAU Selesai di Tujuan */}
-                          {isOrderCompleted ? (
-                            <g transform="translate(520, 80)">
-                              <circle r="24" fill="#10B981" fillOpacity="0.25" />
-                              <circle r="17" fill="#10B981" stroke="#FFFFFF" strokeWidth="2.5" />
-                              <g transform="translate(-8, -8) scale(0.65)">
-                                <path d="M20 6L9 17l-5-5" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                              </g>
-                            </g>
-                          ) : (
-                            <g>
-                              <animateMotion 
-                                dur="7s" 
-                                repeatCount="indefinite" 
-                                rotate="auto"
-                                path="M 80,220 C 160,140 220,240 320,130 C 400,40 480,180 520,80" 
-                              />
-                              <circle r="20" fill="#F59E0B" fillOpacity="0.3" className="animate-ping" />
-                              <circle r="14" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
-                              <g transform="translate(-7, -7) scale(0.6)">
-                                <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v4c0 .6.4 1 1 1h1" fill="none" stroke="#1A1816" strokeWidth="3" strokeLinecap="round" />
-                                <circle cx="7" cy="17" r="3.5" fill="#1A1816" />
-                                <circle cx="17" cy="17" r="3.5" fill="#1A1816" />
-                              </g>
-                            </g>
-                          )}
-                        </svg>
+                  {/* Animated Courier */}
+                  {isOrderCompleted ? (
+                    <g transform="translate(520, 80)">
+                      <circle r="24" fill="#10B981" fillOpacity="0.25" />
+                      <circle r="17" fill="#10B981" stroke="#FFFFFF" strokeWidth="2.5" />
+                      <g transform="translate(-8, -8) scale(0.65)">
+                        <path d="M20 6L9 17l-5-5" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+                    </g>
+                  ) : (
+                    <g>
+                      <animateMotion 
+                        dur="7s" 
+                        repeatCount="indefinite" 
+                        rotate="auto" 
+                        path="M 80,220 C 160,140 220,240 320,130 C 400,40 480,180 520,80" 
+                      />
+                      <circle r="20" fill="#F59E0B" fillOpacity="0.3" className="animate-ping" />
+                      <circle r="14" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="2" />
+                      <g transform="translate(-7, -7) scale(0.6)">
+                        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v4c0 .6.4 1 1 1h1" fill="none" stroke="#1A1816" strokeWidth="3" strokeLinecap="round" />
+                        <circle cx="7" cy="17" r="3.5" fill="#1A1816" />
+                        <circle cx="17" cy="17" r="3.5" fill="#1A1816" />
+                      </g>
+                    </g>
+                  )}
+                </svg>
+              )}
 
-                        {/* Floating Live Telemetry Badge */}
-                        {isOrderCompleted ? (
-                          <div className="absolute top-3 left-3 bg-emerald-50/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-emerald-200 flex items-center gap-2 shadow-2xs">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            <span className="text-[11px] font-semibold text-emerald-800">
-                              Status: Pesanan Telah Sampai di Alamat Tujuan
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-stone-200 flex items-center gap-2 shadow-2xs">
-                            <span className="w-2 h-2 rounded-full bg-[#934B19] animate-pulse" />
-                            <span className="text-[11px] font-semibold text-neutral-800">
-                              Kurir Meluncur: Kecepatan ~35 km/jam
-                            </span>
-                          </div>
-                        )}
-                      </div>
+              {/* Mode Switcher Inside Modal */}
+              <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md p-1 rounded-xl border border-stone-200 shadow-xs flex items-center gap-1 z-10">
+                <button
+                  type="button"
+                  onClick={() => setMapViewMode('openstreetmap')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    mapViewMode === 'openstreetmap'
+                      ? 'bg-black text-white shadow-xs'
+                      : 'text-stone-600 hover:text-black'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>OpenStreetMap</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapViewMode('illustration')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    mapViewMode === 'illustration'
+                      ? 'bg-black text-white shadow-xs'
+                      : 'text-stone-600 hover:text-black'
+                  }`}
+                >
+                  <span>Rute Dapur</span>
+                </button>
+              </div>
+
+              {/* Floating Live Telemetry Badge */}
+              {isOrderCompleted ? (
+                <div className="absolute bottom-3 left-3 bg-emerald-50/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-emerald-200 flex items-center gap-2 shadow-2xs z-10">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[11px] font-semibold text-emerald-800">
+                    Status: Pesanan Telah Sampai di Alamat Tujuan
+                  </span>
+                </div>
+              ) : (
+                <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-stone-200 flex items-center gap-2 shadow-2xs z-10">
+                  <span className="w-2 h-2 rounded-full bg-[#934B19] animate-pulse" />
+                  <span className="text-[11px] font-semibold text-neutral-800">
+                    Kurir Meluncur: Kecepatan ~35 km/jam
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Courier & Telemetry Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">

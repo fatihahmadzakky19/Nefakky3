@@ -1,7 +1,9 @@
+'use client';
+
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Printer, FileSpreadsheet, Menu, LogOut, MessageCircle, ArrowRight } from 'lucide-react';
+import { Menu, LogOut, MessageCircle, ArrowRight, Printer, FileSpreadsheet } from 'lucide-react';
 import { ChatMessage } from '@/context/DataContext';
 
 interface AdminHeaderProps {
@@ -17,15 +19,26 @@ interface AdminHeaderProps {
 export default function AdminHeader({
   onPrintPDF,
   onExportCSV,
-  managerName = 'Fatih Ahmad Zakky',
-  managerRole = 'Store Manager',
+  managerName = 'Admin User',
+  managerRole = 'Enterprise Level',
   onToggleMobileSidebar,
   unreadChatCount = 0,
   unreadMessagesList = []
 }: AdminHeaderProps) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
   const [showChatDropdown, setShowChatDropdown] = useState<boolean>(false);
+
+  const getPageTitle = () => {
+    if (pathname === '/admin') return 'Tinjauan Bisnis';
+    if (pathname.startsWith('/admin/orders')) return 'Kitchen Desk (Pesanan Masuk)';
+    if (pathname.startsWith('/admin/products')) return 'Katalog Produk';
+    if (pathname.startsWith('/admin/promotions')) return 'Voucher & Promosi';
+    if (pathname.startsWith('/admin/reviews')) return 'Moderasi Ulasan';
+    if (pathname.startsWith('/admin/settings')) return 'Pengaturan & CS Chat';
+    return 'Tinjauan Bisnis';
+  };
 
   const handleLogout = async () => {
     if (confirm('Apakah Anda yakin ingin keluar (log out) dari panel admin?')) {
@@ -35,74 +48,109 @@ export default function AdminHeader({
   };
 
   return (
-    <header className="fixed top-0 left-0 lg:left-72 right-0 h-16 bg-[#fbf9f5]/85 backdrop-blur-xl border-b border-amber-900/10 z-40 flex items-center justify-between px-4 sm:px-8 print:hidden">
-      {/* Mobile Toggle Button & Brand Title */}
-      <div className="flex items-center gap-3">
+    <header className="fixed top-0 left-0 lg:left-72 right-0 h-16 bg-surface/85 backdrop-blur-xl border-b border-outline-variant/20 z-40 flex items-center justify-between px-4 sm:px-8 print:hidden">
+      {/* Breadcrumbs (Left) */}
+      <div className="flex items-center gap-2 sm:gap-3">
         <button
           onClick={onToggleMobileSidebar}
-          className="p-2 rounded-xl text-[#25160e] hover:bg-stone-200/60 lg:hidden transition-colors"
+          className="p-2 rounded-xl text-on-surface hover:bg-surface-container lg:hidden transition-colors cursor-pointer"
           aria-label="Toggle Mobile Sidebar"
         >
           <Menu className="w-5 h-5" />
         </button>
-        <span className="font-serif font-bold text-lg text-[#25160e] lg:hidden">
-          Nefakky Admin
-        </span>
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-on-surface-variant font-body-sm uppercase tracking-widest text-[11px]">
+            Dashboard
+          </span>
+          <span className="material-symbols-outlined text-outline text-[16px]">
+            chevron_right
+          </span>
+          <span className="font-headline-sm text-on-surface text-xs sm:text-sm font-bold truncate">
+            {getPageTitle()}
+          </span>
+        </div>
       </div>
 
+      {/* Right Controls: Live Analytics Badge, CS Chat, & Profile */}
       <div className="flex items-center gap-2 sm:gap-4">
-        {/* Tombol & Popover Notifikasi Chat Pelanggan */}
+        {/* Live Analytics Pulsing Pill */}
+        <div className="hidden sm:flex items-center gap-2 bg-error/5 px-3 py-1 rounded-full border border-error/10">
+          <span className="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+          <span className="text-[11px] font-bold text-error uppercase tracking-tighter">
+            Live Analytics
+          </span>
+        </div>
+
+        {/* Action Buttons: Print & Export */}
+        <button 
+          onClick={onPrintPDF}
+          className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-colors cursor-pointer"
+          title="Cetak Laporan PDF"
+        >
+          <Printer className="w-4 h-4" />
+        </button>
+
+        <button 
+          onClick={onExportCSV}
+          className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-colors cursor-pointer"
+          title="Unduh Laporan Excel / CSV"
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+        </button>
+
+        {/* CS Live Chat Trigger */}
         <div className="relative">
           <button 
             onClick={() => setShowChatDropdown(!showChatDropdown)}
-            className="p-2 text-[#4f4540] hover:text-[#25160e] hover:bg-stone-100 rounded-full transition-colors relative cursor-pointer"
+            className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-colors relative cursor-pointer"
             title="Notifikasi CS Live Chat"
           >
-            <MessageCircle className="w-5 h-5 text-[#934b19]" />
+            <MessageCircle className="w-4 h-4 text-on-tertiary-fixed-variant" />
             {unreadChatCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-rose-600 text-white text-[9px] font-extrabold rounded-full flex items-center justify-center animate-pulse border border-white">
+              <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-error text-white text-[9px] font-extrabold rounded-full flex items-center justify-center animate-pulse border border-white">
                 {unreadChatCount}
               </span>
             )}
           </button>
 
-          {/* DROPDOWN POPOVER CS LIVE CHAT */}
+          {/* Chat Popover */}
           {showChatDropdown && (
             <div 
-              className="absolute right-0 mt-2 w-80 bg-white rounded-3xl shadow-2xl border border-amber-900/15 overflow-hidden z-50 animate-fade-in"
+              className="absolute right-0 mt-2 w-80 bg-surface-container-lowest rounded-3xl shadow-2xl border border-outline-variant/30 overflow-hidden z-50 animate-fade-in text-left"
               onClick={() => setShowChatDropdown(false)}
             >
-              <div className="p-3.5 bg-[#25160e] text-white flex items-center justify-between">
-                <span className="text-xs font-bold font-serif text-amber-200 flex items-center gap-1.5">
-                  <MessageCircle className="w-3.5 h-3.5 text-amber-400" />
+              <div className="p-3.5 bg-primary text-on-primary flex items-center justify-between">
+                <span className="text-xs font-bold font-serif text-tertiary-fixed flex items-center gap-1.5">
+                  <MessageCircle className="w-3.5 h-3.5 text-tertiary-fixed" />
                   <span>Notifikasi Chat Pelanggan ({unreadChatCount})</span>
                 </span>
               </div>
 
-              <div className="max-h-72 overflow-y-auto divide-y divide-stone-100">
+              <div className="max-h-72 overflow-y-auto divide-y divide-surface-container">
                 {unreadMessagesList.length === 0 ? (
-                  <p className="text-xs text-stone-400 p-4 text-center">Tidak ada pesan belum dibaca.</p>
+                  <p className="text-xs text-on-surface-variant p-4 text-center">Tidak ada pesan belum dibaca.</p>
                 ) : (
                   unreadMessagesList.map((m) => (
                     <div 
                       key={m.id}
                       onClick={() => router.push(`/admin/settings?chat=${encodeURIComponent(m.userEmail)}`)}
-                      className="p-3 hover:bg-stone-50 transition-colors cursor-pointer space-y-1"
+                      className="p-3 hover:bg-surface-container transition-colors cursor-pointer space-y-1"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#25160e] truncate">{m.userName || m.userEmail.split('@')[0]}</span>
-                        <span className="text-[10px] text-stone-400">{m.timestamp}</span>
+                        <span className="text-xs font-bold text-on-surface truncate">{m.userName || m.userEmail.split('@')[0]}</span>
+                        <span className="text-[10px] text-on-surface-variant">{m.timestamp}</span>
                       </div>
-                      <p className="text-[11px] text-stone-600 truncate">"{m.text}"</p>
+                      <p className="text-[11px] text-on-surface-variant truncate">"{m.text}"</p>
                     </div>
                   ))
                 )}
               </div>
-
-              <div className="p-2.5 bg-[#fbf9f5] border-t border-stone-100 text-center">
+              
+              <div className="p-2.5 bg-surface-container-low border-t border-outline-variant/10 text-center">
                 <button
                   onClick={() => router.push('/admin/settings')}
-                  className="text-xs font-bold text-[#934b19] hover:underline inline-flex items-center gap-1"
+                  className="text-xs font-bold text-on-tertiary-fixed-variant hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
                   <span>Buka Meja Pelayanan CS Live Chat</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -112,41 +160,39 @@ export default function AdminHeader({
           )}
         </div>
 
-        <button 
-          onClick={onPrintPDF}
-          className="p-2 text-[#4f4540] hover:text-[#25160e] hover:bg-stone-100 rounded-full transition-colors relative"
-          title="Cetak Laporan PDF"
-        >
-          <Printer className="w-5 h-5" />
-        </button>
-        <button 
-          onClick={onExportCSV}
-          className="p-2 text-[#4f4540] hover:text-[#25160e] hover:bg-stone-100 rounded-full transition-colors relative"
-          title="Unduh Laporan Excel / CSV"
-        >
-          <FileSpreadsheet className="w-5 h-5" />
-        </button>
-
-        <div className="flex items-center gap-2.5 sm:gap-3 pl-3 sm:pl-4 border-l border-amber-900/10">
+        {/* Admin Profile Details */}
+        <div className="flex items-center gap-2.5 pl-3 sm:pl-4 border-l border-outline-variant/30">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-[#1b1c1a] leading-none">{managerName}</p>
-            <p className="text-[10px] text-[#4f4540] font-medium mt-0.5">{managerRole}</p>
+            <p className="font-label-caps text-on-surface leading-none mb-1 text-[11px]">
+              {user?.displayName || managerName}
+            </p>
+            <p className="text-[10px] text-on-surface-variant uppercase font-medium">
+              {managerRole}
+            </p>
           </div>
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#25160e] text-white flex items-center justify-center font-bold text-xs shadow-sm">
-            {managerName.charAt(0)}
+
+          <div 
+            onClick={handleLogout}
+            className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold text-xs cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
+            title="Klik untuk Keluar (Logout)"
+          >
+            {user?.photoURL ? (
+              <img src={user.photoURL} alt="Admin" className="w-full h-full rounded-full object-cover" />
+            ) : (
+              <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
+            )}
           </div>
 
           <button
             onClick={handleLogout}
-            className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-100/60 rounded-xl transition-colors flex items-center gap-1 text-xs font-bold"
-            title="Keluar / Log Out"
+            className="p-1.5 text-error hover:bg-error/10 rounded-xl transition-colors hidden md:flex items-center gap-1 text-xs font-bold cursor-pointer ml-1"
+            title="Keluar (Log out)"
           >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden md:inline">Keluar</span>
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="text-[11px]">Keluar</span>
           </button>
         </div>
       </div>
     </header>
   );
 }
-

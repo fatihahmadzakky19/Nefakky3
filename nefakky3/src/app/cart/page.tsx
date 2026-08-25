@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useData, isVoucherValidNow } from '@/context/DataContext';
+import { formatCurrentRealtimeOrderDate } from '@/lib/orderTimeUtils';
 import { 
   Search, 
   Bell, 
@@ -196,10 +197,15 @@ export default function CartCheckoutWorkflowPage() {
   const shippingCost = calculateShippingByDistance(deliveryDistanceKm);
   const finalPayableTotal = Math.max(0, subtotal + shippingCost - discountAmount);
 
+  /**
+   * Handler: Menerapkan kode voucher promo ke keranjang belanja
+   * Memvalidasi kode kupon dan memperbarui persentase diskon
+   */
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!promoInput.trim()) return;
 
+    // Memanggil fungsi claimPromo dari CartContext
     const res = claimPromo(promoInput.trim());
     if (res.success) {
       setPromoMessage({ text: res.message, type: 'success' });
@@ -208,28 +214,38 @@ export default function CartCheckoutWorkflowPage() {
       setPromoMessage({ text: res.message, type: 'error' });
     }
 
+    // Menghilangkan pesan notifikasi promo setelah 4 detik
     setTimeout(() => setPromoMessage(null), 4000);
   };
 
+  /**
+   * Handler: Melanjutkan navigasi dari formulir alamat ke langkah pembayaran
+   */
   const handleProceedToPayment = () => {
     if (cartItems.length === 0) return;
     setStep('payment');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  /**
+   * Handler: Inisialisasi Transaksi Pembayaran
+   * - Jika metode COD: Langsung membuat pesanan tanpa popup Midtrans
+   * - Jika metode Online (VA / E-Wallet / QRIS / CC): Memanggil API Route Midtrans Charge
+   */
   const handleInitiatePayment = async () => {
     if (selectedPaymentMethod === 'cod') {
-      // COD langsung dieksekusi tanpa perlu bayar online
+      // Pembayaran Bayar di Tempat (COD) langsung dieksekusi secara instan
       handleExecutePayment();
       return;
     }
 
-    // Midtrans Real Sandbox Transaction Generation
+    // Mengaktifkan status pemrosesan dan loading pembayaran online
     setIsProcessingPayment(true);
     setMidtransStatus('loading');
     const newOrderId = `NFK-${Math.floor(100000 + Math.random() * 900000)}`;
 
     try {
+      // Mengirim payload transaksi ke API Route Next.js (/api/midtrans/charge)
       const res = await fetch('/api/midtrans/charge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -257,6 +273,7 @@ export default function CartCheckoutWorkflowPage() {
       setIsProcessingPayment(false);
 
       if (data.success) {
+        // Menyimpan data respons pembayaran Midtrans ke state lokal
         setMidtransTx({
           orderId: data.orderId || newOrderId,
           vaNumber: data.vaNumber || newOrderId,
@@ -269,7 +286,7 @@ export default function CartCheckoutWorkflowPage() {
         setMidtransStatus('pending');
         setShowSandboxModal(true);
 
-        // Start Automatic Background Status Polling every 2.5s
+        // Memulai polling otomatis status pelunasan setiap 2.5 detik
         startStatusPolling(data.orderId || newOrderId);
       } else {
         alert(data.error || 'Gagal menghubungi Midtrans Sandbox API.');
@@ -281,11 +298,19 @@ export default function CartCheckoutWorkflowPage() {
     }
   };
 
+  /**
+   * Handler: Eksekusi Penyelesaian Pesanan & Simpan ke Database
+   * - Menghasilkan ID unik pesanan (format NFK-XXXXXX)
+   * - Menyimpan snapshot rincian item produk, kuantitas, harga, dan kalkulasi total
+   * - Menyimpan status pembayaran (PAID untuk Midtrans, AWAITING untuk COD)
+   * - Mengosongkan keranjang belanja setelah transaksi berhasil
+   */
   const handleExecutePayment = (explicitOrderId?: string, isMidtransPaid: boolean = false) => {
     setIsProcessingPayment(true);
     setShowSandboxModal(false);
     stopStatusPolling();
 
+    // Menentukan ID pesanan dari Midtrans atau membuat ID baru
     const newOrderId = explicitOrderId || midtransTx?.orderId || `NFK-${Math.floor(100000 + Math.random() * 900000)}`;
     const paymentMethodNames: { [key: string]: string } = {
       va: 'Virtual Account BCA (Midtrans)',
@@ -297,6 +322,7 @@ export default function CartCheckoutWorkflowPage() {
 
     const isCod = selectedPaymentMethod === 'cod';
 
+    // Membentuk objek data pesanan lengkap
     const orderData = {
       id: newOrderId,
       customerName: (customerName || user?.displayName || 'Pelanggan Nefakky').trim(),
@@ -323,10 +349,12 @@ export default function CartCheckoutWorkflowPage() {
       total: finalPayableTotal,
       voucherCode: appliedPromo || '',
       appliedPromo: appliedPromo || '',
-      date: 'Hari ini'
+      date: formatCurrentRealtimeOrderDate(new Date()),
+      createdAt: Date.now()
     };
 
     try {
+      // Menyimpan transaksi ke DataContext (LocalStorage & Firebase Sync)
       if (addOrder) {
         addOrder(orderData);
       }
@@ -334,6 +362,7 @@ export default function CartCheckoutWorkflowPage() {
       console.warn("Order save notice:", err);
     }
 
+    // Menyimpan pesanan yang baru diselesaikan ke state selesai
     setCompletedOrder(orderData);
 
     // Otomatis simpan alamat baru ke profil pengguna jika belum ada
@@ -428,13 +457,13 @@ export default function CartCheckoutWorkflowPage() {
 
         {/* 2. MAIN WORKFLOW AREA */}
         <main className="w-full pt-20">
-          <div className="flex flex-col w-full">
+          <div className="flex flex-col w-full pb-28 lg:pb-16">
             
             {/* ========================================================================= */}
             {/* STEP 1: KERANJANG BELANJA (CART) */}
             {/* ========================================================================= */}
             {step === 'cart' && (
-              <div className="max-w-7xl mx-auto px-6 py-8 w-full text-left">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full text-left">
                 
                 {/* Header Section */}
                 <div className="mb-8 flex flex-col gap-2">
@@ -630,7 +659,7 @@ export default function CartCheckoutWorkflowPage() {
             {/* STEP 2: CHECKOUT & ALAMAT PENGIRIMAN */}
             {/* ========================================================================= */}
             {step === 'address' && (
-              <div className="max-w-7xl mx-auto px-6 py-8 w-full text-left">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full text-left">
                 
                 {/* Stepper Header */}
                 <div className="mb-8 flex flex-col items-start gap-4">
@@ -911,7 +940,7 @@ export default function CartCheckoutWorkflowPage() {
             {/* STEP 3: PEMBAYARAN MIDTRANS SNAP */}
             {/* ========================================================================= */}
             {step === 'payment' && (
-              <div className="max-w-7xl mx-auto px-6 py-8 w-full text-left">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full text-left">
                 
                 {/* Stepper Header */}
                 <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-stone-100 p-6 sm:p-8 rounded-2xl border border-stone-200">
@@ -1115,6 +1144,7 @@ export default function CartCheckoutWorkflowPage() {
                       </div>
 
                       <div className="flex flex-col gap-3 mt-2">
+                        {/* Tombol Eksekusi Pembayaran Utama */}
                         <button 
                           disabled={isProcessingPayment}
                           onClick={handleInitiatePayment}
@@ -1135,12 +1165,14 @@ export default function CartCheckoutWorkflowPage() {
                           )}
                         </button>
 
+                        {/* Keterangan Khusus Metode Pembayaran Bayar di Tempat (COD) */}
                         {selectedPaymentMethod === 'cod' && (
                           <p className="text-[11px] text-stone-500 text-center font-light leading-relaxed bg-amber-50/80 p-2.5 rounded-xl border border-amber-200/60 text-amber-900">
-                            💡 <strong>Bayar di Tempat (COD):</strong> Anda tidak perlu melakukan transfer saat ini. Silakan siapkan uang pas sebesar <strong>Rp {finalPayableTotal.toLocaleString('id-ID')}</strong> untuk diserahkan ke kurir saat pesanan tiba.
+                            <strong>Bayar di Tempat (COD):</strong> Anda tidak perlu melakukan transfer saat ini. Silakan siapkan uang pas sebesar <strong>Rp {finalPayableTotal.toLocaleString('id-ID')}</strong> untuk diserahkan ke kurir saat pesanan tiba.
                           </p>
                         )}
 
+                        {/* Tombol Navigasi Kembali ke Langkah Sebelumnya */}
                         <button 
                           onClick={() => { setStep('address'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                           className="w-full bg-transparent hover:bg-stone-100 text-[#25160E] py-3 rounded-xl font-semibold text-xs border border-stone-200 transition-colors cursor-pointer"
@@ -1162,7 +1194,7 @@ export default function CartCheckoutWorkflowPage() {
             {/* STEP 4: PESANAN BERHASIL (SUCCESS) */}
             {/* ========================================================================= */}
             {step === 'success' && (
-              <div className="max-w-3xl mx-auto w-full px-6 py-12 flex-grow flex flex-col justify-center text-left animate-fade-in">
+              <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 flex-grow flex flex-col justify-center text-left animate-fade-in">
                 
                 {/* Stepper Header Selesai */}
                 <div className="mb-8 flex justify-between items-center relative before:absolute before:inset-0 before:top-1/2 before:-translate-y-1/2 before:h-px before:w-full before:bg-stone-200 before:z-0">
@@ -1447,8 +1479,9 @@ export default function CartCheckoutWorkflowPage() {
               </p>
             </div>
 
+            {/* Status Pelunasan Pembayaran */}
             <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-900 font-medium">
-              ✨ Status: <strong>LUNAS (Settlement)</strong> • Pesanan telah diteruskan ke Dapur Resto Nefakky!
+              Status: <strong>LUNAS (Settlement)</strong> • Pesanan telah diteruskan ke Dapur Resto Nefakky!
             </div>
 
             <button 
