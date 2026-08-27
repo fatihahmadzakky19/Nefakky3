@@ -24,7 +24,6 @@ import Footer from '@/components/Footer';
 import { 
   ShoppingBag, 
   Star, 
-  Heart, 
   Plus, 
   Minus, 
   ArrowLeft,
@@ -248,14 +247,6 @@ export default function MenuDetailPage() {
           </Link>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsWishlist(!isWishlist)}
-              className="w-10 h-10 rounded-full bg-white border border-stone-200 text-stone-700 hover:text-rose-500 flex items-center justify-center shadow-xs transition-colors active:scale-95"
-              title="Tambah ke Favorit"
-            >
-              <Heart className={`w-4 h-4 ${isWishlist ? 'fill-rose-500 text-rose-500' : ''}`} />
-            </button>
-
             <button
               onClick={handleShare}
               className="w-10 h-10 rounded-full bg-white border border-stone-200 text-stone-700 hover:text-black flex items-center justify-center shadow-xs transition-colors active:scale-95"
@@ -496,7 +487,7 @@ export default function MenuDetailPage() {
                       </span>
                     </div>
                     <p className="text-[11px] text-stone-600 font-light mt-0.5 leading-relaxed">
-                      Puri Bojong Lestari 1 Blok AF 41, RT 10 / RW 14, Kel. Pabuaran, Kec. Bojong Gede, Kab. Bogor, Prov. Jawa Barat
+                      {(product as any).kitchenAddress || (product as any).origin || 'Puri Bojong Lestari 1 Blok AF 41, RT 10 / RW 14, Kel. Pabuaran, Kec. Bojong Gede, Kab. Bogor, Prov. Jawa Barat'}
                     </p>
                   </div>
                 </div>

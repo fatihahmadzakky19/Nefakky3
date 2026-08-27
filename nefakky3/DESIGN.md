@@ -1,93 +1,110 @@
-# Master Design System & UI/UX Guidelines — Nefakky
+# Master Design System & UI/UX Guidelines — Nefakky Marketplace
 
 **Produk**: Nefakky - Artisanal Food & Culinary Marketplace  
-**Versi Design**: 3.6.0 (Google Stitch AI UI System, Midtrans Sandbox Interactive Console, OpenStreetMap Live Route Canvas, 3-Way Photo Studio, Artisanal Luxury & Enterprise Command Center)  
-**Tanggal Terakhir Diperbarui**: 25 Agustus 2026  
-**Status**: Production Standard (100% Passed Test Suite & Type-Safe)  
-**Penulis**: Tim Pengembang Nefakky (Fatih Ahmad Zakky) & Google Stitch AI Design System  
+**Versi Design System**: 3.6.0 (Google Stitch Artisanal Luxury, Midtrans Sandbox Interactive Console, OpenStreetMap Dual-Engine Canvas, Realtime WebSockets Telemetry, & Enterprise Admin Command Center)  
+**Status**: Production Standard (100% Passed Test Suite, Type-Safe, WCAG 2.1 AA Compliant)  
+**Dokumen Terkait**: [DESIGN_USER.md](DESIGN_USER.md) (Customer UI) & [DESIGN_ADMIN.md](DESIGN_ADMIN.md) (Admin Command Center)  
+**Penulis**: Tim Pengembang Nefakky & Google Stitch AI Design System  
 
 ---
 
-## 1. Arsitektur & Hierarki Dokumentasi Desain
+## 1. Visi & Filosofi Desain: "Google Stitch Artisanal Luxury"
 
-Dokumentasi spesifikasi desain antarmuka **Nefakky** dibagi menjadi dua dokumen mendalam sesuai target peran pengguna:
+Desain antarmuka **Nefakky** mengusung konsep **"Google Stitch Artisanal Luxury"**. Filosofi ini memadukan kehangatan resep masakan tradisional rumahan berkualitas tinggi dengan ketepatan dan efisiensi platform e-commerce & operational command center berstandar enterprise.
 
-1. 🛒 **[DESIGN_USER.md](DESIGN_USER.md)** — Spesifikasi UI/UX Lengkap untuk Aplikasi Pelanggan (*Customer Facing Application*).
-   - *Beranda Hero Showcase, Katalog Menu 3-Kategori, Modal Varian 3-Jus Interaktif, Alur Checkout 4-Tahap Midtrans Sandbox, Stepper Lacak Pesanan 5-Tahap Real-Time, Peta Rute Kurir OpenStreetMap Interaktif, Riwayat Pesanan Realtime, 3-Way Photo Studio Picker, dan Modal Cetak Struk PDF Resmi.*
-
-2. 🏢 **[DESIGN_ADMIN.md](DESIGN_ADMIN.md)** — Spesifikasi UI/UX Lengkap untuk Enterprise Command Center & Dapur (*Admin & Kitchen App*).
-   - *Executive Dark Command Layout, 5 Metrik KPI Finansial, Realtime Calendar Clock WIB, Editor Grafik Omset Penjualan Interaktif SVG, Modal Input Omset Manual POS/Bazar, Kitchen Order Management 5-Tahap, Pengaturan Peta OpenStreetMap & Geolocation, Manajemen Inventaris Produk, Generator Voucher Promo, Moderasi Ulasan, dan Export Engine Excel (.xls)/PDF.*
-
----
-
-## 2. Filosofi Desain: "Google Stitch Artisanal Luxury"
-
-Desain antarmuka **Nefakky** mengusung konsep **"Google Stitch Artisanal Luxury"**. Filosofi ini memadukan kehangatan otentik hidangan tradisional Nusantara dengan standar desain digital kelas dunia (*high-end D2C culinary e-commerce & enterprise command dashboard*).
-
-### 5 Pilar Utama Desain:
-1. **Warmth & Authenticity**: Nuansa warna kopi (*Espresso*) dan tanah liat (*Terracotta*) yang mencerminkan kehangatan resep masakan tradisional rumahan berkualitas tinggi.
-2. **Clarity & Effortless Navigation**: Alur pemesanan makanan yang ringkas dan bebas hambatan (pemilihan rasa 3-jus tanpa reload halaman, pemilihan label alamat cepat, dan checkout 4-tahap).
-3. **Midtrans Sandbox Interactive Console**: Modal pembayaran digital interaktif yang menampilkan nomor VA / QRIS riil dari API Midtrans, tautan langsung ke Midtrans Simulator, dan radar verifikasi pelunasan otomatis secara *real-time*.
-4. **OpenStreetMap Live Route Canvas**: Visualisasi peta geografis interaktif OpenStreetMap dengan pengalih mode ke animasi kurir meluncur (*Rute Dapur*).
-5. **Enterprise Operational Precision**: Dashboard eksekutif yang menyajikan data finansial, inventaris, jam kalender realtime WIB, dan pesanan secara terstruktur dengan modul ekspor standar korporat.
+### 5 Pilar Fundamental:
+1. **Warmth & Authenticity (Kehangatan Tradisional)**: Nuansa warna kopi pekat (*Deep Espresso* `#25160E`), terakota hangat (*Warm Terracotta* `#934B19`), dan kanvas krem hangat (*Warm Cream* `#FAF8F5`) yang menciptakan rasa nyaman, menggugah selera, dan otentik.
+2. **Effortless Frictionless Experience (Kemudahan Transaksi)**: Alur belanja ringkas 4-tahap tanpa reload halaman, pemilihan varian dinamis, kalkulator ongkir cerdas, dan deteksi otomatis status pelunasan.
+3. **Midtrans Sandbox Interactive Console (Transparansi Pembayaran)**: Panel pembayaran digital interaktif yang menyajikan nomor Virtual Account / QRIS riil, panduan transfer, dan background polling otomatis setiap 2.5 detik.
+4. **OpenStreetMap & Haversine Geolocation Engine (Presisi Pengantaran)**: Visualisasi rute pengiriman interaktif dari Dapur Pusat ke rumah pelanggan dengan estimasi waktu dan jarak akurat.
+5. **Enterprise Operational Precision (Ketepatan Operasional Admin)**: Dashboard manajemen terpusat dengan jam digital WIB realtime, dispatcher 5-tahap, generator invoice PDF resmi, dan ekspor spreadsheet Excel.
 
 ---
 
-## 3. Master Color Palette & Design Tokens
+## 2. Master Color Palette & Token Desain
 
-### 3.1 Primary & Brand Palette
 ```css
 :root {
-  /* Google Stitch Primary Espresso Palette */
-  --primary-espresso-dark: #25160E;       /* Deep Espresso Base (Navbar, Header & Brand Identity) */
-  --primary-espresso-container: #3C2A21;  /* Dark Container Fill & Active Button Highlights */
-  --primary-on-container: #AA9084;        /* Muted Warm Cream Subtitle Text */
+  /* =========================================================================
+     1. PALET WARNA UTAMA (ESPRESSO & ARTISANAL BRAND)
+     ========================================================================= */
+  --color-brand-espresso: #25160E;       /* Base Identity: Navbar, Hero, Dark Buttons */
+  --color-brand-espresso-dark: #1A1816;  /* Admin Executive Dark Header & Deep Surfaces */
+  --color-brand-espresso-light: #3C2A21; /* Active State Container & Elevated Badges */
+  
+  /* =========================================================================
+     2. PALET WARNA AKSEN & TERAKOTA
+     ========================================================================= */
+  --color-accent-terracotta: #934B19;    /* Primary CTA Buttons & Interactive Highlights */
+  --color-accent-amber: #F59E0B;         /* Badges, Promo Highlights, Rating Stars */
+  --color-accent-gold: #D97706;          /* Admin Executive Clock & Warning Accents */
 
-  /* Google Stitch Accent & Terracotta Palette */
-  --secondary-terracotta: #934B19;       /* Terracotta Primary CTA & Action Buttons */
-  --secondary-amber: #FFA26A;            /* Soft Amber Container Highlight & Badges */
-  --terracotta-on-container: #783603;    /* Deep Terracotta High-Contrast Text */
-  --accent-gold: #D97706;                /* Warm Gold Highlight & 5-Star Ratings */
+  /* =========================================================================
+     3. PALET PERMUKAAN & KANVAS (SURFACES & BACKGROUNDS)
+     ========================================================================= */
+  --color-surface-cream: #FAF8F5;        /* Background Kanvas Halaman Utama */
+  --color-surface-white: #FFFFFF;        /* Kartu Produk, Modal Dialog, Input Form */
+  --color-surface-muted: #F5F3EF;        /* Secondary Container & Table Header */
+  --color-surface-border: #E5E0D8;       /* Subtle Clean Border */
 
-  /* Surface & Neutral Canvas Colors */
-  --surface-warm-cream: #FBF9F5;         /* Main Page Background Canvas */
-  --surface-white: #FFFFFF;              /* Pure White Card Background */
-  --surface-muted-cream: #F5F3EF;        /* Input Fill & Secondary Background */
-  --surface-border: rgba(147, 75, 25, 0.15); /* Subtle Terracotta Border */
-
-  /* Semantic Status Indicators */
-  --status-completed: #10B981;           /* Emerald Green - Selesai / Lunas */
-  --status-cooking: #934B19;             /* Terracotta - Sedang Dimasak */
-  --status-waiting: #F59E0B;             /* Amber Gold - Menunggu Kurir */
-  --status-delivery: #3B82F6;            /* Royal Blue - Dalam Pengantaran */
-  --status-cancelled: #EF4444;           /* Crimson Red - Dibatalkan */
+  /* =========================================================================
+     4. INDIKATOR STATUS SEMANTIK (SEMANTIC STATUSES)
+     ========================================================================= */
+  --color-status-success: #10B981;       /* Emerald: Lunas (PAID), Completed, Online */
+  --color-status-warning: #F59E0B;       /* Amber: Sedang Dimasak (Cooking), Low Stock */
+  --color-status-info: #3B82F6;          /* Blue: Kurir Meluncur (Delivering) */
+  --color-status-danger: #EF4444;        /* Rose/Red: Dibatalkan (Cancelled), Refund */
 }
 ```
 
 ---
 
-## 4. Tipografi & Hierarki Teks
+## 3. Tipografi & Skala Hierarki Teks
 
-* **Headline Font Family**: *Newsreader / Playfair Display / Serif Elegance*
-  - Digunakan untuk judul utama (*Hero Headline*), nama hidangan, dan identitas kemewahan artisanal.
-* **Body & UI Font Family**: *Plus Jakarta Sans / Inter / Sans-Serif Clean*
-  - Digunakan untuk label tombol, deskripsi produk, paragraf, dan instruksi formulir.
-* **Financial & Data Font Family**: *JetBrains Mono / Space Mono / Mono Clean*
-  - Digunakan untuk penyajian harga mata uang (Rp), nomor Virtual Account, ID pesanan, dan koordinat GPS.
+| Kategori | Font Family | Contoh Penggunaan | Karakteristik |
+| :--- | :--- | :--- | :--- |
+| **Headline & Brand** | Serif (*Newsreader*, *Playfair Display*) | Logo Monogram, Judul Hero Banner, Nama Menu Spesial | Mewah, otentik, berwibawa |
+| **UI & Paragraf** | Sans-Serif (*Inter*, *Plus Jakarta Sans*) | Label tombol, deskripsi produk, form input | Jelas, bersih, mudah dibaca |
+| **Finansial & Data** | Monospace (*JetBrains Mono*, *Space Mono*) | Format harga (Rp), Nomor VA, Order ID, Jam WIB | Rapi, presisi, angka sejajar |
 
 ---
 
-## 5. Komponen Kunci Antarmuka
+## 4. Standar Grid, Container & Breakpoints Responsif
 
-### 5.1 Kartu Pelacakan Rute OpenStreetMap (`NotificationsPage`)
-* **Wadah Peta**: Kotak rasio aspek 16:9 beresolusi tinggi dengan radius sudut membulat `rounded-2xl` dan border `border-stone-200`.
-* **Badge Telemetri Bergerak**:
-  - Saat dalam pengantaran: Badge putih blur `bg-white/95 backdrop-blur-md` dengan indikator berkedip: `Kurir OTW (~35 km/j)`.
-  - Saat pesanan sampai: Badge hijau emerald `bg-emerald-50 text-emerald-800` dengan ikon centang terverifikasi.
-* **Pengalih Tampilan**: Tombol pill ganda `[OpenStreetMap]` dan `[Rute Dapur]` dengan transisi *smooth active state*.
+* **Lebar Maksimal Container**: `max-w-7xl` (`1280px`) terpusat (`mx-auto`).
+* **Padding Horizontal Halaman**:
+  * Smartphone (<640px): `px-4`
+  * Tablet (640px - 1024px): `px-6`
+  * Desktop (>1024px): `px-8` hingga `px-16`
+* **Breakpoint Tailwind CSS**:
+  * `sm`: `640px` (Ponsel Landscape / Tablet Mini)
+  * `md`: `768px` (Tablet Portait)
+  * `lg`: `1024px` (Laptop / Desktop Standar)
+  * `xl`: `1280px` (Layar Monitor Lebar)
 
-### 5.2 Jam Kalender Realtime (`RealtimeCalendarClock`)
-* Menyajikan waktu berdetak (*live ticking clock*) dengan ikon kalender, penanda waktu WIB, dan badge status sinkronisasi server API.
+---
 
-### 5.3 Konsol Pembayaran Midtrans Snap
-* Menampilkan panel rincian nomor pembayaran, instruksi transfer, batas waktu pelunasan, dan tombol 1-klik menuju simulator Midtrans resmi.
+## 5. Pedoman Ikonografi & Visual Semantik
+
+Semua ikon aplikasi menggunakan pustaka **Lucide React** dengan aturan ketat:
+* **Ukuran Standar**:
+  * Ikon Micro (Badge / Rating): `w-3.5 h-3.5` atau `w-4 h-4`
+  * Ikon Tombol & Menu: `w-4 h-4` atau `w-5 h-5`
+  * Ikon Hero / Empty State: `w-8 h-8` atau `w-12 h-12`
+* **Ketentuan Penggunaan Ikon**:
+  * `ShoppingBag`: Khusus untuk Keranjang Belanja dan Katalog Menu.
+  * `ChefHat` & `Flame`: Khusus untuk Dapur, Masakan Segar, dan Resep Warisan.
+  * `Truck` & `Navigation`: Khusus untuk Pengiriman, Rute Kurir, dan Peta GPS.
+  * `ShieldCheck`: Khusus untuk Panel Administrator dan Jaminan Keamanan Transaksi.
+  * `Receipt` & `FileText`: Khusus untuk Nota Pembayaran, Struk Digital, dan Invoice PDF.
+  * `Star`: Khusus untuk Rating Ulasan Rasa Bintang 1-5.
+  * `LogOut`: Khusus untuk Aksi Keluar Akun Pengguna.
+
+---
+
+## 6. Aksesibilitas (WCAG 2.1 AA) & Performa
+
+1. **Rasio Kontras Warna**: Memastikan rasio kontras teks minimum `4.5:1` terhadap warna latar belakang.
+2. **Keyboard Navigation & Focus Ring**: Seluruh elemen interaktif memiliki `focus:ring-2 focus:ring-[#25160E]` yang jelas saat ditekan tombol Tab.
+3. **Screen Reader Support**: Seluruh tombol icon memiliki atribut `aria-label` deskriptif (contoh: `aria-label="Tambah hidangan ke keranjang"`).
+4. **Optimasi Aset Gambar**: Seluruh gambar menggunakan komponen `<Image />` Next.js dengan properti `sizes`, `priority` untuk LCP hero banner, dan format kompresi modern WebP/AVIF.

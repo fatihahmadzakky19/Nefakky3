@@ -11,6 +11,11 @@ use App\Models\OrderItem;
 use App\Models\ProductItem;
 use App\Models\Voucher;
 use App\Traits\ApiResponseTrait;
+use App\Traits\BroadcastSafelyTrait;
+use App\Events\OrderPlacedEvent;
+use App\Events\OrderStatusUpdatedEvent;
+use App\Events\ProductStockUpdatedEvent;
+use App\Events\RealtimeActivityEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +26,7 @@ use Illuminate\Support\Facades\DB;
  */
 class OrderController extends Controller
 {
-    use ApiResponseTrait;
+    use ApiResponseTrait, BroadcastSafelyTrait;
 
     /**
      * Menampilkan daftar pesanan dengan filter status, email, dan paginasi
@@ -153,6 +158,9 @@ class OrderController extends Controller
                 }
             }
 
+            // 4. Pancarkan event realtime ke WebSocket Reverb
+            $this->safeBroadcast(new OrderPlacedEvent($order));
+
             return $this->createdResponse(new OrderResource($order->load('items')), 'Pesanan Anda berhasil dibuat!');
         });
     }
@@ -169,7 +177,11 @@ class OrderController extends Controller
             return $this->notFoundResponse('Pesanan tidak ditemukan');
         }
 
+        $oldStage = $order->status;
         $newStage = $order->advanceStatus();
+
+        // Pancarkan event realtime pembaruan status pesanan ke WebSocket Reverb
+        $this->safeBroadcast(new OrderStatusUpdatedEvent($order, $oldStage, "Status pesanan #{$order->order_id} diperbarui menjadi: {$newStage}"));
 
         return $this->successResponse([
             'order_id' => $order->order_id,
@@ -190,6 +202,7 @@ class OrderController extends Controller
             return $this->notFoundResponse('Pesanan tidak ditemukan');
         }
 
+        $oldStatus = $order->status;
         $order->customer_confirmed = true;
         $order->confirmed_at = now();
         $order->status = 'COMPLETED';
@@ -199,6 +212,9 @@ class OrderController extends Controller
         }
 
         $order->save();
+
+        // Pancarkan event realtime pesanan selesai ke WebSocket Reverb
+        $this->safeBroadcast(new OrderStatusUpdatedEvent($order, $oldStatus, "Pesanan #{$order->order_id} telah diterima oleh pelanggan dan selesai!"));
 
         return $this->successResponse(new OrderResource($order), 'Terima kasih atas konfirmasi Anda. Pesanan telah selesai!');
     }
@@ -224,6 +240,9 @@ class OrderController extends Controller
 
         $order->save();
 
+        // Pancarkan event realtime update pesanan
+        $this->safeBroadcast(new OrderStatusUpdatedEvent($order, $order->status, "Bukti foto untuk pesanan #{$order->order_id} telah diunggah"));
+
         return $this->successResponse(new OrderResource($order->load('items')), 'Foto bukti pesanan berhasil diunggah');
     }
 
@@ -238,7 +257,11 @@ class OrderController extends Controller
             return $this->notFoundResponse('Pesanan tidak ditemukan');
         }
 
+        $oldStatus = $order->status;
         $order->cancelOrder();
+
+        // Pancarkan event realtime pembatalan pesanan ke WebSocket Reverb
+        $this->safeBroadcast(new OrderStatusUpdatedEvent($order, $oldStatus, "Pesanan #{$order->order_id} telah dibatalkan"));
 
         return $this->successResponse(new OrderResource($order), 'Pesanan berhasil dibatalkan dan stok telah dikembalikan');
     }
@@ -273,6 +296,124 @@ class OrderController extends Controller
         $order->delete();
 
         return $this->successResponse(null, 'Pesanan berhasil dihapus');
+    }
+
+    /**
+     * Menghasilkan dan Mengunduh Dokumen Invoice Pesanan Resmi dalam format PDF
+     * Menggunakan library Barryvdh DomPDF
+     *
+     * @param string|int $id
+     * @return mixed
+     */
+    public function invoicePdf($id)
+    {
+        $order = Order::with('items')->find($id);
+
+        if (!$order) {
+            return $this->notFoundResponse('Pesanan tidak ditemukan untuk mencetak invoice');
+        }
+
+        $html = "
+        <html>
+        <head>
+            <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>
+            <title>Invoice #{$order->order_id} - Nefakky</title>
+            <style>
+                body { font-family: sans-serif; color: #25160E; margin: 20px; font-size: 12px; }
+                .header { text-align: center; border-bottom: 2px solid #25160E; padding-bottom: 15px; margin-bottom: 20px; }
+                .brand { font-size: 24px; font-weight: bold; letter-spacing: 2px; }
+                .subtitle { font-size: 11px; color: #666; margin-top: 4px; }
+                .info-table, .items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                .items-table th { background-color: #f7f4ef; font-weight: bold; }
+                .total-row td { font-weight: bold; font-size: 13px; background-color: #faf8f5; }
+                .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #888; border-top: 1px solid #eee; padding-top: 10px; }
+            </style>
+        </head>
+        <body>
+            <div class=\"header\">
+                <div class=\"brand\">NEFAKKY ARTISANAL</div>
+                <div class=\"subtitle\">Kuliner Masakan Rumahan Berkualitas UMKM Nusantara</div>
+                <div class=\"subtitle\">Puri Bojong Lestari 1 Blok AF 41, Bojong Gede, Bogor | WA: +62 812 3456 7890</div>
+            </div>
+
+            <table class=\"info-table\">
+                <tr>
+                    <td style=\"width: 50%;\">
+                        <strong>No. Pesanan:</strong> #{$order->order_id}<br>
+                        <strong>Tanggal:</strong> " . ($order->order_datetime ?? now()->toFormattedDateString()) . "<br>
+                        <strong>Status:</strong> " . strtoupper($order->status) . " (" . strtoupper($order->payment_badge) . ")
+                    </td>
+                    <td style=\"width: 50%; text-align: right;\">
+                        <strong>Pelanggan:</strong> {$order->customer_name}<br>
+                        <strong>No. Telp:</strong> {$order->phone}<br>
+                        <strong>Alamat:</strong> {$order->address}
+                    </td>
+                </tr>
+            </table>
+
+            <table class=\"items-table\">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Nama Menu / Hidangan</th>
+                        <th style=\"text-align: center;\">Jumlah</th>
+                        <th style=\"text-align: right;\">Harga Satuan</th>
+                        <th style=\"text-align: right;\">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>";
+
+        $no = 1;
+        foreach ($order->items as $item) {
+            $sub = $item->price * $item->quantity;
+            $html .= "
+                    <tr>
+                        <td style=\"text-align: center;\">{$no}</td>
+                        <td>{$item->product_name}</td>
+                        <td style=\"text-align: center;\">{$item->quantity}</td>
+                        <td style=\"text-align: right;\">Rp " . number_format($item->price, 0, ',', '.') . "</td>
+                        <td style=\"text-align: right;\">Rp " . number_format($sub, 0, ',', '.') . "</td>
+                    </tr>";
+            $no++;
+        }
+
+        $html .= "
+                    <tr>
+                        <td colspan=\"4\" style=\"text-align: right;\"><strong>Subtotal:</strong></td>
+                        <td style=\"text-align: right;\">Rp " . number_format($order->subtotal, 0, ',', '.') . "</td>
+                    </tr>
+                    <tr>
+                        <td colspan=\"4\" style=\"text-align: right;\"><strong>Ongkos Kirim:</strong></td>
+                        <td style=\"text-align: right;\">Rp " . number_format($order->shipping_cost, 0, ',', '.') . "</td>
+                    </tr>";
+
+        if ($order->discount > 0) {
+            $html .= "
+                    <tr>
+                        <td colspan=\"4\" style=\"text-align: right; color: green;\"><strong>Potongan Diskon Promo:</strong></td>
+                        <td style=\"text-align: right; color: green;\">-Rp " . number_format($order->discount, 0, ',', '.') . "</td>
+                    </tr>";
+        }
+
+        $html .= "
+                    <tr class=\"total-row\">
+                        <td colspan=\"4\" style=\"text-align: right;\"><strong>TOTAL DIBAYARKAN:</strong></td>
+                        <td style=\"text-align: right; color: #934B19;\"><strong>Rp " . number_format($order->total, 0, ',', '.') . "</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class=\"footer\">
+                <p>Terima kasih telah memesan hidangan lezat di Nefakky Marketplace!</p>
+                <p>Dokumen ini adalah bukti transaksi dan struk pembayaran yang sah.</p>
+            </div>
+        </body>
+        </html>";
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
+
+        return $pdf->download("Invoice_{$order->order_id}.pdf");
     }
 
     /**

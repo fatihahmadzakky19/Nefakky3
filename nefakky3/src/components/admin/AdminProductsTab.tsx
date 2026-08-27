@@ -5,7 +5,8 @@
  * KOMPONEN: AdminProductsTab (src/components/admin/AdminProductsTab.tsx)
  * DESKRIPSI: Konversi 100% presisi dari Stitch MCP HTML/Tailwind
  *            (Katalog Produk & Stok, Toolbar Filter, Grid Table Hidangan,
- *            serta Modal Tambah/Edit Produk Multi-Tab Solid Opaque White).
+ *            serta Modal Tambah/Edit Produk Multi-Tab Solid Opaque White
+ *            dengan Form Input Alamat Dapur / Lokasi Pengolahan Menu Lengkap).
  * ============================================================================
  */
 
@@ -26,9 +27,14 @@ import {
   Eye,
   EyeOff,
   Upload,
-  FolderOpen
+  FolderOpen,
+  MapPin,
+  Store,
+  Building2,
+  Navigation
 } from 'lucide-react';
 import { ProductItem } from '@/context/DataContext';
+import { getMapSettings, DEFAULT_CENTRAL_KITCHEN } from '@/lib/mapService';
 
 interface AdminProductsTabProps {
   productList: ProductItem[];
@@ -46,7 +52,7 @@ export default function AdminProductsTab({
   toggleProductVisibility
 }: AdminProductsTabProps) {
   // --------------------------------------------------------------------------
-  // STATE MANAGEMENT
+  // STATE MODAL TAMBAH / EDIT PRODUK MULTI-TAB
   // --------------------------------------------------------------------------
   const [showProductModal, setShowProductModal] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
@@ -159,7 +165,8 @@ export default function AdminProductsTab({
       const matchName = p.name.toLowerCase().includes(q);
       const matchSku = (p.sku || '').toLowerCase().includes(q);
       const matchCat = (p.category || '').toLowerCase().includes(q);
-      if (!matchName && !matchSku && !matchCat) return false;
+      const matchAddr = ((p as any).kitchenAddress || p.origin || '').toLowerCase().includes(q);
+      if (!matchName && !matchSku && !matchCat && !matchAddr) return false;
     }
     return true;
   });
@@ -184,7 +191,8 @@ export default function AdminProductsTab({
     description: '',
     ingredients: 'Bahan alami segar, rempah khas Nusantara pilihan.',
     usageAdvice: 'Disajikan hangat bersama nasi pulen.',
-    origin: 'Dapur Nefakky',
+    origin: 'Puri Bojong Lestari 1 Blok AF 41, Bojong Gede, Bogor',
+    kitchenAddress: 'Puri Bojong Lestari 1 Blok AF 41, RT 10 / RW 14, Kel. Pabuaran, Kec. Bojong Gede, Kab. Bogor, Prov. Jawa Barat',
     calories: '350 Kkal',
     fat: '12g',
     sugar: '5g',
@@ -196,6 +204,7 @@ export default function AdminProductsTab({
   // HANDLERS: MODAL BUKA / SIMPAN / HAPUS
   // --------------------------------------------------------------------------
   const handleOpenAddProduct = () => {
+    const defaultAddress = getMapSettings()?.centralKitchen?.address || DEFAULT_CENTRAL_KITCHEN.address;
     setEditingProduct(null);
     setProductFormTab('info');
     setProdGallery(['/images/ayam_bakar.jpg']);
@@ -216,7 +225,8 @@ export default function AdminProductsTab({
       description: '',
       ingredients: 'Bahan alami segar, rempah khas Nusantara pilihan.',
       usageAdvice: 'Disajikan hangat bersama nasi pulen.',
-      origin: 'Dapur Nefakky',
+      origin: 'Puri Bojong Lestari 1 Blok AF 41, Bojong Gede, Bogor',
+      kitchenAddress: defaultAddress,
       calories: '350 Kkal',
       fat: '12g',
       sugar: '5g',
@@ -227,6 +237,7 @@ export default function AdminProductsTab({
   };
 
   const handleOpenEditProduct = (prod: ProductItem) => {
+    const defaultAddress = getMapSettings()?.centralKitchen?.address || DEFAULT_CENTRAL_KITCHEN.address;
     setEditingProduct(prod);
     setProductFormTab('info');
     setProdGallery(Array.isArray(prod.gallery) && prod.gallery.length > 0 ? prod.gallery : [prod.image || '/images/ayam_bakar.jpg']);
@@ -247,7 +258,8 @@ export default function AdminProductsTab({
       description: prod.description || '',
       ingredients: prod.ingredients || 'Bahan alami segar, rempah khas Nusantara pilihan.',
       usageAdvice: prod.usageAdvice || 'Disajikan hangat bersama nasi pulen.',
-      origin: (prod as any).origin || 'Dapur Nefakky',
+      origin: prod.origin || 'Puri Bojong Lestari 1 Blok AF 41, Bojong Gede, Bogor',
+      kitchenAddress: (prod as any).kitchenAddress || prod.origin || defaultAddress,
       calories: (prod as any).nutrition?.calories || '350 Kkal',
       fat: (prod as any).nutrition?.fat || '12g',
       sugar: (prod as any).nutrition?.sugar || '5g',
@@ -281,7 +293,8 @@ export default function AdminProductsTab({
       description: prodForm.description,
       ingredients: prodForm.ingredients,
       usageAdvice: prodForm.usageAdvice,
-      origin: prodForm.origin,
+      origin: prodForm.origin || prodForm.kitchenAddress,
+      kitchenAddress: prodForm.kitchenAddress || prodForm.origin,
       nutrition: {
         calories: prodForm.calories,
         fat: prodForm.fat,
@@ -309,34 +322,35 @@ export default function AdminProductsTab({
           <h1 className="font-display-lg text-2xl sm:text-3xl font-bold text-on-surface tracking-tight font-['Playfair_Display']">
             Katalog Produk &amp; Stok
           </h1>
-          <p className="font-body-base text-xs sm:text-sm text-on-surface-variant max-w-2xl">
-            Tambah hidangan baru, ubah harga porsi, dan kelola ketersediaan stok menu.
+          <p className="font-body-base text-xs sm:text-sm text-on-surface-variant max-w-xl">
+            Kelola menu hidangan kuliner Nusantara, status stok harian, foto galeri, alamat dapur pengolahan, serta perilisan produk baru.
           </p>
         </div>
 
-        {/* Add Product Button */}
-        <button 
-          type="button"
-          onClick={handleOpenAddProduct}
-          className="bg-[#934B19] hover:bg-[#7a3e14] text-white px-5 py-2.5 rounded-full font-headline-sm font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
-        >
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          <span>Tambah Menu Baru</span>
-        </button>
+        {/* Action Button: Tambah Menu */}
+        <div className="flex items-center gap-3">
+          <button 
+            type="button"
+            onClick={handleOpenAddProduct}
+            className="px-4 py-2.5 bg-[#934B19] hover:bg-[#783603] text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah Menu Baru</span>
+          </button>
+        </div>
       </div>
 
-      {/* 2. FILTER TABS & SEARCH BAR */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface-container-lowest p-3.5 rounded-2xl border border-outline-variant/20 shadow-xs">
-        
-        {/* Quick Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+      {/* 2. STATS OVERVIEW & FILTER BAR */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-surface-container-low p-4 rounded-2xl border border-outline-variant/20">
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <button 
             type="button"
             onClick={() => setFilterType('all')}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               filterType === 'all' 
-                ? 'bg-primary text-on-primary shadow-xs' 
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                ? 'bg-[#25160E] text-white shadow-xs' 
+                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
             }`}
           >
             Semua Menu ({allProducts.length})
@@ -345,34 +359,35 @@ export default function AdminProductsTab({
           <button 
             type="button"
             onClick={() => setFilterType('active')}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               filterType === 'active' 
-                ? 'bg-primary text-on-primary shadow-xs' 
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                ? 'bg-[#25160E] text-white shadow-xs' 
+                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
             }`}
           >
-            Menu Aktif ({activeCount})
+            Aktif Dijual ({activeCount})
           </button>
 
           <button 
             type="button"
             onClick={() => setFilterType('comingSoon')}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               filterType === 'comingSoon' 
-                ? 'bg-primary text-on-primary shadow-xs' 
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                ? 'bg-[#25160E] text-white shadow-xs' 
+                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
             }`}
           >
-            Segera Hadir ({comingSoonCount})
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Segera Hadir ({comingSoonCount})</span>
           </button>
         </div>
 
-        {/* Search Bar & Category Dropdown */}
-        <div className="flex items-center gap-2">
+        {/* Search & Category Filter */}
+        <div className="flex items-center gap-2.5 flex-1 max-w-md">
           <select 
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-surface-container text-on-surface text-xs font-bold px-3 py-2 rounded-xl border border-outline-variant/30 focus:outline-none cursor-pointer"
+            className="bg-surface-container px-3 py-2 rounded-xl text-xs text-on-surface border border-outline-variant/30 font-semibold cursor-pointer outline-none"
           >
             <option value="Semua">Semua Kategori</option>
             <option value="Makanan Berat">Makanan Berat</option>
@@ -382,16 +397,14 @@ export default function AdminProductsTab({
             <option value="Dessert">Dessert</option>
           </select>
 
-          <div className="relative flex-1 sm:w-60">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-              search
-            </span>
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
             <input 
               type="text"
               value={searchProdQuery}
               onChange={(e) => setSearchProdQuery(e.target.value)}
-              placeholder="Cari nama menu / SKU..."
-              className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary border border-outline-variant/30"
+              placeholder="Cari nama menu, SKU, alamat..."
+              className="w-full pl-9 pr-3 py-2 bg-surface-container rounded-xl text-xs text-on-surface placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#934B19] border border-outline-variant/30"
             />
           </div>
         </div>
@@ -402,7 +415,7 @@ export default function AdminProductsTab({
         <div className="overflow-x-auto">
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 px-6 py-3.5 border-b border-outline-variant/20 bg-surface-container-low text-[11px] font-label-caps text-on-surface-variant uppercase font-bold min-w-[700px]">
-            <div className="col-span-4">Hidangan &amp; SKU</div>
+            <div className="col-span-4">Hidangan &amp; Asal Dapur</div>
             <div className="col-span-2">Kategori</div>
             <div className="col-span-2">Harga Porsi</div>
             <div className="col-span-2">Stok / Status</div>
@@ -419,13 +432,14 @@ export default function AdminProductsTab({
               displayedProducts.map((prod) => {
                 const isComingSoon = prod.isComingSoon;
                 const isInactive = prod.status === 'Inactive' || prod.visibility === false;
+                const displayAddress = (prod as any).kitchenAddress || prod.origin || 'Dapur Bojong Gede';
 
                 return (
                   <div 
                     key={prod.id} 
                     className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-surface-container-low/50 transition-colors text-xs"
                   >
-                    {/* Item & SKU (Col 4) */}
+                    {/* Item & Origin Address (Col 4) */}
                     <div className="col-span-4 flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-container-high shrink-0 shadow-2xs relative">
                         <img 
@@ -441,84 +455,89 @@ export default function AdminProductsTab({
                       </div>
 
                       <div className="flex flex-col min-w-0">
-                        <span className="font-headline-sm font-bold text-on-surface text-xs sm:text-sm truncate">
-                          {prod.name}
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="font-mono-data text-[10px] text-on-surface-variant">
-                            {prod.sku || `SKU-${prod.id.slice(0, 6)}`}
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-headline-sm font-bold text-on-surface text-xs sm:text-sm truncate">
+                            {prod.name}
                           </span>
                           {prod.badge && (
-                            <span className="px-1.5 py-0.2 bg-amber-100 text-amber-900 font-bold rounded text-[9px] tracking-wider">
+                            <span className="px-1.5 py-0.2 bg-amber-100 text-[#934B19] rounded text-[8.5px] font-bold uppercase shrink-0">
                               {prod.badge}
                             </span>
                           )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="font-mono-data text-[10px] text-on-surface-variant font-bold">
+                            {prod.sku || `SKU-${prod.id.slice(0, 6)}`}
+                          </span>
+                          <span className="text-[10px] text-stone-400 truncate flex items-center gap-0.5 max-w-[160px]">
+                            <MapPin className="w-2.5 h-2.5 text-[#934B19] shrink-0" />
+                            <span className="truncate">{displayAddress}</span>
+                          </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Kategori (Col 2) */}
-                    <div className="col-span-2 text-on-surface font-medium">
-                      {prod.category || 'Makanan Berat'}
+                    <div className="col-span-2">
+                      <span className="px-2.5 py-1 rounded-lg bg-surface-container text-[11px] font-medium text-on-surface">
+                        {prod.category}
+                      </span>
                     </div>
 
                     {/* Harga (Col 2) */}
-                    <div className="col-span-2 font-mono-data font-bold text-on-surface">
-                      Rp {(prod.price || 0).toLocaleString('id-ID')}
+                    <div className="col-span-2 font-mono font-bold text-on-surface text-xs">
+                      Rp {prod.price.toLocaleString('id-ID')}
                     </div>
 
-                    {/* Stok / Status (Col 2) */}
-                    <div className="col-span-2 flex flex-col">
-                      <span className="font-mono-data font-bold text-on-surface">
-                        {prod.stock ?? 25} Porsi
+                    {/* Stok & Status (Col 2) */}
+                    <div className="col-span-2 flex flex-col gap-0.5">
+                      <span className="font-mono text-xs font-semibold text-on-surface">
+                        {prod.stock} Porsi
                       </span>
-                      <span className={`text-[10px] font-bold uppercase mt-0.5 ${
-                        isComingSoon 
-                          ? 'text-amber-800' 
-                          : isInactive 
-                          ? 'text-error' 
-                          : 'text-emerald-800'
-                      }`}>
-                        {isComingSoon ? 'Coming Soon' : isInactive ? 'Inactive' : 'Active'}
-                      </span>
+                      {isComingSoon ? (
+                        <span className="text-[10px] font-bold text-amber-600">Rilis {prod.releaseDate || 'Mendatang'}</span>
+                      ) : (
+                        <span className={`text-[10px] font-bold ${
+                          prod.stock > 5 ? 'text-emerald-600' : prod.stock > 0 ? 'text-amber-600' : 'text-rose-600'
+                        }`}>
+                          {prod.stock > 5 ? 'Tersedia' : prod.stock > 0 ? 'Hampir Habis' : 'Stok Kosong'}
+                        </span>
+                      )}
                     </div>
 
                     {/* Aksi (Col 2) */}
                     <div className="col-span-2 flex items-center justify-end gap-1.5">
-                      {/* Toggle Visibility */}
                       <button 
                         type="button"
                         onClick={() => toggleProductVisibility(prod.id)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+                        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                          isInactive ? 'text-stone-400 hover:text-stone-700' : 'text-emerald-600 hover:bg-emerald-50'
+                        }`}
                         title={isInactive ? 'Tampilkan Menu' : 'Sembunyikan Menu'}
                       >
-                        <span className="material-symbols-outlined text-[18px]">
-                          {isInactive ? 'visibility_off' : 'visibility'}
-                        </span>
+                        {isInactive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
 
-                      {/* Edit Button */}
                       <button 
                         type="button"
                         onClick={() => handleOpenEditProduct(prod)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
-                        title="Edit Hidangan"
+                        className="p-2 rounded-xl text-stone-600 hover:text-[#934B19] hover:bg-amber-50 transition-colors cursor-pointer"
+                        title="Edit Hidangan Menu & Alamat"
                       >
-                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                        <Pencil className="w-4 h-4" />
                       </button>
 
-                      {/* Delete Button */}
                       <button 
                         type="button"
                         onClick={() => {
-                          if (confirm(`Apakah Anda yakin ingin menghapus "${prod.name}" dari katalog?`)) {
+                          if (confirm(`Hapus hidangan "${prod.name}" dari katalog?`)) {
                             deleteProduct(prod.id);
                           }
                         }}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error-container/50 transition-colors cursor-pointer"
-                        title="Hapus Hidangan"
+                        className="p-2 rounded-xl text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="Hapus Menu"
                       >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
@@ -542,7 +561,7 @@ export default function AdminProductsTab({
                   {editingProduct ? 'Edit Hidangan Menu' : 'Tambah Produk Menu Baru'}
                 </h2>
                 <span className="font-body-sm text-xs text-stone-500">
-                  Lengkapi detail hidangan untuk katalog digital resmi Nefakky.
+                  Lengkapi detail hidangan, foto, nutrisi, dan alamat dapur pengolahan untuk katalog resmi Nefakky.
                 </span>
               </div>
               <button 
@@ -565,8 +584,8 @@ export default function AdminProductsTab({
                     : 'border-transparent text-stone-500 hover:text-stone-900'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">info</span>
-                <span>Informasi</span>
+                <Info className="w-4 h-4" />
+                <span>Informasi &amp; Alamat</span>
               </button>
 
               <button 
@@ -578,7 +597,7 @@ export default function AdminProductsTab({
                     : 'border-transparent text-stone-500 hover:text-stone-900'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">image</span>
+                <ImageIcon className="w-4 h-4" />
                 <span>Foto &amp; Media</span>
               </button>
 
@@ -591,7 +610,7 @@ export default function AdminProductsTab({
                     : 'border-transparent text-stone-500 hover:text-stone-900'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">restaurant</span>
+                <Store className="w-4 h-4" />
                 <span>Nutrisi &amp; Detail</span>
               </button>
             </div>
@@ -600,7 +619,7 @@ export default function AdminProductsTab({
             <form onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden bg-white">
               <div className="p-6 overflow-y-auto flex-1 bg-white space-y-4 text-xs">
                 
-                {/* TAB 1: INFORMASI UMUM */}
+                {/* TAB 1: INFORMASI UMUM & ALAMAT DAPUR */}
                 {productFormTab === 'info' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Left Column */}
@@ -725,7 +744,7 @@ export default function AdminProductsTab({
                                 : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                             }`}
                           >
-                            <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
+                            <Flame className="w-3.5 h-3.5 text-amber-600" />
                             <span>Best Seller</span>
                           </button>
 
@@ -738,7 +757,7 @@ export default function AdminProductsTab({
                                 : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                             }`}
                           >
-                            <span className="material-symbols-outlined text-[14px]">star</span>
+                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                             <span>Terpopuler</span>
                           </button>
                         </div>
@@ -750,14 +769,52 @@ export default function AdminProductsTab({
                           Deskripsi Hidangan
                         </label>
                         <textarea 
-                          rows={3}
+                          rows={2}
                           value={prodForm.description}
                           onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })}
                           placeholder="Ceritakan kelezatan bumbu dan olahan menu ini..."
-                          className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none text-xs text-stone-900 leading-relaxed"
+                          className="w-full px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none text-xs text-stone-900 leading-relaxed resize-none"
                         />
                       </div>
                     </div>
+
+                    {/* Full Width Row: Alamat Dapur / Lokasi Pengiriman Menu */}
+                    <div className="md:col-span-2 flex flex-col gap-1.5 p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200/80">
+                      <div className="flex items-center justify-between">
+                        <label className="font-label-caps text-stone-800 uppercase text-[11px] font-bold flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-[#934B19]" />
+                          <span>Alamat Lengkap Dapur / Lokasi Pengolahan Menu</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const central = getMapSettings()?.centralKitchen?.address || DEFAULT_CENTRAL_KITCHEN.address;
+                            setProdForm(p => ({ 
+                              ...p, 
+                              kitchenAddress: central,
+                              origin: 'Puri Bojong Lestari 1 Blok AF 41, Bojong Gede, Bogor'
+                            }));
+                          }}
+                          className="text-[10.5px] text-[#934B19] font-bold hover:underline cursor-pointer flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-amber-300 shadow-2xs"
+                          title="Gunakan alamat dapur pusat restoran"
+                        >
+                          <Navigation className="w-3 h-3 text-[#934B19]" />
+                          <span>Pakai Alamat Dapur Utama</span>
+                        </button>
+                      </div>
+
+                      <textarea 
+                        rows={2}
+                        value={prodForm.kitchenAddress}
+                        onChange={(e) => setProdForm({ ...prodForm, kitchenAddress: e.target.value })}
+                        placeholder="Contoh: Puri Bojong Lestari 1 Blok AF 41, RT 10 / RW 14, Kel. Pabuaran, Kec. Bojong Gede, Kab. Bogor, Prov. Jawa Barat"
+                        className="w-full px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none text-xs text-stone-900 leading-relaxed font-medium resize-none shadow-2xs"
+                      />
+                      <p className="text-[10px] text-stone-500 italic">
+                        *Alamat ini digunakan sebagai titik asal penjemputan pesanan dan perhitungan jarak radius pengantaran kurir.
+                      </p>
+                    </div>
+
                   </div>
                 )}
 
@@ -831,8 +888,13 @@ export default function AdminProductsTab({
                             >
                               <img src={asset.path} alt={asset.name} className="w-full h-full object-cover" />
                               {isInGallery && (
-                                <div className="absolute inset-0 bg-[#934B19]/30 flex items-center justify-center">
-                                  <Check className="w-4 h-4 text-white drop-shadow stroke-[3]" />
+                                <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#934B19] text-white flex items-center justify-center shadow">
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                </div>
+                              )}
+                              {isPrimary && (
+                                <div className="absolute inset-x-0 bottom-0 bg-[#934B19]/90 text-white text-[8px] font-bold py-0.5 text-center">
+                                  UTAMA
                                 </div>
                               )}
                             </button>
@@ -841,58 +903,50 @@ export default function AdminProductsTab({
                       </div>
                     </div>
 
-                    {/* 3. DAFTAR GALERI FOTO TERPILIH (MULTI-FOTO PREVIEW & PENGATURAN FOTO UTAMA) */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <label className="font-label-caps text-stone-800 uppercase text-[11px] font-bold">
-                            Galeri Foto Menu ({prodGallery.length} Foto Aktif)
-                          </label>
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300">
-                            Multi-Foto Aktif
-                          </span>
-                        </div>
+                    {/* 3. Preview Galeri Terpilih */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="font-label-caps text-stone-700 uppercase text-[11px] font-bold">
+                          Foto Galeri Terpasang ({prodGallery.length} Foto):
+                        </label>
                         <span className="text-[10px] text-stone-500">
-                          Klik foto untuk dijadikan <strong>Foto Utama</strong>
+                          Klik foto untuk menjadikannya foto sampul utama
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 p-3 bg-stone-50 rounded-2xl border border-stone-200">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 p-3 bg-stone-50 rounded-2xl border border-stone-200">
                         {prodGallery.map((imgUrl, idx) => {
-                          const isPrimary = prodForm.image === imgUrl || (!prodForm.image && idx === 0);
+                          const isPrimary = prodForm.image === imgUrl;
                           return (
                             <div 
                               key={idx}
-                              className={`relative rounded-2xl overflow-hidden aspect-square border-2 transition-all group bg-white shadow-xs ${
-                                isPrimary 
-                                  ? 'border-[#934B19] ring-2 ring-amber-400 shadow-md' 
-                                  : 'border-stone-200 hover:border-stone-400'
+                              className={`relative rounded-2xl overflow-hidden aspect-square border-2 shadow-xs group transition-all ${
+                                isPrimary ? 'border-[#934B19] ring-2 ring-amber-400' : 'border-stone-200 hover:border-amber-400'
                               }`}
                             >
                               <img 
                                 src={imgUrl} 
-                                alt={`Foto ${idx + 1}`} 
+                                alt={`Galeri ${idx + 1}`} 
                                 className="w-full h-full object-cover cursor-pointer"
                                 onClick={() => handleSetPrimaryPhoto(imgUrl)}
                               />
                               
-                              {/* Badge Foto Utama */}
+                              {/* Badge Utama */}
                               {isPrimary ? (
-                                <div className="absolute top-1.5 left-1.5 bg-[#934B19] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow flex items-center gap-0.5">
-                                  <Sparkles className="w-2.5 h-2.5 text-amber-300" />
-                                  <span>Utama</span>
+                                <div className="absolute bottom-2 left-2 bg-[#934B19] text-white px-2 py-0.5 rounded-md text-[9px] font-bold shadow">
+                                  Foto Utama
                                 </div>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => handleSetPrimaryPhoto(imgUrl)}
-                                  className="absolute bottom-1.5 left-1.5 right-1.5 bg-black/70 hover:bg-black text-white text-[9px] font-bold py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-center cursor-pointer"
+                                  className="absolute bottom-2 left-2 bg-black/60 hover:bg-[#934B19] text-white px-2 py-0.5 rounded-md text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                 >
                                   Jadikan Utama
                                 </button>
                               )}
 
-                              {/* Tombol Hapus Foto */}
+                              {/* Tombol Hapus */}
                               {prodGallery.length > 1 && (
                                 <button
                                   type="button"
@@ -951,6 +1005,18 @@ export default function AdminProductsTab({
                           className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none text-xs text-stone-900"
                         />
                       </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="font-label-caps text-stone-700 uppercase text-[11px] font-bold">
+                          Asal Masakan / Wilayah
+                        </label>
+                        <input 
+                          type="text"
+                          value={prodForm.origin}
+                          onChange={(e) => setProdForm({ ...prodForm, origin: e.target.value })}
+                          className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none text-xs text-stone-900 font-medium"
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -1007,23 +1073,25 @@ export default function AdminProductsTab({
 
               </div>
 
-              {/* Modal Footer */}
-              <div className="px-6 py-4 border-t border-stone-200 bg-white flex justify-end gap-3">
-                <button 
+              {/* Modal Footer Actions */}
+              <div className="px-6 py-4 border-t border-stone-200 bg-stone-50 flex items-center justify-end gap-3">
+                <button
                   type="button"
                   onClick={() => setShowProductModal(false)}
-                  className="px-4 py-2 rounded-xl text-stone-600 hover:bg-stone-100 transition-colors text-xs font-semibold cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl text-stone-600 hover:bg-stone-200 text-xs font-bold transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
-                <button 
+
+                <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#934B19] text-white hover:bg-[#783603] transition-colors shadow-md flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
                 >
                   <span>Simpan Produk</span>
-                  <span className="material-symbols-outlined text-[18px]">check</span>
+                  <Check className="w-4 h-4 text-amber-200" />
                 </button>
               </div>
+
             </form>
 
           </div>

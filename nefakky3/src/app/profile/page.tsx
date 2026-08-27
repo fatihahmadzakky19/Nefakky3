@@ -18,10 +18,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useData } from '@/context/DataContext';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { 
-  Search, 
-  Bell, 
-  ShoppingBag, 
   User, 
   Edit3, 
   Phone, 
@@ -30,24 +29,26 @@ import {
   Headphones, 
   Bot, 
   Send, 
-  Paperclip, 
   Flame, 
   MapPin, 
-  RefreshCw, 
   ArrowRight, 
   Check, 
-  ShieldCheck, 
   X, 
   CheckCircle2,
   LogOut,
   Camera,
   Image as ImageIcon,
-  Globe,
-  Link2,
   RotateCcw,
   Upload,
   Plus,
-  Trash2
+  Trash2,
+  Clock,
+  ExternalLink,
+  ShieldCheck,
+  Paperclip,
+  RefreshCw,
+  Globe,
+  Link2
 } from 'lucide-react';
 
 /** Helper Kompresi & Konversi Gambar ke Data URL Base64 yang Optimal */
@@ -302,63 +303,15 @@ export default function UserProfilePage() {
   });
 
   return (
-    <div className="bg-[#fcf8fa] font-sans text-[#1b1b1d] min-h-screen selection:bg-stone-900 selection:text-white flex flex-col justify-between">
+    <div className="bg-[#FAF8F5] font-sans text-[#25160E] min-h-screen selection:bg-[#934b19]/20 selection:text-[#934b19] flex flex-col justify-between">
       
-      <div>
-        {/* 1. FIXED HEADER SESUAI STITCH MCP */}
-        <header className="fixed top-0 w-full z-50 bg-[#fcf8fa]/90 backdrop-blur-xl border-b border-stone-200 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
-          <div className="h-20 max-w-7xl mx-auto px-6 flex items-center justify-between">
-            
-            {/* Brand Wordmark (Left) */}
-            <div className="flex-1 flex items-center font-serif text-2xl tracking-widest text-black font-bold">
-              <Link href="/">NEFAKKY</Link>
-            </div>
+      {/* 1. NAVBAR UTAMA TERPADU */}
+      <Navbar />
 
-            {/* Desktop Navigation (Centered) */}
-            <nav className="hidden md:flex items-center gap-8 flex-1 justify-center">
-              <Link href="/" className="text-stone-600 hover:text-black font-medium text-sm transition-colors">
-                Beranda
-              </Link>
-              <Link href="/menu" className="text-stone-600 hover:text-black font-medium text-sm transition-colors">
-                Menu
-              </Link>
-              <Link href="/comments" className="text-stone-600 hover:text-black font-medium text-sm transition-colors">
-                Ulasan Rasa
-              </Link>
-              <Link href="/notifications" className="text-stone-600 hover:text-black font-medium text-sm transition-colors">
-                Pesanan
-              </Link>
-            </nav>
-
-            {/* Right Action Icons & Profile (Right) */}
-            <div className="flex-1 flex items-center justify-end gap-6">
-              <div className="relative flex items-center">
-                <Link href="/cart" className="text-stone-600 hover:text-black transition-colors" title="Keranjang">
-                  <ShoppingBag className="w-5 h-5" />
-                </Link>
-                {totalCartCount > 0 && (
-                  <span className="absolute -top-1 -right-2 flex items-center justify-center min-w-[16px] h-4 px-1 bg-black text-white text-[10px] font-bold rounded-full">
-                    {totalCartCount}
-                  </span>
-                )}
-              </div>
-
-              <Link 
-                href="/profile"
-                className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white hover:bg-neutral-800 transition-colors overflow-hidden cursor-pointer"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={editAvatarUrl} alt="Profile" className="w-full h-full object-cover" />
-              </Link>
-            </div>
-
-          </div>
-        </header>
-
-        {/* 2. MAIN PROFILE CONTENT */}
-        <main className="w-full pt-20 bg-[#fcf8fa] pb-28 lg:pb-12">
-          <div className="flex flex-col w-full">
-            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-8 text-left">
+      {/* 2. AREA KONTEN UTAMA PROFIL PENGGUNA */}
+      <main className="w-full flex-1">
+        <div className="flex flex-col w-full">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-6 sm:py-8 flex flex-col gap-8 text-left">
               
               {/* ========================================================================= */}
               {/* BANNER PROFIL UTAMA ROUNDED-[32PX] */}
@@ -407,10 +360,10 @@ export default function UserProfilePage() {
                       
                       {user?.role === 'admin' && (
                         <Link 
-                          href="/admin/products"
+                          href="/admin"
                           className="bg-stone-100 text-black px-5 py-2.5 rounded-xl font-semibold text-xs border border-stone-200 shadow-2xs hover:bg-stone-200 transition-colors"
                         >
-                          Panel Administrator
+                          Panel Administrator (Dashboard)
                         </Link>
                       )}
 
@@ -816,7 +769,6 @@ export default function UserProfilePage() {
             </div>
           </div>
         </main>
-      </div>
 
       {/* 3. MODAL EDIT PROFILE DENGAN 3 PILIHAN FOTO (GALERI, FOTO SENDIRI/KAMERA, GOOGLE/MANUAL) */}
       {showEditModal && (
@@ -1137,6 +1089,9 @@ export default function UserProfilePage() {
           </div>
         </div>
       )}
+
+      {/* 5. FOOTER EDITORIAL TERPADU */}
+      <Footer />
 
     </div>
   );

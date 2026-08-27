@@ -102,6 +102,8 @@ Route::post('/orders/{id}/confirm', [OrderController::class, 'confirmReceived'])
 Route::post('/orders/{id}/proof', [OrderController::class, 'uploadProof']);
 // Membatalkan pesanan dan mengembalikan kuantitas stok produk
 Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+// Cetak / Unduh Dokumen Struk & Invoice Resmi PDF
+Route::get('/orders/{id}/invoice-pdf', [OrderController::class, 'invoicePdf']);
 // RESTful CRUD Pesanan (index, store, show, update, destroy)
 Route::apiResource('orders', OrderController::class);
 
@@ -143,6 +145,8 @@ Route::get('/reports/sales', [SalesReportController::class, 'index']);
 Route::post('/reports/sales', [SalesReportController::class, 'store']);
 // Menghapus data baris laporan omset bulanan
 Route::delete('/reports/sales/{id}', [SalesReportController::class, 'destroy']);
+// Ekspor Laporan Finansial ke Excel Spreadsheet (.xlsx)
+Route::get('/reports/sales/export-excel', [SalesReportController::class, 'exportExcel']);
 
 // Laporan Rekap Penjualan Mingguan & Bazar (Juli & Agustus 2026)
 Route::get('/weekly-recaps/month/{month}', [WeeklySalesRecapController::class, 'byMonth']);
@@ -203,3 +207,33 @@ Route::post('/settings', [StoreSettingController::class, 'update']);
 Route::get('/database/schema', [\App\Http\Controllers\Api\DatabaseSchemaController::class, 'getFullSchema']);
 // Mengambil detail kolom dan sampel data dari satu tabel tertentu
 Route::get('/database/schema/{table}', [\App\Http\Controllers\Api\DatabaseSchemaController::class, 'getTableDetails']);
+
+// =========================================================================
+// 16. MODUL WEBSOCKET REVERB & LIVE BROADCAST TEST
+// =========================================================================
+Route::match(['get', 'post'], '/reverb/test-broadcast', function (\Illuminate\Http\Request $request) {
+    $title = $request->input('title', 'Koneksi Realtime Berhasil!');
+    $message = $request->input('message', 'Pesan siaran WebSocket Laravel Reverb berhasil diterima secara live.');
+    $category = $request->input('category', 'test');
+
+    event(new \App\Events\RealtimeActivityEvent($title, $message, $category, [
+        'timestamp' => now()->toIso8601String(),
+        'server' => 'Laravel Reverb 1.11',
+        'ip' => $request->ip(),
+    ]));
+
+    return response()->json([
+        'success' => true,
+        'status' => 'success',
+        'code' => 200,
+        'message' => 'Event broadcast berhasil dipancarkan ke channel activity-feed dan notifications via Laravel Reverb!',
+        'payload' => [
+            'title' => $title,
+            'message' => $message,
+            'channels' => ['activity-feed', 'notifications'],
+            'event' => 'activity.logged',
+            'timestamp' => now()->toIso8601String(),
+        ]
+    ]);
+});
+

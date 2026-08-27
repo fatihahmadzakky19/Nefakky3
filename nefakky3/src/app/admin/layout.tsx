@@ -149,7 +149,7 @@ export default function AdminLayout({
             <button
               onClick={() => {
                 setLatestChatNotification(null);
-                router.push(`/admin/settings?chat=${encodeURIComponent(latestChatNotification.userEmail)}`);
+                router.push(`/admin/chat?chat=${encodeURIComponent(latestChatNotification.userEmail)}`);
               }}
               className="px-4 py-2 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow flex items-center gap-1.5 transition-all cursor-pointer"
             >

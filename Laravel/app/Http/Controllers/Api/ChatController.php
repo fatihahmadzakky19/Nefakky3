@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreChatRequest;
 use App\Http\Resources\ChatMessageResource;
 use App\Models\ChatMessage;
+use App\Events\ChatMessageSentEvent;
 use App\Traits\ApiResponseTrait;
+use App\Traits\BroadcastSafelyTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,7 +18,7 @@ use Illuminate\Http\Request;
  */
 class ChatController extends Controller
 {
-    use ApiResponseTrait;
+    use ApiResponseTrait, BroadcastSafelyTrait;
 
     /**
      * Menampilkan riwayat percakapan (Bisa difilter berdasarkan email pelanggan)
@@ -58,6 +60,9 @@ class ChatController extends Controller
         }
 
         $message = ChatMessage::create($data);
+
+        // Pancarkan event realtime ke WebSocket Reverb
+        $this->safeBroadcast(new ChatMessageSentEvent($message));
 
         return $this->createdResponse(new ChatMessageResource($message), 'Pesan berhasil dikirimkan');
     }

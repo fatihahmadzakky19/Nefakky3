@@ -23,7 +23,6 @@ import {
   Search, 
   Bell, 
   ShoppingBag, 
-  Heart,
   ArrowRight, 
   ChevronLeft, 
   ChevronRight, 
@@ -35,7 +34,8 @@ import {
   Sparkles,
   CheckCircle2,
   Ticket,
-  User
+  User,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -241,7 +241,18 @@ export default function HomePage() {
           </nav>
 
           {/* Right Action Icons & Profile (Right) */}
-          <div className="flex-1 flex items-center justify-end gap-6">
+          <div className="flex-1 flex items-center justify-end gap-3 sm:gap-5">
+            {user?.role === 'admin' && (
+              <Link
+                href="/admin"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#934b19] hover:bg-[#783603] text-white text-xs font-bold rounded-full transition-all shadow-sm"
+                title="Masuk ke Panel Dashboard Admin"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-200" />
+                <span className="hidden sm:inline">Panel Admin</span>
+              </Link>
+            )}
+
             <div className="relative flex items-center">
               <Link href="/cart" className="text-stone-600 hover:text-black transition-colors" title="Keranjang Belanja">
                 <ShoppingBag className="w-5 h-5" />
@@ -537,17 +548,6 @@ export default function HomePage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
                         src={product.image}
                       />
-
-                      {/* Wishlist Heart Button */}
-                      <div className="absolute top-3 right-3 z-10">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id); }}
-                          aria-label="Tambah ke Favorit" 
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm text-stone-600 hover:text-rose-500 transition-colors shadow-sm active:scale-95 cursor-pointer"
-                        >
-                          <Heart className={`w-4 h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
-                        </button>
-                      </div>
 
                       {/* Rating & Sold Badge */}
                       <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-lg text-xs font-semibold text-[#1b1b1d] border border-stone-200 flex items-center gap-1 shadow-2xs">

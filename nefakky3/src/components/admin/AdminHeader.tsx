@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Menu, LogOut, MessageCircle, ArrowRight, Printer, FileSpreadsheet } from 'lucide-react';
@@ -36,7 +37,8 @@ export default function AdminHeader({
     if (pathname.startsWith('/admin/products')) return 'Katalog Produk';
     if (pathname.startsWith('/admin/promotions')) return 'Voucher & Promosi';
     if (pathname.startsWith('/admin/reviews')) return 'Moderasi Ulasan';
-    if (pathname.startsWith('/admin/settings')) return 'Pengaturan & CS Chat';
+    if (pathname.startsWith('/admin/chat')) return 'Meja Pelayanan CS Live Chat';
+    if (pathname.startsWith('/admin/settings') || pathname.startsWith('/admin/store-settings')) return 'Pengaturan Toko & Peta';
     return 'Tinjauan Bisnis';
   };
 
@@ -60,9 +62,13 @@ export default function AdminHeader({
         </button>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-on-surface-variant font-body-sm uppercase tracking-widest text-[11px]">
+          <Link 
+            href="/admin"
+            className="text-on-surface-variant font-body-sm uppercase tracking-widest text-[11px] hover:text-[#934B19] hover:font-bold transition-colors"
+            title="Kembali ke Dashboard Utama"
+          >
             Dashboard
-          </span>
+          </Link>
           <span className="material-symbols-outlined text-outline text-[16px]">
             chevron_right
           </span>
@@ -134,7 +140,7 @@ export default function AdminHeader({
                   unreadMessagesList.map((m) => (
                     <div 
                       key={m.id}
-                      onClick={() => router.push(`/admin/settings?chat=${encodeURIComponent(m.userEmail)}`)}
+                      onClick={() => router.push(`/admin/chat?chat=${encodeURIComponent(m.userEmail)}`)}
                       className="p-3 hover:bg-surface-container transition-colors cursor-pointer space-y-1"
                     >
                       <div className="flex items-center justify-between">
@@ -149,7 +155,7 @@ export default function AdminHeader({
               
               <div className="p-2.5 bg-surface-container-low border-t border-outline-variant/10 text-center">
                 <button
-                  onClick={() => router.push('/admin/settings')}
+                  onClick={() => router.push('/admin/chat')}
                   className="text-xs font-bold text-on-tertiary-fixed-variant hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
                   <span>Buka Meja Pelayanan CS Live Chat</span>
@@ -171,17 +177,17 @@ export default function AdminHeader({
             </p>
           </div>
 
-          <div 
-            onClick={handleLogout}
-            className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold text-xs cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
-            title="Klik untuk Keluar (Logout)"
+          <Link 
+            href="/admin"
+            className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold text-xs cursor-pointer hover:ring-2 hover:ring-[#934B19]/50 transition-all shadow-sm overflow-hidden"
+            title="Dashboard Administrator"
           >
             {user?.photoURL ? (
               <img src={user.photoURL} alt="Admin" className="w-full h-full rounded-full object-cover" />
             ) : (
               <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
             )}
-          </div>
+          </Link>
 
           <button
             onClick={handleLogout}

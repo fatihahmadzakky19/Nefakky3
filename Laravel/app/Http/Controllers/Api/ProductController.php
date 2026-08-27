@@ -7,7 +7,9 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\ProductItem;
+use App\Events\ProductStockUpdatedEvent;
 use App\Traits\ApiResponseTrait;
+use App\Traits\BroadcastSafelyTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,7 +19,7 @@ use Illuminate\Http\Request;
  */
 class ProductController extends Controller
 {
-    use ApiResponseTrait;
+    use ApiResponseTrait, BroadcastSafelyTrait;
 
     /**
      * Menampilkan daftar semua produk dengan filter, pencarian, dan pengurutan
@@ -188,6 +190,10 @@ class ProductController extends Controller
         $product->visibility = !$product->visibility;
         $product->save();
 
+        // Pancarkan event realtime ke WebSocket Reverb
+        $statusMsg = $product->visibility ? "Produk {$product->name} sekarang ditampilkan" : "Produk {$product->name} disembunyikan";
+        $this->safeBroadcast(new ProductStockUpdatedEvent($product, $statusMsg));
+
         return $this->successResponse(new ProductResource($product), 'Status visibilitas produk berhasil diubah');
     }
 
@@ -209,6 +215,9 @@ class ProductController extends Controller
         $product->stock = (int) $request->stock;
         $product->updateStockStatus();
         $product->save();
+
+        // Pancarkan event realtime ke WebSocket Reverb
+        $this->safeBroadcast(new ProductStockUpdatedEvent($product, "Stok produk {$product->name} diperbarui menjadi {$product->stock}"));
 
         return $this->successResponse(new ProductResource($product), 'Jumlah stok produk berhasil diperbarui');
     }

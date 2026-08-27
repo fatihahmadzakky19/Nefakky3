@@ -129,14 +129,16 @@ export default function AutoMapPickerModal({
 
   // Mengubah jarak pengiriman otomatis setiap kali koordinat berubah
   useEffect(() => {
+    const kitchenLat = mapSettings?.centralKitchen?.lat || DEFAULT_CENTRAL_KITCHEN.lat;
+    const kitchenLng = mapSettings?.centralKitchen?.lng || DEFAULT_CENTRAL_KITCHEN.lng;
     const calculatedKm = calculateHaversineDistanceKm(
-      DEFAULT_CENTRAL_KITCHEN.lat,
-      DEFAULT_CENTRAL_KITCHEN.lng,
+      kitchenLat,
+      kitchenLng,
       coordinates.lat,
       coordinates.lng
     );
     setShippingDistanceKm(calculatedKm);
-  }, [coordinates]);
+  }, [coordinates, mapSettings]);
 
   /**
    * Mengaktifkan pendeteksian sinyal GPS perangkat pelanggan.
@@ -356,9 +358,7 @@ export default function AutoMapPickerModal({
           {/* Search Box with Autocomplete */}
           <div className="relative">
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-[18px]">
-                search
-              </span>
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}

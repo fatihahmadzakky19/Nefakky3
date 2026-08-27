@@ -129,7 +129,41 @@ class SalesReportController extends Controller
     }
 
     /**
-     * Menghapus baris laporan
+     * Mengekspor Laporan Finansial dan Omset Penjualan ke Format Excel Spreadsheet (.xlsx)
+     * Menggunakan library performa tinggi Rap2hpoutre FastExcel
+     *
+     * @param Request $request
+     * @return mixed
+     */
+    public function exportExcel(Request $request)
+    {
+        $year = $request->query('year', date('Y'));
+        $reports = SalesReport::where('year', $year)->orderBy('id', 'asc')->get();
+
+        // Transformasi data untuk format kolom spreadsheet yang rapi
+        $exportData = $reports->map(function ($r) {
+            return [
+                'ID' => $r->id,
+                'Tahun' => $r->year,
+                'Periode Bulan' => $r->month_year,
+                'Omset Kotor (Rp)' => (float) $r->gross_revenue,
+                'Laba Bersih (Rp)' => (float) $r->net_profit,
+                'Total Transaksi' => (int) $r->total_orders,
+                'Event / Bazar' => $r->event_tag ?? '-',
+                'Kategori' => $r->is_bazar ? 'Event Bazar' : 'Penjualan Reguler',
+            ];
+        });
+
+        $fileName = "Laporan_Penjualan_Nefakky_{$year}.xlsx";
+
+        return (new \Rap2hpoutre\FastExcel\FastExcel($exportData))->download($fileName);
+    }
+
+    /**
+     * Menghapus baris laporan omset
+     *
+     * @param int|string $id
+     * @return JsonResponse
      */
     public function destroy($id): JsonResponse
     {

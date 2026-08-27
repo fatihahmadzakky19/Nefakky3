@@ -30,7 +30,7 @@ export default function AdminSidebar({
   const navItems = [
     {
       href: '/admin',
-      label: 'Business Overview',
+      label: 'Business Overview (Dashboard)',
       icon: 'analytics',
       badge: null
     },
@@ -59,10 +59,16 @@ export default function AdminSidebar({
       badge: null
     },
     {
-      href: '/admin/settings',
-      label: 'Store Settings',
-      icon: 'settings',
+      href: '/admin/chat',
+      label: 'CS Live Chat',
+      icon: 'forum',
       badge: unreadChatCount > 0 ? unreadChatCount : null
+    },
+    {
+      href: '/admin/settings',
+      label: 'Store & Maps',
+      icon: 'settings',
+      badge: null
     }
   ];
 
@@ -127,7 +133,7 @@ export default function AdminSidebar({
 
                 {item.badge !== null && (
                   <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                    item.href === '/admin/settings' ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-500 text-black'
+                    item.href === '/admin/chat' ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-500 text-black'
                   }`}>
                     {item.badge}
                   </span>

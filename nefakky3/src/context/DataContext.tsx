@@ -23,6 +23,7 @@ import {
 import { ref, set as setRtdb, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
 import { db, rtdb } from '@/lib/firebase';
 import { formatCurrentRealtimeOrderDate } from '@/lib/orderTimeUtils';
+import { getEchoInstance } from '@/lib/echo';
 
 
 /** Interface Data Produk Utama */
@@ -48,6 +49,7 @@ export interface ProductItem {
   ingredients: string;
   usageAdvice: string;
   origin: string;
+  kitchenAddress?: string;
   calories: string;
   fat: string;
   sugar: string;
@@ -1165,6 +1167,84 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       unsubRev();
       unsubChat();
     };
+  }, []);
+
+  // Sinkronisasi Data Real-time Langsung dari WebSocket Laravel Reverb Engine
+  useEffect(() => {
+    const echo = getEchoInstance();
+    if (!echo) return;
+
+    try {
+      // 1. Tangkap pembaruan status pesanan secara langsung tanpa reload
+      const ordersChannel = echo.channel('orders');
+      ordersChannel.listen('.order.status.updated', (payload: any) => {
+        if (payload?.order_id && payload?.new_status) {
+          setOrdersState(prev => prev.map(o => {
+            if (o.id === payload.order_id) {
+              return {
+                ...o,
+                status: payload.new_status,
+                customerConfirmed: payload.new_status === 'COMPLETED' ? true : o.customerConfirmed
+              };
+            }
+            return o;
+          }));
+        }
+      });
+
+      // 2. Tangkap pembaruan stok menu produk secara instan
+      const productsChannel = echo.channel('products');
+      productsChannel.listen('.product.stock.updated', (payload: any) => {
+        if (payload?.product_id !== undefined && payload?.stock !== undefined) {
+          setProductsState(prev => prev.map(p => {
+            if (p.id === String(payload.product_id) || p.id === `m${payload.product_id}`) {
+              return {
+                ...p,
+                stock: payload.stock,
+                status: payload.stock <= 0 ? 'Inactive' : (payload.stock <= 5 ? 'Low Stock' : 'Active'),
+                visibility: payload.visibility !== undefined ? payload.visibility : p.visibility
+              };
+            }
+            return p;
+          }));
+        }
+      });
+
+      // 3. Tangkap pesan live chat masuk
+      const chatChannel = echo.channel('chat');
+      chatChannel.listen('.chat.message.sent', (payload: any) => {
+        if (payload?.chat_id && payload?.text) {
+          setChatMessagesState(prev => {
+            if (prev.some(m => m.id === payload.chat_id || m.id === `chat_${payload.chat_id}`)) {
+              return prev;
+            }
+            const incomingMsg: ChatMessage = {
+              id: payload.chat_id,
+              userEmail: payload.user_email,
+              userName: payload.user_name || 'Pelanggan',
+              sender: payload.sender,
+              text: payload.text,
+              timestamp: payload.timestamp || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+              readByAdmin: payload.sender === 'admin',
+              readByUser: payload.sender === 'user'
+            };
+            return [...prev, incomingMsg];
+          });
+        }
+      });
+
+      return () => {
+        try {
+          ordersChannel.stopListening('.order.status.updated');
+          productsChannel.stopListening('.product.stock.updated');
+          chatChannel.stopListening('.chat.message.sent');
+        } catch (e) {
+          // Ignore
+        }
+      };
+    } catch (err) {
+      console.warn('[Laravel Reverb DataContext Sync] Gagal mendaftarkan listener:', err);
+    }
   }, []);
 
   /** Helper membersihkan properti undefined agar tidak memicu Firestore Unsupported field error */

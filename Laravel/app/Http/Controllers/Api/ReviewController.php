@@ -7,7 +7,9 @@ use App\Http\Requests\StoreReviewRequest;
 use App\Http\Resources\ReviewResource;
 use App\Models\ProductItem;
 use App\Models\Review;
+use App\Events\RealtimeActivityEvent;
 use App\Traits\ApiResponseTrait;
+use App\Traits\BroadcastSafelyTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,7 +19,7 @@ use Illuminate\Http\Request;
  */
 class ReviewController extends Controller
 {
-    use ApiResponseTrait;
+    use ApiResponseTrait, BroadcastSafelyTrait;
 
     /**
      * Menampilkan daftar ulasan pelanggan
@@ -102,6 +104,14 @@ class ReviewController extends Controller
                 $prod->recalculateRating();
             }
         }
+
+        // Pancarkan event realtime ke WebSocket Reverb
+        $this->safeBroadcast(new RealtimeActivityEvent(
+            'Ulasan Baru',
+            "{$review->author_name} memberikan rating {$review->rating}★ untuk " . ($review->product_name ?? 'hidangan'),
+            'review',
+            ['review_id' => $review->review_id, 'rating' => $review->rating, 'author' => $review->author_name]
+        ));
 
         return $this->createdResponse(new ReviewResource($review), 'Terima kasih! Ulasan hidangan Anda berhasil disimpan.');
     }

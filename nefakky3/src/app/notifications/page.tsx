@@ -18,6 +18,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useData, AdminOrder } from '@/context/DataContext';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { 
   Search, 
   Bell, 
@@ -25,7 +27,6 @@ import {
   User, 
   Receipt, 
   CookingPot, 
-  ShoppingBag as BagIcon, 
   Truck, 
   CheckCircle2, 
   MapPin, 
@@ -145,66 +146,14 @@ export default function NotificationsPage() {
   const userAvatar = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=25160E&color=ffffff&bold=true` : (user?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.split('@')[0])}&background=25160E&color=ffffff&bold=true` : null));
 
   return (
-    <div className="bg-[#fcf8fa] font-sans text-[#1b1b1d] min-h-screen selection:bg-stone-900 selection:text-white flex flex-col justify-between">
+    <div className="bg-[#FAF8F5] font-sans text-[#25160E] min-h-screen selection:bg-[#934b19]/20 selection:text-[#934b19] flex flex-col justify-between">
       
-      <div>
-        {/* 1. FIXED HEADER SESUAI STITCH MCP */}
-        <header className="fixed top-0 w-full z-50 bg-[#fcf8fa]/90 backdrop-blur-xl border-b border-stone-200 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
-          <div className="h-20 max-w-7xl mx-auto px-6 flex items-center justify-between">
-            
-            {/* Brand Wordmark (Left) */}
-            <div className="flex-1 flex items-center font-serif text-2xl tracking-widest text-black font-bold">
-              <Link href="/">NEFAKKY</Link>
-            </div>
+      {/* 1. NAVBAR UTAMA TERPADU */}
+      <Navbar />
 
-            {/* Desktop Navigation (Centered) */}
-            <nav className="hidden md:flex items-center gap-8 flex-1 justify-center">
-              <Link href="/" className="text-stone-600 hover:text-black font-medium text-sm transition-colors">
-                Beranda
-              </Link>
-              <Link href="/menu" className="text-stone-600 hover:text-black font-medium text-sm transition-colors">
-                Menu
-              </Link>
-              <Link href="/comments" className="text-stone-600 hover:text-black font-medium text-sm transition-colors">
-                Ulasan Rasa
-              </Link>
-              <Link href="/notifications" className="text-black font-bold text-sm transition-colors">
-                Pesanan
-              </Link>
-            </nav>
-
-            {/* Right Action Icons & Profile (Right) */}
-            <div className="flex-1 flex items-center justify-end gap-6">
-              <div className="relative flex items-center">
-                <Link href="/cart" className="text-stone-600 hover:text-black transition-colors" title="Keranjang">
-                  <ShoppingBag className="w-5 h-5" />
-                </Link>
-                {totalCartCount > 0 && (
-                  <span className="absolute -top-1 -right-2 flex items-center justify-center min-w-[16px] h-4 px-1 bg-black text-white text-[10px] font-bold rounded-full">
-                    {totalCartCount}
-                  </span>
-                )}
-              </div>
-
-              <Link 
-                href={user ? "/profile" : "/login"}
-                className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white hover:bg-neutral-800 transition-colors overflow-hidden cursor-pointer"
-              >
-                {userAvatar ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-4 h-4" />
-                )}
-              </Link>
-            </div>
-
-          </div>
-        </header>
-
-        {/* 2. MAIN TRACKING CONTENT ATAU EMPTY STATE */}
-        <main className="w-full pt-20">
-          <div className="flex flex-col w-full bg-[#fcf8fa] text-[#1b1b1d] pb-28 lg:pb-12">
+      {/* 2. AREA KONTEN UTAMA PELACAKAN PESANAN */}
+      <main className="w-full flex-1">
+        <div className="flex flex-col w-full bg-[#FAF8F5] text-[#25160E] pb-28 lg:pb-12">
             
             {!hasOrders || !activeOrder ? (
               /* EMPTY STATE: Muncul jika akun belum melakukan pembelian / uji coba checkout */
@@ -359,7 +308,7 @@ export default function NotificationsPage() {
                                 ? 'bg-black text-white'
                                 : 'bg-stone-100 text-stone-400 border border-stone-200'
                             }`}>
-                              <BagIcon className="w-5 h-5" />
+                              <ShoppingBag className="w-5 h-5" />
                             </div>
                             <div className="flex flex-col gap-0.5 pt-0.5">
                               <span className="font-bold text-sm text-black">Menunggu Kurir</span>
@@ -810,7 +759,6 @@ export default function NotificationsPage() {
 
           </div>
         </main>
-      </div>
 
       {/* 5. MODAL STRUK NOTA INVOICE DIGITAL */}
       {selectedReceipt && (
@@ -1095,6 +1043,9 @@ export default function NotificationsPage() {
           </div>
         </div>
       )}
+
+      {/* 6. FOOTER EDITORIAL TERPADU */}
+      <Footer />
 
     </div>
   );
