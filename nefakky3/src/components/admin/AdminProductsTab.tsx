@@ -181,6 +181,9 @@ export default function AdminProductsTab({
     price: '35000',
     discount: '0',
     stock: '25',
+    stokMangga: '20',
+    stokSirsak: '15',
+    stokJambu: '15',
     visibility: true,
     status: 'Active' as 'Active' | 'Low Stock' | 'Inactive',
     badge: '' as 'TERPOPULER' | 'BARU' | 'BEST SELLER' | 'NEW' | '',
@@ -215,6 +218,9 @@ export default function AdminProductsTab({
       price: '35000',
       discount: '0',
       stock: '25',
+      stokMangga: '20',
+      stokSirsak: '15',
+      stokJambu: '15',
       visibility: true,
       status: 'Active',
       badge: '',
@@ -248,6 +254,9 @@ export default function AdminProductsTab({
       price: String(prod.price || 35000),
       discount: String(prod.discount || 0),
       stock: String(prod.stock || 25),
+      stokMangga: String(prod.variantStocks?.Mangga ?? 20),
+      stokSirsak: String(prod.variantStocks?.Sirsak ?? 15),
+      stokJambu: String(prod.variantStocks?.Jambu ?? 15),
       visibility: prod.visibility ?? true,
       status: prod.status || 'Active',
       badge: (prod.badge as any) || '',
@@ -276,15 +285,29 @@ export default function AdminProductsTab({
       return;
     }
 
-    const payload = {
+    const isDrink = prodForm.category === 'Minuman' || prodForm.name.toLowerCase().includes('jus');
+    let finalStock = parseInt(prodForm.stock) || 0;
+    let variantStocksObj: { [key: string]: number } | undefined = undefined;
+
+    if (isDrink) {
+      variantStocksObj = {
+        'Mangga': Math.max(0, parseInt(prodForm.stokMangga) || 0),
+        'Sirsak': Math.max(0, parseInt(prodForm.stokSirsak) || 0),
+        'Jambu': Math.max(0, parseInt(prodForm.stokJambu) || 0)
+      };
+      finalStock = variantStocksObj.Mangga + variantStocksObj.Sirsak + variantStocksObj.Jambu;
+    }
+
+    const payload: any = {
       name: prodForm.name.trim(),
       sku: prodForm.sku.trim(),
       category: prodForm.category,
       price: parseInt(prodForm.price) || 0,
       discount: parseInt(prodForm.discount) || 0,
-      stock: parseInt(prodForm.stock) || 0,
+      stock: finalStock,
+      variantStocks: variantStocksObj,
       visibility: prodForm.visibility,
-      status: prodForm.status,
+      status: finalStock === 0 ? 'Low Stock' : prodForm.status,
       badge: prodForm.badge || undefined,
       isComingSoon: prodForm.isComingSoon,
       releaseDate: prodForm.isComingSoon ? prodForm.releaseDate : undefined,
@@ -490,18 +513,63 @@ export default function AdminProductsTab({
                     </div>
 
                     {/* Stok & Status (Col 2) */}
-                    <div className="col-span-2 flex flex-col gap-0.5">
-                      <span className="font-mono text-xs font-semibold text-on-surface">
-                        {prod.stock} Porsi
-                      </span>
-                      {isComingSoon ? (
-                        <span className="text-[10px] font-bold text-amber-600">Rilis {prod.releaseDate || 'Mendatang'}</span>
+                    <div className="col-span-2 flex flex-col gap-1">
+                      {prod.category === 'Minuman' || prod.id === 'm6' || prod.name.toLowerCase().includes('jus') ? (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-bold text-on-surface">
+                              {prod.stock} Porsi
+                            </span>
+                            <span className="px-1.5 py-0.2 bg-amber-100 text-amber-900 font-bold text-[8.5px] rounded-md">
+                              3 Varian
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-0.5 text-[10px] font-mono bg-stone-50 p-1.5 rounded-lg border border-stone-200/80 shadow-2xs">
+                            <div className="flex justify-between items-center text-stone-700">
+                              <span className="flex items-center gap-1 font-sans">
+                                <span>🥭</span>
+                                <span>Mangga:</span>
+                              </span>
+                              <span className={`font-bold ${((prod.variantStocks?.Mangga ?? 20) > 0) ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
+                                {(prod.variantStocks?.Mangga ?? 20)} Porsi
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-stone-700">
+                              <span className="flex items-center gap-1 font-sans">
+                                <span>🍈</span>
+                                <span>Sirsak:</span>
+                              </span>
+                              <span className={`font-bold ${((prod.variantStocks?.Sirsak ?? 15) > 0) ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
+                                {(prod.variantStocks?.Sirsak ?? 15)} Porsi
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-stone-700">
+                              <span className="flex items-center gap-1 font-sans">
+                                <span>🍓</span>
+                                <span>Jambu:</span>
+                              </span>
+                              <span className={`font-bold ${((prod.variantStocks?.Jambu ?? 15) > 0) ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
+                                {(prod.variantStocks?.Jambu ?? 15)} Porsi
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       ) : (
-                        <span className={`text-[10px] font-bold ${
-                          prod.stock > 5 ? 'text-emerald-600' : prod.stock > 0 ? 'text-amber-600' : 'text-rose-600'
-                        }`}>
-                          {prod.stock > 5 ? 'Tersedia' : prod.stock > 0 ? 'Hampir Habis' : 'Stok Kosong'}
-                        </span>
+                        <>
+                          <span className="font-mono text-xs font-semibold text-on-surface">
+                            {prod.stock} Porsi
+                          </span>
+                          {isComingSoon ? (
+                            <span className="text-[10px] font-bold text-amber-600">Rilis {prod.releaseDate || 'Mendatang'}</span>
+                          ) : (
+                            <span className={`text-[10px] font-bold ${
+                              prod.stock > 5 ? 'text-emerald-600' : prod.stock > 0 ? 'text-amber-600' : 'text-rose-600'
+                            }`}>
+                              {prod.stock > 5 ? 'Tersedia' : prod.stock > 0 ? 'Hampir Habis' : 'Stok Kosong'}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
 
@@ -715,19 +783,74 @@ export default function AdminProductsTab({
                           />
                         </div>
 
-                        <div className="flex flex-col gap-1">
-                          <label className="font-label-caps text-stone-700 uppercase text-[11px] font-bold">
-                            Stok Porsi
-                          </label>
-                          <input 
-                            type="number"
-                            value={prodForm.stock}
-                            onChange={(e) => setProdForm({ ...prodForm, stock: e.target.value })}
-                            placeholder="25"
-                            className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none font-mono text-xs text-stone-900 font-bold"
-                          />
-                        </div>
+                        {prodForm.category !== 'Minuman' && !prodForm.name.toLowerCase().includes('jus') && (
+                          <div className="flex flex-col gap-1">
+                            <label className="font-label-caps text-stone-700 uppercase text-[11px] font-bold">
+                              Stok Porsi
+                            </label>
+                            <input 
+                              type="number"
+                              value={prodForm.stock}
+                              onChange={(e) => setProdForm({ ...prodForm, stock: e.target.value })}
+                              placeholder="25"
+                              className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none font-mono text-xs text-stone-900 font-bold"
+                            />
+                          </div>
+                        )}
                       </div>
+
+                      {/* Khusus Minuman / Jus: Input Stok 3 Varian Tersendiri */}
+                      {(prodForm.category === 'Minuman' || prodForm.name.toLowerCase().includes('jus')) && (
+                        <div className="space-y-2 p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl">
+                          <div className="flex items-center justify-between">
+                            <label className="font-label-caps text-amber-950 uppercase text-[11px] font-bold flex items-center gap-1.5">
+                              <span>🍹</span>
+                              <span>Stok Per Varian Rasa Jus:</span>
+                            </label>
+                            <span className="font-mono font-bold text-xs bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded-md">
+                              Total: {(parseInt(prodForm.stokMangga) || 0) + (parseInt(prodForm.stokSirsak) || 0) + (parseInt(prodForm.stokJambu) || 0)} Porsi
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2 pt-1">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-stone-700 truncate">🥭 Jus Mangga</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={prodForm.stokMangga}
+                                onChange={(e) => setProdForm({ ...prodForm, stokMangga: e.target.value })}
+                                placeholder="20"
+                                className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-stone-700 truncate">🍈 Jus Sirsak</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={prodForm.stokSirsak}
+                                onChange={(e) => setProdForm({ ...prodForm, stokSirsak: e.target.value })}
+                                placeholder="15"
+                                className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-stone-700 truncate">🍓 Jus Jambu</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={prodForm.stokJambu}
+                                onChange={(e) => setProdForm({ ...prodForm, stokJambu: e.target.value })}
+                                placeholder="15"
+                                className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Badge Spesial Chips */}
                       <div className="flex flex-col gap-1 mt-1">

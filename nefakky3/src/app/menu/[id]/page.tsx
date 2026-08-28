@@ -31,7 +31,10 @@ import {
   CheckCircle2,
   Store,
   Check,
-  Lock
+  Lock,
+  AlertCircle,
+  MessageSquare,
+  ArrowRight
 } from 'lucide-react';
 
 const DRINK_VARIANTS = [
@@ -62,8 +65,8 @@ export default function MenuDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { addToCart } = useCart();
-  const { products, reviews } = useData();
+  const { cart, addToCart, removeFromCart } = useCart();
+  const { products, reviews, sendChatMessage } = useData();
 
   const productId = params?.id as string;
   // Temukan produk dari database atau fallback ke master products
@@ -82,7 +85,58 @@ export default function MenuDetailPage() {
   const [addedNotice, setAddedNotice] = useState<boolean>(false);
   const [shareNotice, setShareNotice] = useState<boolean>(false);
 
+  // State Reservasi Produk Habis ke Customer Service
+  const [isReserving, setIsReserving] = useState<boolean>(false);
+  const [reservationSent, setReservationSent] = useState<boolean>(false);
+
   const activeDrinkVariant = DRINK_VARIANTS.find(v => v.id === selectedVariant) || DRINK_VARIANTS[0];
+
+  // Helper cek stok per varian
+  const getVariantStock = (variantId: string): number => {
+    if ((product as any).variantStocks && (product as any).variantStocks[variantId] !== undefined) {
+      return (product as any).variantStocks[variantId];
+    }
+    if (isDrink) {
+      if (variantId === 'Mangga') return 20;
+      if (variantId === 'Sirsak') return 15;
+      if (variantId === 'Jambu') return 15;
+    }
+    return (product as any).stock ?? 25;
+  };
+
+  const currentVariantStock = isDrink ? getVariantStock(selectedVariant) : ((product as any).stock ?? 25);
+  const isOutOfStock = currentVariantStock <= 0 || ((product as any).status === 'Low Stock' && (product as any).stock === 0);
+
+  // Daftar varian yang sedang ada di keranjang untuk hidangan ini
+  const variantsInCart = isDrink 
+    ? DRINK_VARIANTS.map(v => {
+        const key = `${product.id}_${v.id}`;
+        const qty = cart[key] || 0;
+        return { ...v, key, qty, subtotal: qty * product.price };
+      }).filter(v => v.qty > 0)
+    : [];
+
+  const totalVariantsInCartCount = variantsInCart.reduce((sum, v) => sum + v.qty, 0);
+  const totalVariantsInCartPrice = variantsInCart.reduce((sum, v) => sum + v.subtotal, 0);
+
+  // Handler Reservasi Produk Habis ke Customer Service
+  const handleReserveToCS = async () => {
+    setIsReserving(true);
+    const varName = isDrink ? activeDrinkVariant.name : product.name;
+    const userEmail = user?.email || 'customer@nefakky.com';
+    const userName = user?.displayName || 'Pelanggan Nefakky';
+
+    const msgText = `[RESERVASI PRODUK HABIS] Halo Tim CS Nefakky, saya ingin melakukan pemesanan / reservasi produk "${product.name}${isDrink ? ` (${varName})` : ''}" sebanyak ${quantity} porsi yang saat ini sedang habis. Mohon prioritaskan pesanan saya dan hubungi saya segera jika stok sudah kembali restock ya. Terima kasih!`;
+
+    try {
+      await sendChatMessage(userEmail, userName, msgText);
+    } catch (e) {
+      console.error('Gagal mengirim chat reservasi:', e);
+    }
+
+    setIsReserving(false);
+    setReservationSent(true);
+  };
 
   // Foto Utama: Jika menu jus, ikuti varian aktif. Jika makanan, gunakan foto dari database
   const currentMainImage = isDrink 
@@ -353,15 +407,20 @@ export default function MenuDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {DRINK_VARIANTS.map((v) => {
                     const isSelected = selectedVariant === v.id;
+                    const vStock = getVariantStock(v.id);
+                    const isVOutOfStock = vStock <= 0;
+
                     return (
                       <button
                         key={v.id}
                         type="button"
                         onClick={() => setSelectedVariant(v.id)}
-                        className={`relative p-3 rounded-2xl border text-left transition-all flex flex-col justify-between space-y-2 ${
+                        className={`relative p-3 rounded-2xl border text-left transition-all flex flex-col justify-between space-y-2 cursor-pointer ${
                           isSelected
                             ? 'bg-white border-neutral-900 ring-1 ring-neutral-900 shadow-sm'
-                            : 'bg-stone-50/80 border-stone-200 hover:bg-white hover:border-stone-300'
+                            : isVOutOfStock
+                              ? 'bg-stone-100/70 border-stone-200 opacity-60'
+                              : 'bg-stone-50/80 border-stone-200 hover:bg-white hover:border-stone-300'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-1">
@@ -376,13 +435,72 @@ export default function MenuDetailPage() {
                             <span className="w-4 h-4 rounded-full border border-stone-300 shrink-0 mt-0.5" />
                           )}
                         </div>
-                        <span className="inline-block text-[9px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded uppercase">
-                          {v.tag}
-                        </span>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="inline-block text-[9px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded uppercase">
+                            {v.tag}
+                          </span>
+                          <span className={`text-[9px] font-bold font-mono ${isVOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
+                            {isVOutOfStock ? 'Habis' : `Stok ${vStock}`}
+                          </span>
+                        </div>
                       </button>
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* Multi-Varian: Ringkasan Varian di Keranjang Anda */}
+            {isDrink && variantsInCart.length > 0 && (
+              <div className="p-4 bg-amber-50/70 border border-amber-200/90 rounded-2xl space-y-2.5 animate-fade-in">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-stone-900 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                    <ShoppingBag className="w-4 h-4 text-[#934B19]" />
+                    <span>Varian di Keranjang ({totalVariantsInCartCount} Porsi)</span>
+                  </span>
+                  <span className="font-mono font-bold text-[#934B19] text-sm">
+                    Total: Rp {totalVariantsInCartPrice.toLocaleString('id-ID')}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  {variantsInCart.map(v => (
+                    <div key={v.key} className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-stone-200/80 text-xs shadow-2xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-stone-800">{v.name}</span>
+                        <span className="text-stone-400 font-mono text-[11px]">Rp {v.subtotal.toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(v.key)}
+                          className="w-6 h-6 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg flex items-center justify-center font-bold transition-colors cursor-pointer"
+                          title="Kurangi"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="font-mono font-bold text-xs px-1.5">{v.qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => addToCart(product.id, v.id)}
+                          className="w-6 h-6 bg-neutral-900 hover:bg-black text-white rounded-lg flex items-center justify-center font-bold transition-colors cursor-pointer"
+                          title="Tambah"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => router.push('/cart')}
+                  className="w-full py-2.5 px-4 bg-[#25160E] hover:bg-black text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+                >
+                  <span>Lanjut Bayar Semua Varian dalam 1 Transaksi</span>
+                  <ArrowRight className="w-4 h-4 text-amber-300" />
+                </button>
               </div>
             )}
 
@@ -521,6 +639,48 @@ export default function MenuDetailPage() {
               </div>
             </div>
 
+            {/* Banner Peringatan Jika Stok Habis */}
+            {isOutOfStock && (
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-1.5 animate-fade-in">
+                <div className="flex items-center gap-2 text-rose-800 font-bold text-xs sm:text-sm">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>Produk Habis — Stok {isDrink ? `Varian ${activeDrinkVariant.name}` : product.name} Sedang Kosong</span>
+                </div>
+                <p className="text-xs text-rose-700 font-light leading-relaxed">
+                  Mohon maaf, saat ini menu tidak dapat dibeli langsung. Anda dapat melakukan <strong>Pemesanan / Reservasi Prioritas</strong> ke Customer Service kami agar langsung dikabari begitu stok restock kembali!
+                </p>
+              </div>
+            )}
+
+            {/* Status Sukses Reservasi */}
+            {reservationSent && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs space-y-2 animate-fade-in">
+                <div className="flex items-center gap-2 font-bold text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Reservasi Prioritas Berhasil Terkirim! 📋</span>
+                </div>
+                <p className="text-xs text-emerald-700 leading-relaxed font-light">
+                  Permintaan prioritas untuk {quantity}x {isDrink ? `Jus ${selectedVariant}` : product.name} telah diterima oleh Tim CS. Kami akan segera menghubungi Anda saat stok kembali tersedia.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <Link
+                    href="/profile"
+                    className="px-3.5 py-2 bg-[#25160E] hover:bg-black text-white text-xs font-bold rounded-xl transition-colors"
+                  >
+                    Buka Live Chat CS
+                  </Link>
+                  <a
+                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo CS Nefakky, saya ingin reservasi pesanan ${product.name}${isDrink ? ` varian ${activeDrinkVariant.name}` : ''} sebanyak ${quantity} porsi yang sedang habis.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors"
+                  >
+                    WhatsApp CS
+                  </a>
+                </div>
+              </div>
+            )}
+
           </div>
 
         </div>
@@ -631,7 +791,7 @@ export default function MenuDetailPage() {
             <div className="flex items-center justify-between bg-stone-100 border border-stone-200 rounded-xl px-2 py-1.5 w-24 sm:w-28 shrink-0">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-6 h-6 rounded hover:bg-white flex items-center justify-center text-stone-600 transition-colors"
+                className="w-6 h-6 rounded hover:bg-white flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
                 aria-label="Kurang"
               >
                 <Minus className="w-3 h-3" />
@@ -641,29 +801,42 @@ export default function MenuDetailPage() {
               </span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-6 h-6 rounded hover:bg-white flex items-center justify-center text-stone-600 transition-colors"
+                className="w-6 h-6 rounded hover:bg-white flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
                 aria-label="Tambah"
               >
                 <Plus className="w-3 h-3" />
               </button>
             </div>
 
-            {/* Tambah ke Keranjang Button */}
-            <button
-              onClick={handleAddToCart}
-              className="py-2.5 px-3.5 sm:px-5 bg-white border border-stone-300 hover:bg-stone-50 active:scale-[0.99] text-stone-900 font-medium text-xs sm:text-sm rounded-xl shadow-xs transition-all flex items-center gap-2"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">Tambah ke Keranjang</span>
-            </button>
+            {isOutOfStock ? (
+              <button
+                onClick={handleReserveToCS}
+                disabled={isReserving}
+                className="py-2.5 px-4 sm:px-6 bg-[#934B19] hover:bg-[#783603] active:scale-[0.99] text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>{isReserving ? 'Mengirim Reservasi...' : `Pesan / Reservasi ke Customer Service (${quantity} Porsi)`}</span>
+              </button>
+            ) : (
+              <>
+                {/* Tambah ke Keranjang Button */}
+                <button
+                  onClick={handleAddToCart}
+                  className="py-2.5 px-3.5 sm:px-5 bg-white border border-stone-300 hover:bg-stone-50 active:scale-[0.99] text-stone-900 font-medium text-xs sm:text-sm rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span className="hidden sm:inline">Tambah ke Keranjang</span>
+                </button>
 
-            {/* Beli Langsung Button */}
-            <button
-              onClick={handleBuyNow}
-              className="py-2.5 px-4 sm:px-6 bg-black hover:bg-neutral-800 active:scale-[0.99] text-white font-medium text-xs sm:text-sm rounded-xl shadow-sm transition-all whitespace-nowrap"
-            >
-              Beli Langsung
-            </button>
+                {/* Beli Langsung Button */}
+                <button
+                  onClick={handleBuyNow}
+                  className="py-2.5 px-4 sm:px-6 bg-black hover:bg-neutral-800 active:scale-[0.99] text-white font-medium text-xs sm:text-sm rounded-xl shadow-sm transition-all whitespace-nowrap cursor-pointer"
+                >
+                  Beli Langsung
+                </button>
+              </>
+            )}
 
           </div>
 

@@ -54,6 +54,7 @@ export interface ProductItem {
   fat: string;
   sugar: string;
   satFat: string;
+  variantStocks?: { [variantKey: string]: number };
   maxDeliveryKm?: number;
   isDeleted?: boolean;
   deletedAt?: string;
@@ -548,6 +549,11 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     price: 5000,
     discount: 0,
     stock: 50,
+    variantStocks: {
+      'Mangga': 20,
+      'Sirsak': 15,
+      'Jambu': 15
+    },
     visibility: true,
     status: 'Active',
     rating: 4.9,
@@ -1478,6 +1484,40 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Immediate local React state update so order appears 100% reliably
     setOrdersState(prev => [newOrder, ...prev.filter(o => o.id !== newId)]);
+
+    // Deduct stock for ordered products & variants
+    if (Array.isArray(newOrder.items)) {
+      setProductsState(prev => {
+        return prev.map(p => {
+          let pCopy = { ...p };
+          let modified = false;
+
+          for (const it of newOrder.items) {
+            const [baseId, variant] = (it.id || '').split('_');
+            const qty = it.quantity || 1;
+
+            if (p.id === baseId || (p.name && it.name && p.name.toLowerCase() === it.name.toLowerCase())) {
+              modified = true;
+              const newStock = Math.max(0, pCopy.stock - qty);
+              pCopy.stock = newStock;
+              if (newStock === 0) pCopy.status = 'Low Stock';
+
+              if (variant && pCopy.variantStocks && pCopy.variantStocks[variant] !== undefined) {
+                const updatedVarStocks = { ...pCopy.variantStocks };
+                updatedVarStocks[variant] = Math.max(0, (updatedVarStocks[variant] || 0) - qty);
+                pCopy.variantStocks = updatedVarStocks;
+              }
+            }
+          }
+
+          if (modified) {
+            const cleanProd = cleanForFirestore(pCopy);
+            updateDoc(doc(db, 'products', p.id), cleanProd).catch(console.error);
+          }
+          return pCopy;
+        });
+      });
+    }
 
     const cleanOrder = cleanForFirestore(newOrder);
     setDoc(doc(db, 'orders', newId), cleanOrder).catch(console.error);

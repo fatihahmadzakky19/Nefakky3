@@ -16,6 +16,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import { useData, sortReviewsNewestFirst } from '@/context/DataContext';
 import { 
   X, 
@@ -24,6 +25,9 @@ import {
   Minus, 
   ShoppingBag, 
   CheckCircle2,
+  AlertCircle,
+  MessageSquare,
+  ArrowRight,
   Store,
   Check,
   MapPin,
@@ -39,6 +43,8 @@ export interface DetailProduct {
   category: string;
   price: number;
   rating: number;
+  stock?: number;
+  variantStocks?: { [variantKey: string]: number };
   reviewsCount?: string | number;
   soldCount?: string;
   image: string;
@@ -90,8 +96,9 @@ const DRINK_VARIANTS = [
 
 export default function MenuDetailModal({ product, onClose }: MenuDetailModalProps) {
   const router = useRouter();
-  const { addToCart } = useCart();
-  const { reviews } = useData();
+  const { user } = useAuth();
+  const { cart, addToCart, removeFromCart } = useCart();
+  const { reviews, products, sendChatMessage } = useData();
 
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'description' | 'ingredients' | 'storage' | 'serving'>('description');
@@ -99,6 +106,10 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   const [addedNotice, setAddedNotice] = useState<boolean>(false);
   const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
   const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
+
+  // State Reservasi Produk Habis ke Customer Service
+  const [isReserving, setIsReserving] = useState<boolean>(false);
+  const [reservationSent, setReservationSent] = useState<boolean>(false);
 
   const kitchenAddress = 'Puri Bojong Lestari 1 Blok AF 41, RT 10 / RW 14, Kel. Pabuaran, Kec. Bojong Gede, Kab. Bogor, Prov. Jawa Barat';
 
@@ -111,14 +122,45 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
   if (!product) return null;
 
-  const isDrink = product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus');
+  // Sinkronisasi data live product dari DataContext jika tersedia
+  const liveProduct = products.find(p => p.id === product.id) || product;
+
+  const isDrink = liveProduct.category === 'Minuman' || liveProduct.id === 'm6' || liveProduct.name.toLowerCase().includes('jus');
   const activeDrinkVariant = DRINK_VARIANTS.find(v => v.id === selectedVariant) || DRINK_VARIANTS[0];
+
+  // Helper cek stok per varian
+  const getVariantStock = (variantId: string): number => {
+    if (liveProduct.variantStocks && liveProduct.variantStocks[variantId] !== undefined) {
+      return liveProduct.variantStocks[variantId];
+    }
+    if (isDrink) {
+      if (variantId === 'Mangga') return 20;
+      if (variantId === 'Sirsak') return 15;
+      if (variantId === 'Jambu') return 15;
+    }
+    return liveProduct.stock ?? 25;
+  };
+
+  const currentVariantStock = isDrink ? getVariantStock(selectedVariant) : ((liveProduct as any).stock ?? 25);
+  const isOutOfStock = currentVariantStock <= 0 || ((liveProduct as any).status === 'Low Stock' && (liveProduct as any).stock === 0);
+
+  // Daftar varian yang sedang ada di keranjang untuk hidangan ini
+  const variantsInCart = isDrink 
+    ? DRINK_VARIANTS.map(v => {
+        const key = `${liveProduct.id}_${v.id}`;
+        const qty = cart[key] || 0;
+        return { ...v, key, qty, subtotal: qty * liveProduct.price };
+      }).filter(v => v.qty > 0)
+    : [];
+
+  const totalVariantsInCartCount = variantsInCart.reduce((sum, v) => sum + v.qty, 0);
+  const totalVariantsInCartPrice = variantsInCart.reduce((sum, v) => sum + v.subtotal, 0);
 
   const currentMainImage = isDrink 
     ? activeDrinkVariant.image 
-    : (product.image || '/images/ayam_bakar.jpg');
+    : (liveProduct.image || '/images/ayam_bakar.jpg');
 
-  const totalPrice = product.price * quantity;
+  const totalPrice = liveProduct.price * quantity;
 
   // Helper pembersih string untuk pencocokan ulasan akurat
   const cleanStr = (s?: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -126,8 +168,8 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   // Realtime Reviews dari DataContext yang strictly cocok dengan hidangan ini
   const communityReviews = useMemo(() => {
     const rawList = Array.isArray(reviews) ? reviews : [];
-    const curProdName = cleanStr(product.name);
-    const curProdId = product.id;
+    const curProdName = cleanStr(liveProduct.name);
+    const curProdId = liveProduct.id;
 
     // Filter ulasan yang khusus untuk produk ini
     const matching = rawList.filter(rev => {
@@ -179,26 +221,47 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
         photo: r.photoUrl || r.photo || (r.photos && r.photos[0]) || null
       };
     });
-  }, [reviews, product.name, product.id, isDrink]);
+  }, [reviews, liveProduct.name, liveProduct.id, isDrink]);
 
   const totalReviewsCount = useMemo(() => {
     return communityReviews.length;
   }, [communityReviews]);
 
   const handleAddToCart = () => {
+    if (isOutOfStock) return;
     for (let i = 0; i < quantity; i++) {
-      addToCart(product.id, isDrink ? selectedVariant : undefined);
+      addToCart(liveProduct.id, isDrink ? selectedVariant : undefined);
     }
     setAddedNotice(true);
     setTimeout(() => setAddedNotice(false), 2500);
   };
 
   const handleBuyNow = () => {
+    if (isOutOfStock) return;
     for (let i = 0; i < quantity; i++) {
-      addToCart(product.id, isDrink ? selectedVariant : undefined);
+      addToCart(liveProduct.id, isDrink ? selectedVariant : undefined);
     }
     onClose();
     router.push('/cart');
+  };
+
+  // Handler Reservasi Produk Habis ke Customer Service
+  const handleReserveToCS = async () => {
+    setIsReserving(true);
+    const varName = isDrink ? activeDrinkVariant.name : liveProduct.name;
+    const userEmail = user?.email || 'customer@nefakky.com';
+    const userName = user?.displayName || 'Pelanggan Nefakky';
+
+    const msgText = `[RESERVASI PRODUK HABIS] Halo Tim CS Nefakky, saya ingin melakukan pemesanan / reservasi produk "${liveProduct.name}${isDrink ? ` (${varName})` : ''}" sebanyak ${quantity} porsi yang saat ini sedang habis. Mohon prioritaskan pesanan saya dan hubungi saya segera jika stok sudah kembali restock ya. Terima kasih!`;
+
+    try {
+      await sendChatMessage(userEmail, userName, msgText);
+    } catch (e) {
+      console.error('Gagal mengirim chat reservasi:', e);
+    }
+
+    setIsReserving(false);
+    setReservationSent(true);
   };
 
   return (
@@ -305,15 +368,20 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                   <div className="grid grid-cols-3 gap-2">
                     {DRINK_VARIANTS.map((v) => {
                       const isSelected = selectedVariant === v.id;
+                      const vStock = getVariantStock(v.id);
+                      const isVOutOfStock = vStock <= 0;
+
                       return (
                         <button
                           key={v.id}
                           type="button"
                           onClick={() => setSelectedVariant(v.id)}
-                          className={`relative p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between space-y-1.5 ${
+                          className={`relative p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between space-y-1.5 cursor-pointer ${
                             isSelected
                               ? 'bg-white border-neutral-900 ring-1 ring-neutral-900 shadow-xs'
-                              : 'bg-stone-50/80 border-stone-200 hover:bg-white'
+                              : isVOutOfStock
+                                ? 'bg-stone-100/70 border-stone-200 opacity-60'
+                                : 'bg-stone-50/80 border-stone-200 hover:bg-white'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-1">
@@ -328,13 +396,76 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                               <span className="w-3.5 h-3.5 rounded-full border border-stone-300 shrink-0" />
                             )}
                           </div>
-                          <span className="inline-block text-[8px] font-bold text-stone-600 bg-stone-100 px-1 py-0.5 rounded uppercase">
-                            {v.tag}
-                          </span>
+
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="inline-block text-[8px] font-bold text-stone-600 bg-stone-100 px-1 py-0.5 rounded uppercase">
+                              {v.tag}
+                            </span>
+                            <span className={`text-[8.5px] font-bold font-mono ${isVOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
+                              {isVOutOfStock ? 'Habis' : `Stok ${vStock}`}
+                            </span>
+                          </div>
                         </button>
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Multi-Varian: Ringkasan Varian di Keranjang Anda */}
+              {isDrink && variantsInCart.length > 0 && (
+                <div className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-2xl space-y-2 animate-fade-in">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-stone-900 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+                      <ShoppingBag className="w-3.5 h-3.5 text-[#934B19]" />
+                      <span>Varian di Keranjang ({totalVariantsInCartCount} Porsi)</span>
+                    </span>
+                    <span className="font-mono font-bold text-[#934B19] text-xs">
+                      Total: Rp {totalVariantsInCartPrice.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                    {variantsInCart.map(v => (
+                      <div key={v.key} className="flex items-center justify-between bg-white p-2 rounded-xl border border-stone-200/70 text-xs shadow-2xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-stone-800">{v.name}</span>
+                          <span className="text-stone-400 font-mono text-[11px]">Rp {v.subtotal.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(v.key)}
+                            className="w-5 h-5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded flex items-center justify-center font-bold transition-colors cursor-pointer"
+                            title="Kurangi"
+                          >
+                            <Minus className="w-2.5 h-2.5" />
+                          </button>
+                          <span className="font-mono font-bold text-xs px-1">{v.qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => addToCart(liveProduct.id, v.id)}
+                            className="w-5 h-5 bg-neutral-900 hover:bg-black text-white rounded flex items-center justify-center font-bold transition-colors cursor-pointer"
+                            title="Tambah"
+                          >
+                            <Plus className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      router.push('/cart');
+                    }}
+                    className="w-full py-2 px-3 bg-[#25160E] hover:bg-black text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+                  >
+                    <span>Lanjut Bayar Semua Varian (1 Transaksi)</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-amber-300" />
+                  </button>
                 </div>
               )}
 
@@ -384,28 +515,28 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                     <p>
                       {isDrink
                         ? 'Aneka pilihan jus buah segar alami berkualitas premium: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis.'
-                        : (product.description || 'Ayam bakar otentik dengan olesan madu murni pilihan, dipanggang perlahan di atas arang batok kelapa.')}
+                        : (liveProduct.description || 'Ayam bakar otentik dengan olesan madu murni pilihan, dipanggang perlahan di atas arang batok kelapa.')}
                     </p>
                   )}
                   {activeTab === 'ingredients' && (
                     <p>
                       {isDrink
                         ? 'Buah segar matang pohon alami, air mineral higienis, dan sedikit madu tanpa pengawet.'
-                        : ((product as any).ingredients || 'Daging ayam pejantan segar, madu murni, kecap kedelai manis alami, lengkuas, ketumbar sangrai, serai, daun jeruk purut, bawang merah, dan bawang putih.')}
+                        : ((liveProduct as any).ingredients || 'Daging ayam pejantan segar, madu murni, kecap kedelai manis alami, lengkuas, ketumbar sangrai, serai, daun jeruk purut, bawang merah, dan bawang putih.')}
                     </p>
                   )}
                   {activeTab === 'storage' && (
                     <p>
                       {isDrink
                         ? 'Simpan dalam chiller kulkas pada suhu 4°C (tahan 4 hari).'
-                        : ((product as any).storage || (product as any).usageAdvice || 'Simpan dalam chiller kulkas pada suhu 4°C (tahan 3 hari) atau simpan beku dalam freezer pada suhu -18°C (tahan 1 bulan).')}
+                        : ((liveProduct as any).storage || (liveProduct as any).usageAdvice || 'Simpan dalam chiller kulkas pada suhu 4°C (tahan 3 hari) atau simpan beku dalam freezer pada suhu -18°C (tahan 1 bulan).')}
                     </p>
                   )}
                   {activeTab === 'serving' && (
                     <p>
                       {isDrink
                         ? 'Kocok perlahan sebelum diminum dan nikmati selagi dingin.'
-                        : ((product as any).serving || 'Hangatkan dalam microwave selama 2 menit atau panggang kembali di atas teflon dengan api kecil selama 3-5 menit sebelum disantap.')}
+                        : ((liveProduct as any).serving || 'Hangatkan dalam microwave selama 2 menit atau panggang kembali di atas teflon dengan api kecil selama 3-5 menit sebelum disantap.')}
                     </p>
                   )}
                 </div>
@@ -444,44 +575,103 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                 </div>
               </div>
 
+              {/* Banner Peringatan Jika Stok Habis */}
+              {isOutOfStock && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl space-y-1.5 animate-fade-in">
+                  <div className="flex items-center gap-2 text-rose-800 font-bold text-xs">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>Produk Habis — Stok {isDrink ? `Varian ${activeDrinkVariant.name}` : liveProduct.name} Sedang Kosong</span>
+                  </div>
+                  <p className="text-[11px] text-rose-700 font-light leading-relaxed">
+                    Mohon maaf, saat ini menu tidak dapat dibeli langsung. Anda dapat melakukan <strong>Pemesanan / Reservasi Prioritas</strong> ke Customer Service kami agar langsung dikabari begitu stok restock kembali!
+                  </p>
+                </div>
+              )}
+
+              {/* Status Sukses Reservasi */}
+              {reservationSent && (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs space-y-2 animate-fade-in">
+                  <div className="flex items-center gap-2 font-bold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Reservasi Prioritas Berhasil Terkirim! 📋</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 leading-relaxed font-light">
+                    Permintaan prioritas untuk {quantity}x {isDrink ? `Jus ${selectedVariant}` : liveProduct.name} telah diterima oleh Tim CS. Kami akan segera menghubungi Anda saat stok kembali tersedia.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Link
+                      href="/profile"
+                      onClick={onClose}
+                      className="px-3 py-1.5 bg-[#25160E] hover:bg-black text-white text-[11px] font-bold rounded-lg transition-colors"
+                    >
+                      Buka Live Chat CS
+                    </Link>
+                    <a
+                      href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo CS Nefakky, saya ingin reservasi pesanan ${liveProduct.name}${isDrink ? ` varian ${activeDrinkVariant.name}` : ''} sebanyak ${quantity} porsi yang sedang habis.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition-colors"
+                    >
+                      WhatsApp CS
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {/* Action Stepper & Buttons */}
               <div className="flex items-center gap-2.5 pt-2">
                 <div className="flex items-center justify-between bg-white border border-stone-200 rounded-xl px-2 py-1.5 w-24 shrink-0">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-6 h-6 rounded hover:bg-stone-100 flex items-center justify-center text-stone-600"
+                    className="w-6 h-6 rounded hover:bg-stone-100 flex items-center justify-center text-stone-600 cursor-pointer"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
                   <span className="text-xs font-bold text-neutral-900">{quantity}</span>
                   <button
                     onClick={() => setQuantity(quantity + 1)}
-                    className="w-6 h-6 rounded hover:bg-stone-100 flex items-center justify-center text-stone-600"
+                    className="w-6 h-6 rounded hover:bg-stone-100 flex items-center justify-center text-stone-600 cursor-pointer"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
 
-                <button
-                  onClick={handleAddToCart}
-                  className="flex-1 py-2.5 px-3 bg-white border border-stone-300 hover:bg-stone-50 active:scale-[0.99] text-stone-900 font-medium text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5"
-                >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>Tambah</span>
-                </button>
+                {isOutOfStock ? (
+                  /* Tombol Reservasi ke Customer Service Jika Produk Habis */
+                  <button
+                    type="button"
+                    onClick={handleReserveToCS}
+                    disabled={isReserving}
+                    className="flex-1 py-3 px-4 bg-[#934B19] hover:bg-[#783603] active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>{isReserving ? 'Mengirim Reservasi...' : `Pesan / Reservasi ke Customer Service (${quantity} Porsi)`}</span>
+                  </button>
+                ) : (
+                  /* Tombol Pembelian Normal Jika Stok Tersedia */
+                  <>
+                    <button
+                      onClick={handleAddToCart}
+                      className="flex-1 py-2.5 px-3 bg-white border border-stone-300 hover:bg-stone-50 active:scale-[0.99] text-stone-900 font-medium text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                      <span>Tambah</span>
+                    </button>
 
-                <button
-                  onClick={handleBuyNow}
-                  className="py-2.5 px-4 bg-black hover:bg-neutral-800 active:scale-[0.99] text-white font-medium text-xs rounded-xl shadow-sm transition-all whitespace-nowrap"
-                >
-                  Beli Langsung (Rp {totalPrice.toLocaleString('id-ID')})
-                </button>
+                    <button
+                      onClick={handleBuyNow}
+                      className="py-2.5 px-4 bg-black hover:bg-neutral-800 active:scale-[0.99] text-white font-medium text-xs rounded-xl shadow-sm transition-all whitespace-nowrap cursor-pointer"
+                    >
+                      Beli Langsung (Rp {totalPrice.toLocaleString('id-ID')})
+                    </button>
+                  </>
+                )}
               </div>
 
               {addedNotice && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in font-medium">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{quantity}x {isDrink ? `Jus Segar (${selectedVariant})` : product.name} berhasil ditambahkan ke keranjang!</span>
+                  <span>{quantity}x {isDrink ? `Jus Segar (${selectedVariant})` : liveProduct.name} berhasil ditambahkan ke keranjang!</span>
                 </div>
               )}
 

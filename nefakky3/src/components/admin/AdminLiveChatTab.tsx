@@ -658,10 +658,20 @@ export default function AdminLiveChatTab({
                         isAdmin ? 'items-end self-end' : 'items-start self-start'
                       }`}
                     >
+                      {/* Reservation Tag if Customer Sent a Reservation Request */}
+                      {!isAdmin && (msg.text?.includes('[RESERVASI PRODUK HABIS]') || msg.text?.includes('[RESERVASI MENU HABIS]')) && (
+                        <div className="mb-1.5 flex items-center gap-1.5 bg-amber-100/90 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-2xs">
+                          <span>🏷️</span>
+                          <span>PERMINTAAN RESERVASI PRODUK HABIS</span>
+                        </div>
+                      )}
+
                       <div className={`px-4 py-3 rounded-2xl text-xs leading-relaxed shadow-2xs relative ${
                         isAdmin 
                           ? 'bg-[#25160E] text-white rounded-tr-none' 
-                          : 'bg-white text-stone-900 rounded-tl-none border border-stone-200'
+                          : msg.text?.includes('[RESERVASI')
+                            ? 'bg-amber-50/90 text-stone-900 rounded-tl-none border-2 border-amber-300'
+                            : 'bg-white text-stone-900 rounded-tl-none border border-stone-200'
                       }`}>
                         {/* Media Image Attachment if present */}
                         {msg.mediaUrl && msg.mediaType !== 'video' && (
@@ -688,8 +698,8 @@ export default function AdminLiveChatTab({
                         <span className="whitespace-pre-wrap font-normal">{msg.text}</span>
                       </div>
 
-                      {/* Message Footer: Time + Quote/Reply Action */}
-                      <div className="flex items-center gap-2 mt-1 px-1">
+                      {/* Message Footer: Time + Quote/Reply Action + Quick Restock Notify Button */}
+                      <div className="flex flex-wrap items-center gap-2 mt-1 px-1">
                         <span className="text-[10px] text-stone-400">
                           {msg.timestamp || 'Baru saja'} {isAdmin ? '• Terkirim CS' : ''}
                         </span>
@@ -701,6 +711,19 @@ export default function AdminLiveChatTab({
                             className="opacity-0 group-hover:opacity-100 text-[10px] text-[#934B19] font-bold hover:underline transition-opacity cursor-pointer flex items-center gap-0.5"
                           >
                             <span>Balas</span>
+                          </button>
+                        )}
+
+                        {!isAdmin && (msg.text?.includes('[RESERVASI PRODUK HABIS]') || msg.text?.includes('[RESERVASI MENU HABIS]')) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAdminReplyInput('Halo kak! Kabar gembira, menu yang kakak pesan/reservasi kemarin kini telah KEMBALI TERSEDIA (RESTOCK) di dapur kami dan siap dipesan. Silakan melakukan pemesanan langsung melalui aplikasi ya kak! Selamat menikmati! 🍲✨');
+                            }}
+                            className="text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-0.5 rounded-md shadow-2xs transition-colors cursor-pointer flex items-center gap-1"
+                            title="Klik untuk mengisi pesan balasan restock otomatis"
+                          >
+                            <span>⚡ Kabari Restock</span>
                           </button>
                         )}
                       </div>

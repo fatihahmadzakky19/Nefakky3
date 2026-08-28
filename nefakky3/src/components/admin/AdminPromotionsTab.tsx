@@ -32,7 +32,8 @@ import {
   TrendingUp,
   BarChart2,
   Upload,
-  FolderOpen
+  FolderOpen,
+  Users
 } from 'lucide-react';
 import { AdminVoucher, useData } from '@/context/DataContext';
 import { createPromoCalendarUrl } from '@/lib/googleCalendar';
@@ -40,6 +41,7 @@ import { createPromoCalendarUrl } from '@/lib/googleCalendar';
 interface AdminPromotionsTabProps {
   voucherList: AdminVoucher[];
   addVoucher: (voucher: any) => void;
+  updateVoucher?: (id: string, updated: Partial<AdminVoucher>) => void;
   deleteVoucher: (id: string) => void;
   toggleVoucherStatus: (id: string) => void;
   initialVoucherCode?: string;
@@ -49,6 +51,7 @@ interface AdminPromotionsTabProps {
 export default function AdminPromotionsTab({
   voucherList,
   addVoucher,
+  updateVoucher,
   deleteVoucher,
   toggleVoucherStatus,
   initialVoucherCode = '',
@@ -69,9 +72,12 @@ export default function AdminPromotionsTab({
   const [voucherName, setVoucherName] = useState<string>(initialVoucherName || '');
   const [voucherDiscount, setVoucherDiscount] = useState<string>('20');
   const [voucherMinSpend, setVoucherMinSpend] = useState<string>('50000');
-  const [voucherEvent, setVoucherEvent] = useState<string>('Pelanggan Baru');
+  const [voucherEvent, setVoucherEvent] = useState<string>('Flash Sale');
   const [validDays, setValidDays] = useState<string>('Semua Hari');
   const [autoResetWeekly, setAutoResetWeekly] = useState<boolean>(false);
+  const [userLimitType, setUserLimitType] = useState<'limited' | 'unlimited'>('limited');
+  const [voucherUserLimit, setVoucherUserLimit] = useState<string>('100');
+  const [voucherExpiry, setVoucherExpiry] = useState<string>('31 Des 2026');
   const [voucherImageUrl, setVoucherImageUrl] = useState<string>('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80');
   const voucherFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,9 +122,12 @@ export default function AdminPromotionsTab({
     setVoucherName('');
     setVoucherDiscount('20');
     setVoucherMinSpend('50000');
-    setVoucherEvent('Pelanggan Baru');
+    setVoucherEvent('Flash Sale');
     setValidDays('Semua Hari');
     setAutoResetWeekly(false);
+    setUserLimitType('limited');
+    setVoucherUserLimit('100');
+    setVoucherExpiry('31 Des 2026');
     setVoucherImageUrl('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80');
     setShowVoucherModal(true);
   };
@@ -129,11 +138,52 @@ export default function AdminPromotionsTab({
     setVoucherName(v.name || '');
     setVoucherDiscount(String(v.discountPercent || 20));
     setVoucherMinSpend(String(v.minSpend || 50000));
-    setVoucherEvent((v as any).eventCategory || 'Pelanggan Baru');
+    const ev = (v as any).eventCategory || v.event || 'Flash Sale';
+    setVoucherEvent(ev);
     setValidDays(v.validDays || 'Semua Hari');
     setAutoResetWeekly(v.autoResetWeekly || false);
     setVoucherImageUrl(v.imageUrl || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80');
+
+    const isPelangganBaru = ev === 'Pelanggan Baru' || (v.code || '').toUpperCase().includes('NEFAKKY10') || (v.name || '').toLowerCase().includes('pelanggan baru');
+    if (isPelangganBaru) {
+      setUserLimitType('unlimited');
+      setVoucherExpiry('Selamanya');
+      setVoucherUserLimit('100');
+    } else {
+      if (v.redemptions === 'Tanpa Batas' || (v.redemptions && String(v.redemptions).toLowerCase().includes('tanpa batas'))) {
+        setUserLimitType('unlimited');
+        setVoucherUserLimit('100');
+      } else {
+        setUserLimitType('limited');
+        if (v.totalLimit) {
+          setVoucherUserLimit(String(v.totalLimit));
+        } else if (v.redemptions && v.redemptions.includes('/')) {
+          setVoucherUserLimit(v.redemptions.split('/')[1]?.trim() || '100');
+        } else {
+          setVoucherUserLimit('100');
+        }
+      }
+      setVoucherExpiry(v.expiry || '31 Des 2026');
+    }
+
     setShowVoucherModal(true);
+  };
+
+  const handleEventChange = (val: string) => {
+    setVoucherEvent(val);
+    if (val === 'Pelanggan Baru') {
+      setUserLimitType('unlimited');
+      setVoucherExpiry('Selamanya');
+      setAutoResetWeekly(false);
+    } else {
+      if (voucherExpiry === 'Selamanya' || voucherEvent === 'Pelanggan Baru') {
+        setVoucherExpiry('31 Des 2026');
+        setUserLimitType('limited');
+        if (!voucherUserLimit || voucherUserLimit === '0') {
+          setVoucherUserLimit('100');
+        }
+      }
+    }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -143,20 +193,54 @@ export default function AdminPromotionsTab({
       return;
     }
 
-    const payload = {
+    const isPelangganBaru = voucherEvent === 'Pelanggan Baru';
+    const limitNum = parseInt(voucherUserLimit) || 100;
+    const currentUsed = editingVoucher ? (editingVoucher.usedCount || 0) : 0;
+
+    let redemptionsVal = 'Tanpa Batas';
+    let totalLimitVal: number | undefined = undefined;
+    let expiryVal = voucherExpiry.trim() || '31 Des 2026';
+
+    if (isPelangganBaru) {
+      redemptionsVal = '1x Per Pengguna Baru';
+      totalLimitVal = 999999;
+      expiryVal = 'Selamanya';
+    } else if (userLimitType === 'limited') {
+      redemptionsVal = `${currentUsed}/${limitNum}`;
+      totalLimitVal = limitNum;
+    } else {
+      redemptionsVal = 'Tanpa Batas';
+      totalLimitVal = undefined;
+    }
+
+    const payload: any = {
       code: voucherCode.trim().toUpperCase(),
       name: voucherName.trim() || `Diskon ${voucherDiscount}%`,
       discountPercent: parseInt(voucherDiscount) || 0,
       minSpend: parseInt(voucherMinSpend) || 0,
       eventCategory: voucherEvent,
+      event: voucherEvent,
       validDays: validDays,
-      autoResetWeekly: autoResetWeekly,
-      isActive: true,
+      autoResetWeekly: isPelangganBaru ? false : autoResetWeekly,
+      isActive: editingVoucher ? (editingVoucher.isActive !== false) : true,
+      status: 'Active',
       imageUrl: voucherImageUrl || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
-      expiry: '31 Des 2026'
+      redemptions: redemptionsVal,
+      totalLimit: totalLimitVal,
+      usedCount: currentUsed,
+      expiry: expiryVal
     };
 
-    addVoucher(payload);
+    if (editingVoucher) {
+      if (updateVoucher) {
+        updateVoucher(editingVoucher.id, payload);
+      } else {
+        addVoucher({ ...payload, id: editingVoucher.id });
+      }
+    } else {
+      addVoucher(payload);
+    }
+
     setShowVoucherModal(false);
   };
 
@@ -223,6 +307,26 @@ export default function AdminPromotionsTab({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedVouchers.map((voucher) => {
             const isActive = voucher.isActive ?? true;
+            const isPelangganBaru = 
+              (voucher as any).eventCategory === 'Pelanggan Baru' || 
+              voucher.event === 'Pelanggan Baru' || 
+              (voucher.code || '').toUpperCase().includes('NEFAKKY10') ||
+              (voucher.name || '').toLowerCase().includes('pelanggan baru');
+
+            const isTanpaBatas = 
+              !isPelangganBaru && 
+              (voucher.redemptions === 'Tanpa Batas' || (voucher.redemptions && String(voucher.redemptions).toLowerCase().includes('tanpa batas')));
+
+            let usedCount = voucher.usedCount || 0;
+            let totalLimit = voucher.totalLimit;
+            if (totalLimit === undefined && voucher.redemptions && voucher.redemptions.includes('/')) {
+              const parts = voucher.redemptions.split('/');
+              usedCount = parseInt(parts[0], 10) || usedCount;
+              totalLimit = parseInt(parts[1], 10) || 500;
+            }
+            if (!totalLimit && !isTanpaBatas && !isPelangganBaru) {
+              totalLimit = 500;
+            }
 
             return (
               <div 
@@ -243,7 +347,7 @@ export default function AdminPromotionsTab({
                   <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10">
                     <span className="px-3 py-1 bg-amber-400 text-amber-950 font-extrabold rounded-full text-[10px] uppercase shadow-md tracking-wider flex items-center gap-1">
                       <Tag className="w-3 h-3 text-amber-950" />
-                      <span>{(voucher as any).eventCategory || 'Promo Spesial'}</span>
+                      <span>{(voucher as any).eventCategory || voucher.event || 'Promo Spesial'}</span>
                     </span>
 
                     <button 
@@ -297,16 +401,45 @@ export default function AdminPromotionsTab({
                       </span>
                     </div>
 
+                    <div className="flex justify-between border-b border-stone-100 py-2 items-center">
+                      <span className="text-stone-500 font-medium">Batasan Kuota</span>
+                      {isPelangganBaru ? (
+                        <span className="px-2 py-0.5 bg-amber-100 text-amber-900 font-bold text-[10px] rounded-md border border-amber-300">
+                          1x Per User (Selamanya)
+                        </span>
+                      ) : isTanpaBatas ? (
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-md border border-emerald-300">
+                          Tanpa Batas Kuota
+                        </span>
+                      ) : (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-mono font-bold text-stone-900 text-[11px]">
+                            {usedCount}/{totalLimit} Pengguna
+                          </span>
+                          <div className="w-20 h-1.5 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
+                            <div 
+                              className="h-full bg-[#934B19] rounded-full transition-all"
+                              style={{ width: `${Math.min(100, (usedCount / Math.max(1, totalLimit || 1)) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex justify-between border-b border-stone-100 py-2">
                       <span className="text-stone-500 font-medium">Aturan</span>
                       <span className="font-mono font-bold text-stone-900">
-                        {voucher.autoResetWeekly ? 'Reset Mingguan' : '1x Per User'}
+                        {isPelangganBaru ? 'User Baru Selamanya' : voucher.autoResetWeekly ? 'Reset Mingguan' : '1x Per User'}
                       </span>
                     </div>
 
-                    <div className="flex justify-between pt-2 text-rose-600 text-xs font-bold">
+                    <div className="flex justify-between pt-2 text-rose-600 text-xs font-bold items-center">
                       <span className="text-stone-500 font-medium">Expiry</span>
-                      <span className="font-mono">{voucher.expiry || '31 Des 2026'}</span>
+                      {isPelangganBaru ? (
+                        <span className="font-mono text-emerald-700 font-bold text-[11px]">Aktif Selamanya</span>
+                      ) : (
+                        <span className="font-mono">{voucher.expiry || '31 Des 2026'}</span>
+                      )}
                     </div>
                   </div>
 
@@ -551,10 +684,10 @@ export default function AdminPromotionsTab({
                     </label>
                     <select 
                       value={voucherEvent} 
-                      onChange={(e) => setVoucherEvent(e.target.value)}
+                      onChange={(e) => handleEventChange(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none text-xs text-stone-900 font-semibold cursor-pointer shadow-2xs"
                     >
-                      <option value="Pelanggan Baru">Pelanggan Baru</option>
+                      <option value="Pelanggan Baru">Pelanggan Baru (Aktif Selamanya)</option>
                       <option value="Promo Akhir Pekan">Promo Akhir Pekan</option>
                       <option value="Flash Sale">Flash Sale</option>
                       <option value="Tanggal Kembar">Tanggal Kembar</option>
@@ -578,6 +711,130 @@ export default function AdminPromotionsTab({
                     </select>
                   </div>
                 </div>
+
+                {/* Section Batasan Pengguna & Masa Berlaku */}
+                {voucherEvent === 'Pelanggan Baru' ? (
+                  <div className="p-4 bg-amber-50/80 rounded-2xl border border-amber-300/80 flex items-start gap-3.5 shadow-2xs">
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 text-[#934B19] flex items-center justify-center shrink-0 mt-0.5 border border-amber-200">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-stone-900 text-xs">Promo Pelanggan Baru (Aktif Selamanya)</span>
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-md border border-emerald-300">
+                          Aktif Selamanya
+                        </span>
+                      </div>
+                      <p className="text-stone-600 text-[11px] mt-1 leading-relaxed">
+                        Sesuai ketentuan, promo pelanggan baru akan <strong>selalu aktif selamanya</strong> dan berlaku otomatis <strong>1x klaim per akun pengguna baru</strong> tanpa dibatasi kuota global.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                    <div className="flex items-center justify-between">
+                      <label className="font-label-caps text-stone-800 uppercase text-[11px] font-bold flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-[#934B19]" />
+                        <span>Batasan Pengguna (Kuota Klaim Promo)</span>
+                      </label>
+                      
+                      {/* Pilihan: Terbatas vs Tanpa Batas */}
+                      <div className="flex items-center gap-1 bg-stone-200/70 p-0.5 rounded-lg text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setUserLimitType('limited')}
+                          className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                            userLimitType === 'limited'
+                              ? 'bg-white text-[#934B19] shadow-xs font-extrabold'
+                              : 'text-stone-600 hover:text-stone-900'
+                          }`}
+                        >
+                          Batas Kuota
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUserLimitType('unlimited')}
+                          className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                            userLimitType === 'unlimited'
+                              ? 'bg-white text-[#934B19] shadow-xs font-extrabold'
+                              : 'text-stone-600 hover:text-stone-900'
+                          }`}
+                        >
+                          Tanpa Batas
+                        </button>
+                      </div>
+                    </div>
+
+                    {userLimitType === 'limited' ? (
+                      <div className="space-y-2.5">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="100000"
+                            required
+                            value={voucherUserLimit}
+                            onChange={(e) => setVoucherUserLimit(e.target.value)}
+                            placeholder="Contoh: 100"
+                            className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none font-mono text-xs text-stone-900 font-bold shadow-2xs"
+                          />
+                          <span className="text-xs font-bold text-stone-600 shrink-0">Pengguna</span>
+                        </div>
+
+                        {/* Quick Limit Presets */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-stone-500 font-medium mr-1">Preset Cepat:</span>
+                          {['25', '50', '100', '250', '500', '1000'].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setVoucherUserLimit(preset)}
+                              className={`px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold border transition-colors cursor-pointer ${
+                                voucherUserLimit === preset 
+                                  ? 'bg-[#934B19] text-white border-[#934B19]' 
+                                  : 'bg-white text-stone-700 border-stone-200 hover:border-stone-400'
+                              }`}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Checkbox Auto-Reset Mingguan */}
+                        <label className="flex items-center gap-2 pt-1 text-stone-700 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={autoResetWeekly}
+                            onChange={(e) => setAutoResetWeekly(e.target.checked)}
+                            className="w-4 h-4 rounded border-stone-300 text-[#934B19] focus:ring-[#934B19] accent-[#934B19] cursor-pointer"
+                          />
+                          <span className="text-[11px] font-semibold">
+                            Auto-Reset Kuota Setiap Minggu (Cocok untuk Promo Akhir Pekan / Rutin)
+                          </span>
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 bg-white rounded-xl border border-stone-200 text-stone-600 text-[11px] flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px] text-emerald-600">all_inclusive</span>
+                        <span>Voucher ini dapat diklaim tanpa batas total kuota hingga masa berlaku selesai.</span>
+                      </div>
+                    )}
+
+                    {/* Expiry Field */}
+                    <div className="flex flex-col gap-1 pt-2 border-t border-stone-200">
+                      <label className="font-label-caps text-stone-800 uppercase text-[11px] font-bold">
+                        Masa Berlaku / Tanggal Kedaluwarsa
+                      </label>
+                      <input
+                        type="text"
+                        value={voucherExpiry}
+                        onChange={(e) => setVoucherExpiry(e.target.value)}
+                        placeholder="Contoh: 31 Des 2026 atau Akhir Pekan"
+                        className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none text-xs text-stone-900 font-semibold shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Foto / Background Voucher */}
                 <div className="space-y-3 pt-2 border-t border-stone-200">

@@ -252,17 +252,25 @@ export default function MenuCatalogPage() {
                           className="object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         
-                        {/* Badge Kategori / Promo Terpopuler */}
-                        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-                          {product.badge && (
-                            <span className="px-2.5 py-1 bg-[#25160E] text-white text-[10px] font-bold uppercase rounded-full shadow-md">
-                              {product.badge}
+                        {/* Badge Kategori / Promo Terpopuler / Stok Habis */}
+                        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+                          {product.stock <= 0 ? (
+                            <span className="px-2.5 py-1 bg-rose-600 text-white text-[10px] font-bold uppercase rounded-full shadow-md">
+                              Produk Habis
                             </span>
-                          )}
-                          {product.isComingSoon && (
-                            <span className="px-2.5 py-1 bg-amber-500 text-white text-[10px] font-bold uppercase rounded-full shadow-md">
-                              Segera Hadir
-                            </span>
+                          ) : (
+                            <>
+                              {product.badge && (
+                                <span className="px-2.5 py-1 bg-[#25160E] text-white text-[10px] font-bold uppercase rounded-full shadow-md">
+                                  {product.badge}
+                                </span>
+                              )}
+                              {product.isComingSoon && (
+                                <span className="px-2.5 py-1 bg-amber-500 text-white text-[10px] font-bold uppercase rounded-full shadow-md">
+                                  Segera Hadir
+                                </span>
+                              )}
+                            </>
                           )}
                         </div>
 
@@ -273,7 +281,7 @@ export default function MenuCatalogPage() {
                             e.stopPropagation();
                             toggleWishlist(product.id);
                           }}
-                          className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-colors ${
+                          className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-colors z-10 ${
                             isFav ? 'bg-rose-50 text-rose-500' : 'bg-white/80 text-stone-600 hover:text-rose-500'
                           }`}
                           aria-label="Simpan ke Favorit"
@@ -320,9 +328,17 @@ export default function MenuCatalogPage() {
                         </span>
                       </div>
 
-                      {/* Kontrol Kuantitas Keranjang */}
+                      {/* Kontrol Kuantitas Keranjang / Reservasi */}
                       <div>
-                        {cartQty > 0 ? (
+                        {product.stock <= 0 ? (
+                          <button
+                            onClick={() => setDetailProduct(product)}
+                            className="px-3.5 py-2 rounded-xl text-[11px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 transition-all flex items-center gap-1 shadow-xs cursor-pointer"
+                            title="Produk habis, klik untuk reservasi ke CS"
+                          >
+                            <span>Reservasi CS</span>
+                          </button>
+                        ) : cartQty > 0 ? (
                           <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl border border-stone-200">
                             <button
                               onClick={() => removeFromCart(product.id)}
@@ -342,9 +358,15 @@ export default function MenuCatalogPage() {
                           </div>
                         ) : (
                           <button
-                            onClick={() => addToCart(product.id)}
+                            onClick={() => {
+                              if (product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus')) {
+                                setDetailProduct(product);
+                              } else {
+                                addToCart(product.id);
+                              }
+                            }}
                             disabled={Boolean(product.isComingSoon)}
-                            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${
+                            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${
                               product.isComingSoon
                                 ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
                                 : 'bg-[#25160E] hover:bg-[#934b19] text-white active:scale-95'

@@ -13,6 +13,7 @@ export default function AdminPromotionsPage() {
   const {
     vouchers,
     addVoucher,
+    updateVoucher,
     deleteVoucher,
     toggleVoucherStatus
   } = useData();
@@ -21,6 +22,7 @@ export default function AdminPromotionsPage() {
     <AdminPromotionsTab
       voucherList={vouchers || []}
       addVoucher={addVoucher}
+      updateVoucher={updateVoucher}
       deleteVoucher={deleteVoucher}
       toggleVoucherStatus={toggleVoucherStatus}
       initialVoucherCode={initialCode}

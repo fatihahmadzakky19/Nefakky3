@@ -556,14 +556,20 @@ export default function HomePage() {
                         <span className="text-stone-400 text-[10px] ml-0.5">({product.soldCount || '3.5k Terjual'})</span>
                       </div>
 
-                      {/* Best Seller Tag */}
-                      {isBestSeller && (
+                      {/* Out of Stock / Best Seller Tag */}
+                      {product.stock <= 0 ? (
+                        <div className="absolute bottom-3 left-3">
+                          <span className="bg-rose-600 text-white px-2.5 py-0.5 rounded font-bold text-[10px] tracking-wider uppercase shadow-xs">
+                            PRODUK HABIS
+                          </span>
+                        </div>
+                      ) : isBestSeller ? (
                         <div className="absolute bottom-3 left-3">
                           <span className="bg-[#934B19] text-white px-2.5 py-0.5 rounded font-bold text-[10px] tracking-wider uppercase shadow-xs">
                             BEST SELLER
                           </span>
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Card Body */}
@@ -588,7 +594,15 @@ export default function HomePage() {
                             Rp {product.price.toLocaleString('id-ID')}
                           </span>
 
-                          {cartQty > 0 ? (
+                          {product.stock <= 0 ? (
+                            <button
+                              onClick={() => setDetailProduct(product)}
+                              className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-[10px] font-bold transition-all shadow-2xs cursor-pointer"
+                              title="Produk habis, klik untuk reservasi ke CS"
+                            >
+                              Reservasi CS
+                            </button>
+                          ) : cartQty > 0 ? (
                             <div className="flex items-center gap-1 bg-stone-100 p-0.5 rounded-lg border border-stone-200">
                               <button
                                 onClick={() => removeFromCart(product.id)}
@@ -606,9 +620,15 @@ export default function HomePage() {
                             </div>
                           ) : (
                             <button
-                              onClick={() => addToCart(product.id)}
-                              className="w-8 h-8 rounded-lg bg-black hover:bg-neutral-800 text-white flex items-center justify-center transition-all shadow-2xs active:scale-95"
-                              title="Tambah ke Keranjang"
+                              onClick={() => {
+                                if (product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus')) {
+                                  setDetailProduct(product);
+                                } else {
+                                  addToCart(product.id);
+                                }
+                              }}
+                              className="w-8 h-8 rounded-lg bg-black hover:bg-neutral-800 text-white flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer"
+                              title="Pesan / Tambah ke Keranjang"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
