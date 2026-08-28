@@ -10,11 +10,11 @@
 | Parameter | Hasil |
 | :--- | :--- |
 | **Status Keseluruhan** | **PASSED ✅** |
-| **Waktu Eksekusi** | 27/8/2026, 14.36.00 WIB |
+| **Waktu Eksekusi** | 28/8/2026, 17.33.59 WIB |
 | **Total Pengujian** | 8 Tes |
 | **Berhasil (Passed)** | **8** ✅ |
 | **Gagal (Failed)** | **0** ❌ |
-| **Durasi Eksekusi** | 3846 ms |
+| **Durasi Eksekusi** | 5428 ms |
 
 ---
 
@@ -23,13 +23,13 @@
 
 ### 1. 1. TypeScript Compilation — tsc --noEmit type check
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 3838 ms
+- **Waktu Eksekusi**: 5421 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
 ### 2. 2. Route Integrity — Core application routes existence
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 3 ms
+- **Waktu Eksekusi**: 2 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
@@ -59,13 +59,13 @@
 
 ### 7. 7. Midtrans Sandbox API Integrity — Charge & Status API Routes (/api/midtrans/*)
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 1 ms
+- **Waktu Eksekusi**: 0 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
 ### 8. 8. Distance Shipping Engine — Distance shipping calculation logic (<=10km flat 10k, >10km +2.5k/2km)
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 0 ms
+- **Waktu Eksekusi**: 1 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 

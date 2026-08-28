@@ -8,7 +8,7 @@
 [![Laravel Reverb](https://img.shields.io/badge/Laravel_Reverb-WebSockets_Active-FF2D20?style=for-the-badge)](https://laravel.com/docs/reverb)
 [![Leaflet](https://img.shields.io/badge/Leaflet-1.9.4-199900?style=for-the-badge&logo=leaflet)](https://leafletjs.com/)
 [![Midtrans](https://img.shields.io/badge/Midtrans-Snap_Sandbox-004B99?style=for-the-badge)](https://midtrans.com/)
-[![Test Suite](https://img.shields.io/badge/Test_Suite-8%2F8_Passed-success?style=for-the-badge)](TEST_REPORT.md)
+[![Test Suite](https://img.shields.io/badge/Test_Suite-8%2F8_Passed-success?style=for-the-badge)](docs/TEST_REPORT.md)
 
 ---
 
@@ -20,24 +20,24 @@ Aplikasi ini menggabungkan frontend modern berbasis **Next.js 14 App Router** de
 
 ---
 
-## 📚 Indeks Dokumentasi Lengkap Proyek
+## 📚 Indeks Dokumentasi Lengkap Proyek (`/docs`)
 
-Untuk memahami setiap aspek arsitektur, desain, API, dan alur kerja aplikasi secara mendalam, silakan baca dokumentasi terstruktur berikut:
+Seluruh dokumen teknis, spesifikasi, dan panduan proyek tersimpan rapi di dalam folder [`docs/`](docs/):
 
 | Dokumen | Deskripsi & Cakupan |
 | :--- | :--- |
-| 🏗️ **[ARCHITECTURE.md](ARCHITECTURE.md)** | Arsitektur sistem menyeluruh, komponen frontend, backend Laravel 12, Reverb, dan integrasi pihak ketiga. |
-| 📡 **[API.md](API.md)** | Spesifikasi lengkap seluruh 97 endpoint REST API Laravel 12, request body, query params, response JSON, dan Sanctum Auth. |
-| 🗄️ **[DATABASE.md](DATABASE.md)** | Skema basis data, ERD (Entity Relationship Diagram), tabel, tipe data, indeks, relasi Eloquent, dan mutator. |
-| 🔄 **[WORKFLOW.md](WORKFLOW.md)** | Alur kerja bisnis (Order Lifecycle 5-Tahap, Payment Webhook, Auto-Restock saat Cancel, dan Reporting). |
-| 💻 **[INSTALLATION.md](INSTALLATION.md)** | Panduan instalasi dan menjalankan lingkungan lokal (Laravel 12, Next.js 14, Reverb, Composer, NPM). |
-| 🎨 **[DESIGN.md](DESIGN.md)** | Master design system Google Stitch Artisanal Luxury, palet warna, tipografi, grid, dan ikonografi. |
-| 🛒 **[DESIGN_USER.md](DESIGN_USER.md)** | Spesifikasi UI/UX antarmuka belanja pelanggan (Beranda, Menu, Cart, Tracking, Comments, Profile). |
-| 🏢 **[DESIGN_ADMIN.md](DESIGN_ADMIN.md)** | Spesifikasi UI/UX Enterprise Admin Command Center (KPI Dashboard, Kitchen Desk, POS Logger, Settings). |
-| 📋 **[PRD.md](PRD.md)** | Product Requirement Document, visi bisnis, spesifikasi fungsional, dan non-fungsional. |
-| 🧪 **[TEST_REPORT.md](TEST_REPORT.md)** | Laporan hasil pengujian otomatis (*Automated Test Suite*) frontend & backend (100% Passed). |
-| 📜 **[CHANGELOG.md](CHANGELOG.md)** | Catatan riwayat perubahan versi dan pembaruan fitur aplikasi dari waktu ke waktu. |
-| 🤝 **[CONTRIBUTING.md](CONTRIBUTING.md)** | Panduan kontribusi, standard code style PSR-12, TypeScript strict guidelines, dan Git flow. |
+| 🏗️ **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Arsitektur sistem menyeluruh, komponen frontend, backend Laravel 12, Reverb, dan integrasi pihak ketiga. |
+| 📡 **[API.md](docs/API.md)** | Spesifikasi lengkap seluruh 97 endpoint REST API Laravel 12, request body, query params, response JSON, dan Sanctum Auth. |
+| 🗄️ **[DATABASE.md](docs/DATABASE.md)** | Skema basis data, ERD (Entity Relationship Diagram), tabel, tipe data, indeks, relasi Eloquent, dan mutator. |
+| 🔄 **[WORKFLOW.md](docs/WORKFLOW.md)** | Alur kerja bisnis (Order Lifecycle 5-Tahap, Payment Webhook, Auto-Restock saat Cancel, dan Reporting). |
+| 💻 **[INSTALLATION.md](docs/INSTALLATION.md)** | Panduan instalasi dan menjalankan lingkungan lokal (Laravel 12, Next.js 14, Reverb, Composer, NPM). |
+| 🎨 **[DESIGN.md](docs/DESIGN.md)** | Master design system Google Stitch Artisanal Luxury, palet warna, tipografi, grid, dan ikonografi. |
+| 🛒 **[DESIGN_USER.md](docs/DESIGN_USER.md)** | Spesifikasi UI/UX antarmuka belanja pelanggan (Beranda, Menu, Cart, Tracking, Comments, Profile). |
+| 🏢 **[DESIGN_ADMIN.md](docs/DESIGN_ADMIN.md)** | Spesifikasi UI/UX Enterprise Admin Command Center (KPI Dashboard, Kitchen Desk, POS Logger, Settings). |
+| 📋 **[PRD.md](docs/PRD.md)** | Product Requirement Document, visi bisnis, spesifikasi fungsional, dan non-fungsional. |
+| 🧪 **[TEST_REPORT.md](docs/TEST_REPORT.md)** | Laporan hasil pengujian otomatis (*Automated Test Suite*) frontend & backend (100% Passed). |
+| 📜 **[CHANGELOG.md](docs/CHANGELOG.md)** | Catatan riwayat perubahan versi dan pembaruan fitur aplikasi dari waktu ke waktu. |
+| 🤝 **[CONTRIBUTING.md](docs/CONTRIBUTING.md)** | Panduan kontribusi, standard code style PSR-12, TypeScript strict guidelines, dan Git flow. |
 
 ---
 

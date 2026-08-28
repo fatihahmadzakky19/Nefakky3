@@ -230,15 +230,17 @@ ${r.message ? `- **Pesan Eror**: \`\`\`\n${r.message}\n\`\`\`` : '- **Keterangan
 *Laporan dibuat otomatis oleh Nefakky Automated Test Runner.*
 `;
 
-const reportPath = path.join(rootDir, 'TEST_REPORT.md');
-const testReportPath = path.join(rootDir, 'test_report.md');
+const docsDir = path.join(rootDir, 'docs');
+if (!fs.existsSync(docsDir)) {
+  fs.mkdirSync(docsDir, { recursive: true });
+}
+const reportPath = path.join(docsDir, 'TEST_REPORT.md');
 fs.writeFileSync(reportPath, reportMarkdown, 'utf-8');
-fs.writeFileSync(testReportPath, reportMarkdown, 'utf-8');
 
 console.log(`\n==============================================`);
 console.log(` Status Pengujian: ${overallStatus}`);
 console.log(` Total: ${totalTests} | Passed: ${passedTests} | Failed: ${failedTests}`);
-console.log(` Laporan telah diperbarui di: TEST_REPORT.md & test_report.md`);
+console.log(` Laporan telah diperbarui di: docs/TEST_REPORT.md`);
 console.log(`==============================================\n`);
 
 if (failedTests > 0) {
