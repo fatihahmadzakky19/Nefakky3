@@ -129,11 +129,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const role = fbUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'customer';
 
         let name = fbUser.displayName;
-        if (!name && fbUser.email) {
+        let phone: string = '';
+        let addresses: UserAddress[] = [];
+
+        if (fbUser.email) {
           const storedUsersStr = localStorage.getItem('nefakky_registered_users');
           const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
           const matched = registeredUsers.find((u: any) => u.email && u.email.trim().toLowerCase() === fbUser.email?.toLowerCase());
-          if (matched) name = matched.displayName || matched.name;
+          if (matched) {
+            name = matched.displayName || matched.name || name;
+            phone = matched.phoneNumber || matched.phone || '';
+            addresses = matched.addresses || [];
+          }
+        }
+
+        const currentSavedStr = localStorage.getItem('nefakky_user');
+        if (currentSavedStr) {
+          try {
+            const parsed = JSON.parse(currentSavedStr);
+            if (!phone && parsed.phoneNumber) phone = parsed.phoneNumber;
+            if (addresses.length === 0 && parsed.addresses && parsed.addresses.length > 0) addresses = parsed.addresses;
+          } catch {}
         }
 
         const isGoogle = fbUser.providerData.some(p => p.providerId === 'google.com');
@@ -142,9 +158,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           uid: fbUser.uid,
           email: fbUser.email,
           displayName: name || (role === 'admin' ? 'Fatih Ahmad Zakky' : 'Pelanggan Nefakky'),
+          phoneNumber: phone,
           photoURL: fbUser.photoURL,
           role: role,
-          authProvider: isGoogle ? 'google' : 'password'
+          authProvider: isGoogle ? 'google' : 'password',
+          addresses: addresses
         });
 
         setUser(userProf);
@@ -203,7 +221,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         displayName: 'Fatih Ahmad Zakky (Admin)',
         role: 'admin',
         phoneNumber: '+6281234567890',
-        authProvider: 'password'
+        authProvider: 'password',
+        addresses: DEFAULT_INITIAL_ADDRESSES
       });
       setUser(adminUser);
       if (typeof window !== 'undefined') {
@@ -220,7 +239,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const role: 'admin' | 'customer' = isUserAdmin ? 'admin' : 'customer';
 
       let displayName = cred.user.displayName;
-      if (!displayName && typeof window !== 'undefined') {
+      let phoneNumber: string = '';
+      let userAddresses: UserAddress[] = [];
+
+      if (typeof window !== 'undefined') {
         const storedUsersStr = localStorage.getItem('nefakky_registered_users');
         const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
         const matchedUser = registeredUsers.find(
@@ -228,6 +250,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         );
         if (matchedUser) {
           displayName = matchedUser.displayName || matchedUser.name;
+          phoneNumber = matchedUser.phoneNumber || matchedUser.phone || '';
+          userAddresses = matchedUser.addresses || [];
         }
       }
 
@@ -235,9 +259,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         uid: cred.user.uid,
         email: cred.user.email,
         displayName: displayName || (role === 'admin' ? 'Fatih Ahmad Zakky' : normalizedEmail.split('@')[0]),
+        phoneNumber: phoneNumber,
         photoURL: cred.user.photoURL,
         role: role,
-        authProvider: 'password'
+        authProvider: 'password',
+        addresses: userAddresses
       });
 
       setUser(userProf);
@@ -256,9 +282,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             displayName: userProf.displayName,
             email: normalizedEmail,
             password: pass,
+            phoneNumber: phoneNumber,
             role,
             authProvider: 'password',
-            addresses: userProf.addresses
+            addresses: userAddresses
           });
           localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
         }

@@ -57,7 +57,7 @@ import {
 export default function CartCheckoutWorkflowPage() {
   const router = useRouter();
   const { user, addAddress, updateProfile } = useAuth();
-  const { vouchers, addOrder } = useData();
+  const { vouchers, addOrder, claimVoucherRedemption } = useData();
   const { 
     cartItems, 
     totalCartCount, 
@@ -65,6 +65,8 @@ export default function CartCheckoutWorkflowPage() {
     appliedPromo, 
     discountPercent, 
     discountAmount, 
+    minSpendRequired,
+    isMinSpendMet,
     addToCart, 
     removeFromCart, 
     deleteFromCart, 
@@ -182,7 +184,7 @@ export default function CartCheckoutWorkflowPage() {
   // Jarak Pengantaran & Perhitungan Ongkos Kirim Berdasarkan Jarak
   // Aturan Ongkir Nefakky:
   // - Jarak <= 10 km: Flat Rp 10.000
-  // - Jarak > 10 km: Rp 10.000 + (ceil((jarak - 10) / 3) * Rp 2.500)
+  // - Jarak > 10 km: Rp 10.000 + (ceil((jarak - 10) / 3) * Rp 1.500)
   const deliveryDistanceKm = 4.2; // Default estimasi jarak dapur resto ke alamat (4.2 Km)
 
   const calculateShippingByDistance = (distKm: number = 4.2): number => {
@@ -191,8 +193,8 @@ export default function CartCheckoutWorkflowPage() {
       return 10000; // Flat Rp 10.000 untuk jarak <= 10 km
     }
     const extraKm = distKm - 10;
-    const extraIntervals = Math.ceil(extraKm / 3); // Nambah Rp 2.500 per 3 km
-    return 10000 + (extraIntervals * 2500);
+    const extraIntervals = Math.ceil(extraKm / 3); // Nambah Rp 1.500 per 3 km
+    return 10000 + (extraIntervals * 1500);
   };
 
   const shippingCost = calculateShippingByDistance(deliveryDistanceKm);
@@ -326,6 +328,7 @@ export default function CartCheckoutWorkflowPage() {
     // Membentuk objek data pesanan lengkap
     const orderData = {
       id: newOrderId,
+      userId: user?.uid || '',
       customerName: (customerName || user?.displayName || 'Pelanggan Nefakky').trim(),
       customerEmail: user?.email || '',
       avatar: user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName || user?.displayName || 'Pelanggan')}&background=25160E&color=ffffff`,
@@ -358,6 +361,12 @@ export default function CartCheckoutWorkflowPage() {
       // Menyimpan transaksi ke DataContext (LocalStorage & Firebase Sync)
       if (addOrder) {
         addOrder(orderData);
+      }
+
+      // Catat klaim penggunaan voucher promo oleh user ini secara permanen
+      if (appliedPromo && claimVoucherRedemption) {
+        claimVoucherRedemption(appliedPromo, user?.uid, user?.email).catch(console.error);
+        if (removePromo) removePromo();
       }
     } catch (err) {
       console.warn("Order save notice:", err);
@@ -534,14 +543,39 @@ export default function CartCheckoutWorkflowPage() {
                         </form>
 
                         {appliedPromo && (
-                          <div className="bg-amber-50 text-amber-900 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Tag className="w-4 h-4 text-amber-700" />
-                              <span className="font-semibold text-xs">
-                                Promo Aktif: {appliedPromo} (Diskon {discountPercent}%)
-                              </span>
+                          <div className={`border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                            isMinSpendMet 
+                              ? 'bg-emerald-50 text-emerald-900 border-emerald-200' 
+                              : 'bg-amber-50 text-amber-900 border-amber-200'
+                          }`}>
+                            <div className="flex items-start sm:items-center gap-3">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isMinSpendMet ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                <Tag className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="font-semibold text-xs flex items-center gap-2 flex-wrap">
+                                  <span>Voucher: <strong className="font-bold font-mono">{appliedPromo}</strong> (Diskon {discountPercent}%)</span>
+                                  {isMinSpendMet ? (
+                                    <span className="text-[10px] bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded font-bold">
+                                      Diskon Aktif (-Rp {discountAmount.toLocaleString('id-ID')})
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">
+                                      Min. Belanja Rp {minSpendRequired.toLocaleString('id-ID')}
+                                    </span>
+                                  )}
+                                </div>
+                                {!isMinSpendMet && (
+                                  <p className="text-[11px] text-amber-800 font-light mt-0.5">
+                                    Tambah menu senilai <strong className="font-bold">Rp {(minSpendRequired - subtotal).toLocaleString('id-ID')}</strong> lagi untuk menikmati potongan diskon {discountPercent}%.
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <button onClick={removePromo} className="font-bold text-[11px] text-rose-600 hover:text-rose-800 transition-colors uppercase tracking-wider">
+                            <button 
+                              onClick={removePromo} 
+                              className="font-bold text-[11px] text-rose-600 hover:text-rose-800 transition-colors uppercase tracking-wider self-end sm:self-auto cursor-pointer"
+                            >
                               Hapus
                             </button>
                           </div>
@@ -567,12 +601,17 @@ export default function CartCheckoutWorkflowPage() {
                           <span>Estimasi Ongkir</span>
                           <span className="font-mono font-semibold">Rp {shippingCost.toLocaleString('id-ID')}</span>
                         </div>
-                        {discountAmount > 0 && (
+                        {discountAmount > 0 ? (
                           <div className="flex justify-between items-center text-emerald-700 font-semibold">
-                            <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> Diskon Promo</span>
+                            <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> Diskon Promo ({appliedPromo})</span>
                             <span className="font-mono">-Rp {discountAmount.toLocaleString('id-ID')}</span>
                           </div>
-                        )}
+                        ) : appliedPromo && !isMinSpendMet ? (
+                          <div className="flex justify-between items-center text-amber-700 text-[11px]">
+                            <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> Diskon {appliedPromo}</span>
+                            <span className="font-mono text-amber-800 font-semibold">Min. Rp {minSpendRequired.toLocaleString('id-ID')}</span>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="h-[1px] w-full bg-stone-200"></div>
@@ -1187,16 +1226,27 @@ export default function CartCheckoutWorkflowPage() {
                       </div>
                     </div>
 
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold mb-3 uppercase tracking-wider">
-                      <Zap className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>PEMBAYARAN DITERIMA REAL-TIME</span>
-                    </div>
+                    {completedOrder?.paymentMethod === 'cod' || selectedPaymentMethod === 'cod' ? (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold mb-3 uppercase tracking-wider">
+                        <Truck className="w-3.5 h-3.5 text-amber-700" />
+                        <span>PESANAN DITERIMA (BAYAR DI TEMPAT / COD)</span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold mb-3 uppercase tracking-wider">
+                        <Zap className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>PEMBAYARAN DITERIMA REAL-TIME</span>
+                      </div>
+                    )}
 
                     <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-[#25160E] mb-2">
-                      Pesanan Berhasil
+                      {completedOrder?.paymentMethod === 'cod' || selectedPaymentMethod === 'cod' 
+                        ? 'Pesanan Anda Berhasil' 
+                        : 'Pembayaran & Pesanan Anda Berhasil'}
                     </h1>
                     <p className="text-xs sm:text-sm text-stone-600 font-light max-w-md">
-                      Terima kasih! Pesanan Anda #{completedOrder?.id || 'NFK-892102'} sedang diproses dan akan segera disiapkan oleh tim culinary kami.
+                      {completedOrder?.paymentMethod === 'cod' || selectedPaymentMethod === 'cod'
+                        ? `Pesanan Anda #${completedOrder?.id || 'NFK-892102'} berhasil dibuat dan segera disiapkan. Silakan siapkan uang tunai pas saat kurir tiba di lokasi pengiriman.`
+                        : `Terima kasih! Pembayaran online Anda telah terverifikasi oleh Midtrans. Pesanan #${completedOrder?.id || 'NFK-892102'} sedang diproses dan segera disiapkan oleh tim dapur kami.`}
                     </p>
                   </div>
 

@@ -589,14 +589,9 @@ export default function AdminLiveChatTab({
                 {activeUserObj.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm text-on-surface">
-                    {activeUserObj.name}
-                  </h3>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                    Online / Aktif
-                  </span>
-                </div>
+                <h3 className="font-bold text-sm text-on-surface">
+                  {activeUserObj.name}
+                </h3>
                 <p className="font-mono text-on-surface-variant text-[11px] mt-0.5">
                   {activeUserObj.email}
                 </p>

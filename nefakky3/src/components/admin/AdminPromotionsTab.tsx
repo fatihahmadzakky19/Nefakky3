@@ -60,7 +60,7 @@ export default function AdminPromotionsTab({
   // --------------------------------------------------------------------------
   // STATE MANAGEMENT
   // --------------------------------------------------------------------------
-  const { vouchers } = useData();
+  const { vouchers, resetVoucherUsage } = useData();
   const [showVoucherModal, setShowVoucherModal] = useState<boolean>(Boolean(initialVoucherCode));
   const [editingVoucher, setEditingVoucher] = useState<AdminVoucher | null>(null);
   const [showUsageModal, setShowUsageModal] = useState<boolean>(false);
@@ -78,29 +78,6 @@ export default function AdminPromotionsTab({
   const [userLimitType, setUserLimitType] = useState<'limited' | 'unlimited'>('limited');
   const [voucherUserLimit, setVoucherUserLimit] = useState<string>('100');
   const [voucherExpiry, setVoucherExpiry] = useState<string>('31 Des 2026');
-  const [voucherImageUrl, setVoucherImageUrl] = useState<string>('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80');
-  const voucherFileInputRef = useRef<HTMLInputElement>(null);
-
-  // Upload Foto Voucher dari Galeri Perangkat
-  const handleVoucherFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      alert('Silakan pilih file gambar yang valid (JPG, PNG, WebP).');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        setVoucherImageUrl(result);
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
 
   const allVouchers = voucherList || vouchers || [];
 
@@ -128,7 +105,6 @@ export default function AdminPromotionsTab({
     setUserLimitType('limited');
     setVoucherUserLimit('100');
     setVoucherExpiry('31 Des 2026');
-    setVoucherImageUrl('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80');
     setShowVoucherModal(true);
   };
 
@@ -142,7 +118,6 @@ export default function AdminPromotionsTab({
     setVoucherEvent(ev);
     setValidDays(v.validDays || 'Semua Hari');
     setAutoResetWeekly(v.autoResetWeekly || false);
-    setVoucherImageUrl(v.imageUrl || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80');
 
     const isPelangganBaru = ev === 'Pelanggan Baru' || (v.code || '').toUpperCase().includes('NEFAKKY10') || (v.name || '').toLowerCase().includes('pelanggan baru');
     if (isPelangganBaru) {
@@ -224,7 +199,6 @@ export default function AdminPromotionsTab({
       autoResetWeekly: isPelangganBaru ? false : autoResetWeekly,
       isActive: editingVoucher ? (editingVoucher.isActive !== false) : true,
       status: 'Active',
-      imageUrl: voucherImageUrl || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
       redemptions: redemptionsVal,
       totalLimit: totalLimitVal,
       usedCount: currentUsed,
@@ -247,6 +221,16 @@ export default function AdminPromotionsTab({
   const handleOpenTrackingModal = (v: AdminVoucher) => {
     setSelectedVoucherForUsage(v);
     setShowUsageModal(true);
+  };
+
+  const handleResetVoucher = async (codeOrId: string) => {
+    if (confirm(`Apakah Anda yakin ingin me-reset data penggunaan voucher #${codeOrId}? Pengguna yang sebelumnya telah memakai voucher ini akan dapat menggunakannya kembali.`)) {
+      if (resetVoucherUsage) {
+        await resetVoucherUsage(codeOrId);
+        alert(`Penggunaan voucher #${codeOrId} berhasil di-reset ke 0!`);
+        setShowUsageModal(false);
+      }
+    }
   };
 
   // Mock Usage History
@@ -333,19 +317,12 @@ export default function AdminPromotionsTab({
                 key={voucher.id}
                 className="bg-white rounded-3xl overflow-hidden shadow-md border border-stone-200 flex flex-col justify-between hover:shadow-xl transition-all group relative"
               >
-                {/* Card Top Banner / Photo with High-Contrast Overlay */}
-                <div className="h-36 relative overflow-hidden bg-stone-900">
-                  <img 
-                    src={voucher.imageUrl || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80'} 
-                    alt={voucher.code}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  {/* Rich Dark Gradient Overlay for Maximum Text Contrast */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/30"></div>
-
+                {/* Card Top Banner (Clean Dark Luxury Gradient - Tanpa Gambar) */}
+                <div className="h-32 relative overflow-hidden bg-gradient-to-br from-[#25160E] via-[#381F12] to-[#180C06] p-3.5 flex flex-col justify-between">
+                  
                   {/* Top Badges */}
-                  <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10">
-                    <span className="px-3 py-1 bg-amber-400 text-amber-950 font-extrabold rounded-full text-[10px] uppercase shadow-md tracking-wider flex items-center gap-1">
+                  <div className="flex justify-between items-center z-10">
+                    <span className="px-3 py-1 bg-amber-400 text-amber-950 font-extrabold rounded-full text-[10px] uppercase shadow-sm tracking-wider flex items-center gap-1">
                       <Tag className="w-3 h-3 text-amber-950" />
                       <span>{(voucher as any).eventCategory || voucher.event || 'Promo Spesial'}</span>
                     </span>
@@ -353,7 +330,7 @@ export default function AdminPromotionsTab({
                     <button 
                       type="button"
                       onClick={() => toggleVoucherStatus(voucher.id)}
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold shadow-md cursor-pointer transition-all flex items-center gap-1.5 ${
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold shadow-sm cursor-pointer transition-all flex items-center gap-1.5 ${
                         isActive 
                           ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
                           : 'bg-stone-700 hover:bg-stone-800 text-stone-300'
@@ -365,8 +342,8 @@ export default function AdminPromotionsTab({
                   </div>
 
                   {/* Bottom Promo Code & Name */}
-                  <div className="absolute bottom-3 left-3 right-3 z-10">
-                    <div className="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-xl mb-1 shadow-lg border border-stone-100">
+                  <div className="z-10">
+                    <div className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl mb-1 shadow-md border border-stone-100">
                       <span className="font-mono text-xs sm:text-sm font-extrabold text-stone-900 tracking-wider">
                         #{voucher.code}
                       </span>
@@ -374,7 +351,7 @@ export default function AdminPromotionsTab({
                         {voucher.discountPercent}% OFF
                       </span>
                     </div>
-                    <h3 className="font-bold text-white text-xs sm:text-sm drop-shadow-md truncate">
+                    <h3 className="font-bold text-white text-xs sm:text-sm truncate">
                       {voucher.name || `Voucher Diskon ${voucher.discountPercent}%`}
                     </h3>
                   </div>
@@ -570,7 +547,16 @@ export default function AdminPromotionsTab({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-stone-50 border-t border-stone-200 flex justify-end">
+            <div className="p-4 bg-stone-50 border-t border-stone-200 flex justify-between items-center">
+              <button 
+                type="button"
+                onClick={() => handleResetVoucher(selectedVoucherForUsage.code || selectedVoucherForUsage.id)}
+                className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+                <span>Reset Penggunaan Voucher</span>
+              </button>
+
               <button 
                 type="button"
                 onClick={() => setShowUsageModal(false)}
@@ -835,66 +821,6 @@ export default function AdminPromotionsTab({
                     </div>
                   </div>
                 )}
-
-                {/* Foto / Background Voucher */}
-                <div className="space-y-3 pt-2 border-t border-stone-200">
-                  <label className="font-label-caps text-stone-800 uppercase text-[11px] font-bold">
-                    Foto Sampul Voucher Promo:
-                  </label>
-
-                  {/* 1. Tombol Upload Galeri Perangkat */}
-                  <div className="p-4 bg-amber-50/70 rounded-2xl border-2 border-dashed border-amber-300 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                    <input 
-                      ref={voucherFileInputRef}
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleVoucherFileUpload}
-                      className="hidden" 
-                    />
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 text-[#934B19] flex items-center justify-center shrink-0">
-                        <Upload className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-stone-900 text-xs">Ambil Foto dari Galeri Perangkat</h4>
-                        <p className="text-stone-500 text-[10px]">
-                          Pilih foto promosi (JPG, PNG, WebP) langsung dari HP atau Laptop.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => voucherFileInputRef.current?.click()}
-                      className="px-4 py-2 bg-[#934B19] hover:bg-[#783603] text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
-                    >
-                      <FolderOpen className="w-4 h-4" />
-                      <span>Pilih dari Galeri</span>
-                    </button>
-                  </div>
-
-                  {/* Live Preview Sampul */}
-                  <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200 flex items-center gap-3">
-                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-stone-200 shrink-0 border border-stone-300 shadow-2xs">
-                      <img 
-                        src={voucherImageUrl || '/images/ayam_bakar.jpg'} 
-                        alt="Preview Voucher" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-0.5 text-xs min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-stone-900">Preview Sampul Voucher</span>
-                        <span className="px-2 py-0.2 bg-emerald-100 text-emerald-800 font-bold text-[9px] rounded-full border border-emerald-300">
-                          Aktif
-                        </span>
-                      </div>
-                      <p className="text-stone-500 text-[10px] truncate">
-                        {voucherImageUrl.startsWith('data:') ? '📁 Foto Terunggah dari Galeri Lokal' : voucherImageUrl}
-                      </p>
-                    </div>
-                  </div>
-
-                </div>
 
               </div>
 

@@ -16,8 +16,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { useData, isVoucherValidNow } from '@/context/DataContext';
+import { useData, isVoucherValidNow, cleanPromoCode } from '@/context/DataContext';
 import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
+import Navbar from '@/components/Navbar';
 import { 
   Star, 
   Search, 
@@ -33,6 +34,7 @@ import {
   Leaf,
   Sparkles,
   CheckCircle2,
+  AlertCircle,
   Ticket,
   User,
   ShieldCheck
@@ -41,13 +43,13 @@ import {
 export default function HomePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { vouchers, products } = useData();
+  const { vouchers, products, isVoucherUsedByUser } = useData();
   const { cartItems, totalCartCount, addToCart, removeFromCart, claimPromo } = useCart();
 
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
   const [heroIndex, setHeroIndex] = useState<number>(0);
   const [selectedVoucherCode, setSelectedVoucherCode] = useState<string | null>(null);
-  const [claimedNotice, setClaimedNotice] = useState<string | null>(null);
+  const [claimedNotice, setClaimedNotice] = useState<{ text: string; success: boolean } | null>(null);
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
 
@@ -57,12 +59,22 @@ export default function HomePage() {
     );
   };
 
-  // Saring semua voucher aktif yang dibuat oleh Admin
-  const activeVouchers = (vouchers || []).filter(v => isVoucherValidNow(v).active);
-  const currentVoucher = 
-    activeVouchers.find(v => v.code === selectedVoucherCode) || 
-    activeVouchers[0] || 
-    (vouchers && vouchers[0]);
+  // Saring semua voucher aktif yang dibuat oleh Admin dan BELUM pernah dipakai oleh akun pengguna ini
+  const activeVouchers = useMemo(() => {
+    return (vouchers || [])
+      .filter(v => isVoucherValidNow(v).active)
+      .filter(v => !isVoucherUsedByUser(v.code, user?.uid, user?.email));
+  }, [vouchers, user, isVoucherUsedByUser]);
+
+  const currentVoucher = useMemo(() => {
+    if (!activeVouchers || activeVouchers.length === 0) return null;
+    const cleanSelected = cleanPromoCode(selectedVoucherCode);
+    const foundSelected = activeVouchers.find(v => cleanPromoCode(v.code) === cleanSelected);
+    if (foundSelected) return foundSelected;
+    const foundWeekend = activeVouchers.find(v => cleanPromoCode(v.code).includes('WEEKEND'));
+    if (foundWeekend) return foundWeekend;
+    return activeVouchers[0] || null;
+  }, [activeVouchers, selectedVoucherCode]);
 
   const categories = ['Semua', 'Makanan Berat', 'Minuman', 'Menu Hemat'];
 
@@ -166,9 +178,12 @@ export default function HomePage() {
   }, [dynamicHeroSlides.length]);
 
   const handleClaimVoucher = (code: string) => {
-    claimPromo(code);
-    setClaimedNotice(`Voucher ${code} berhasil diklaim ke keranjang!`);
-    setTimeout(() => setClaimedNotice(null), 3000);
+    const res = claimPromo(code);
+    setClaimedNotice({
+      text: res.message || `Voucher ${code} berhasil diklaim ke keranjang!`,
+      success: res.success
+    });
+    setTimeout(() => setClaimedNotice(null), 4500);
   };
 
   // Mengambil daftar produk aktif langsung dari backend / database DataContext
@@ -201,96 +216,17 @@ export default function HomePage() {
   const userAvatar = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=25160E&color=ffffff&bold=true` : (user?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.split('@')[0])}&background=25160E&color=ffffff&bold=true` : null));
 
   return (
-    <div className="bg-[#fcf8fa] font-sans text-[#1b1b1d] min-h-screen selection:bg-stone-900 selection:text-white flex flex-col justify-between">
+    <div className="bg-[#FAF8F5] font-sans text-[#25160E] min-h-screen selection:bg-[#934b19]/20 selection:text-[#934b19] flex flex-col justify-between">
       
-      {/* 1. HEADER / NAVBAR SESUAI STITCH MCP */}
-      <header className="fixed top-0 w-full z-50 bg-[#fcf8fa]/90 backdrop-blur-xl border-b border-stone-200 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
-        <div className="h-20 max-w-7xl mx-auto px-6 flex items-center justify-between">
-          
-          {/* Brand Wordmark (Left) */}
-          <div className="flex-1 flex items-center font-serif text-2xl tracking-widest text-black font-bold">
-            <Link href="/">NEFAKKY</Link>
-          </div>
-
-          {/* Desktop Nav Links (Centered) */}
-          <nav className="hidden md:flex items-center gap-8 flex-1 justify-center">
-            <Link 
-              href="/" 
-              className="text-black font-bold text-sm transition-colors"
-            >
-              Beranda
-            </Link>
-            <Link 
-              href="/menu" 
-              className="text-stone-600 hover:text-black font-medium text-sm transition-colors"
-            >
-              Menu
-            </Link>
-            <Link 
-              href="/comments" 
-              className="text-stone-600 hover:text-black font-medium text-sm transition-colors"
-            >
-              Ulasan Rasa
-            </Link>
-            <Link 
-              href="/notifications" 
-              className="text-stone-600 hover:text-black font-medium text-sm transition-colors"
-            >
-              Pesanan
-            </Link>
-          </nav>
-
-          {/* Right Action Icons & Profile (Right) */}
-          <div className="flex-1 flex items-center justify-end gap-3 sm:gap-5">
-            {user?.role === 'admin' && (
-              <Link
-                href="/admin"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#934b19] hover:bg-[#783603] text-white text-xs font-bold rounded-full transition-all shadow-sm"
-                title="Masuk ke Panel Dashboard Admin"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-200" />
-                <span className="hidden sm:inline">Panel Admin</span>
-              </Link>
-            )}
-
-            <div className="relative flex items-center">
-              <Link href="/cart" className="text-stone-600 hover:text-black transition-colors" title="Keranjang Belanja">
-                <ShoppingBag className="w-5 h-5" />
-              </Link>
-              {totalCartCount > 0 && (
-                <span className="absolute -top-1 -right-2 flex items-center justify-center min-w-[16px] h-4 px-1 bg-black text-white text-[10px] font-bold rounded-full">
-                  {totalCartCount}
-                </span>
-              )}
-            </div>
-
-            {/* Profile Avatar Link */}
-            <Link 
-              href={user ? "/profile" : "/login"}
-              className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white hover:bg-neutral-800 transition-colors overflow-hidden cursor-pointer"
-            >
-              {userAvatar ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img 
-                  alt="Profile" 
-                  className="w-full h-full object-cover" 
-                  src={userAvatar}
-                />
-              ) : (
-                <User className="w-4 h-4" />
-              )}
-            </Link>
-          </div>
-
-        </div>
-      </header>
+      {/* 1. NAVBAR UTAMA TERPADU */}
+      <Navbar />
 
       {/* 2. MAIN CONTENT AREA */}
-      <main className="w-full pt-20">
+      <main className="w-full flex-1">
         <div className="flex flex-col w-full">
 
           {/* DYNAMIC HERO SHOWCASE SLIDER (Crisp 2-Column Food Showcase) */}
-          <section className="relative w-full bg-[#fcf8fa] overflow-hidden border-b border-stone-200/60">
+          <section className="relative w-full bg-[#FAF8F5] overflow-hidden border-b border-stone-200/60">
             {/* Ambient Background Glow */}
             <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-amber-100/25 to-transparent pointer-events-none"></div>
 
@@ -425,7 +361,7 @@ export default function HomePage() {
           </section>
 
           {/* FLOATING QUICK CATEGORY PILLS */}
-          <section className="sticky top-20 z-40 bg-[#fcf8fa]/90 backdrop-blur-md border-b border-stone-200 py-3">
+          <section className="sticky top-20 z-40 bg-[#FAF8F5]/90 backdrop-blur-md border-b border-stone-200 py-3">
             <div className="max-w-7xl mx-auto px-6 flex items-center gap-3 overflow-x-auto no-scrollbar">
               {categories.map((cat) => {
                 const isActive = activeCategory === cat;
@@ -433,10 +369,10 @@ export default function HomePage() {
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-6 py-2 rounded-full font-semibold text-xs whitespace-nowrap transition-colors ${
+                    className={`px-6 py-2 rounded-full font-semibold text-xs whitespace-nowrap transition-colors cursor-pointer ${
                       isActive
                         ? 'bg-[#25160E] text-white'
-                        : 'bg-[#fcf8fa] text-[#1b1b1d] border border-stone-200 hover:bg-stone-100'
+                        : 'bg-[#FAF8F5] text-[#25160E] border border-stone-300/80 hover:bg-stone-100'
                     }`}
                   >
                     {cat}
@@ -471,22 +407,22 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                   {activeVouchers.length > 1 && (
-                    <div className="hidden sm:flex items-center gap-1 bg-black/30 p-1 rounded-lg border border-white/10">
+                    <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-lg border border-white/10 flex-wrap">
                       {activeVouchers.map((v) => (
                         <button
                           key={v.id || v.code}
                           type="button"
                           onClick={() => setSelectedVoucherCode(v.code)}
-                          className={`px-2 py-1 text-[10px] font-mono font-bold rounded transition-colors ${
-                            (currentVoucher?.code === v.code) 
-                              ? 'bg-amber-400 text-black shadow-xs' 
-                              : 'text-stone-300 hover:text-white'
+                          className={`px-2.5 py-1 text-xs font-mono font-bold rounded transition-all cursor-pointer ${
+                            (cleanPromoCode(currentVoucher?.code) === cleanPromoCode(v.code)) 
+                              ? 'bg-amber-400 text-black shadow-xs scale-105' 
+                              : 'text-stone-300 hover:text-white hover:bg-white/10'
                           }`}
                           title={`Pilih voucher ${v.code}`}
                         >
-                          {v.code}
+                          {v.code.startsWith('#') ? v.code : `#${v.code}`}
                         </button>
                       ))}
                     </div>
@@ -494,7 +430,7 @@ export default function HomePage() {
 
                   <button 
                     onClick={() => handleClaimVoucher(currentVoucher.code)}
-                    className="bg-[#934B19] text-white font-semibold text-xs px-6 py-3 rounded whitespace-nowrap hover:bg-[#7a3e14] active:scale-95 transition-all shadow-sm cursor-pointer"
+                    className="bg-[#934B19] text-white font-semibold text-xs px-6 py-3 rounded-lg whitespace-nowrap hover:bg-[#7a3e14] active:scale-95 transition-all shadow-sm cursor-pointer"
                   >
                     Klaim Kupon
                   </button>
@@ -502,9 +438,17 @@ export default function HomePage() {
               </div>
 
               {claimedNotice && (
-                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{claimedNotice}</span>
+                <div className={`mt-3 p-3 rounded-xl text-xs flex items-center gap-2.5 animate-fade-in font-medium shadow-xs ${
+                  claimedNotice.success 
+                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' 
+                    : 'bg-rose-50 border border-rose-200 text-rose-800'
+                }`}>
+                  {claimedNotice.success ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span>{claimedNotice.text}</span>
                 </div>
               )}
             </section>
@@ -532,7 +476,10 @@ export default function HomePage() {
                 const inCart = cartItems.find(i => i.id === product.id);
                 const cartQty = inCart?.quantity || 0;
                 const isFav = favorites.includes(product.id);
-                const isBestSeller = (product.soldCount && (product.soldCount.includes('1.') || product.soldCount.includes('2.') || product.soldCount.includes('3.'))) || product.rating >= 4.8;
+                const rating = Number(product.rating) || 4.9;
+                const soldCount = String(product.soldCount || '1.5k Terjual');
+                const price = Number(product.price) || 0;
+                const isBestSeller = (soldCount.includes('1.') || soldCount.includes('2.') || soldCount.includes('3.')) || rating >= 4.8;
 
                 return (
                   <article 
@@ -552,12 +499,12 @@ export default function HomePage() {
                       {/* Rating & Sold Badge */}
                       <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-lg text-xs font-semibold text-[#1b1b1d] border border-stone-200 flex items-center gap-1 shadow-2xs">
                         <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                        <span>{product.rating.toFixed(1)}</span>
-                        <span className="text-stone-400 text-[10px] ml-0.5">({product.soldCount || '3.5k Terjual'})</span>
+                        <span>{rating.toFixed(1)}</span>
+                        <span className="text-stone-400 text-[10px] ml-0.5">({soldCount})</span>
                       </div>
 
                       {/* Out of Stock / Best Seller Tag */}
-                      {product.stock <= 0 ? (
+                      {(product.stock ?? 10) <= 0 ? (
                         <div className="absolute bottom-3 left-3">
                           <span className="bg-rose-600 text-white px-2.5 py-0.5 rounded font-bold text-[10px] tracking-wider uppercase shadow-xs">
                             PRODUK HABIS
@@ -591,10 +538,10 @@ export default function HomePage() {
 
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                           <span className="font-serif text-base font-bold text-[#1b1b1d]">
-                            Rp {product.price.toLocaleString('id-ID')}
+                            Rp {price.toLocaleString('id-ID')}
                           </span>
 
-                          {product.stock <= 0 ? (
+                          {(product.stock ?? 10) <= 0 ? (
                             <button
                               onClick={() => setDetailProduct(product)}
                               className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-[10px] font-bold transition-all shadow-2xs cursor-pointer"
@@ -642,8 +589,6 @@ export default function HomePage() {
               })}
             </div>
           </section>
-
-
 
           {/* SPLIT PANEL (FILOSOFI RASA) */}
           <section className="max-w-7xl mx-auto px-6 py-12 w-full border-t border-stone-200 mt-4">
@@ -696,8 +641,6 @@ export default function HomePage() {
 
         </div>
       </main>
-
-
 
       {/* MODAL DETAIL PRODUK */}
       {detailProduct && (

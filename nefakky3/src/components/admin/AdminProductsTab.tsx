@@ -514,48 +514,56 @@ export default function AdminProductsTab({
 
                     {/* Stok & Status (Col 2) */}
                     <div className="col-span-2 flex flex-col gap-1">
-                      {prod.category === 'Minuman' || prod.id === 'm6' || prod.name.toLowerCase().includes('jus') ? (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-xs font-bold text-on-surface">
-                              {prod.stock} Porsi
-                            </span>
-                            <span className="px-1.5 py-0.2 bg-amber-100 text-amber-900 font-bold text-[8.5px] rounded-md">
-                              3 Varian
-                            </span>
+                      {prod.category === 'Minuman' || prod.id === 'm6' || prod.name.toLowerCase().includes('jus') ? (() => {
+                        const vStocks = prod.variantStocks || {};
+                        const manggaStock = Number(vStocks.Mangga ?? vStocks.mangga ?? (prod.stock === 40 ? 13 : 20));
+                        const sirsakStock = Number(vStocks.Sirsak ?? vStocks.sirsak ?? (prod.stock === 40 ? 14 : 15));
+                        const jambuStock = Number(vStocks.Jambu ?? vStocks.jambu ?? (prod.stock === 40 ? 13 : 15));
+                        const totalCalculated = manggaStock + sirsakStock + jambuStock;
+
+                        return (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs font-bold text-on-surface">
+                                {totalCalculated} Porsi
+                              </span>
+                              <span className="px-1.5 py-0.2 bg-amber-100 text-amber-900 font-bold text-[8.5px] rounded-md">
+                                3 Varian
+                              </span>
+                            </div>
+                            
+                            <div className="space-y-0.5 text-[10px] font-mono bg-stone-50 p-1.5 rounded-lg border border-stone-200/80 shadow-2xs">
+                              <div className="flex justify-between items-center text-stone-700">
+                                <span className="flex items-center gap-1 font-sans">
+                                  <span>🥭</span>
+                                  <span>Mangga:</span>
+                                </span>
+                                <span className={`font-bold ${manggaStock > 0 ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
+                                  {manggaStock} Porsi
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-stone-700">
+                                <span className="flex items-center gap-1 font-sans">
+                                  <span>🍈</span>
+                                  <span>Sirsak:</span>
+                                </span>
+                                <span className={`font-bold ${sirsakStock > 0 ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
+                                  {sirsakStock} Porsi
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-stone-700">
+                                <span className="flex items-center gap-1 font-sans">
+                                  <span>🍓</span>
+                                  <span>Jambu:</span>
+                                </span>
+                                <span className={`font-bold ${jambuStock > 0 ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
+                                  {jambuStock} Porsi
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          
-                          <div className="space-y-0.5 text-[10px] font-mono bg-stone-50 p-1.5 rounded-lg border border-stone-200/80 shadow-2xs">
-                            <div className="flex justify-between items-center text-stone-700">
-                              <span className="flex items-center gap-1 font-sans">
-                                <span>🥭</span>
-                                <span>Mangga:</span>
-                              </span>
-                              <span className={`font-bold ${((prod.variantStocks?.Mangga ?? 20) > 0) ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
-                                {(prod.variantStocks?.Mangga ?? 20)} Porsi
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center text-stone-700">
-                              <span className="flex items-center gap-1 font-sans">
-                                <span>🍈</span>
-                                <span>Sirsak:</span>
-                              </span>
-                              <span className={`font-bold ${((prod.variantStocks?.Sirsak ?? 15) > 0) ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
-                                {(prod.variantStocks?.Sirsak ?? 15)} Porsi
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center text-stone-700">
-                              <span className="flex items-center gap-1 font-sans">
-                                <span>🍓</span>
-                                <span>Jambu:</span>
-                              </span>
-                              <span className={`font-bold ${((prod.variantStocks?.Jambu ?? 15) > 0) ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
-                                {(prod.variantStocks?.Jambu ?? 15)} Porsi
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
+                        );
+                      })() : (
                         <>
                           <span className="font-mono text-xs font-semibold text-on-surface">
                             {prod.stock} Porsi
@@ -564,9 +572,9 @@ export default function AdminProductsTab({
                             <span className="text-[10px] font-bold text-amber-600">Rilis {prod.releaseDate || 'Mendatang'}</span>
                           ) : (
                             <span className={`text-[10px] font-bold ${
-                              prod.stock > 5 ? 'text-emerald-600' : prod.stock > 0 ? 'text-amber-600' : 'text-rose-600'
+                              prod.stock <= 0 ? 'text-rose-600' : prod.stock < 10 ? 'text-amber-600' : 'text-emerald-700'
                             }`}>
-                              {prod.stock > 5 ? 'Tersedia' : prod.stock > 0 ? 'Hampir Habis' : 'Stok Kosong'}
+                              {prod.stock <= 0 ? 'Stok Kosong' : prod.stock < 10 ? 'Stok Menipis' : 'Tersedia'}
                             </span>
                           )}
                         </>

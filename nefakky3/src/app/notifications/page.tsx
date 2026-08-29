@@ -126,6 +126,7 @@ export default function NotificationsPage() {
       case 'RECEIVED':
       case 'PENDING':
         return 1;
+      case 'PREPARING':
       case 'COOKING':
         return 2;
       case 'READY':
@@ -287,14 +288,14 @@ export default function NotificationsPage() {
                             </div>
                           </div>
 
-                          {/* Stage 2: Cooking */}
+                          {/* Stage 2: Preparing & Cooking */}
                           <div className={`flex gap-4 items-start relative z-10 ${currentStage < 2 ? 'opacity-40' : ''}`}>
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${currentStage >= 2 ? 'bg-black text-white' : 'bg-stone-100 text-stone-400 border border-stone-200'}`}>
                               <CookingPot className="w-5 h-5" />
                             </div>
                             <div className="flex flex-col gap-0.5 pt-0.5">
-                              <span className="font-bold text-sm text-black">Sedang Dimasak</span>
-                              <span className="text-xs text-stone-500 font-light">Koki sedang menyiapkan hidangan Anda dengan sepenuh hati di dapur.</span>
+                              <span className="font-bold text-sm text-black">Pesanan Disiapkan &amp; Dimasak</span>
+                              <span className="text-xs text-stone-500 font-light">Dapur sedang menyiapkan bahan segar dan memasak hidangan dengan sepenuh hati.</span>
                               <span className="font-mono text-[11px] text-stone-400 mt-0.5">12:35 PM</span>
                             </div>
                           </div>

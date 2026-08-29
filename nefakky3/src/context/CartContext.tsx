@@ -14,7 +14,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 // Mengimpor kustom hook AuthContext untuk mendapatkan status akun user yang sedang login
 import { useAuth } from './AuthContext';
 // Mengimpor DataContext & fungsi validasi voucher isVoucherValidNow
-import { useData, isVoucherValidNow } from './DataContext';
+import { useData, isVoucherValidNow, cleanPromoCode } from './DataContext';
 
 /** Interface Struktur Data Produk Keranjang */
 export interface CartItemProduct {
@@ -92,6 +92,8 @@ interface CartContextType {
   appliedPromo: string | null; // Kode promo yang sedang diterapkan
   discountPercent: number; // Persentase diskon (%)
   discountAmount: number; // Nominal potongan harga (Rp)
+  minSpendRequired: number; // Syarat minimal belanja voucher (Rp)
+  isMinSpendMet: boolean; // Apakah syarat minimal belanja terpenuhi
   addToCart: (productId: string, variant?: string) => void; // Fungsi menambah barang ke keranjang
   removeFromCart: (productId: string) => void; // Fungsi mengurangi kuantitas 1 barang
   deleteFromCart: (productId: string) => void; // Fungsi menghapus barang sepenuhnya dari keranjang
@@ -111,55 +113,69 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null); // State kode promo aktif
   const [discountPercent, setDiscountPercent] = useState<number>(0); // State persentase diskon
 
-  // Effect: Muat keranjang dan promo dari localStorage sesuai UID user yang sedang login
+  // Effect: Muat keranjang dan promo dari localStorage dengan fallback guest & user persistent
   useEffect(() => {
-    if (user?.uid) {
-      const storageKey = `nefakky_cart_${user.uid}`; // Key storage keranjang per user
-      const savedCart = localStorage.getItem(storageKey);
-      if (savedCart) {
-        try {
-          setCart(JSON.parse(savedCart)); // Parse & set data keranjang tersimpan
-        } catch (e) {
-          setCart({}); // Fallback keranjang kosong jika error
-        }
-      } else {
-        setCart({}); // Kosongkan jika belum ada data tersimpan
-      }
+    if (typeof window === 'undefined') return;
 
-      const savedPromo = localStorage.getItem(`nefakky_promo_${user.uid}`); // Key storage promo per user
-      if (savedPromo) {
-        try {
-          const parsed = JSON.parse(savedPromo);
-          setAppliedPromo(parsed.code); // Set kode promo tersimpan
-          const liveV = (vouchers || []).find(v => v.code.toUpperCase() === parsed.code.toUpperCase());
-          setDiscountPercent(liveV?.discountPercent || parsed.percent || 15); // Set persen diskon tersimpan
-        } catch (e) {
-          setAppliedPromo(null);
-          setDiscountPercent(0);
-        }
+    const cartKey = user?.uid ? `nefakky_cart_${user.uid}` : 'nefakky_cart_guest';
+    const promoKey = user?.uid ? `nefakky_promo_${user.uid}` : 'nefakky_promo_guest';
+
+    const savedCart = 
+      localStorage.getItem(cartKey) || 
+      localStorage.getItem('nefakky_cart_active') || 
+      localStorage.getItem('nefakky_cart_guest');
+      
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        setCart({});
       }
-    } else {
-      // Kosongkan state jika user logout / belum login
-      setCart({});
-      setAppliedPromo(null);
-      setDiscountPercent(0);
     }
-  }, [user, vouchers]);
+
+    const savedPromo = 
+      localStorage.getItem(promoKey) || 
+      localStorage.getItem('nefakky_promo_active') || 
+      localStorage.getItem('nefakky_promo_guest');
+      
+    if (savedPromo) {
+      try {
+        const parsed = JSON.parse(savedPromo);
+        if (parsed.code) {
+          setAppliedPromo(parsed.code);
+          const liveV = (vouchers || []).find(v => v.code.toUpperCase() === parsed.code.toUpperCase());
+          setDiscountPercent(liveV?.discountPercent || parsed.percent || 10);
+        }
+      } catch (e) {
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+      }
+    }
+  }, [user?.uid, vouchers]);
 
   // Fungsi helper simpan state keranjang ke localStorage
   const saveCart = (newCart: { [itemId: string]: number }) => {
-    setCart(newCart); // Update state React
-    if (user?.uid && typeof window !== 'undefined') {
-      localStorage.setItem(`nefakky_cart_${user.uid}`, JSON.stringify(newCart)); // Persist ke localStorage browser
+    setCart(newCart);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nefakky_cart_active', JSON.stringify(newCart));
+      if (user?.uid) {
+        localStorage.setItem(`nefakky_cart_${user.uid}`, JSON.stringify(newCart));
+      } else {
+        localStorage.setItem('nefakky_cart_guest', JSON.stringify(newCart));
+      }
     }
   };
 
   // Fungsi menghapus promo yang terpasang di keranjang
   const removePromo = () => {
-    setAppliedPromo(null); // Reset kode promo
-    setDiscountPercent(0); // Reset diskon 0%
-    if (user?.uid && typeof window !== 'undefined') {
-      localStorage.removeItem(`nefakky_promo_${user.uid}`); // Hapus data promo di localStorage
+    setAppliedPromo(null);
+    setDiscountPercent(0);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('nefakky_promo_active');
+      localStorage.removeItem('nefakky_promo_guest');
+      if (user?.uid) {
+        localStorage.removeItem(`nefakky_promo_${user.uid}`);
+      }
     }
   };
 
@@ -174,117 +190,36 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const isAlreadyUsed = isVoucherUsedByUser && isVoucherUsedByUser(appliedPromo, user?.uid, user?.email);
 
       if (!isStillActive || isAlreadyUsed) {
-        removePromo(); // Cabut promo jika voucher sudah tidak aktif atau sudah pernah dipakai
+        removePromo();
       } else if (foundVoucher && foundVoucher.discountPercent && foundVoucher.discountPercent !== discountPercent) {
-        setDiscountPercent(foundVoucher.discountPercent); // Sinkronisasi persentase diskon terbaru
-        if (user?.uid && typeof window !== 'undefined') {
-          localStorage.setItem(`nefakky_promo_${user.uid}`, JSON.stringify({ code: foundVoucher.code.toUpperCase(), percent: foundVoucher.discountPercent }));
+        setDiscountPercent(foundVoucher.discountPercent);
+        if (typeof window !== 'undefined') {
+          const payload = JSON.stringify({ code: foundVoucher.code.toUpperCase(), percent: foundVoucher.discountPercent });
+          localStorage.setItem('nefakky_promo_active', payload);
+          if (user?.uid) {
+            localStorage.setItem(`nefakky_promo_${user.uid}`, payload);
+          } else {
+            localStorage.setItem('nefakky_promo_guest', payload);
+          }
         }
       }
     }
   }, [vouchers, appliedPromo, discountPercent, user, isVoucherUsedByUser]);
 
-  // Fungsi untuk mengklaim kode promo voucher
-  const claimPromo = (code: string) => {
-    const upper = code.trim().toUpperCase(); // Ubah kode ke huruf besar
-    
-    // Cari voucher di daftar vouchers DataContext
-    const foundVoucher = vouchers.find(
-      v => v.code.toUpperCase() === upper || v.id.toUpperCase() === upper
-    );
-
-    // Jika voucher tidak ditemukan atau sudah dihapus
-    if (!foundVoucher || foundVoucher.isDeleted) {
-      return {
-        success: false,
-        message: `Maaf, kode promo "${upper}" tidak ditemukan atau telah non-aktif! Silakan periksa kembali kode promo Anda.`,
-        percent: 0
-      };
-    }
-
-    // Periksa apakah user sudah pernah memakai voucher ini sebelumnya
-    if (isVoucherUsedByUser && isVoucherUsedByUser(upper, user?.uid, user?.email)) {
-      removePromo();
-      return {
-        success: false,
-        message: `Maaf, Anda sudah pernah menggunakan kode promo "${upper}". Setiap voucher promo hanya dapat digunakan 1 kali per akun!`,
-        percent: 0
-      };
-    }
-
-    // Periksa status keaktifan voucher dan tanggal berlaku
-    const { active: isVoucherActive, reason } = isVoucherValidNow(foundVoucher);
-
-    if (!isVoucherActive) {
-      removePromo();
-      return {
-        success: false,
-        message: reason || `Maaf, promosi "${foundVoucher.name}" (${upper}) sedang NON-AKTIF atau tidak dapat digunakan saat ini.`,
-        percent: 0
-      };
-    }
-
-    const percent = foundVoucher.discountPercent || 15; // Default diskon 15% jika tidak diset
-
-    setAppliedPromo(upper); // Set promo aktif
-    setDiscountPercent(percent); // Set persen diskon
-
-    if (user?.uid && typeof window !== 'undefined') {
-      localStorage.setItem(`nefakky_promo_${user.uid}`, JSON.stringify({ code: upper, percent })); // Simpan promo di localStorage
-    }
-
-    return {
-      success: true,
-      message: `Kode promo "${upper}" (${foundVoucher.name}) BERHASIL digunakan! Diskon ${percent}% diterapkan pada seluruh item keranjang Anda.`,
-      percent
-    };
-  };
-
-  // Fungsi menambah kuantitas barang ke keranjang
-  const addToCart = (productId: string, variant?: string) => {
-    const cartKey = variant ? `${productId}_${variant}` : productId; // Tentukan key unik item
-    const updated = { ...cart, [cartKey]: (cart[cartKey] || 0) + 1 }; // Tambahkan kuantitas +1
-    saveCart(updated);
-  };
-
-  // Fungsi mengurangi 1 kuantitas barang di keranjang
-  const removeFromCart = (productId: string) => {
-    const updated = { ...cart };
-    if (updated[productId] > 1) {
-      updated[productId] -= 1; // Kurangi kuantitas 1
-    } else {
-      delete updated[productId]; // Hapus jika sisa 1
-    }
-    saveCart(updated);
-  };
-
-  // Fungsi menghapus barang sepenuhnya dari keranjang
-  const deleteFromCart = (productId: string) => {
-    const updated = { ...cart };
-    delete updated[productId]; // Hapus key dari objek keranjang
-    saveCart(updated);
-  };
-
-  // Fungsi mengosongkan keranjang belanja
-  const clearCart = () => {
-    saveCart({}); // Reset objek keranjang ke {}
-  };
-
   // Memetakan objek cart { key: qty } menjadi array CartLineItem lengkap beserta detail produk
   const cartItems: CartLineItem[] = Object.entries(cart).map(([key, quantity]) => {
-    const [baseId, variant] = key.split('_'); // Pisahkan ID produk dan varian (jika ada)
+    const [baseId, variant] = key.split('_');
     const product = products.find(p => p.id === baseId) || MASTER_PRODUCTS.find(p => p.id === baseId) || {
       id: baseId,
       name: 'Hidangan Nefakky',
-      category: 'Makanan',
+      category: 'Makanan Berat',
       price: 35000,
-      image: '/images/hero_rendang.png'
+      image: '/images/ayam_bakar.jpg'
     };
 
     let itemImage = product.image;
     let itemName = product.name;
 
-    // Menangani varian minuman jus khusus
     if (variant) {
       itemName = `Jus ${variant} Segar`;
       if (variant === 'Mangga') itemImage = '/images/jus_mangga.jpg';
@@ -306,11 +241,115 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Hitung subtotal harga kotor seluruh barang
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  // Hitung besaran nominal potongan diskon dalam Rupiah
-  const discountAmount = Math.round(subtotal * (discountPercent / 100));
+
+  // Cari objek voucher aktif untuk memeriksa batas minimal belanja (minSpend)
+  const activeVoucherObj = (vouchers || []).find(
+    v => appliedPromo && (v.code.toUpperCase() === appliedPromo.toUpperCase() || v.id.toUpperCase() === appliedPromo.toUpperCase())
+  );
+  const minSpendRequired = activeVoucherObj?.minSpend || 0;
+  const isMinSpendMet = subtotal >= minSpendRequired;
+
+  // Hitung besaran nominal potongan diskon dalam Rupiah jika syarat minSpend terpenuhi
+  const discountAmount = (isMinSpendMet && discountPercent > 0) ? Math.round(subtotal * (discountPercent / 100)) : 0;
+
+  // Fungsi untuk mengklaim kode promo voucher
+  const claimPromo = (code: string) => {
+    const upper = code.trim().toUpperCase();
+    
+    const foundVoucher = vouchers.find(
+      v => v.code.toUpperCase() === upper || v.id.toUpperCase() === upper
+    );
+
+    if (!foundVoucher || foundVoucher.isDeleted) {
+      return {
+        success: false,
+        message: `Maaf, kode promo "${upper}" tidak ditemukan atau telah non-aktif! Silakan periksa kembali kode promo Anda.`,
+        percent: 0
+      };
+    }
+
+    if (isVoucherUsedByUser && isVoucherUsedByUser(upper, user?.uid, user?.email)) {
+      removePromo();
+      const isNewCust = cleanPromoCode(upper) === 'NEFAKKY10' || cleanPromoCode(upper).includes('NEWUSER') || cleanPromoCode(upper).includes('PELANGGANBARU');
+      return {
+        success: false,
+        message: isNewCust 
+          ? `Maaf, kode promo "${upper}" khusus untuk pesanan pertama pelanggan baru dan hanya dapat digunakan 1 kali.`
+          : `Maaf, Anda sudah pernah menggunakan kode promo "${upper}". Setiap voucher promo hanya dapat digunakan 1 kali per akun!`,
+        percent: 0
+      };
+    }
+
+    const { active: isVoucherActive, reason } = isVoucherValidNow(foundVoucher);
+
+    if (!isVoucherActive) {
+      removePromo();
+      return {
+        success: false,
+        message: reason || `Maaf, promosi "${foundVoucher.name}" (${upper}) sedang NON-AKTIF atau tidak dapat digunakan saat ini.`,
+        percent: 0
+      };
+    }
+
+    const percent = foundVoucher.discountPercent || 10;
+    const minSpend = foundVoucher.minSpend || 0;
+
+    setAppliedPromo(upper);
+    setDiscountPercent(percent);
+
+    if (typeof window !== 'undefined') {
+      const payload = JSON.stringify({ code: upper, percent });
+      localStorage.setItem('nefakky_promo_active', payload);
+      if (user?.uid) {
+        localStorage.setItem(`nefakky_promo_${user.uid}`, payload);
+      } else {
+        localStorage.setItem('nefakky_promo_guest', payload);
+      }
+    }
+
+    let message = `Kode promo "${upper}" (${foundVoucher.name}) BERHASIL digunakan! Diskon ${percent}% diterapkan pada pesanan Anda.`;
+    if (minSpend > 0 && subtotal > 0 && subtotal < minSpend) {
+      message = `Voucher "${upper}" berhasil dipasang! Minimal belanja Rp ${minSpend.toLocaleString('id-ID')} (belanja Anda saat ini Rp ${subtotal.toLocaleString('id-ID')}). Tambah menu untuk mengaktifkan potongan diskon ${percent}%.`;
+    }
+
+    return {
+      success: true,
+      message,
+      percent
+    };
+  };
+
+  // Fungsi menambah kuantitas barang ke keranjang
+  const addToCart = (productId: string, variant?: string) => {
+    const cartKey = variant ? `${productId}_${variant}` : productId;
+    const updated = { ...cart, [cartKey]: (cart[cartKey] || 0) + 1 };
+    saveCart(updated);
+  };
+
+  // Fungsi mengurangi 1 kuantitas barang di keranjang
+  const removeFromCart = (productId: string) => {
+    const updated = { ...cart };
+    if (updated[productId] > 1) {
+      updated[productId] -= 1;
+    } else {
+      delete updated[productId];
+    }
+    saveCart(updated);
+  };
+
+  // Fungsi menghapus barang sepenuhnya dari keranjang
+  const deleteFromCart = (productId: string) => {
+    const updated = { ...cart };
+    delete updated[productId];
+    saveCart(updated);
+  };
+
+  // Fungsi mengosongkan keranjang belanja
+  const clearCart = () => {
+    saveCart({});
+  };
 
   return (
-    // Sediakan nilai Context ke seluruh komponen anak (children)
     <CartContext.Provider value={{
       cart,
       cartItems,
@@ -319,6 +358,8 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       appliedPromo,
       discountPercent,
       discountAmount,
+      minSpendRequired,
+      isMinSpendMet,
       addToCart,
       removeFromCart,
       deleteFromCart,

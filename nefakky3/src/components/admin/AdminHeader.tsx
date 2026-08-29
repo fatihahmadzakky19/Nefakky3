@@ -78,16 +78,8 @@ export default function AdminHeader({
         </div>
       </div>
 
-      {/* Right Controls: Live Analytics Badge, CS Chat, & Profile */}
+      {/* Right Controls: Print, Export, CS Chat, & Profile */}
       <div className="flex items-center gap-2 sm:gap-4">
-        {/* Live Analytics Pulsing Pill */}
-        <div className="hidden sm:flex items-center gap-2 bg-error/5 px-3 py-1 rounded-full border border-error/10">
-          <span className="w-2 h-2 rounded-full bg-error animate-pulse"></span>
-          <span className="text-[11px] font-bold text-error uppercase tracking-tighter">
-            Live Analytics
-          </span>
-        </div>
-
         {/* Action Buttons: Print & Export */}
         <button 
           onClick={onPrintPDF}

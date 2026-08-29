@@ -111,6 +111,8 @@ export default function UserProfilePage() {
   // File & Camera Input References
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // State Tabs Riwayat Pesanan: 'all' | 'active' | 'completed'
   const [orderTab, setOrderTab] = useState<'all' | 'active' | 'completed'>('all');
@@ -124,6 +126,10 @@ export default function UserProfilePage() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
   const [showManualUrlInput, setShowManualUrlInput] = useState<boolean>(false);
   const [photoFeedback, setPhotoFeedback] = useState<string | null>(null);
+
+  // State Live Camera Modal
+  const [showLiveCameraModal, setShowLiveCameraModal] = useState<boolean>(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   // State Add/Edit Address Modal
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
@@ -142,7 +148,54 @@ export default function UserProfilePage() {
     }
   }, [user]);
 
-  // Handler: Ambil foto dari Galeri HP / PC atau Kamera Selfie
+  // Handler: Buka Kamera Selfie Langsung
+  const startLiveCamera = async () => {
+    try {
+      setShowLiveCameraModal(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } }
+      });
+      setCameraStream(stream);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(console.error);
+        }
+      }, 100);
+    } catch (err) {
+      console.warn("Camera access fallback:", err);
+      setShowLiveCameraModal(false);
+      cameraInputRef.current?.click();
+    }
+  };
+
+  const stopLiveCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowLiveCameraModal(false);
+  };
+
+  const capturePhotoFromCamera = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth || 400;
+      canvas.height = video.videoHeight || 400;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setEditAvatarUrl(dataUrl);
+        setPhotoFeedback('Foto selfie berhasil diambil!');
+        setTimeout(() => setPhotoFeedback(null), 3500);
+      }
+      stopLiveCamera();
+    }
+  };
+
+  // Handler: Ambil foto dari Galeri HP / PC atau Kamera File Input
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -295,8 +348,25 @@ export default function UserProfilePage() {
     }
   };
 
-  // Filter pesanan sesuai tab
+  // Filter pesanan sesuai user yang sedang login & tab
+  const currentUserEmail = (user?.email || '').toLowerCase().trim();
+  const currentUserId = user?.uid || '';
+  const currentUserName = (user?.displayName || '').toLowerCase().trim();
+
   const myOrders = (orders || []).filter(o => {
+    if (!user) return false;
+    const orderEmail = (o.customerEmail || '').toLowerCase().trim();
+    const orderUserId = o.userId || '';
+    const orderName = (o.customerName || '').toLowerCase().trim();
+
+    const isMyOrder = 
+      (currentUserId && orderUserId === currentUserId) || 
+      (currentUserEmail && orderEmail === currentUserEmail) || 
+      (currentUserEmail && orderEmail.includes(currentUserEmail)) || 
+      (currentUserName && orderName === currentUserName);
+
+    if (!isMyOrder) return false;
+
     if (orderTab === 'active') return o.status !== 'COMPLETED' && o.status !== 'CANCELLED';
     if (orderTab === 'completed') return o.status === 'COMPLETED' || o.status === 'CANCELLED';
     return true;
@@ -720,12 +790,44 @@ export default function UserProfilePage() {
                                     </h4>
                                   </div>
 
-                                  <div className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
-                                    isActive ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
-                                  }`}>
-                                    {isActive && <RefreshCw className="w-3 h-3 animate-spin" />}
-                                    <span>{isActive ? 'Diproses' : 'Selesai'}</span>
-                                  </div>
+                                  {(() => {
+                                    const st = ord.status || 'RECEIVED';
+                                    const isComp = st === 'COMPLETED';
+                                    const isCanc = st === 'CANCELLED';
+                                    const isPrep = st === 'PREPARING' || st === 'COOKING';
+                                    const isRdy = st === 'READY';
+                                    const isDeliv = st === 'DELIVERING' || st === 'SHIPPING' || st === 'ON_DELIVERY';
+                                    const isArrived = st === 'DELIVERED';
+
+                                    let badgeStyle = 'bg-amber-100 text-amber-900 border-amber-200';
+                                    let badgeText = 'Diterima';
+                                    if (isComp) {
+                                      badgeStyle = 'bg-emerald-100 text-emerald-900 border-emerald-200';
+                                      badgeText = 'Selesai';
+                                    } else if (isCanc) {
+                                      badgeStyle = 'bg-rose-100 text-rose-900 border-rose-200';
+                                      badgeText = 'Dibatalkan';
+                                    } else if (isPrep) {
+                                      badgeStyle = 'bg-orange-100 text-orange-900 border-orange-200';
+                                      badgeText = 'Disiapkan';
+                                    } else if (isRdy) {
+                                      badgeStyle = 'bg-purple-100 text-purple-900 border-purple-200';
+                                      badgeText = 'Siap Antar';
+                                    } else if (isDeliv) {
+                                      badgeStyle = 'bg-blue-100 text-blue-900 border-blue-200';
+                                      badgeText = 'Diantar Kurir';
+                                    } else if (isArrived) {
+                                      badgeStyle = 'bg-cyan-100 text-cyan-900 border-cyan-200';
+                                      badgeText = 'Tiba di Alamat';
+                                    }
+
+                                    return (
+                                      <div className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border ${badgeStyle}`}>
+                                        {isActive && <RefreshCw className="w-3 h-3 animate-spin" />}
+                                        <span>{badgeText}</span>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
 
                                 <p className="text-xs text-stone-500 font-light line-clamp-1">
@@ -863,7 +965,7 @@ export default function UserProfilePage() {
                   {/* Opsi 2: Foto Sendiri / Kamera */}
                   <button
                     type="button"
-                    onClick={() => cameraInputRef.current?.click()}
+                    onClick={startLiveCamera}
                     className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 hover:border-emerald-700 transition-all text-neutral-800 group cursor-pointer shadow-2xs active:scale-95"
                   >
                     <div className="w-8 h-8 rounded-full bg-emerald-100/70 text-emerald-700 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
@@ -888,17 +990,8 @@ export default function UserProfilePage() {
 
                 </div>
 
-                {/* Toggle Input URL Manual atau Reset */}
-                <div className="pt-1 flex items-center justify-between text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setShowManualUrlInput(!showManualUrlInput)}
-                    className="text-[#934B19] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Link2 className="w-3 h-3" />
-                    <span>{showManualUrlInput ? 'Sembunyikan URL Manual' : 'Input URL / Link Foto Manual'}</span>
-                  </button>
-
+                {/* Reset ke Inisial Nama */}
+                <div className="pt-1 flex items-center justify-end text-[11px]">
                   <button
                     type="button"
                     onClick={handleResetToInitials}
@@ -908,19 +1001,6 @@ export default function UserProfilePage() {
                     <span>Inisial Nama</span>
                   </button>
                 </div>
-
-                {/* Input Text URL Manual jika dibuka */}
-                {showManualUrlInput && (
-                  <div className="pt-2 animate-fade-in">
-                    <input 
-                      type="url"
-                      placeholder="https://contoh-link-gambar.com/foto.jpg"
-                      value={editAvatarUrl}
-                      onChange={(e) => setEditAvatarUrl(e.target.value)}
-                      className="w-full bg-white border border-stone-300 rounded-xl p-2.5 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-black"
-                    />
-                  </div>
-                )}
 
               </div>
 
@@ -1090,7 +1170,73 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* 5. FOOTER EDITORIAL TERPADU */}
+      {/* 5. MODAL LIVE CAMERA / WEBCAM SELFIE */}
+      {showLiveCameraModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 text-left border border-stone-200 animate-fade-in flex flex-col items-center">
+            
+            <div className="w-full flex justify-between items-center border-b border-stone-200 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-base font-bold text-neutral-900">
+                    Kamera Selfie
+                  </h3>
+                  <p className="text-[10px] text-stone-500 font-light">
+                    Arahkan kamera ke wajah Anda lalu tekan Ambil Foto.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={stopLiveCamera}
+                className="p-1.5 rounded-full text-stone-400 hover:text-black hover:bg-stone-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Video Viewfinder */}
+            <div className="relative w-full aspect-square bg-black rounded-2xl overflow-hidden shadow-inner flex items-center justify-center border-2 border-stone-200">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                className="w-full h-full object-cover scale-x-[-1]" 
+              />
+              <canvas ref={canvasRef} className="hidden" />
+              
+              {/* Overlay Guide Target Circle */}
+              <div className="absolute inset-8 rounded-full border-2 border-white/40 pointer-events-none border-dashed animate-pulse"></div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="w-full flex gap-3 pt-2">
+              <button 
+                type="button"
+                onClick={capturePhotoFromCamera}
+                className="flex-1 py-3 px-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Ambil Foto / Jepret</span>
+              </button>
+              
+              <button 
+                type="button"
+                onClick={stopLiveCamera}
+                className="px-4 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 6. FOOTER EDITORIAL TERPADU */}
       <Footer />
 
     </div>

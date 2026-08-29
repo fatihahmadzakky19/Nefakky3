@@ -68,7 +68,7 @@ export default function AdminOrdersTab({
   const [uploadTarget, setUploadTarget] = useState<{ orderId: string; type: 'proof' | 'payment' } | null>(null);
   const adminFileInputRef = useRef<HTMLInputElement>(null);
   const [productSearch, setProductSearch] = useState<string>('');
-  const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PENDING' | 'COOKING' | 'SHIPPING' | 'COMPLETED'>('ALL');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PENDING' | 'PREPARING' | 'READY' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED'>('ALL');
   const [timeFilter, setTimeFilter] = useState<'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH'>('ALL');
 
   // Live Realtime Calendar & Clock Ticker
@@ -163,7 +163,8 @@ export default function AdminOrdersTab({
   // KPI Metrics Calculation (100% Realtime dari Database)
   const totalOrdersCount = sortedOrders.length;
   const pendingOrdersCount = sortedOrders.filter(o => o.status === 'PENDING' || o.status === 'RECEIVED').length;
-  const inDeliveryCount = sortedOrders.filter(o => o.status === 'SHIPPING' || o.status === 'DELIVERING' || o.status === 'COOKING').length;
+  const preparingOrdersCount = sortedOrders.filter(o => o.status === 'PREPARING' || o.status === 'COOKING').length;
+  const inDeliveryCount = sortedOrders.filter(o => o.status === 'SHIPPING' || o.status === 'DELIVERING' || o.status === 'ON_DELIVERY' || o.status === 'READY' || o.status === 'DELIVERED').length;
   const completedTodayCount = sortedOrders.filter(o => o.status === 'COMPLETED').length;
   const confirmedOrdersCount = sortedOrders.filter(o => o.customerConfirmed === true).length;
 
@@ -207,9 +208,11 @@ export default function AdminOrdersTab({
     return sortedOrders.filter((order) => {
       // 1. Filter Status
       if (orderStatusFilter === 'PENDING' && order.status !== 'PENDING' && order.status !== 'RECEIVED') return false;
-      if (orderStatusFilter === 'COOKING' && order.status !== 'COOKING') return false;
-      if (orderStatusFilter === 'SHIPPING' && order.status !== 'SHIPPING' && order.status !== 'DELIVERING' && order.status !== 'DELIVERED') return false;
+      if (orderStatusFilter === 'PREPARING' && order.status !== 'PREPARING' && order.status !== 'COOKING') return false;
+      if (orderStatusFilter === 'READY' && order.status !== 'READY') return false;
+      if (orderStatusFilter === 'SHIPPING' && order.status !== 'SHIPPING' && order.status !== 'DELIVERING' && order.status !== 'ON_DELIVERY' && order.status !== 'DELIVERED') return false;
       if (orderStatusFilter === 'COMPLETED' && order.status !== 'COMPLETED') return false;
+      if (orderStatusFilter === 'CANCELLED' && order.status !== 'CANCELLED') return false;
 
       // 2. Filter Rentang Waktu (Terbaru, Hari Ini, Minggu Ini, Bulan Ini)
       if (!isWithinTimeRange(order, timeFilter)) return false;
@@ -345,32 +348,32 @@ export default function AdminOrdersTab({
 
         {/* Pending & Masuk */}
         <div className="flex flex-col bg-surface-container-lowest rounded-2xl p-5 shadow-xs gap-2 border border-outline-variant/20 hover:-translate-y-0.5 transition-transform">
-          <div className="flex items-center justify-between text-on-tertiary-fixed-variant">
-            <span className="font-label-caps uppercase text-[11px] font-bold">Pending &amp; Masuk</span>
+          <div className="flex items-center justify-between text-amber-800">
+            <span className="font-label-caps uppercase text-[11px] font-bold">Pesanan Masuk</span>
             <span className="material-symbols-outlined text-[20px] text-amber-600">hourglass_empty</span>
           </div>
           <div className="font-display-lg text-2xl sm:text-3xl font-bold text-on-surface">
             {pendingOrdersCount}
           </div>
-          <span className="text-[11px] text-amber-800 font-semibold">Perlu tindakan dapur</span>
+          <span className="text-[11px] text-amber-800 font-semibold">Menunggu konfirmasi dapur</span>
         </div>
 
-        {/* In Delivery (Proses) */}
+        {/* Sedang Disiapkan / Dimasak */}
         <div className="flex flex-col bg-surface-container-lowest rounded-2xl p-5 shadow-xs gap-2 border border-outline-variant/20 hover:-translate-y-0.5 transition-transform">
-          <div className="flex items-center justify-between text-on-secondary-fixed-variant">
-            <span className="font-label-caps uppercase text-[11px] font-bold">In Delivery</span>
-            <span className="material-symbols-outlined text-[20px] text-blue-600">local_shipping</span>
+          <div className="flex items-center justify-between text-orange-800">
+            <span className="font-label-caps uppercase text-[11px] font-bold">Disiapkan / Dimasak</span>
+            <span className="material-symbols-outlined text-[20px] text-orange-600">skillet</span>
           </div>
           <div className="font-display-lg text-2xl sm:text-3xl font-bold text-on-surface">
-            {inDeliveryCount}
+            {preparingOrdersCount}
           </div>
-          <span className="text-[11px] text-blue-800 font-semibold">Sedang diantar kurir</span>
+          <span className="text-[11px] text-orange-800 font-semibold">Dapur sedang menyiapkan menu</span>
         </div>
 
         {/* Completed Today */}
         <div className="flex flex-col bg-surface-container-lowest rounded-2xl p-5 shadow-xs gap-2 border border-outline-variant/20 hover:-translate-y-0.5 transition-transform">
           <div className="flex items-center justify-between text-emerald-800">
-            <span className="font-label-caps uppercase text-[11px] font-bold">Completed Today</span>
+            <span className="font-label-caps uppercase text-[11px] font-bold">Completed</span>
             <span className="material-symbols-outlined text-[20px] text-emerald-600">check_circle</span>
           </div>
           <div className="font-display-lg text-2xl sm:text-3xl font-bold text-on-surface">
@@ -385,19 +388,34 @@ export default function AdminOrdersTab({
         
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Status Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-            {(['ALL', 'PENDING', 'COOKING', 'SHIPPING', 'COMPLETED'] as const).map((st) => (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            {[
+              { key: 'ALL' as const, label: 'Semua Pesanan', count: totalOrdersCount },
+              { key: 'PENDING' as const, label: 'Pesanan Masuk', count: pendingOrdersCount },
+              { key: 'PREPARING' as const, label: 'Disiapkan / Dimasak', count: preparingOrdersCount },
+              { key: 'READY' as const, label: 'Pesanan Siap', count: sortedOrders.filter(o => o.status === 'READY').length },
+              { key: 'SHIPPING' as const, label: 'Pengiriman', count: inDeliveryCount },
+              { key: 'COMPLETED' as const, label: 'Selesai', count: completedTodayCount },
+              { key: 'CANCELLED' as const, label: 'Dibatalkan', count: sortedOrders.filter(o => o.status === 'CANCELLED').length },
+            ].map((st) => (
               <button
-                key={st}
+                key={st.key}
                 type="button"
-                onClick={() => setOrderStatusFilter(st)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  orderStatusFilter === st
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                onClick={() => setOrderStatusFilter(st.key)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  orderStatusFilter === st.key
+                    ? 'bg-[#25160E] text-white shadow-xs'
+                    : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                 }`}
               >
-                {st === 'ALL' ? 'Semua Pesanan' : st === 'COOKING' ? 'Sedang Dimasak' : st === 'SHIPPING' ? 'Pengiriman' : st}
+                <span>{st.label}</span>
+                {st.count > 0 && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                    orderStatusFilter === st.key ? 'bg-amber-400 text-black' : 'bg-stone-200 text-stone-700'
+                  }`}>
+                    {st.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -468,10 +486,14 @@ export default function AdminOrdersTab({
           </div>
         ) : (
           displayOrders.map((order: any) => {
+            const isPending = order.status === 'PENDING' || order.status === 'RECEIVED';
+            const isPreparing = order.status === 'PREPARING';
             const isCooking = order.status === 'COOKING';
-            const isDelivering = order.status === 'DELIVERING' || order.status === 'SHIPPING';
+            const isReady = order.status === 'READY';
+            const isDelivering = order.status === 'DELIVERING' || order.status === 'SHIPPING' || order.status === 'ON_DELIVERY';
             const isDelivered = order.status === 'DELIVERED';
             const isCompleted = order.status === 'COMPLETED';
+            const isCancelled = order.status === 'CANCELLED';
 
             return (
               <div 
@@ -479,15 +501,20 @@ export default function AdminOrdersTab({
                 className={`bg-surface-container-lowest rounded-2xl p-5 shadow-xs border flex flex-col justify-between transition-all ${
                   order.customerConfirmed 
                     ? 'border-emerald-500/50 ring-1 ring-emerald-500/30' 
+                    : isCancelled
+                    ? 'border-rose-300/50 bg-rose-50/20'
                     : 'border-outline-variant/20 hover:border-outline-variant/50'
                 }`}
               >
                 <div>
-                  {/* Card Header: Order ID, Time, & Status Badge */}
+                  {/* Card Header: Order ID, Time, & Status Selector */}
                   <div className="flex items-start justify-between border-b border-outline-variant/20 pb-3 mb-3">
                     <div>
-                      <div className="font-mono-data font-bold text-sm text-on-surface">
-                        #{order.id}
+                      <div className="font-mono-data font-bold text-sm text-on-surface flex items-center gap-2">
+                        <span>#{order.id}</span>
+                        {isPending && (
+                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                        )}
                       </div>
                       {(() => {
                         const timeInfo = getDetailedOrderDateTime(order);
@@ -506,18 +533,42 @@ export default function AdminOrdersTab({
                       })()}
                     </div>
 
-                    <div className="flex flex-col items-end gap-1">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                        isCompleted 
-                          ? 'bg-emerald-500/20 text-emerald-800' 
-                          : isDelivered 
-                          ? 'bg-blue-500/20 text-blue-800' 
-                          : isDelivering 
-                          ? 'bg-amber-500/20 text-amber-800' 
-                          : 'bg-stone-200 text-stone-800'
-                      }`}>
-                        {order.status || 'COOKING'}
-                      </span>
+                    <div className="flex flex-col items-end gap-1.5">
+                      {/* Status Selector Settings (Dropdown Langsung Pengaturan Status) */}
+                      <div className="relative group">
+                        <select
+                          value={order.status || 'RECEIVED'}
+                          onChange={(e) => updateOrderStatus(order.id, e.target.value as any)}
+                          title="Klik untuk mengatur / mengubah status pesanan"
+                          className={`px-3 py-1 rounded-xl text-[11px] font-bold uppercase cursor-pointer outline-none border transition-all appearance-none pr-6 shadow-2xs font-mono ${
+                            isCompleted 
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' 
+                              : isDelivered 
+                              ? 'bg-cyan-50 text-cyan-800 border-cyan-300 hover:bg-cyan-100' 
+                              : isDelivering 
+                              ? 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100' 
+                              : isReady
+                              ? 'bg-purple-50 text-purple-800 border-purple-300 hover:bg-purple-100'
+                              : isPreparing || isCooking 
+                              ? 'bg-orange-50 text-orange-900 border-orange-300 hover:bg-orange-100' 
+                              : isCancelled
+                              ? 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
+                              : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                          }`}
+                        >
+                          <option value="RECEIVED">📥 RECEIVED (Pesanan Diterima)</option>
+                          <option value="PREPARING">🍳 PREPARING (Pesanan Disiapkan)</option>
+                          <option value="COOKING">🔥 COOKING (Sedang Dimasak)</option>
+                          <option value="READY">📦 READY (Pesanan Siap)</option>
+                          <option value="DELIVERING">🛵 DELIVERING (Sedang Diantar)</option>
+                          <option value="DELIVERED">📍 DELIVERED (Tiba di Lokasi)</option>
+                          <option value="COMPLETED">✅ COMPLETED (Selesai & Lunas)</option>
+                          <option value="CANCELLED">❌ CANCELLED (Dibatalkan)</option>
+                        </select>
+                        <span className="material-symbols-outlined pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[14px] text-stone-600">
+                          expand_more
+                        </span>
+                      </div>
 
                       {order.customerConfirmed && (
                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded text-[9px] font-bold flex items-center gap-1">
@@ -636,29 +687,39 @@ export default function AdminOrdersTab({
                     <button 
                       type="button"
                       onClick={() => setSelectedReceiptOrder(order)}
-                      className="px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center justify-center gap-1 border border-outline-variant/30 cursor-pointer"
+                      className="px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold flex items-center justify-center gap-1 border border-outline-variant/30 cursor-pointer transition-colors"
                       title="Cetak Struk Thermal"
                     >
                       <Printer className="w-3.5 h-3.5" />
                       <span>Nota</span>
                     </button>
 
-                    {/* Sequential Status Buttons */}
-                    {order.status === 'PENDING' && (
+                    {/* Step-by-Step Status Progression Action Buttons */}
+                    {(order.status === 'RECEIVED' || order.status === 'PENDING') && (
                       <button 
                         type="button"
-                        onClick={() => updateOrderStatus(order.id, 'COOKING')}
-                        className="flex-1 py-2 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                        onClick={() => updateOrderStatus(order.id, 'PREPARING')}
+                        className="flex-1 py-2 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
                       >
-                        <span>⏳ Masak Menu</span>
+                        <span>🍳 Siapkan Pesanan</span>
                       </button>
                     )}
 
-                    {isCooking && (
+                    {(isPreparing || isCooking) && (
+                      <button 
+                        type="button"
+                        onClick={() => updateOrderStatus(order.id, 'READY')}
+                        className="flex-1 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
+                      >
+                        <span>📦 Pesanan Siap</span>
+                      </button>
+                    )}
+
+                    {isReady && (
                       <button 
                         type="button"
                         onClick={() => updateOrderStatus(order.id, 'DELIVERING')}
-                        className="flex-1 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                        className="flex-1 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
                       >
                         <span>🛵 Berangkat Antar</span>
                       </button>
@@ -668,7 +729,7 @@ export default function AdminOrdersTab({
                       <button 
                         type="button"
                         onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                        className="flex-1 py-2 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                        className="flex-1 py-2 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
                       >
                         <span>📍 Tiba di Lokasi</span>
                       </button>
@@ -678,16 +739,23 @@ export default function AdminOrdersTab({
                       <button 
                         type="button"
                         onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
-                        className="flex-1 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                        className="flex-1 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
                       >
                         <span>✅ Selesai &amp; Lunas</span>
                       </button>
                     )}
 
                     {isCompleted && (
-                      <div className="flex-1 py-2 bg-emerald-100 text-emerald-900 border border-emerald-300 text-center font-bold text-xs rounded-xl flex items-center justify-center gap-1">
+                      <div className="flex-1 py-2 bg-emerald-50 text-emerald-900 border border-emerald-300 text-center font-bold text-xs rounded-xl flex items-center justify-center gap-1">
                         <Check className="w-3.5 h-3.5 text-emerald-700" />
                         <span>Selesai &amp; Lunas</span>
+                      </div>
+                    )}
+
+                    {isCancelled && (
+                      <div className="flex-1 py-2 bg-rose-50 text-rose-900 border border-rose-300 text-center font-bold text-xs rounded-xl flex items-center justify-center gap-1">
+                        <X className="w-3.5 h-3.5 text-rose-700" />
+                        <span>Pesanan Dibatalkan</span>
                       </div>
                     )}
                   </div>

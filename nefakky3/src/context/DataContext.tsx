@@ -18,7 +18,8 @@ import {
   updateDoc, 
   deleteDoc, 
   writeBatch,
-  getDocs
+  getDocs,
+  addDoc
 } from 'firebase/firestore';
 import { ref, set as setRtdb, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
 import { db, rtdb } from '@/lib/firebase';
@@ -89,6 +90,7 @@ export interface AdminVoucher {
   expiry: string;
   status: 'Active' | 'Expired';
   event?: string;
+  eventCategory?: string;
   isActive?: boolean;
   usedCount?: number;
   totalLimit?: number;
@@ -110,6 +112,11 @@ export const getISOWeekString = (d: Date = new Date()): string => {
   const week1 = new Date(date.getFullYear(), 0, 4);
   const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
   return `${date.getFullYear()}-W${weekNum}`;
+};
+
+/** Helper pembersih kode voucher (menghapus tanda #, spasi, dan kapitalisasi) */
+export const cleanPromoCode = (c?: string | null): string => {
+  return (c || '').trim().toUpperCase().replace(/^#+/, '');
 };
 
 /** Helper function untuk mengecek apakah voucher valid & aktif saat ini (termasuk validasi kuota, auto-reset mingguan & hari/tanggal) */
@@ -204,12 +211,17 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
   }
 
   // 4. Weekend / Day of Week Validation (Aturan Batas Hari Aktif)
-  const day = new Date().getDay(); // 0 = Minggu, 6 = Sabtu, 1-5 = Senin-Jumat
-  const isWeekendDay = day === 0 || day === 6;
+  // Sesuai standar industri F&B Nusantara (WIB), Promo Weekend / Akhir Pekan berlaku hari Jumat, Sabtu, & Minggu (0 = Minggu, 5 = Jumat, 6 = Sabtu)
+  const now = new Date();
+  const day = now.getDay(); 
+  const isWeekendDay = day === 0 || day === 5 || day === 6;
   const isWeekday = day >= 1 && day <= 5;
 
   const isWeekendPromo = 
     daysLower.includes('weekend') ||
+    daysLower.includes('akhir pekan') ||
+    daysLower.includes('sabtu') ||
+    daysLower.includes('minggu') ||
     codeUpper.includes('WEEKEND') || 
     nameLower.includes('weekend') ||
     expiryLower.includes('akhir pekan') ||
@@ -221,7 +233,7 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
   if (isWeekendPromo && !isWeekendDay) {
     return { 
       active: false, 
-      reason: `Promo ${voucher.code || ''} (${voucher.name || ''}) hanya berlaku pada hari Sabtu & Minggu (Weekend).` 
+      reason: `Promo ${voucher.code || ''} (${voucher.name || ''}) hanya berlaku pada hari Jumat, Sabtu & Minggu (Weekend).` 
     };
   }
 
@@ -257,7 +269,7 @@ export interface AdminOrder {
   paymentBadge: 'PAID' | 'AWAITING' | 'REFUNDED' | 'FAILED';
   deliveryType: 'KURIR NEFAKKY' | 'EXPRESS' | 'STANDARD' | 'SAME DAY' | 'PB1 (10%)' | string;
   distance?: string;
-  status: 'RECEIVED' | 'COOKING' | 'READY' | 'DELIVERING' | 'ON_DELIVERY' | 'DELIVERED' | 'COMPLETED' | 'PENDING' | 'SHIPPING' | 'EXPIRED' | 'CANCELLED';
+  status: 'RECEIVED' | 'PENDING' | 'PREPARING' | 'COOKING' | 'READY' | 'DELIVERING' | 'ON_DELIVERY' | 'DELIVERED' | 'COMPLETED' | 'SHIPPING' | 'EXPIRED' | 'CANCELLED';
   subtotal: number;
   shippingCost: number;
   discount: number;
@@ -575,89 +587,47 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
 
 export const DEFAULT_PROMOTIONS: PromotionItem[] = [
   {
-    id: 'promo-1',
-    title: 'Weekend Promo 15%',
-    subtitle: 'Ayam bakar pejantan pilihan dengan kecap rempah pilihan.',
-    tag: '15% OFF',
+    id: 'v4',
+    title: 'Voucher Pelanggan Baru 10%',
+    subtitle: 'Diskon 10% khusus pengguna baru Nefakky.',
+    tag: '10% OFF',
     badge: 'Active',
     image: '/images/ayam_bakar.jpg',
-    duration: '01 Mei - 31 Des',
+    duration: 'Selamanya',
     type: 'Percentage',
-    usedCount: 142,
+    usedCount: 0,
+    totalLimit: 999999,
+    isActive: true
+  },
+  {
+    id: 'promo-1',
+    title: 'Weekend Promo Diskon 15%',
+    subtitle: 'Diskon spesial akhir pekan untuk semua menu pilihan.',
+    tag: '15% OFF',
+    badge: 'Active',
+    image: '/images/nasi_bakar.jpg',
+    duration: '31 Des 2026',
+    type: 'Percentage',
+    usedCount: 0,
     totalLimit: 500,
     isActive: true
   },
   {
-    id: 'promo-2',
-    title: 'Flash Sale: Gudeg Komplit',
-    subtitle: 'Gudeg nangka muda olahan tradisional rasa otentik.',
-    tag: 'FLASH SALE',
+    id: 'promo-86',
+    title: 'hahaha',
+    subtitle: 'Promo spesial diskon 20% menu kuliner.',
+    tag: '20% OFF',
     badge: 'Active',
-    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
-    duration: 'Akhir Pekan',
-    type: 'Fixed Amount',
-    usedCount: 98,
-    totalLimit: 1000,
-    isActive: true
-  },
-  {
-    id: 'promo-3',
-    title: 'Hemat Nasi Bakar Cumi',
-    subtitle: 'Nasi bakar daun pisang isian cumi pedas gurih.',
-    tag: 'BOGO',
-    badge: 'Active',
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
-    duration: '01 Juni - 31 Des',
-    type: 'Buy 1 Get 1',
-    usedCount: 45,
+    image: '/images/gudeg.jpg',
+    duration: '31 Des 2026',
+    type: 'Percentage',
+    usedCount: 0,
     totalLimit: 100,
     isActive: true
   }
 ];
 
 export const DEFAULT_VOUCHERS: AdminVoucher[] = [
-  {
-    id: 'promo-1',
-    code: 'WEEKENDSERU',
-    name: 'Weekend Promo Diskon 15%',
-    type: 'Percentage',
-    discountPercent: 15,
-    minSpend: 50000,
-    redemptions: '142/500',
-    expiry: '01 Mei - 31 Des',
-    event: 'Promo Akhir Pekan',
-    status: 'Active',
-    isActive: true,
-    imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: 'promo-2',
-    code: 'FLASHSALE',
-    name: 'Flash Sale: Gudeg Komplit Jogja',
-    type: 'Fixed Amount',
-    discountPercent: 20,
-    minSpend: 30000,
-    redemptions: '98/1000',
-    expiry: 'Akhir Pekan',
-    event: 'Flash Sale',
-    status: 'Active',
-    isActive: true,
-    imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: 'promo-3',
-    code: 'HEMAT50',
-    name: 'Hemat Nasi Bakar Cumi (BOGO)',
-    type: 'Percentage',
-    discountPercent: 50,
-    minSpend: 45000,
-    redemptions: '45/100',
-    expiry: '01 Juni - 31 Des',
-    event: 'Tanggal Kembar',
-    status: 'Active',
-    isActive: true,
-    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'
-  },
   {
     id: 'v4',
     code: 'NEFAKKY10',
@@ -668,9 +638,41 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     redemptions: '1x Per Pengguna Baru',
     expiry: 'Selamanya',
     event: 'Pelanggan Baru',
+    eventCategory: 'Pelanggan Baru',
     status: 'Active',
     isActive: true,
-    imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80'
+    validDays: 'Semua Hari'
+  },
+  {
+    id: 'promo-1',
+    code: 'WEEKENDSERU',
+    name: 'Weekend Promo Diskon 15%',
+    type: 'Percentage',
+    discountPercent: 15,
+    minSpend: 50000,
+    redemptions: '0/500',
+    expiry: '31 Des 2026',
+    event: 'Flash Sale',
+    eventCategory: 'Flash Sale',
+    status: 'Active',
+    isActive: true,
+    validDays: 'Weekend (Jumat - Minggu)',
+    autoResetWeekly: true
+  },
+  {
+    id: 'promo-86',
+    code: 'PROMO86',
+    name: 'hahaha',
+    type: 'Percentage',
+    discountPercent: 20,
+    minSpend: 50000,
+    redemptions: '0/100',
+    expiry: '31 Des 2026',
+    event: 'Flash Sale',
+    eventCategory: 'Flash Sale',
+    status: 'Active',
+    isActive: true,
+    validDays: 'Semua Hari'
   }
 ];
 
@@ -1021,6 +1023,7 @@ interface DataContextType {
   deleteVoucher: (id: string) => void;
   toggleVoucherStatus: (id: string) => void;
   claimVoucherRedemption: (code: string, userUid?: string | null, userEmail?: string | null) => Promise<boolean>;
+  resetVoucherUsage: (voucherIdOrCode: string) => Promise<boolean>;
   isVoucherUsedByUser: (code: string, userUid?: string | null, userEmail?: string | null) => boolean;
   addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
@@ -1066,7 +1069,33 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         const prods = snapshot.docs
           .map(d => ({ ...d.data(), id: d.id }) as ProductItem)
-          .filter(p => p.id !== 'm7' && p.id !== 'm8');
+          .filter(p => p.id !== 'm7' && p.id !== 'm8')
+          .map(p => {
+            if (p.id === 'm6' || p.category === 'Minuman' || (p.name || '').toLowerCase().includes('jus')) {
+              const vStocks = p.variantStocks ? { ...p.variantStocks } : null;
+              let finalVarStocks = vStocks ? {
+                Mangga: Number(vStocks.Mangga ?? vStocks.mangga ?? 13),
+                Sirsak: Number(vStocks.Sirsak ?? vStocks.sirsak ?? 14),
+                Jambu: Number(vStocks.Jambu ?? vStocks.jambu ?? 13)
+              } : {
+                Mangga: 13,
+                Sirsak: 14,
+                Jambu: 13
+              };
+
+              if (p.stock === 40 && (!vStocks || (vStocks.Mangga === 20 && vStocks.Sirsak === 15 && vStocks.Jambu === 15))) {
+                finalVarStocks = { Mangga: 13, Sirsak: 14, Jambu: 13 };
+              }
+
+              const totalCalculated = Object.values(finalVarStocks).reduce((sum, v) => sum + (Number(v) || 0), 0);
+              return {
+                ...p,
+                stock: totalCalculated,
+                variantStocks: finalVarStocks
+              };
+            }
+            return p;
+          });
         
         // Auto-seed missing default products (e.g. Garang Asam m5 & Jus m6) without altering user-edited items
         const existingIds = new Set(prods.map(p => p.id));
@@ -1425,40 +1454,80 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   const addVoucher = (voucherData: Omit<AdminVoucher, 'id'>): AdminVoucher => {
     const newId = `v_${Date.now()}`;
+    const cleanCode = cleanPromoCode(voucherData.code);
     const newVoucher: AdminVoucher = {
       ...voucherData,
       id: newId,
-      code: voucherData.code.toUpperCase(),
-      status: voucherData.status || 'Active',
+      code: cleanCode,
+      name: voucherData.name || `Promo Diskon ${voucherData.discountPercent}%`,
+      discountPercent: Number(voucherData.discountPercent) || 10,
+      minSpend: Number(voucherData.minSpend) || 0,
+      status: (voucherData.status as any) || 'Active',
+      isActive: voucherData.isActive !== false,
       lastResetWeek: getISOWeekString()
     };
+
+    // Update state lokal secara instan agar langsung muncul di admin & homepage
+    setVouchersState(prev => {
+      const filtered = prev.filter(v => cleanPromoCode(v.code) !== cleanCode && v.id !== newId);
+      return [newVoucher, ...filtered];
+    });
+
+    // Simpan ke Firestore
     setDoc(doc(db, 'vouchers', newId), newVoucher).catch(console.error);
+
+    // Sinkronkan juga ke promotions collection
+    const newPromo: PromotionItem = {
+      id: newId,
+      title: newVoucher.name,
+      subtitle: `Diskon ${newVoucher.discountPercent}% (Min. Rp ${(newVoucher.minSpend || 0).toLocaleString('id-ID')})`,
+      tag: newVoucher.event || 'Promo Spesial',
+      badge: 'Active',
+      image: '/images/ayam_bakar.jpg',
+      duration: newVoucher.expiry || '31 Des 2026',
+      type: 'Voucher',
+      usedCount: 0,
+      totalLimit: newVoucher.totalLimit || 100,
+      isActive: true
+    };
+    setDoc(doc(db, 'promotions', newId), newPromo).catch(console.error);
+
     return newVoucher;
   };
 
   const updateVoucher = (id: string, updated: Partial<AdminVoucher>) => {
-    setVouchersState(prev => prev.map(v => v.id === id ? { ...v, ...updated } : v));
-    updateDoc(doc(db, 'vouchers', id), updated).catch(console.error);
+    const cleanCode = updated.code ? cleanPromoCode(updated.code) : undefined;
+    const finalUpdates = {
+      ...updated,
+      ...(cleanCode ? { code: cleanCode } : {})
+    };
+    setVouchersState(prev => prev.map(v => (v.id === id || (cleanCode && cleanPromoCode(v.code) === cleanCode)) ? { ...v, ...finalUpdates } : v));
+    updateDoc(doc(db, 'vouchers', id), finalUpdates).catch(console.error);
   };
 
   const deleteVoucher = (id: string) => {
-    setVouchersState(prev => prev.filter(v => v.id !== id));
+    const target = vouchers.find(v => v.id === id || cleanPromoCode(v.code) === cleanPromoCode(id));
+    const targetId = target ? target.id : id;
+    setVouchersState(prev => prev.filter(v => v.id !== targetId && cleanPromoCode(v.code) !== cleanPromoCode(id)));
     try {
-      deleteDoc(doc(db, 'vouchers', id)).catch(console.error);
-      deleteDoc(doc(db, 'promotions', id)).catch(console.error);
+      deleteDoc(doc(db, 'vouchers', targetId)).catch(console.error);
+      deleteDoc(doc(db, 'promotions', targetId)).catch(console.error);
     } catch (e) {
       console.warn('Catch deleteVoucher error:', e);
     }
   };
 
   const toggleVoucherStatus = (id: string) => {
-    const target = vouchers.find(v => v.id === id || v.code.toUpperCase() === id.toUpperCase());
+    const target = vouchers.find(v => v.id === id || cleanPromoCode(v.code) === cleanPromoCode(id));
     if (target) {
       const nextActive = !(target.status === 'Active' && target.isActive !== false);
-      updateDoc(doc(db, 'vouchers', target.id), {
-        status: nextActive ? 'Active' : 'Expired',
+      const updates = {
+        status: (nextActive ? 'Active' : 'Expired') as AdminVoucher['status'],
         isActive: nextActive
-      }).catch(console.error);
+      };
+
+      setVouchersState(prev => prev.map(v => (v.id === target.id || cleanPromoCode(v.code) === cleanPromoCode(target.code)) ? { ...v, ...updates } : v));
+      updateDoc(doc(db, 'vouchers', target.id), updates).catch(console.error);
 
       const matchingPromo = promotions.find(p => p.id === target.id || (p.title && p.title.toLowerCase().includes(target.code.toLowerCase())));
       if (matchingPromo) {
@@ -1485,37 +1554,99 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     // Immediate local React state update so order appears 100% reliably
     setOrdersState(prev => [newOrder, ...prev.filter(o => o.id !== newId)]);
 
-    // Deduct stock for ordered products & variants
-    if (Array.isArray(newOrder.items)) {
-      setProductsState(prev => {
-        return prev.map(p => {
+    // Deduct stock for ordered products & variants in realtime
+    if (Array.isArray(newOrder.items) && newOrder.items.length > 0) {
+      setProductsState(prevProducts => {
+        const updatedProducts = prevProducts.map(p => {
           let pCopy = { ...p };
-          let modified = false;
+          let isModified = false;
 
           for (const it of newOrder.items) {
-            const [baseId, variant] = (it.id || '').split('_');
-            const qty = it.quantity || 1;
+            const rawId = String(it.id || '');
+            const [baseId, rawVariant] = rawId.split('_');
+            const itName = String(it.name || '').toLowerCase().trim();
+            const pName = String(p.name || '').toLowerCase().trim();
+            const qty = Math.max(1, Number(it.quantity) || 1);
 
-            if (p.id === baseId || (p.name && it.name && p.name.toLowerCase() === it.name.toLowerCase())) {
-              modified = true;
-              const newStock = Math.max(0, pCopy.stock - qty);
-              pCopy.stock = newStock;
-              if (newStock === 0) pCopy.status = 'Low Stock';
+            // Cek apakah item pesanan ini cocok dengan produk p
+            const isIdMatch = p.id === baseId || p.id === rawId || p.sku === rawId || p.sku === baseId;
+            const isNameExactMatch = pName === itName;
+            const isDrinkMatch = (p.category === 'Minuman' || p.id === 'm6' || pName.includes('jus')) && itName.includes('jus');
+            const isNamePartialMatch = pName.includes(itName.replace(/jus\s*|\s*segar/gi, '').trim()) || itName.includes(pName);
 
-              if (variant && pCopy.variantStocks && pCopy.variantStocks[variant] !== undefined) {
+            const isMatch = isIdMatch || isNameExactMatch || isDrinkMatch || isNamePartialMatch;
+
+            if (isMatch) {
+              isModified = true;
+
+              // Deteksi nama varian (contoh: 'Mangga', 'Sirsak', 'Jambu')
+              let detectedVariant: string | null = null;
+              if (rawVariant) {
+                detectedVariant = rawVariant.charAt(0).toUpperCase() + rawVariant.slice(1).toLowerCase();
+              } else if (itName.includes('mangga')) {
+                detectedVariant = 'Mangga';
+              } else if (itName.includes('sirsak')) {
+                detectedVariant = 'Sirsak';
+              } else if (itName.includes('jambu')) {
+                detectedVariant = 'Jambu';
+              }
+
+              // Jika produk memiliki variantStocks (seperti Jus Segar)
+              if (pCopy.variantStocks) {
                 const updatedVarStocks = { ...pCopy.variantStocks };
-                updatedVarStocks[variant] = Math.max(0, (updatedVarStocks[variant] || 0) - qty);
+
+                if (detectedVariant) {
+                  // Temukan key varian yang cocok tanpa mempedulikan huruf besar/kecil
+                  const matchingKey = Object.keys(updatedVarStocks).find(
+                    k => k.toLowerCase() === detectedVariant!.toLowerCase()
+                  ) || detectedVariant;
+
+                  const currentVarStock = Number(updatedVarStocks[matchingKey] ?? 15);
+                  updatedVarStocks[matchingKey] = Math.max(0, currentVarStock - qty);
+                } else {
+                  // Jika tidak ada varian spesifik, kurangi stok pertama yang masih tersedia
+                  for (const k of Object.keys(updatedVarStocks)) {
+                    if (updatedVarStocks[k] > 0) {
+                      updatedVarStocks[k] = Math.max(0, updatedVarStocks[k] - qty);
+                      break;
+                    }
+                  }
+                }
+
                 pCopy.variantStocks = updatedVarStocks;
+                // Total stok adalah jumlah seluruh varian yang tersisa
+                pCopy.stock = Object.values(updatedVarStocks).reduce((sum, v) => sum + (Number(v) || 0), 0);
+              } else {
+                // Produk reguler tanpa varian (Ayam Bakar, Nasi Bakar, Krecek, Gudeg, Garang Asam)
+                pCopy.stock = Math.max(0, (Number(pCopy.stock) || 0) - qty);
+              }
+
+              // Update status stok jika habis
+              if (pCopy.stock <= 0) {
+                pCopy.status = 'Low Stock';
               }
             }
           }
 
-          if (modified) {
+          if (isModified) {
             const cleanProd = cleanForFirestore(pCopy);
             updateDoc(doc(db, 'products', p.id), cleanProd).catch(console.error);
+            setRtdb(ref(rtdb, `products/${p.id}`), cleanProd).catch(console.error);
+            setRtdb(ref(rtdb, `live_products/${p.id}`), cleanProd).catch(console.error);
           }
+
           return pCopy;
         });
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('nefakky_products_live', JSON.stringify(updatedProducts));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        return updatedProducts;
       });
     }
 
@@ -1688,63 +1819,142 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(console.error);
   };
 
-  /** Helper function untuk mengecek apakah user tertentu sudah pernah menggunakan voucher */
-  const isVoucherUsedByUser = (voucherCode: string, userUid?: string | null, userEmail?: string | null): boolean => {
-    if (!voucherCode) return false;
-    const codeUpper = voucherCode.trim().toUpperCase();
+  /** Helper pembersih kode voucher (menghapus tanda #, spasi, dan kapitalisasi) */
+  const cleanPromoCode = (c?: string | null): string => {
+    return (c || '').trim().toUpperCase().replace(/^#+/, '');
+  };
 
-    // 1. Cek dari localStorage per user
+  /** Helper function untuk memeriksa apakah voucher sudah pernah digunakan oleh pengguna */
+  const isVoucherUsedByUser = (voucherCode?: string, userUid?: string | null, userEmail?: string | null): boolean => {
+    if (!voucherCode) return false;
+    const cleanTargetCode = cleanPromoCode(voucherCode);
+    if (!cleanTargetCode) return false;
+
+    const isNewCustomerVoucher = cleanTargetCode === 'NEFAKKY10' || cleanTargetCode.includes('NEWUSER') || cleanTargetCode.includes('PELANGGANBARU');
+
+    // 1. Cek dari localStorage khusus akun user ini
     if (typeof window !== 'undefined') {
       const keysToCheck = [
         userUid ? `nefakky_used_vouchers_${userUid}` : null,
-        userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase()}` : null,
-        'nefakky_used_vouchers_guest',
-        'nefakky_used_vouchers_global'
+        userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase().trim()}` : null,
+        'nefakky_used_vouchers_admin'
       ].filter(Boolean) as string[];
 
       for (const storageKey of keysToCheck) {
         try {
           const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-          if (existing.some(c => c.trim().toUpperCase() === codeUpper)) return true;
+          if (existing.some(c => cleanPromoCode(c) === cleanTargetCode)) {
+            return true;
+          }
         } catch (e) {
           console.error(e);
         }
       }
     }
 
-    // 2. Cek dari riwayat pemesanan pengguna di orders
-    const userOrders = (orders || []).filter(o => 
-      (userUid && o.userId === userUid) || 
-      (userEmail && o.customerEmail && o.customerEmail.toLowerCase() === userEmail.toLowerCase())
-    );
+    // 2. Cek riwayat pesanan (orders) untuk akun user ini
+    const userOrders = (orders || []).filter(o => {
+      const isUidMatch = Boolean(userUid && o.userId && o.userId === userUid);
+      const isEmailMatch = Boolean(userEmail && o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail.toLowerCase().trim());
+      const isAdminMatch = Boolean(
+        userEmail && (userEmail.toLowerCase().includes('fatih') || userEmail.toLowerCase().includes('admin')) &&
+        (o.customerEmail?.toLowerCase().includes('fatih') || o.userId?.includes('admin') || o.customerName?.toLowerCase().includes('fatih'))
+      );
+      return isUidMatch || isEmailMatch || isAdminMatch;
+    });
 
-    const hasUsedInOrders = userOrders.some(o => 
-      (o.voucherCode && o.voucherCode.toUpperCase().includes(codeUpper)) ||
-      (o.appliedPromo && o.appliedPromo.toUpperCase().includes(codeUpper))
-    );
+    const hasUsedInOrders = userOrders.some(o => {
+      const ordVoucher = cleanPromoCode(o.voucherCode || o.appliedPromo);
+      if (!ordVoucher) return false;
+      return ordVoucher === cleanTargetCode;
+    });
 
-    return hasUsedInOrders;
+    if (hasUsedInOrders) return true;
+
+    // ATURAN KHUSUS PELANGGAN BARU (#NEFAKKY10):
+    // Jika akun sudah memiliki riwayat pesanan (orders >= 1) atau akun admin testing,
+    // Akun tersebut BUKAN lagi pengguna baru, sehingga promo pelanggan baru tidak muncul
+    if (isNewCustomerVoucher) {
+      if (userOrders.length > 0) {
+        return true;
+      }
+      if (userEmail && (userEmail.toLowerCase().includes('admin') || userEmail.toLowerCase().includes('fatih'))) {
+        const allAdminTestingOrders = (orders || []).filter(o => 
+          o.customerEmail?.toLowerCase().includes('fatih') || 
+          o.userId?.includes('admin') || 
+          o.customerName?.toLowerCase().includes('fatih')
+        );
+        if (allAdminTestingOrders.length > 0) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  /** Helper function untuk mereset data penggunaan voucher (oleh Admin di Dashboard Promosi) */
+  const resetVoucherUsage = async (voucherIdOrCode: string): Promise<boolean> => {
+    if (!voucherIdOrCode) return false;
+    const cleanCode = cleanPromoCode(voucherIdOrCode);
+
+    // 1. Bersihkan localStorage catatan used voucher di seluruh browser
+    if (typeof window !== 'undefined') {
+      try {
+        const keysToRemove = Object.keys(localStorage).filter(k => k.startsWith('nefakky_used_vouchers_'));
+        for (const k of keysToRemove) {
+          const arr: string[] = JSON.parse(localStorage.getItem(k) || '[]');
+          const filtered = arr.filter(c => cleanPromoCode(c) !== cleanCode);
+          localStorage.setItem(k, JSON.stringify(filtered));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // 2. Update status & reset usedCount di Firestore Database
+    const target = vouchers.find(v => v.id === voucherIdOrCode || cleanPromoCode(v.code) === cleanCode);
+    if (target && db) {
+      const isNewCust = target.event === 'Pelanggan Baru' || cleanPromoCode(target.code).includes('NEFAKKY10');
+      const limit = target.totalLimit || 500;
+      const redemptions = isNewCust ? '1x Per Pengguna Baru' : `0/${limit}`;
+
+      const updates = {
+        usedCount: 0,
+        redemptions,
+        status: 'Active' as AdminVoucher['status'],
+        isActive: true,
+        lastResetWeek: getISOWeekString()
+      };
+
+      setVouchersState(prev => prev.map(v => (v.id === target.id || cleanPromoCode(v.code) === cleanCode) ? { ...v, ...updates } : v));
+      await updateDoc(doc(db, 'vouchers', target.id), updates).catch(console.error);
+      return true;
+    }
+
+    return false;
   };
 
   /** Helper function untuk mengklaim penggunaan voucher & mematikan promo otomatis secara realtime jika kuota habis */
   const claimVoucherRedemption = async (voucherCode: string, userUid?: string | null, userEmail?: string | null): Promise<boolean> => {
-    if (!db || !voucherCode) return false;
-    try {
-      const codeUpper = voucherCode.trim().toUpperCase();
+    if (!voucherCode) return false;
+    const cleanCode = cleanPromoCode(voucherCode);
+    if (!cleanCode) return false;
 
-      // Catat ke localStorage user agar langsung tidak dapat digunakan kembali
+    try {
+      // 1. Simpan langsung ke localStorage user & session browser agar instan ter-filter dari tampilan
       if (typeof window !== 'undefined') {
         const keysToSave = [
           userUid ? `nefakky_used_vouchers_${userUid}` : null,
-          userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase()}` : null,
-          'nefakky_used_vouchers_global'
+          userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase().trim()}` : null,
+          'nefakky_used_vouchers_session'
         ].filter(Boolean) as string[];
 
         for (const storageKey of keysToSave) {
           try {
             const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            if (!existing.some(c => c.toUpperCase() === codeUpper)) {
-              existing.push(codeUpper);
+            if (!existing.some(c => cleanPromoCode(c) === cleanCode)) {
+              existing.push(cleanCode);
               localStorage.setItem(storageKey, JSON.stringify(existing));
             }
           } catch (e) {
@@ -1753,89 +1963,95 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      const q = collection(db, 'vouchers');
-      const snapshot = await getDocs(q);
-      const targetDoc = snapshot.docs.find(d => {
-        const data = d.data();
-        return (data.code && data.code.toUpperCase() === codeUpper) || (d.id && d.id.toUpperCase() === codeUpper);
-      });
-
-      if (targetDoc) {
-        const v = targetDoc.data();
-        
-        // Cek apakah promo pelanggan baru (1x Per Pengguna Baru)
-        const isNewCust = v.event === 'Pelanggan Baru' || (v.code && v.code.toUpperCase().includes('NEFAKKY10'));
-        const isTanpaBatas = (v.redemptions === 'Tanpa Batas' || (v.redemptions && String(v.redemptions).toLowerCase().includes('tanpa batas'))) && !isNewCust;
-
-        if (isNewCust) {
-          const newUsed = (v.usedCount || 0) + 1;
-          await updateDoc(doc(db, 'vouchers', targetDoc.id), {
-            usedCount: newUsed,
-            redemptions: '1x Per Pengguna Baru',
-            expiry: 'Selamanya',
-            status: 'Active',
-            isActive: true
+      // 2. Simpan catatan riwayat klaim ke Firestore collection 'voucher_redemptions'
+      if (db) {
+        try {
+          const redemptionsCol = collection(db, 'voucher_redemptions');
+          await addDoc(redemptionsCol, {
+            voucherCode: cleanCode,
+            userId: userUid || 'anonymous',
+            userEmail: userEmail || '',
+            redeemedAt: Date.now()
           });
-          return true;
+        } catch (e) {
+          console.warn("Firestore redemption record error:", e);
         }
+      }
 
-        if (isTanpaBatas) {
-          const newUsed = (v.usedCount || 0) + 1;
-          await updateDoc(doc(db, 'vouchers', targetDoc.id), {
-            usedCount: newUsed,
-            redemptions: 'Tanpa Batas',
-            expiry: 'Selamanya',
-            status: 'Active',
-            isActive: true
-          });
-          return true;
-        }
+      // 3. Update kuota dan redemptions voucher di Firestore secara realtime
+      if (db) {
+        const q = collection(db, 'vouchers');
+        const snapshot = await getDocs(q);
+        const targetDoc = snapshot.docs.find(d => {
+          const data = d.data();
+          const docCode = cleanPromoCode(data.code || d.id);
+          return docCode === cleanCode;
+        });
 
-        let usedCount = v.usedCount;
-        let totalLimit = v.totalLimit;
+        if (targetDoc) {
+          const v = targetDoc.data();
+          const isNewCust = v.event === 'Pelanggan Baru' || cleanPromoCode(v.code).includes('NEFAKKY10');
+          const isTanpaBatas = (v.redemptions === 'Tanpa Batas' || (v.redemptions && String(v.redemptions).toLowerCase().includes('tanpa batas'))) && !isNewCust;
 
-        if ((usedCount === undefined || totalLimit === undefined) && v.redemptions) {
-          const parts = String(v.redemptions).split('/');
-          if (parts.length === 2) {
-            usedCount = parseInt(parts[0].trim(), 10);
-            totalLimit = parseInt(parts[1].trim(), 10);
+          if (isNewCust) {
+            const newUsed = (v.usedCount || 0) + 1;
+            await updateDoc(doc(db, 'vouchers', targetDoc.id), {
+              usedCount: newUsed,
+              redemptions: '1x Per Pengguna Baru',
+              expiry: 'Selamanya',
+              status: 'Active',
+              isActive: true
+            });
+          } else if (isTanpaBatas) {
+            const newUsed = (v.usedCount || 0) + 1;
+            await updateDoc(doc(db, 'vouchers', targetDoc.id), {
+              usedCount: newUsed,
+              redemptions: 'Tanpa Batas',
+              expiry: 'Selamanya',
+              status: 'Active',
+              isActive: true
+            });
+          } else {
+            let usedCount = v.usedCount;
+            let totalLimit = v.totalLimit;
+
+            if ((usedCount === undefined || totalLimit === undefined) && v.redemptions) {
+              const parts = String(v.redemptions).split('/');
+              if (parts.length === 2) {
+                usedCount = parseInt(parts[0].trim(), 10);
+                totalLimit = parseInt(parts[1].trim(), 10);
+              }
+            }
+
+            const newUsed = (usedCount || 0) + 1;
+            const limit = totalLimit || 500;
+            const isNowExpired = newUsed >= limit;
+            const newRedemptions = `${newUsed}/${limit}`;
+
+            await updateDoc(doc(db, 'vouchers', targetDoc.id), {
+              usedCount: newUsed,
+              totalLimit: limit,
+              redemptions: newRedemptions,
+              status: isNowExpired ? 'Expired' : 'Active',
+              isActive: !isNowExpired
+            });
           }
         }
-
-        const newUsed = (usedCount || 0) + 1;
-        const limit = totalLimit || 500;
-        const isNowExpired = newUsed >= limit;
-        const newRedemptions = `${newUsed}/${limit}`;
-
-        await updateDoc(doc(db, 'vouchers', targetDoc.id), {
-          usedCount: newUsed,
-          totalLimit: limit,
-          redemptions: newRedemptions,
-          status: isNowExpired ? 'Expired' : (v.status || 'Active'),
-          isActive: isNowExpired ? false : (v.isActive !== false)
-        });
-
-        // Sync ke koleksi promotions jika ada
-        const promoQ = collection(db, 'promotions');
-        const promoSnapshot = await getDocs(promoQ);
-        const targetPromo = promoSnapshot.docs.find(d => {
-          const p = d.data();
-          return p.id === targetDoc.id || (p.title && p.title.toLowerCase().includes(v.code.toLowerCase()));
-        });
-        if (targetPromo) {
-          await updateDoc(doc(db, 'promotions', targetPromo.id), {
-            usedCount: newUsed,
-            totalLimit: limit,
-            badge: isNowExpired ? 'Ended' : (targetPromo.data().badge || 'Active'),
-            isActive: isNowExpired ? false : (targetPromo.data().isActive !== false)
-          });
-        }
-        return true;
       }
+
+      // 4. Perbarui state lokal vouchers agar langsung re-render
+      setVouchersState(prev => prev.map(v => {
+        if (cleanPromoCode(v.code) === cleanCode) {
+          return { ...v, usedCount: (v.usedCount || 0) + 1 };
+        }
+        return v;
+      }));
+
+      return true;
     } catch (err) {
       console.error('Error claiming voucher redemption:', err);
+      return false;
     }
-    return false;
   };
 
   const addReview = (reviewData: Omit<UserReview, 'id' | 'date' | 'likesCount'>): UserReview => {
@@ -2074,6 +2290,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       deleteVoucher,
       toggleVoucherStatus,
       claimVoucherRedemption,
+      resetVoucherUsage,
       isVoucherUsedByUser,
       addOrder,
       updateOrderStatus,
