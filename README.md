@@ -34,24 +34,125 @@ Platform ini dirancang untuk memberikan pengalaman kuliner terbaik bagi pelangga
 5. **Sambal Goreng Krecek Santan Pedas**: Krecek sapi lembut kenyal dengan kuah santan merah gurih nampol.
 6. **Aneka Jus Tropis Buah Segar Alami**: 100% buah asli pilihan tanpa pemanis buatan (Varian *Mangga Harum Manis*, *Sirsak Segar*, dan *Jambu Biji Merah*).
 
-### 🌟 Fitur Utama Aplikasi:
-- **Single Active Order Protection**: Kebijakan satu pesanan aktif untuk memastikan hidangan dimasak dan diantar dengan kualitas terbaik sebelum memesan kembali.
-- **Multi-Voucher Promo Stacking**: Penggunaan hingga maksimal 2 voucher promo bersamaan di keranjang/checkout dengan kalkulasi diskon kumulatif.
-- **Transparansi Ongkos Kirim GPS Realtime**: Validasi geocoding alamat OpenStreetMap dengan perhitungan jarak matematis *Haversine Formula* dari dapur pusat ke lokasi pelanggan.
-- **Gerbang Pembayaran Midtrans Snap**: Pembayaran instan via Virtual Account (BCA/BNI/Mandiri/BRI), QRIS, Kartu Kredit, atau Bayar di Tempat (COD).
-- **Pelacakan Rute Kurir Realtime**: Pantau posisi kurir dan status pemrosesan dapur (Diterima $\rightarrow$ Dimasak $\rightarrow$ Siap $\rightarrow$ Diantar $\rightarrow$ Selesai).
-- **Meja Pelayanan CS Live Chat & Admin Command Center**: Interaksi tanya jawab langsung antara pelanggan dan admin restoran secara realtime.
-- **Cetak Nota & Invoice Resmi PDF**: Unduh dan cetak struk transaksi digital resmi.
+---
+
+## 🌟 3. Informasi Fitur-Fitur Lengkap Aplikasi
+
+### 🛒 A. Fitur Pelanggan (Customer Facing Features)
+
+1. **Katalog Hidangan Interaktif & Live Search/Filter**:
+   - Filter cepat berdasarkan kategori (*Makanan Berat*, *Minuman*, *Menu Hemat*).
+   - Pencarian hidangan secara instan (*Live Search*) tanpa reload halaman.
+   - Pengurutan menu berdasarkan harga terendah, harga tertinggi, dan rating ulasan terfavorit.
+
+2. **Modal Detail Menu 360° & Informasi Nutrisi**:
+   - Informasi lengkap porsi, komposisi bahan rempah alami, dan petunjuk penyimpanan.
+   - Tabel nutrisi detail (Kalori, Lemak Total, Lemak Jenuh, Gula Alami).
+   - Khusus menu minuman: Pilihan 3 varian rasa jus (*Mangga*, *Sirsak*, *Jambu*) dengan pergantian foto dan stok secara instan.
+
+3. **Single Active Order Policy (Pembatasan Pesanan Aktif)**:
+   - Kebijakan pintar yang membatasi transaksi pembelian baru jika pesanan sebelumnya masih dalam proses memasak atau pengantaran kurir.
+   - Menampilkan pop-up modal editorial (*ActiveOrderBlockerModal*) yang memuat status pesanan dan tombol cepat pelacakan.
+   - Memastikan kualitas hidangan tetap prima dan tidak terjadi penumpukan transaksi yang membingungkan pelanggan.
+
+4. **Multi-Voucher Promo Stacking (Maksimal 2 Voucher)**:
+   - Pengguna dapat mengklaim dan menggunakan hingga maksimal **2 voucher promo sekaligus** di keranjang belanja / checkout.
+   - Akumulasi persentase diskon otomatis dan kalkulasi nominal potongan harga dalam Rupiah (Rp).
+   - Indikator kuota voucher (misal: `1/2 (+ Tambah 1 Voucher Lagi)` atau `2/2 Voucher Digunakan (Maks. 2)`).
+   - Kartu voucher individual dengan rincian minimal belanja dan tombol **Hapus** masing-masing.
+
+5. **Validasi Alamat Geocoding & OpenStreetMap GPS Realtime**:
+   - Pencarian alamat otomatis dan pemilihan titik koordinat GPS presisi melalui peta interaktif OpenStreetMap.
+   - Validasi ketepatan alamat (*Geocoding Validation*); pesanan terkunci jika alamat belum terverifikasi oleh peta.
+   - Kalkulasi jarak tempuh kilometer akurat berbasis formula matematis *Haversine* dari Dapur Pusat ke rumah pelanggan.
+   - Transparansi perhitungan ongkos kirim dinamis sesuai jarak realtime.
+
+6. **Workflow Checkout 4-Tahap & Midtrans Snap Gateway**:
+   - Tahapan terstruktur: **Keranjang** $\rightarrow$ **Alamat Pengiriman** $\rightarrow$ **Pembayaran** $\rightarrow$ **Sukses Transaksi**.
+   - Integrasi pembayaran resmi Midtrans Snap (Sandbox Simulator):
+     - *Virtual Account*: BCA, BNI, Mandiri Bill, BRI.
+     - *E-Wallet / QRIS*: GoPay, ShopeePay, QRIS Nasional.
+     - *Kartu Kredit / Debit*.
+     - *Bayar di Tempat (Cash on Delivery / COD)*.
+   - Otomatisasi pengecekan pelunasan (*Auto Polling Status Settlement*).
+
+7. **Pelacakan Rute Kurir Realtime (Live Order Tracking)**:
+   - Visualisasi peta rute perjalanan kurir dari dapur resto ke alamat pembeli.
+   - Progres status pesanan 5-tahap (*Pesanan Diterima* $\rightarrow$ *Sedang Dimasak* $\rightarrow$ *Siap Diantar* $\rightarrow$ *Dalam Pengantaran Kurir* $\rightarrow$ *Pesanan Selesai*).
+   - Tombol **"Konfirmasi Pesanan Telah Sampai (Tiba Tepat Waktu)"** bagi pelanggan untuk menyelesaikan pesanan secara mandiri.
+
+8. **Ulasan Rasa & Komunitas Pelanggan**:
+   - Formulir testimoni dengan rating bintang 1-5, teks ulasan rasa, dan unggah foto hidangan asli.
+   - Filter ulasan terverifikasi dan balasan resmi (*official reply*) langsung dari Admin Nefakky.
+
+9. **Studio Foto Profil 3-Arah (3-Way Photo Studio Picker)**:
+   - Penggantian foto profil fleksibel: Unggah dari Galeri Perangkat, Pengambilan Foto Langsung via Webcam/Kamera, atau Sinkronisasi Avatar Google SSO.
+   - Manajemen multi-alamat tersimpan (Rumah, Kantor, dll.) dengan titik koordinat GPS masing-masing.
+
+10. **Meja Layanan Pelanggan (CS Live Chat)**:
+    - Obrolan dua arah langsung antara pelanggan dan tim customer service dapur via komunikasi realtime.
+    - Notifikasi reservasi instan untuk hidangan yang sedang habis stok.
+
+11. **Cetak Nota & Invoice Resmi PDF**:
+    - Tombol cetak nota transaksi dan unduh invoice digital resmi siap cetak (termasuk rincian diskon multi-voucher dan ongkir).
+
+12. **Guest Auth Guard**:
+    - Pengguna tamu (belum login) tetap leluasa menjelajahi menu dan katalog.
+    - Modal otentikasi ramah (*AuthRequiredModal*) memandu pengguna untuk masuk atau mendaftar saat ingin melakukan transaksi atau klaim voucher.
 
 ---
 
-## 💻 3. Framework & Teknologi yang Digunakan
+### 🏢 B. Fitur Admin & Dapur Restoran (Enterprise Command Center - `/admin`)
+
+1. **Executive Dashboard & Realtime WIB Clock**:
+   - Jam kalender digital resmi WIB berdetak tanpa lag beserta indikator status telemetri server.
+   - Akses navigasi tab terpadu: *Ringkasan*, *Kelola Menu*, *Voucher Promo*, *Live Chat Pelanggan*, *Dispatcher Pesanan*, *POS Bazar*, dan *Laporan Keuangan*.
+
+2. **Dashboard KPI & Analitik Keuangan**:
+   - Pemantauan metrik finansial: Omset Penjualan Kotor, Estimasi Laba Bersih (Margin 40%), Total Volume Pesanan, Rata-rata Nilai Belanja (*AOV*), dan Skor Kepuasan Pelanggan (*CSAT*).
+
+3. **Interactive Sales Chart**:
+   - Grafik batang visual omset bulanan interaktif.
+   - Modal edit data pembukuan omset bazar offline dan penjualan katering.
+
+4. **Kitchen Order Dispatcher 5-Tahap**:
+   - Kontrol status dapur 1-klik (`RECEIVED` $\rightarrow$ `COOKING` $\rightarrow$ `READY` $\rightarrow$ `DELIVERING` $\rightarrow$ `COMPLETED`).
+   - Broadcast status instan ke halaman pelacakan kurir pelanggan melalui koneksi WebSocket / Firebase RTDB.
+
+5. **Point of Sale (POS) Logger Bazar Offline**:
+   - Formulir pencatatan cepat transaksi penjualan langsung di lokasi pameran/bazar kuliner.
+   - Pemilihan menu instan, penentuan nominal diskon, kalkulasi kembalian tunai, dan tagging menu terlaris.
+
+6. **Manajemen Produk & Stok Realtime**:
+   - Tambah menu baru, edit nama, harga, kategori, foto, kalori, dan komposisi bahan.
+   - Atur kuota stok hidangan utama dan stok per varian rasa minuman jus secara terpisah.
+   - Tombol sembunyikan/tampilkan menu dari katalog pelanggan.
+
+7. **Manajemen Kupon & Voucher Promo**:
+   - Pembuatan kode voucher baru (misal: `DISKON20`, `HEMAT50`).
+   - Pengaturan persentase diskon, syarat minimal belanja, kuota limit penggunaan, dan masa berlaku kedaluwarsa.
+   - Monitoring jumlah voucher yang telah diklaim dan digunakan oleh pelanggan.
+
+8. **Meja CS Live Chat Terpadu & Riwayat Transaksi**:
+   - Kotak masuk obrolan seluruh pelanggan secara realtime.
+   - Panel samping yang menampilkan riwayat pesanan pelanggan secara presisi 100% berdasarkan email akun untuk mempermudah penanganan keluhan.
+
+9. **Reporting Engine (Ekspor Excel & Cetak PDF)**:
+   - Ekspor seluruh data transaksi dan omset ke spreadsheet Microsoft Excel (`.xlsx` via FastExcel).
+   - Cetak laporan rekapitulasi keuangan resmi ke format PDF (`DomPDF`).
+
+10. **Moderasi Komentar & Ulasan Komunitas**:
+    - Tinjau seluruh ulasan masuk: Setujui (*Approve*), Sembunyikan (*Hide*), Sematkan di Paling Atas (*Pin*), dan Berikan Balasan Resmi Resto.
+
+---
+
+## 💻 4. Framework & Arsitektur Teknologi
 
 ### 🌐 Frontend (User Interface & Client App)
 * **[Next.js 14](https://nextjs.org/)** (*App Router* Architecture) — Framework React SSR/SSG performa tinggi.
 * **[React 18](https://reactjs.org/)** — Pustaka UI deklaratif modern berbasis komponen.
 * **[TypeScript 5](https://www.typescriptlang.org/)** — Bahasa pemrograman bertipe ketat (*Type-Safe*) untuk keandalan kode tanpa bug runtime.
-* **[Tailwind CSS 3](https://tailwindcss.com/)** — Framework styling utility-first yang dipadukan dengan desain mewah **Google Stitch Artisanal Luxury** (Palet warna Deep Espresso `#25160E`, Warm Terracotta `#934B19`, dan Warm Cream `#FAF8F5`).
+* **[Tailwind CSS 3](https://tailwindcss.com/)** — Framework styling utility-first yang dipadukan dengan master desain **Google Stitch Artisanal Luxury** (Palet warna Deep Espresso `#25160E`, Warm Terracotta `#934B19`, dan Warm Cream `#FAF8F5`).
 
 ### ⚙️ Backend (REST API & Realtime Server)
 * **[Laravel 12 (PHP 8.2+)](https://laravel.com/)** — Framework backend enterprise untuk RESTful API, otentikasi Sanctum, dan broadcast WebSockets.
@@ -60,7 +161,7 @@ Platform ini dirancang untuk memberikan pengalaman kuliner terbaik bagi pelangga
 
 ---
 
-## 📡 4. Layanan API yang Digunakan
+## 📡 5. Layanan API yang Digunakan
 
 1. **Midtrans Payment Gateway API**:
    - *Core API & Snap SDK Sandbox Simulator*.
@@ -78,7 +179,7 @@ Platform ini dirancang untuk memberikan pengalaman kuliner terbaik bagi pelangga
 
 ---
 
-## 🗄️ 5. Basis Data (Database) yang Digunakan
+## 🗄️ 6. Basis Data (Database) yang Digunakan
 
 | Database | Tipe Basis Data | Kegunaan dalam Aplikasi |
 | :--- | :--- | :--- |
@@ -88,7 +189,7 @@ Platform ini dirancang untuk memberikan pengalaman kuliner terbaik bagi pelangga
 
 ---
 
-## 📦 6. Ekstensi & Library (Pustaka) yang Digunakan
+## 📦 7. Ekstensi & Library (Pustaka) yang Digunakan
 
 ### 🎨 Pustaka Frontend (`nefakky3/package.json`)
 * **`lucide-react`**: Kumpulan ikon grafis modern, elegan, dan semantik.
@@ -112,7 +213,7 @@ Platform ini dirancang untuk memberikan pengalaman kuliner terbaik bagi pelangga
 
 ---
 
-## ⚡ 7. Panduan Menjalankan Aplikasi di Komputer Lokal
+## ⚡ 8. Panduan Menjalankan Aplikasi di Komputer Lokal
 
 ### 1. Menjalankan Backend Laravel 12 API
 ```bash
@@ -141,7 +242,7 @@ Buka peramban web di: **http://localhost:3000**
 
 ---
 
-## 📚 8. Indeks Berkas Dokumentasi Lengkap (`nefakky3/docs/`)
+## 📚 9. Indeks Berkas Dokumentasi Lengkap (`nefakky3/docs/`)
 
 * 🏗️ **[ARCHITECTURE.md](nefakky3/docs/ARCHITECTURE.md)** — Arsitektur sistem menyeluruh, komponen Next.js 14, Laravel 12, dan Reverb.
 * 📡 **[API.md](nefakky3/docs/API.md)** — Spesifikasi lengkap seluruh endpoint REST API Laravel 12.
