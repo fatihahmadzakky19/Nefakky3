@@ -28,6 +28,7 @@ import { useData, sortReviewsNewestFirst } from '@/context/DataContext';
 // Mengimpor Navbar & Footer terpadu
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import AuthRequiredModal from '@/components/AuthRequiredModal';
 // Mengimpor ikon-ikon semantik dan jelas dari Lucide React
 import { 
   Star, 
@@ -41,7 +42,9 @@ import {
   CheckCircle2, 
   Users, 
   ChevronDown,
-  User
+  User,
+  Lock,
+  UserCheck
 } from 'lucide-react';
 
 /**
@@ -70,6 +73,8 @@ export default function CommentsPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // State batas jumlah ulasan yang ditampilkan di awal
   const [visibleReviewsCount, setVisibleReviewsCount] = useState<number>(6);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authActionName, setAuthActionName] = useState<string>('menulis ulasan rasa makanan');
 
   /**
    * Helper fungsi untuk merender bintang interaktif pada preview formulir
@@ -125,6 +130,11 @@ export default function CommentsPage() {
    */
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setAuthActionName('menulis ulasan rasa makanan');
+      setShowAuthModal(true);
+      return;
+    }
     // Cegah submit jika teks ulasan kosong
     if (!commentText.trim()) return;
 
@@ -163,6 +173,11 @@ export default function CommentsPage() {
    * @param reviewId ID unik ulasan yang dibalas
    */
   const handleSendReply = (reviewId: string) => {
+    if (!user) {
+      setAuthActionName('membalas komentar ulasan');
+      setShowAuthModal(true);
+      return;
+    }
     const text = replyInputText[reviewId];
     if (!text || !text.trim()) return;
 
@@ -230,6 +245,28 @@ export default function CommentsPage() {
                   <h2 className="font-serif text-xl font-bold text-[#25160E] mb-1">Tulis Ulasan Rasa</h2>
                   <p className="text-xs text-stone-500 font-light">Bagikan pengalaman kuliner Anda hari ini.</p>
                 </div>
+
+                {!user && (
+                  <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-3">
+                    <div className="flex items-start gap-2 text-amber-900 text-xs">
+                      <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                      <p className="leading-relaxed font-medium">
+                        Anda sedang menjelajah sebagai <strong>Tamu (Guest)</strong>. Silakan masuk atau daftar akun untuk menulis ulasan dan berdiskusi dengan komunitas.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthActionName('menulis ulasan rasa dan berdiskusi di komunitas');
+                        setShowAuthModal(true);
+                      }}
+                      className="w-full py-2.5 bg-[#25160E] hover:bg-black text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <UserCheck className="w-3.5 h-3.5 text-amber-200" />
+                      <span>Masuk / Daftar Akun</span>
+                    </button>
+                  </div>
+                )}
 
                 <form className="flex flex-col space-y-4" onSubmit={handleSubmitReview}>
                   
@@ -493,6 +530,13 @@ export default function CommentsPage() {
 
         </div>
       </main>
+
+      {/* MODAL WAJIB AUTENTIKASI UNTUK PENGGUNA GUEST */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        actionName={authActionName}
+      />
 
       {/* 3. FOOTER EDITORIAL TERPADU */}
       <Footer />

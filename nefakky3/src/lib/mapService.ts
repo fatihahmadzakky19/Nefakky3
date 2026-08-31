@@ -295,3 +295,116 @@ export const getMapEmbedUrl = (
 
   return `https://www.openstreetmap.org/export/embed.html?bbox=${minLon}%2C${minLat}%2C${maxLon}%2C${maxLat}&layer=mapnik&marker=${safeLat.toFixed(6)}%2C${safeLng.toFixed(6)}`;
 };
+
+/**
+ * Validasi Alamat Pengiriman Realtime:
+ * Memeriksa apakah alamat teks dapat dilacak dan dipetakan ke koordinat geografis valid.
+ */
+export const validateAddressGeocode = async (
+  address: string,
+  provider: MapProvider = 'openstreetmap',
+  apiKey?: string
+): Promise<{
+  isValid: boolean;
+  lat?: number;
+  lng?: number;
+  formattedAddress?: string;
+  distanceKm?: number;
+  reason?: string;
+}> => {
+  if (!address || address.trim().length < 6) {
+    return {
+      isValid: false,
+      reason: 'Alamat pengiriman terlalu pendek atau belum lengkap. Cantumkan nama jalan, nomor, RT/RW, dan kelurahan/kota.'
+    };
+  }
+
+  const trimmed = address.trim();
+  const lower = trimmed.toLowerCase();
+
+  // 1. Cek pencocokan preset cepat Jabodetabek
+  const knownPresets: { [keyword: string]: { lat: number; lng: number; name: string } } = {
+    'senayan': { lat: -6.2253, lng: 106.8086, name: 'Senayan, Jakarta Selatan' },
+    'scbd': { lat: -6.2253, lng: 106.8086, name: 'SCBD, Kebayoran Baru, Jakarta Selatan' },
+    'sudirman': { lat: -6.2150, lng: 106.8200, name: 'Jl. Jend. Sudirman, Jakarta' },
+    'kebon jeruk': { lat: -6.1950, lng: 106.7700, name: 'Kebon Jeruk, Jakarta Barat' },
+    'menteng': { lat: -6.1989, lng: 106.8411, name: 'Menteng, Jakarta Pusat' },
+    'kemang': { lat: -6.2612, lng: 106.8143, name: 'Kemang, Mampang Prapatan, Jakarta Selatan' },
+    'pondok indah': { lat: -6.2655, lng: 106.7842, name: 'Pondok Indah, Kebayoran Lama, Jakarta Selatan' },
+    'kelapa gading': { lat: -6.1558, lng: 106.9025, name: 'Kelapa Gading, Jakarta Utara' },
+    'bsd': { lat: -6.3021, lng: 106.6524, name: 'BSD City, Tangerang Selatan' },
+    'bojong gede': { lat: -6.4967, lng: 106.7972, name: 'Bojong Gede, Kab. Bogor, Jawa Barat' },
+    'pabuaran': { lat: -6.4967, lng: 106.7972, name: 'Pabuaran, Bojong Gede, Bogor' },
+    'puri bojong lestari': { lat: -6.4967, lng: 106.7972, name: 'Puri Bojong Lestari, Bojong Gede, Bogor' },
+    'depok': { lat: -6.4025, lng: 106.7942, name: 'Depok, Jawa Barat' },
+    'bogor': { lat: -6.5950, lng: 106.8166, name: 'Kota Bogor, Jawa Barat' }
+  };
+
+  for (const [key, preset] of Object.entries(knownPresets)) {
+    if (lower.includes(key)) {
+      const distanceKm = calculateHaversineDistanceKm(
+        DEFAULT_CENTRAL_KITCHEN.lat,
+        DEFAULT_CENTRAL_KITCHEN.lng,
+        preset.lat,
+        preset.lng
+      );
+      return {
+        isValid: true,
+        lat: preset.lat,
+        lng: preset.lng,
+        formattedAddress: trimmed,
+        distanceKm
+      };
+    }
+  }
+
+  // 2. Pencarian online geocoding via Map Engine
+  try {
+    const results = await searchAddressCoordinates(trimmed, provider, apiKey);
+    if (results && results.length > 0) {
+      const best = results[0];
+      const distanceKm = calculateHaversineDistanceKm(
+        DEFAULT_CENTRAL_KITCHEN.lat,
+        DEFAULT_CENTRAL_KITCHEN.lng,
+        best.lat,
+        best.lng
+      );
+      return {
+        isValid: true,
+        lat: best.lat,
+        lng: best.lng,
+        formattedAddress: trimmed,
+        distanceKm
+      };
+    }
+  } catch (err) {
+    console.warn('Geocoding validation error:', err);
+  }
+
+  // 3. Jika alamat mengandung pola koordinat numerik (misal "(-6.2, 106.8)")
+  const coordMatch = trimmed.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
+  if (coordMatch) {
+    const parsedLat = parseFloat(coordMatch[1]);
+    const parsedLng = parseFloat(coordMatch[2]);
+    if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+      const distanceKm = calculateHaversineDistanceKm(
+        DEFAULT_CENTRAL_KITCHEN.lat,
+        DEFAULT_CENTRAL_KITCHEN.lng,
+        parsedLat,
+        parsedLng
+      );
+      return {
+        isValid: true,
+        lat: parsedLat,
+        lng: parsedLng,
+        formattedAddress: trimmed,
+        distanceKm
+      };
+    }
+  }
+
+  return {
+    isValid: false,
+    reason: 'Alamat tidak dapat dilacak pada peta satelit/GPS. Harap gunakan fitur Pinpoint Peta atau perbaiki penulisan nama jalan/kelurahan/kota Anda.'
+  };
+};

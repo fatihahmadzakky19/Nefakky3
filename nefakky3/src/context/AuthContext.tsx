@@ -28,6 +28,10 @@ export interface UserAddress {
   receiverPhone: string;
   address: string;
   isDefault?: boolean;
+  lat?: number;
+  lng?: number;
+  distanceKm?: number;
+  isVerified?: boolean;
 }
 
 /** Profil Pengguna Terautentikasi */
@@ -293,35 +297,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
       return { success: true, role };
     } catch (err: any) {
-      console.warn("Firebase Auth sign-in error:", err.code, err.message);
-
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setLoading(false);
-        return {
-          success: false,
-          role: 'customer' as const,
-          error: 'Email atau password yang Anda masukkan salah. Silakan periksa kembali email dan password Anda.'
-        };
-      }
-
-      if (err.code === 'auth/invalid-email') {
-        setLoading(false);
-        return {
-          success: false,
-          role: 'customer' as const,
-          error: 'Format email tidak valid. Periksa kembali penulisan email Anda.'
-        };
-      }
-
-      if (err.code === 'auth/too-many-requests') {
-        setLoading(false);
-        return {
-          success: false,
-          role: 'customer' as const,
-          error: 'Terlalu banyak percobaan login yang gagal. Silakan coba lagi beberapa saat lagi.'
-        };
-      }
-
       // Fallback check local registered users database in localStorage for offline/demo support
       if (typeof window !== 'undefined') {
         const storedUsersStr = localStorage.getItem('nefakky_registered_users');
@@ -337,7 +312,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return {
               success: false,
               role: 'customer' as const,
-              error: 'Password yang Anda masukkan salah. Silakan periksa kembali password Anda.'
+              error: 'Kata sandi yang Anda masukkan salah. Silakan periksa kembali kata sandi Anda.'
             };
           }
 
@@ -358,11 +333,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
+      if (err.code === 'auth/invalid-email') {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Format email tidak valid. Periksa kembali penulisan email Anda.'
+        };
+      }
+
+      if (err.code === 'auth/too-many-requests') {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Terlalu banyak percobaan login yang gagal. Silakan coba lagi beberapa saat lagi.'
+        };
+      }
+
       setLoading(false);
       return {
         success: false,
         role: 'customer' as const,
-        error: `Akun dengan email "${email}" belum terdaftar atau email/password salah. Silakan periksa ejaan email Anda.`
+        error: `Akun dengan email "${email}" belum terdaftar. Anda wajib melakukan registrasi akun baru terlebih dahulu sebelum login (atau masuk langsung menggunakan Akun Google).`
       };
     }
   };

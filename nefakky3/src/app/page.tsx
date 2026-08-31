@@ -18,6 +18,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useData, isVoucherValidNow, cleanPromoCode } from '@/context/DataContext';
 import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
+import AuthRequiredModal from '@/components/AuthRequiredModal';
 import Navbar from '@/components/Navbar';
 import { 
   Star, 
@@ -52,6 +53,8 @@ export default function HomePage() {
   const [claimedNotice, setClaimedNotice] = useState<{ text: string; success: boolean } | null>(null);
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authActionName, setAuthActionName] = useState<string>('melakukan aktivitas ini');
 
   const toggleWishlist = (productId: string) => {
     setFavorites(prev => 
@@ -178,6 +181,11 @@ export default function HomePage() {
   }, [dynamicHeroSlides.length]);
 
   const handleClaimVoucher = (code: string) => {
+    if (!user) {
+      setAuthActionName('mengklaim dan menggunakan kupon voucher diskon');
+      setShowAuthModal(true);
+      return;
+    }
     const res = claimPromo(code);
     setClaimedNotice({
       text: res.message || `Voucher ${code} berhasil diklaim ke keranjang!`,
@@ -568,6 +576,11 @@ export default function HomePage() {
                           ) : (
                             <button
                               onClick={() => {
+                                if (!user) {
+                                  setAuthActionName('menambahkan hidangan ke keranjang belanja');
+                                  setShowAuthModal(true);
+                                  return;
+                                }
                                 if (product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus')) {
                                   setDetailProduct(product);
                                 } else {
@@ -649,6 +662,13 @@ export default function HomePage() {
           onClose={() => setDetailProduct(null)}
         />
       )}
+
+      {/* MODAL WAJIB AUTENTIKASI UNTUK PENGGUNA GUEST */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        actionName={authActionName}
+      />
 
     </div>
   );

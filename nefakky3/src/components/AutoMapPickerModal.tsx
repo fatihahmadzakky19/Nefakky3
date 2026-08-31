@@ -34,9 +34,16 @@ interface AutoMapPickerModalProps {
   /** Fungsi callback untuk menutup modal */
   onClose: () => void;
   /** Fungsi callback saat alamat dan jarak berhasil dipilih */
-  onSelectAddress: (selectedAddress: string, distanceKm: number) => void;
+  onSelectAddress: (
+    selectedAddress: string,
+    distanceKm: number,
+    coords?: { lat: number; lng: number },
+    isVerified?: boolean
+  ) => void;
   /** Alamat awal opsional yang ditampilkan di form */
   initialAddress?: string;
+  /** Koordinat awal opsional */
+  initialCoords?: { lat: number; lng: number };
 }
 
 /** Daftar lokasi preset populer area Jabodetabek */
@@ -92,7 +99,8 @@ export default function AutoMapPickerModal({
   isOpen,
   onClose,
   onSelectAddress,
-  initialAddress = ''
+  initialAddress = '',
+  initialCoords
 }: AutoMapPickerModalProps) {
   const [mapSettings, setMapSettingsState] = useState(getMapSettings());
   const [activeProvider, setActiveProvider] = useState<MapProvider>(mapSettings.provider || 'openstreetmap');
@@ -101,8 +109,8 @@ export default function AutoMapPickerModal({
 
   // State koordinat lokasi saat ini
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number }>({
-    lat: DEFAULT_CENTRAL_KITCHEN.lat,
-    lng: DEFAULT_CENTRAL_KITCHEN.lng
+    lat: initialCoords?.lat || DEFAULT_CENTRAL_KITCHEN.lat,
+    lng: initialCoords?.lng || DEFAULT_CENTRAL_KITCHEN.lng
   });
 
   // State teks input alamat & pencarian
@@ -250,7 +258,7 @@ export default function AutoMapPickerModal({
    * Mengonfirmasi alamat pengiriman yang dipilih.
    */
   const handleConfirmLocation = () => {
-    onSelectAddress(addressInputText, shippingDistanceKm);
+    onSelectAddress(addressInputText, shippingDistanceKm, coordinates, true);
     onClose();
   };
 

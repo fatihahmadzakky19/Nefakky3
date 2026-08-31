@@ -19,8 +19,16 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useData, isVoucherValidNow } from '@/context/DataContext';
 import { formatCurrentRealtimeOrderDate } from '@/lib/orderTimeUtils';
+import { 
+  validateAddressGeocode, 
+  calculateHaversineDistanceKm, 
+  DEFAULT_CENTRAL_KITCHEN, 
+  calculateDeliveryFee 
+} from '@/lib/mapService';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import AutoMapPickerModal from '@/components/AutoMapPickerModal';
+import AuthRequiredModal from '@/components/AuthRequiredModal';
 import { 
   Search, 
   Bell, 
@@ -34,7 +42,8 @@ import {
   Tag, 
   ShieldCheck, 
   CheckCircle2, 
-  Check,
+  AlertCircle,
+  Check, 
   X, 
   MapPin, 
   Edit,
@@ -83,11 +92,21 @@ export default function CartCheckoutWorkflowPage() {
   const [promoMessage, setPromoMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Address & Notes State
-  const userDefaultAddr = user?.addresses?.find(a => a.isDefault)?.address || user?.addresses?.[0]?.address || '';
+  const userDefaultAddr = user?.addresses?.find(a => a.isDefault) || user?.addresses?.[0];
   const [customerName, setCustomerName] = useState<string>(user?.displayName || '');
   const [customerPhone, setCustomerPhone] = useState<string>(user?.phoneNumber || '');
-  const [addressLabel, setAddressLabel] = useState<string>('Rumah');
-  const [deliveryAddress, setDeliveryAddress] = useState<string>(userDefaultAddr);
+  const [addressLabel, setAddressLabel] = useState<string>(userDefaultAddr?.label || 'Rumah');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>(userDefaultAddr?.address || '');
+  const [deliveryDistanceKm, setDeliveryDistanceKm] = useState<number>(userDefaultAddr?.distanceKm || 4.2);
+  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(
+    userDefaultAddr?.lat && userDefaultAddr?.lng ? { lat: userDefaultAddr.lat, lng: userDefaultAddr.lng } : null
+  );
+  const [isAddressVerified, setIsAddressVerified] = useState<boolean>(Boolean(userDefaultAddr?.isVerified || userDefaultAddr?.lat));
+  const [isVerifyingAddress, setIsVerifyingAddress] = useState<boolean>(false);
+  const [addressValidationError, setAddressValidationError] = useState<string | null>(null);
+  const [showMapPickerModal, setShowMapPickerModal] = useState<boolean>(false);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authActionName, setAuthActionName] = useState<string>('melakukan checkout pesanan');
   const [courierNotes, setCourierNotes] = useState<string>('');
   const [kitchenNotes, setKitchenNotes] = useState<string>('');
   const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false);
@@ -96,8 +115,15 @@ export default function CartCheckoutWorkflowPage() {
     if (user) {
       if (!customerName && user.displayName) setCustomerName(user.displayName);
       if (!customerPhone && user.phoneNumber) setCustomerPhone(user.phoneNumber);
-      const activeAddr = user.addresses?.find(a => a.isDefault)?.address || user.addresses?.[0]?.address;
-      if (!deliveryAddress && activeAddr) setDeliveryAddress(activeAddr);
+      const activeAddr = user.addresses?.find(a => a.isDefault) || user.addresses?.[0];
+      if (activeAddr) {
+        if (!deliveryAddress) setDeliveryAddress(activeAddr.address);
+        if (activeAddr.distanceKm) setDeliveryDistanceKm(activeAddr.distanceKm);
+        if (activeAddr.lat && activeAddr.lng) {
+          setDeliveryCoords({ lat: activeAddr.lat, lng: activeAddr.lng });
+          setIsAddressVerified(true);
+        }
+      }
     }
   }, [user]);
 
@@ -181,24 +207,67 @@ export default function CartCheckoutWorkflowPage() {
     }, 2500);
   };
 
-  // Jarak Pengantaran & Perhitungan Ongkos Kirim Berdasarkan Jarak
-  // Aturan Ongkir Nefakky:
-  // - Jarak <= 10 km: Flat Rp 10.000
-  // - Jarak > 10 km: Rp 10.000 + (ceil((jarak - 10) / 3) * Rp 1.500)
-  const deliveryDistanceKm = 4.2; // Default estimasi jarak dapur resto ke alamat (4.2 Km)
-
+  // Jarak Pengantaran & Perhitungan Ongkos Kirim Berdasarkan Jarak Realtime
   const calculateShippingByDistance = (distKm: number = 4.2): number => {
     if (cartItems.length === 0) return 0;
-    if (distKm <= 10) {
-      return 10000; // Flat Rp 10.000 untuk jarak <= 10 km
-    }
-    const extraKm = distKm - 10;
-    const extraIntervals = Math.ceil(extraKm / 3); // Nambah Rp 1.500 per 3 km
-    return 10000 + (extraIntervals * 1500);
+    return calculateDeliveryFee(distKm, 10000, 2500);
   };
 
   const shippingCost = calculateShippingByDistance(deliveryDistanceKm);
   const finalPayableTotal = Math.max(0, subtotal + shippingCost - discountAmount);
+
+  /**
+   * Handler Validasi Geocoding Alamat Realtime
+   */
+  const handleValidateAddress = async (addrToTest: string): Promise<boolean> => {
+    if (!addrToTest.trim() || addrToTest.trim().length < 6) {
+      setIsAddressVerified(false);
+      setAddressValidationError('Alamat pengiriman terlalu pendek atau belum lengkap. Cantumkan nama jalan, nomor, RT/RW, dan kelurahan/kota.');
+      return false;
+    }
+    setIsVerifyingAddress(true);
+    setAddressValidationError(null);
+    try {
+      const res = await validateAddressGeocode(addrToTest);
+      if (res.isValid && res.distanceKm !== undefined) {
+        setIsAddressVerified(true);
+        setDeliveryDistanceKm(res.distanceKm);
+        if (res.lat && res.lng) {
+          setDeliveryCoords({ lat: res.lat, lng: res.lng });
+        }
+        setAddressValidationError(null);
+        setIsVerifyingAddress(false);
+        return true;
+      } else {
+        setIsAddressVerified(false);
+        setAddressValidationError(res.reason || 'Alamat tidak dapat dilacak pada peta satelit/GPS. Harap gunakan tombol "Pilih Titik Lokasi Peta GPS" untuk menentukan titik yang presisi.');
+        setIsVerifyingAddress(false);
+        return false;
+      }
+    } catch (err) {
+      console.warn('Address validation failed:', err);
+      setIsVerifyingAddress(false);
+      return false;
+    }
+  };
+
+  /**
+   * Handler saat lokasi dipilih melalui AutoMapPickerModal
+   */
+  const handleSelectFromMap = (
+    selectedAddress: string,
+    distanceKm: number,
+    coords?: { lat: number; lng: number },
+    isVerified?: boolean
+  ) => {
+    setDeliveryAddress(selectedAddress);
+    setDeliveryDistanceKm(distanceKm);
+    if (coords) {
+      setDeliveryCoords(coords);
+    }
+    setIsAddressVerified(true);
+    setAddressValidationError(null);
+  };
 
   /**
    * Handler: Menerapkan kode voucher promo ke keranjang belanja
@@ -206,6 +275,11 @@ export default function CartCheckoutWorkflowPage() {
    */
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setAuthActionName('menggunakan kupon promo diskon');
+      setShowAuthModal(true);
+      return;
+    }
     if (!promoInput.trim()) return;
 
     // Memanggil fungsi claimPromo dari CartContext
@@ -224,8 +298,26 @@ export default function CartCheckoutWorkflowPage() {
   /**
    * Handler: Melanjutkan navigasi dari formulir alamat ke langkah pembayaran
    */
-  const handleProceedToPayment = () => {
+  const handleProceedToPayment = async () => {
+    if (!user) {
+      setAuthActionName('melanjutkan ke proses pembayaran');
+      setShowAuthModal(true);
+      return;
+    }
     if (cartItems.length === 0) return;
+
+    if (!deliveryAddress.trim()) {
+      setAddressValidationError('Silakan tentukan alamat pengiriman terlebih dahulu.');
+      return;
+    }
+
+    if (!isAddressVerified) {
+      const isValid = await handleValidateAddress(deliveryAddress);
+      if (!isValid) {
+        return;
+      }
+    }
+
     setStep('payment');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -389,6 +481,10 @@ export default function CartCheckoutWorkflowPage() {
           receiverName: customerName || user.displayName || 'Pelanggan',
           receiverPhone: customerPhone || user.phoneNumber || '',
           address: trimmedAddr,
+          lat: deliveryCoords?.lat,
+          lng: deliveryCoords?.lng,
+          distanceKm: deliveryDistanceKm,
+          isVerified: isAddressVerified,
           isDefault: existingAddresses.length === 0
         });
       }
@@ -621,9 +717,38 @@ export default function CartCheckoutWorkflowPage() {
                         <span className="font-serif text-2xl font-bold text-[#25160E]">Rp {(subtotal + shippingCost - discountAmount).toLocaleString('id-ID')}</span>
                       </div>
 
+                      {!user && (
+                        <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-xs">
+                          <div className="flex items-start gap-2 text-amber-900 font-medium">
+                            <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                            <p className="leading-snug">
+                              Anda menjelajah sebagai <strong>Tamu</strong>. Silakan masuk atau daftar untuk checkout.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAuthActionName('melanjutkan proses checkout');
+                              setShowAuthModal(true);
+                            }}
+                            className="w-full py-2 bg-[#25160E] hover:bg-black text-amber-200 text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
+                          >
+                            Masuk / Daftar Akun
+                          </button>
+                        </div>
+                      )}
+
                       <button 
                         disabled={cartItems.length === 0}
-                        onClick={() => { setStep('address'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        onClick={() => {
+                          if (!user) {
+                            setAuthActionName('melanjutkan proses checkout pesanan');
+                            setShowAuthModal(true);
+                            return;
+                          }
+                          setStep('address');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
                         className="bg-[#25160E] text-white h-14 rounded-xl flex items-center justify-center font-semibold text-xs tracking-wide w-full gap-2 hover:bg-black transition-all shadow-lg disabled:opacity-50 cursor-pointer"
                       >
                         <span>Lanjutkan Ke Alamat Pengiriman</span>
@@ -701,23 +826,65 @@ export default function CartCheckoutWorkflowPage() {
                     
                     {/* Selected Address Card */}
                     <section className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-                      <div className="p-5 bg-stone-50 border-b border-stone-200 flex justify-between items-center">
-                        <h2 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2">
+                      <div className="p-5 bg-stone-50 border-b border-stone-200 flex flex-wrap justify-between items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <MapPin className="w-5 h-5 text-[#25160E]" />
-                          <span>Alamat Pengiriman</span>
-                        </h2>
-                        <button 
-                          onClick={() => setIsEditingAddress(!isEditingAddress)}
-                          className="font-semibold text-xs text-[#25160E] hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <Edit className="w-4 h-4" />
-                          <span>{isEditingAddress ? 'Simpan' : 'Edit'}</span>
-                        </button>
+                          <h2 className="font-serif text-lg font-bold text-[#25160E]">Alamat Pengiriman</h2>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowMapPickerModal(true)}
+                            className="px-3.5 py-1.5 bg-[#25160E] hover:bg-black text-amber-200 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                          >
+                            <Navigation className="w-3.5 h-3.5 text-amber-300" />
+                            <span>Pilih Titik Lokasi Peta GPS</span>
+                          </button>
+                          <button 
+                            onClick={() => setIsEditingAddress(!isEditingAddress)}
+                            className="font-semibold text-xs text-stone-700 hover:text-black border border-stone-300 bg-white px-3 py-1.5 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>{isEditingAddress ? 'Tutup' : 'Edit Alamat'}</span>
+                          </button>
+                        </div>
                       </div>
 
                       <div className="p-6 space-y-4">
+                        {/* Status Verifikasi Alamat Peta */}
+                        {isAddressVerified ? (
+                          <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-50/90 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-medium">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <div className="flex-1">
+                              <span className="font-bold">Titik Alamat Terverifikasi di Peta:</span> Jarak ke Dapur Pusat Nefakky adalah <strong className="font-mono text-emerald-950 font-bold">{deliveryDistanceKm} Km</strong>.
+                            </div>
+                          </div>
+                        ) : addressValidationError ? (
+                          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-start gap-2.5">
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                            <div className="flex-1 space-y-1">
+                              <p className="font-bold text-rose-900">Alamat Belum Terlacak di Peta / GPS</p>
+                              <p className="leading-relaxed font-light">{addressValidationError}</p>
+                              <button
+                                type="button"
+                                onClick={() => setShowMapPickerModal(true)}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-900 underline mt-1 hover:text-rose-950 cursor-pointer"
+                              >
+                                Buka Pinpoint Peta untuk Memilih Lokasi &rarr;
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium">
+                            <Info className="w-4 h-4 text-amber-700 shrink-0" />
+                            <p className="leading-relaxed">
+                              Pastikan alamat Anda lengkap atau gunakan fitur <strong>Pinpoint Peta GPS</strong> agar kurir dapat mengantar pesanan tepat waktu.
+                            </p>
+                          </div>
+                        )}
+
                         {isEditingAddress ? (
-                          <div className="space-y-3">
+                          <div className="space-y-3 pt-1">
                             <div>
                               <label className="font-semibold text-xs text-[#25160E] block mb-1">
                                 Label Alamat <span className="text-[10px] font-normal text-stone-500">(Bisa diketik manual atau pilih cepat)</span>
@@ -759,8 +926,21 @@ export default function CartCheckoutWorkflowPage() {
                             </div>
 
                             <div>
-                              <label className="font-semibold text-xs text-[#25160E] block mb-1">Alamat Lengkap</label>
-                              <textarea rows={2} value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-black resize-none focus:outline-none focus:ring-2 focus:ring-black" />
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="font-semibold text-xs text-[#25160E]">Alamat Lengkap &amp; Rincian Wilayah</label>
+                                {isVerifyingAddress && <span className="text-[10px] text-stone-500 italic animate-pulse">Memverifikasi ke satelit...</span>}
+                              </div>
+                              <textarea 
+                                rows={2} 
+                                value={deliveryAddress} 
+                                onChange={(e) => {
+                                  setDeliveryAddress(e.target.value);
+                                  setIsAddressVerified(false);
+                                }}
+                                onBlur={(e) => handleValidateAddress(e.target.value)}
+                                placeholder="Tuliskan nama jalan, nomor rumah, RT/RW, kelurahan, kecamatan, dan kota..."
+                                className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-black resize-none focus:outline-none focus:ring-2 focus:ring-black" 
+                              />
                             </div>
 
                             <div>
@@ -769,8 +949,8 @@ export default function CartCheckoutWorkflowPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="bg-[#FBF9F5] rounded-xl p-4 border border-stone-200 relative overflow-hidden group cursor-pointer">
-                            <div className="absolute top-4 right-4">
+                          <div className="bg-[#FBF9F5] rounded-xl p-4 border border-stone-200 relative overflow-hidden group cursor-pointer" onClick={() => setIsEditingAddress(true)}>
+                            <div className="absolute top-4 right-4 flex items-center gap-2">
                               <div className="w-6 h-6 rounded-full bg-[#25160E] flex items-center justify-center text-white">
                                 <Check className="w-3.5 h-3.5" />
                               </div>
@@ -786,12 +966,17 @@ export default function CartCheckoutWorkflowPage() {
                                   <span className="px-2 py-0.5 bg-[#25160E]/10 text-[#25160E] rounded text-[9px] font-bold uppercase tracking-wider">
                                     Utama
                                   </span>
+                                  {isAddressVerified && (
+                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold uppercase">
+                                      Terverifikasi GPS ({deliveryDistanceKm} Km)
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-xs font-semibold text-[#25160E]">
                                   {customerName} <span className="text-stone-500 font-normal">| {customerPhone}</span>
                                 </p>
                                 <p className="text-xs text-stone-600 font-light leading-relaxed mt-0.5">
-                                  {deliveryAddress}
+                                  {deliveryAddress || 'Alamat belum diatur. Klik Edit untuk mengisi alamat pengiriman.'}
                                 </p>
                                 {courierNotes && (
                                   <p className="text-xs text-stone-500 italic mt-0.5">
@@ -842,13 +1027,17 @@ export default function CartCheckoutWorkflowPage() {
                         <Bike className="w-5 h-5" />
                       </div>
                       <div className="flex flex-col gap-1.5 text-left">
-                        <h3 className="font-bold text-xs text-[#25160E]">Transparansi Ongkos Kirim</h3>
+                        <h3 className="font-bold text-xs text-[#25160E]">Transparansi Ongkos Kirim Realtime</h3>
                         <p className="text-xs text-stone-600 font-light leading-relaxed">
-                          Kami menggunakan perhitungan jarak berbasis GPS dari dapur kami ke lokasi Anda. Tarif dasar adalah Rp 10.000 untuk 3km pertama, ditambah Rp 1.500/km berikutnya.
+                          Kami menggunakan perhitungan jarak berbasis GPS dari dapur kami ke lokasi Anda. Tarif dasar adalah Rp 10.000 (untuk &le; 10 km), dan penyesuaian +Rp 2.500 per 3 km untuk jarak di atas 10 km.
                         </p>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="font-mono text-xs bg-white px-2.5 py-1 rounded-md border border-stone-200 text-black">Jarak Estimasi: 4.2 km</span>
-                          <span className="font-mono text-xs bg-white px-2.5 py-1 rounded-md border border-stone-200 text-black">Tarif: Rp 13.000</span>
+                          <span className="font-mono text-xs bg-white px-2.5 py-1 rounded-md border border-stone-200 text-black">
+                            Jarak Realtime: <strong>{deliveryDistanceKm} km</strong>
+                          </span>
+                          <span className="font-mono text-xs bg-white px-2.5 py-1 rounded-md border border-stone-200 text-black">
+                            Ongkir: <strong>Rp {shippingCost.toLocaleString('id-ID')}</strong>
+                          </span>
                         </div>
                       </div>
                     </section>
@@ -1494,6 +1683,22 @@ export default function CartCheckoutWorkflowPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL AUTO MAP PICKER PRESISI GPS */}
+      <AutoMapPickerModal
+        isOpen={showMapPickerModal}
+        onClose={() => setShowMapPickerModal(false)}
+        onSelectAddress={handleSelectFromMap}
+        initialAddress={deliveryAddress}
+        initialCoords={deliveryCoords || undefined}
+      />
+
+      {/* MODAL WAJIB AUTENTIKASI UNTUK PENGGUNA GUEST */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        actionName={authActionName}
+      />
 
       {/* 7. FOOTER EDITORIAL TERPADU */}
       <Footer />

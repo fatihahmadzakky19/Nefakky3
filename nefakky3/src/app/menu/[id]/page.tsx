@@ -21,6 +21,7 @@ import { useCart, MASTER_PRODUCTS } from '@/context/CartContext';
 import { useData, sortReviewsNewestFirst } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import AuthRequiredModal from '@/components/AuthRequiredModal';
 import { 
   ShoppingBag, 
   Star, 
@@ -82,6 +83,7 @@ export default function MenuDetailPage() {
   const [activeTab, setActiveTab] = useState<'description' | 'ingredients' | 'storage' | 'serving'>('description');
   const [selectedVariant, setSelectedVariant] = useState<string>('Mangga');
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authActionName, setAuthActionName] = useState<string>('memesan hidangan');
   const [addedNotice, setAddedNotice] = useState<boolean>(false);
   const [shareNotice, setShareNotice] = useState<boolean>(false);
 
@@ -121,6 +123,11 @@ export default function MenuDetailPage() {
 
   // Handler Reservasi Produk Habis ke Customer Service
   const handleReserveToCS = async () => {
+    if (!user) {
+      setAuthActionName('melakukan reservasi produk ke Customer Service');
+      setShowAuthModal(true);
+      return;
+    }
     setIsReserving(true);
     const varName = isDrink ? activeDrinkVariant.name : product.name;
     const userEmail = user?.email || 'customer@nefakky.com';
@@ -851,42 +858,12 @@ export default function MenuDetailPage() {
         </div>
       )}
 
-      {/* Guest Auth Modal */}
-      {showAuthModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in fade-in zoom-in-95">
-            <div className="w-12 h-12 bg-stone-100 text-stone-900 rounded-full flex items-center justify-center mx-auto">
-              <Lock className="w-5 h-5 text-neutral-800" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-serif text-lg font-bold text-neutral-900">Silakan Masuk Terlebih Dahulu</h3>
-              <p className="text-xs text-stone-500 font-light leading-relaxed">
-                Masuk atau buat akun baru untuk memesan hidangan lezat ini.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 pt-2">
-              <button
-                onClick={() => router.push('/login')}
-                className="w-full py-2.5 bg-black hover:bg-neutral-800 text-white font-medium text-xs rounded-xl shadow transition-all"
-              >
-                Masuk ke Akun
-              </button>
-              <button
-                onClick={() => router.push('/register')}
-                className="w-full py-2.5 border border-stone-300 hover:bg-stone-50 text-stone-700 font-medium text-xs rounded-xl transition-all"
-              >
-                Daftar Akun Baru
-              </button>
-              <button
-                onClick={() => setShowAuthModal(false)}
-                className="text-xs text-stone-400 hover:text-stone-600 font-light pt-1"
-              >
-                Kembali
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* MODAL WAJIB AUTENTIKASI UNTUK PENGGUNA GUEST */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        actionName={authActionName}
+      />
 
     </div>
   );

@@ -20,6 +20,8 @@ import { useCart } from '@/context/CartContext';
 import { useData } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import AutoMapPickerModal from '@/components/AutoMapPickerModal';
+import { validateAddressGeocode } from '@/lib/mapService';
 import { 
   User, 
   Edit3, 
@@ -34,21 +36,23 @@ import {
   ArrowRight, 
   Check, 
   X, 
-  CheckCircle2,
-  LogOut,
-  Camera,
-  Image as ImageIcon,
-  RotateCcw,
-  Upload,
-  Plus,
-  Trash2,
-  Clock,
-  ExternalLink,
-  ShieldCheck,
-  Paperclip,
-  RefreshCw,
-  Globe,
-  Link2
+  CheckCircle2, 
+  AlertCircle,
+  Navigation,
+  LogOut, 
+  Camera, 
+  Image as ImageIcon, 
+  RotateCcw, 
+  Upload, 
+  Plus, 
+  Trash2, 
+  Clock, 
+  ExternalLink, 
+  ShieldCheck, 
+  Paperclip, 
+  RefreshCw, 
+  Globe, 
+  Link2 
 } from 'lucide-react';
 
 /** Helper Kompresi & Konversi Gambar ke Data URL Base64 yang Optimal */
@@ -133,12 +137,19 @@ export default function UserProfilePage() {
 
   // State Add/Edit Address Modal
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
+  const [showMapPickerModal, setShowMapPickerModal] = useState<boolean>(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [modalAddressLabel, setModalAddressLabel] = useState<string>('Rumah');
   const [modalAddressText, setModalAddressText] = useState<string>('');
   const [modalReceiverName, setModalReceiverName] = useState<string>('');
   const [modalReceiverPhone, setModalReceiverPhone] = useState<string>('');
   const [modalIsDefault, setModalIsDefault] = useState<boolean>(false);
+  const [modalLat, setModalLat] = useState<number | undefined>(undefined);
+  const [modalLng, setModalLng] = useState<number | undefined>(undefined);
+  const [modalDistanceKm, setModalDistanceKm] = useState<number | undefined>(undefined);
+  const [modalIsVerified, setModalIsVerified] = useState<boolean>(false);
+  const [modalValidationError, setModalValidationError] = useState<string | null>(null);
+  const [isVerifyingModalAddress, setIsVerifyingModalAddress] = useState<boolean>(false);
 
   React.useEffect(() => {
     if (user) {
@@ -156,19 +167,18 @@ export default function UserProfilePage() {
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } }
       });
       setCameraStream(stream);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(console.error);
-        }
-      }, 100);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
     } catch (err) {
-      console.warn("Camera access fallback:", err);
+      console.warn('Gagal mengakses kamera:', err);
+      alert('Tidak dapat mengakses webcam/kamera perangkat Anda. Pastikan izin kamera telah diberikan di peramban.');
       setShowLiveCameraModal(false);
-      cameraInputRef.current?.click();
     }
   };
 
+  // Handler: Hentikan Stream Kamera Selfie
   const stopLiveCamera = () => {
     if (cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop());
@@ -177,49 +187,49 @@ export default function UserProfilePage() {
     setShowLiveCameraModal(false);
   };
 
-  const capturePhotoFromCamera = () => {
+  // Handler: Ambil Snapshot Foto dari Webcam
+  const captureLivePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth || 400;
-      canvas.height = video.videoHeight || 400;
+      const size = Math.min(video.videoWidth, video.videoHeight);
+      canvas.width = size;
+      canvas.height = size;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const startX = (video.videoWidth - size) / 2;
+        const startY = (video.videoHeight - size) / 2;
+        ctx.drawImage(video, startX, startY, size, size, 0, 0, size, size);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
         setEditAvatarUrl(dataUrl);
-        setPhotoFeedback('Foto selfie berhasil diambil!');
-        setTimeout(() => setPhotoFeedback(null), 3500);
+        setPhotoFeedback('Foto berhasil diambil dari kamera!');
+        setTimeout(() => setPhotoFeedback(null), 3000);
       }
       stopLiveCamera();
     }
   };
 
-  // Handler: Ambil foto dari Galeri HP / PC atau Kamera File Input
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handler Upload Foto dari Galeri / File Perangkat
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      alert('Silakan pilih file gambar yang valid (JPG, PNG, WebP).');
-      return;
-    }
-
+    setIsUploadingPhoto(true);
+    setPhotoFeedback('Mengompresi foto...');
     try {
-      setIsUploadingPhoto(true);
-      setPhotoFeedback('Memproses gambar...');
-      const compressedDataUrl = await compressImageFile(file);
+      const compressedDataUrl = await compressImageFile(file, 500, 500, 0.85);
       setEditAvatarUrl(compressedDataUrl);
-      setPhotoFeedback('Foto profil berhasil dimuat!');
-      setTimeout(() => setPhotoFeedback(null), 3500);
-    } catch (err) {
-      console.error("Gagal membaca file gambar:", err);
-      setPhotoFeedback('Gagal memuat file gambar.');
+      setPhotoFeedback('Foto berhasil dimuat!');
+      setTimeout(() => setPhotoFeedback(null), 3000);
+    } catch (error) {
+      console.warn('Gagal memproses gambar:', error);
+      alert('Format foto tidak didukung atau ukuran file terlalu besar.');
     } finally {
       setIsUploadingPhoto(false);
-      e.target.value = '';
     }
   };
+
+  const handleFileSelect = handleFileUpload;
 
   // Handler: Sinkronkan dengan foto akun Google
   const handleSyncGooglePhoto = () => {
@@ -252,6 +262,11 @@ export default function UserProfilePage() {
     setModalReceiverName(user?.displayName || '');
     setModalReceiverPhone(user?.phoneNumber || '');
     setModalIsDefault(addresses.length === 0);
+    setModalLat(undefined);
+    setModalLng(undefined);
+    setModalDistanceKm(undefined);
+    setModalIsVerified(false);
+    setModalValidationError(null);
     setShowAddressModal(true);
   };
 
@@ -262,12 +277,70 @@ export default function UserProfilePage() {
     setModalReceiverName(addr.receiverName || user?.displayName || '');
     setModalReceiverPhone(addr.receiverPhone || user?.phoneNumber || '');
     setModalIsDefault(Boolean(addr.isDefault));
+    setModalLat(addr.lat);
+    setModalLng(addr.lng);
+    setModalDistanceKm(addr.distanceKm);
+    setModalIsVerified(Boolean(addr.isVerified || addr.lat));
+    setModalValidationError(null);
     setShowAddressModal(true);
+  };
+
+  const handleValidateModalAddress = async (addrToTest: string): Promise<boolean> => {
+    if (!addrToTest.trim() || addrToTest.trim().length < 6) {
+      setModalIsVerified(false);
+      setModalValidationError('Alamat pengiriman terlalu pendek atau belum lengkap. Cantumkan nama jalan, nomor, RT/RW, dan kelurahan/kota.');
+      return false;
+    }
+    setIsVerifyingModalAddress(true);
+    setModalValidationError(null);
+    try {
+      const res = await validateAddressGeocode(addrToTest);
+      if (res.isValid && res.distanceKm !== undefined) {
+        setModalIsVerified(true);
+        setModalDistanceKm(res.distanceKm);
+        setModalLat(res.lat);
+        setModalLng(res.lng);
+        setModalValidationError(null);
+        setIsVerifyingModalAddress(false);
+        return true;
+      } else {
+        setModalIsVerified(false);
+        setModalValidationError(res.reason || 'Alamat tidak dapat dilacak pada peta satelit/GPS. Harap gunakan tombol "Pilih Titik Lokasi Peta GPS".');
+        setIsVerifyingModalAddress(false);
+        return false;
+      }
+    } catch (err) {
+      console.warn('Modal geocoding validation error:', err);
+      setIsVerifyingModalAddress(false);
+      return false;
+    }
+  };
+
+  const handleSelectFromMapModal = (
+    selectedAddress: string,
+    distanceKm: number,
+    coords?: { lat: number; lng: number }
+  ) => {
+    setModalAddressText(selectedAddress);
+    setModalDistanceKm(distanceKm);
+    if (coords) {
+      setModalLat(coords.lat);
+      setModalLng(coords.lng);
+    }
+    setModalIsVerified(true);
+    setModalValidationError(null);
   };
 
   const handleSaveAddressModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!modalAddressText.trim()) return;
+
+    if (!modalIsVerified) {
+      const isValid = await handleValidateModalAddress(modalAddressText);
+      if (!isValid) {
+        return;
+      }
+    }
 
     if (editingAddressId) {
       if (updateAddress) {
@@ -276,6 +349,10 @@ export default function UserProfilePage() {
           address: modalAddressText.trim(),
           receiverName: modalReceiverName.trim() || user?.displayName || 'Pelanggan',
           receiverPhone: modalReceiverPhone.trim() || user?.phoneNumber || '',
+          lat: modalLat,
+          lng: modalLng,
+          distanceKm: modalDistanceKm,
+          isVerified: modalIsVerified,
           isDefault: modalIsDefault
         });
       }
@@ -286,6 +363,10 @@ export default function UserProfilePage() {
           address: modalAddressText.trim(),
           receiverName: modalReceiverName.trim() || user?.displayName || 'Pelanggan',
           receiverPhone: modalReceiverPhone.trim() || user?.phoneNumber || '',
+          lat: modalLat,
+          lng: modalLng,
+          distanceKm: modalDistanceKm,
+          isVerified: modalIsVerified,
           isDefault: modalIsDefault || addresses.length === 0
         });
       }
@@ -1072,6 +1153,42 @@ export default function UserProfilePage() {
             </div>
 
             <form onSubmit={handleSaveAddressModal} className="space-y-4 text-xs">
+              {/* Tombol Buka Map GPS Presisi */}
+              <div className="flex items-center justify-between p-3 bg-stone-50 rounded-2xl border border-stone-200">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-[#25160E] text-amber-200 flex items-center justify-center shrink-0">
+                    <Navigation className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-neutral-900 text-xs">Pilih Titik Lokasi Peta GPS</h4>
+                    <p className="text-[10px] text-stone-500 font-light">Tentukan koordinat akurat di peta satelit.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMapPickerModal(true)}
+                  className="px-3.5 py-2 bg-[#25160E] hover:bg-black text-amber-200 text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
+                >
+                  Buka Peta
+                </button>
+              </div>
+
+              {/* Status Verifikasi Geocoding */}
+              {modalIsVerified ? (
+                <div className="flex items-center gap-2 px-3.5 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Titik Lokasi Terverifikasi GPS {modalDistanceKm ? `(${modalDistanceKm} Km)` : ''}</span>
+                </div>
+              ) : modalValidationError ? (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-rose-900">Alamat Belum Terlacak di Peta</p>
+                    <p className="text-[11px] leading-relaxed font-light">{modalValidationError}</p>
+                  </div>
+                </div>
+              ) : null}
+
               <div>
                 <label className="font-semibold text-neutral-900 block mb-1">
                   Label Alamat <span className="text-[10px] font-normal text-stone-500">(Bisa diketik manual atau pilih cepat)</span>
@@ -1106,12 +1223,21 @@ export default function UserProfilePage() {
               </div>
 
               <div>
-                <label className="font-semibold text-neutral-900 block mb-1">Alamat Lengkap</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-semibold text-neutral-900">Alamat Lengkap</label>
+                  {isVerifyingModalAddress && (
+                    <span className="text-[10px] text-stone-500 italic animate-pulse">Memverifikasi alamat...</span>
+                  )}
+                </div>
                 <textarea
                   required
                   rows={3}
                   value={modalAddressText}
-                  onChange={(e) => setModalAddressText(e.target.value)}
+                  onChange={(e) => {
+                    setModalAddressText(e.target.value);
+                    setModalIsVerified(false);
+                  }}
+                  onBlur={(e) => handleValidateModalAddress(e.target.value)}
                   placeholder="Contoh: Jl. Bojong Indah No. 12, RT 02 / RW 05, Kel. Pabuaran, Kec. Bojong Gede"
                   className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-neutral-900 focus:outline-none focus:ring-2 focus:ring-black"
                 />
@@ -1153,9 +1279,10 @@ export default function UserProfilePage() {
               <div className="pt-2 flex gap-2">
                 <button 
                   type="submit"
-                  className="flex-1 bg-black text-white font-semibold text-xs py-3 rounded-xl hover:bg-neutral-800 transition-all shadow-md active:scale-95 cursor-pointer"
+                  disabled={isVerifyingModalAddress}
+                  className="flex-1 bg-black text-white font-semibold text-xs py-3 rounded-xl hover:bg-neutral-800 transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
                 >
-                  {editingAddressId ? 'Simpan Perubahan' : 'Tambah Alamat'}
+                  {isVerifyingModalAddress ? 'Memverifikasi...' : editingAddressId ? 'Simpan Perubahan' : 'Tambah Alamat'}
                 </button>
                 <button 
                   type="button"
@@ -1216,7 +1343,7 @@ export default function UserProfilePage() {
             <div className="w-full flex gap-3 pt-2">
               <button 
                 type="button"
-                onClick={capturePhotoFromCamera}
+                onClick={captureLivePhoto}
                 className="flex-1 py-3 px-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
               >
                 <Camera className="w-4 h-4" />
@@ -1236,7 +1363,16 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* 6. FOOTER EDITORIAL TERPADU */}
+      {/* 6. MODAL MAP PICKER PRESISI */}
+      <AutoMapPickerModal
+        isOpen={showMapPickerModal}
+        onClose={() => setShowMapPickerModal(false)}
+        onSelectAddress={handleSelectFromMapModal}
+        initialAddress={modalAddressText}
+        initialCoords={modalLat && modalLng ? { lat: modalLat, lng: modalLng } : undefined}
+      />
+
+      {/* 7. FOOTER EDITORIAL TERPADU */}
       <Footer />
 
     </div>

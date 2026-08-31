@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useData, sortReviewsNewestFirst } from '@/context/DataContext';
+import AuthRequiredModal from './AuthRequiredModal';
 import { 
   X, 
   Star, 
@@ -110,6 +111,8 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   // State Reservasi Produk Habis ke Customer Service
   const [isReserving, setIsReserving] = useState<boolean>(false);
   const [reservationSent, setReservationSent] = useState<boolean>(false);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authActionName, setAuthActionName] = useState<string>('memesan hidangan ini');
 
   const kitchenAddress = 'Puri Bojong Lestari 1 Blok AF 41, RT 10 / RW 14, Kel. Pabuaran, Kec. Bojong Gede, Kab. Bogor, Prov. Jawa Barat';
 
@@ -228,6 +231,11 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   }, [communityReviews]);
 
   const handleAddToCart = () => {
+    if (!user) {
+      setAuthActionName('menambahkan hidangan ke keranjang belanja');
+      setShowAuthModal(true);
+      return;
+    }
     if (isOutOfStock) return;
     for (let i = 0; i < quantity; i++) {
       addToCart(liveProduct.id, isDrink ? selectedVariant : undefined);
@@ -237,6 +245,11 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   };
 
   const handleBuyNow = () => {
+    if (!user) {
+      setAuthActionName('memesan dan membeli hidangan');
+      setShowAuthModal(true);
+      return;
+    }
     if (isOutOfStock) return;
     for (let i = 0; i < quantity; i++) {
       addToCart(liveProduct.id, isDrink ? selectedVariant : undefined);
@@ -247,6 +260,11 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
   // Handler Reservasi Produk Habis ke Customer Service
   const handleReserveToCS = async () => {
+    if (!user) {
+      setAuthActionName('melakukan reservasi produk ke Customer Service');
+      setShowAuthModal(true);
+      return;
+    }
     setIsReserving(true);
     const varName = isDrink ? activeDrinkVariant.name : liveProduct.name;
     const userEmail = user?.email || 'customer@nefakky.com';
@@ -877,6 +895,13 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
           </div>
         </div>
       )}
+
+      {/* MODAL WAJIB AUTENTIKASI UNTUK PENGGUNA GUEST */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        actionName={authActionName}
+      />
 
     </div>
   );

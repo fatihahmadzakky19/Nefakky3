@@ -254,6 +254,14 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Fungsi untuk mengklaim kode promo voucher
   const claimPromo = (code: string) => {
+    if (!user) {
+      return {
+        success: false,
+        message: 'Silakan masuk atau daftar akun terlebih dahulu untuk mengklaim dan menggunakan voucher promo.',
+        percent: 0
+      };
+    }
+
     const upper = code.trim().toUpperCase();
     
     const foundVoucher = vouchers.find(

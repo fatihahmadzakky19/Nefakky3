@@ -26,8 +26,10 @@ import Link from 'next/link';
 import { useData } from '@/context/DataContext';
 // Mengimpor CartContext untuk memanipulasi keranjang belanja
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 // Mengimpor Komponen Modal Detail Menu
 import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
+import AuthRequiredModal from '@/components/AuthRequiredModal';
 // Mengimpor Navbar & Footer terpadu
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -51,6 +53,7 @@ import {
  * Menyediakan katalog lengkap produk kuliner Nefakky
  */
 export default function MenuCatalogPage() {
+  const { user } = useAuth();
   // Mengambil daftar produk aktif dari DataContext
   const { products } = useData();
   // Mengambil state dan fungsi manipulasi keranjang dari CartContext
@@ -66,6 +69,8 @@ export default function MenuCatalogPage() {
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
   // State daftar ID produk favorit/wishlist yang disimpan di memori sesi
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authActionName, setAuthActionName] = useState<string>('memesan hidangan');
 
   // Daftar opsi kategori yang dapat difilter
   const categories = ['Semua', 'Makanan Berat', 'Minuman', 'Menu Hemat', 'Segera Hadir'];
@@ -359,6 +364,11 @@ export default function MenuCatalogPage() {
                         ) : (
                           <button
                             onClick={() => {
+                              if (!user) {
+                                setAuthActionName('memesan hidangan');
+                                setShowAuthModal(true);
+                                return;
+                              }
                               if (product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus')) {
                                 setDetailProduct(product);
                               } else {
@@ -396,6 +406,13 @@ export default function MenuCatalogPage() {
           onClose={() => setDetailProduct(null)}
         />
       )}
+
+      {/* MODAL WAJIB AUTENTIKASI UNTUK PENGGUNA GUEST */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        actionName={authActionName}
+      />
 
       {/* 6. FOOTER EDITORIAL TERPADU */}
       <Footer />

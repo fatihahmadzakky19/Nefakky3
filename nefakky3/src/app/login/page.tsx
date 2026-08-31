@@ -143,9 +143,19 @@ export default function LoginPage() {
               
               {/* Error Alert Box */}
               {errorMessage && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2 animate-fade-in font-medium">
-                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                  <span>{errorMessage}</span>
+                <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs rounded-xl space-y-2 animate-fade-in font-medium">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{errorMessage}</span>
+                  </div>
+                  {errorMessage.toLowerCase().includes('belum terdaftar') && (
+                    <Link
+                      href={`/register${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+                      className="block text-center py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors shadow-xs"
+                    >
+                      Daftar Akun Baru Sekarang
+                    </Link>
+                  )}
                 </div>
               )}
 
