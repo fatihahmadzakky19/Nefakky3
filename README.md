@@ -213,53 +213,7 @@ Platform ini dirancang untuk memberikan pengalaman kuliner terbaik bagi pelangga
 
 ---
 
-## ⚡ 8. Panduan Menjalankan Aplikasi di Komputer Lokal
-
-### 1. Menjalankan Backend Laravel 12 API
-```bash
-cd f:\UKK\Laravel
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate --seed
-php artisan serve --port=8000
-```
-
-### 2. Menjalankan Server WebSocket Laravel Reverb (Opsional)
-```bash
-cd f:\UKK\Laravel
-php artisan reverb:start
-```
-
-### 3. Menjalankan Frontend Next.js 14
-```bash
-cd f:\UKK\nefakky3
-npm install
-npm run dev
-```
-
-Buka peramban web di: **http://localhost:3000**
-
----
-
-## 📚 9. Indeks Berkas Dokumentasi Lengkap (`nefakky3/docs/`)
-
-* 🏗️ **[ARCHITECTURE.md](nefakky3/docs/ARCHITECTURE.md)** — Arsitektur sistem menyeluruh, komponen Next.js 14, Laravel 12, dan Reverb.
-* 📡 **[API.md](nefakky3/docs/API.md)** — Spesifikasi lengkap seluruh endpoint REST API Laravel 12.
-* 🗄️ **[DATABASE.md](nefakky3/docs/DATABASE.md)** — Skema basis data, ERD, tabel, tipe data, dan relasi Eloquent.
-* 🔄 **[WORKFLOW.md](nefakky3/docs/WORKFLOW.md)** — Alur kerja bisnis (Order Lifecycle 5-Tahap, Payment Webhook, Auto-Restock).
-* 💻 **[INSTALLATION.md](nefakky3/docs/INSTALLATION.md)** — Panduan instalasi dan setup lingkungan lokal langkah demi langkah.
-* 🎨 **[DESIGN.md](nefakky3/docs/DESIGN.md)** — Master design system Google Stitch Artisanal Luxury.
-* 🛒 **[DESIGN_USER.md](nefakky3/docs/DESIGN_USER.md)** — Spesifikasi UI/UX antarmuka belanja pelanggan.
-* 🏢 **[DESIGN_ADMIN.md](nefakky3/docs/DESIGN_ADMIN.md)** — Spesifikasi UI/UX Enterprise Admin Command Center.
-* 📋 **[PRD.md](nefakky3/docs/PRD.md)** — Product Requirement Document, visi bisnis, dan spesifikasi sistem.
-* 🧪 **[TEST_REPORT.md](nefakky3/docs/TEST_REPORT.md)** — Laporan hasil pengujian otomatis frontend & backend (100% Passed).
-* 📜 **[CHANGELOG.md](nefakky3/docs/CHANGELOG.md)** — Catatan riwayat perubahan versi dan pembaruan fitur aplikasi.
-* 🤝 **[CONTRIBUTING.md](nefakky3/docs/CONTRIBUTING.md)** — Panduan kontribusi, standard code style PSR-12, dan TypeScript.
-
----
-
 ## ⚖️ Hak Cipta
 
 Seluruh hak cipta dilindungi undang-undang.  
-Dibuat dengan ❤️ untuk **Nefakky Artisanal Culinary Marketplace & Resto**.
+Dibuat untuk **Nefakky Culinary Marketplace & Resto**.
