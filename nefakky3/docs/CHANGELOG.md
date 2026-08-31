@@ -6,6 +6,31 @@ Format pencatatan mengacu pada standar [Keep a Changelog](https://keepachangelog
 
 ---
 
+## [3.7.0] — 2026-08-31 (Single Active Order Policy, Multi-Voucher Stacking & UI Polishing)
+
+### 🚀 Ditambahkan (Added)
+* **Single Active Order Policy (Pembatasan Pesanan Aktif Berjalan)**:
+  * Proteksi sistem yang mencegah pengguna melakukan checkout/transaksi pembelian baru jika masih memiliki pesanan aktif yang belum selesai (`RECEIVED`, `COOKING`, `READY`, `DELIVERING`, atau belum dikonfirmasi pelanggan).
+  * Komponen modal pop-up mewah [`ActiveOrderBlockerModal.tsx`](file:///f:/UKK/nefakky3/src/components/ActiveOrderBlockerModal.tsx) yang menampilkan detail status pesanan berjalan dan tombol pintas *"Lacak & Selesaikan Pesanan Ini"* menuju halaman pelacakan.
+  * Banner peringatan informatif di langkah 1 Keranjang Belanja dan penguncian tombol checkout.
+  * Tombol *"Konfirmasi Pesanan Telah Sampai"* di halaman `/notifications` yang secara realtime menyelesaikan pesanan dan langsung membuka kembali akses checkout bagi pengguna.
+* **Multi-Voucher Promo Stacking (Maksimal 2 Voucher Bersamaan)**:
+  * Dukungan penggunaan hingga maksimal 2 voucher diskon bersamaan di keranjang belanja ([`CartContext.tsx`](file:///f:/UKK/nefakky3/src/context/CartContext.tsx)).
+  * Akumulasi persentase diskon otomatis dan pemotongan total belanja.
+  * Indikator kuota voucher (misal: `1/2 (+ Tambah 1 Voucher Lagi)` atau `2/2 Voucher Digunakan (Maks. 2)`) dan kartu voucher individual dengan tombol **Hapus** masing-masing.
+
+### 🛠️ Diperbaiki (Fixed)
+* **Penyembunyian Ikon Password Reveal Bawaan Peramban**:
+  * Menambahkan override CSS global pada `globals.css` (`::-ms-reveal`, `::-ms-clear`, dan `::-webkit-credentials-auto-fill-button`) sehingga hanya satu ikon mata custom Lucide React yang tampil elegan di kolom sandi.
+* **Isolasi Riwayat Pesanan CS Live Chat Admin**:
+  * Mengganti pencocokan parsial nama menjadi pencocokan email presisi 100% (`o.customerEmail === selectedChatUserEmail`) pada [`AdminLiveChatTab.tsx`](file:///f:/UKK/nefakky3/src/components/admin/AdminLiveChatTab.tsx), mencegah riwayat transaksi akun baru tercampur dengan pesanan demo/akun lain.
+* **Komentar Kode Baris per Baris & Pembersihan Ikon**:
+  * Seluruh file Context dan Komponen kunci (`CartContext.tsx`, `ActiveOrderBlockerModal.tsx`, `cart/page.tsx`) telah dilengkapi komentar penjelas berbahasa Indonesia yang sangat lengkap dan terstruktur.
+  * Seluruh impor ikon Lucide yang tidak terpakai dan ambigu telah dibersihkan.
+  * 100% lulus uji tipe data TypeScript (`0 error` pada `npx tsc --noEmit`).
+
+---
+
 ## [3.6.0] — 2026-08-27 (Enterprise Modernization & Code Refactor)
 
 ### 🚀 Ditambahkan (Added)

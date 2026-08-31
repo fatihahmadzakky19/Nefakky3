@@ -187,7 +187,7 @@ export default function AdminLiveChatTab({
     if (filtered.length > 0) return filtered;
 
     // Fallback simulated conversation for demo
-    if (selectedChatUserEmail.includes('nizar')) {
+    if (selectedChatUserEmail.toLowerCase() === 'nizar.azzuhra@gmail.com') {
       return [
         {
           id: 'sim-nz-1',
@@ -223,29 +223,23 @@ export default function AdminLiveChatTab({
   };
 
   // ============================================================================
-  // PENCARIAN SELURUH PESANAN & TRANSAKSI PELANGGAN AKTIF
+  // PENCARIAN SELURUH PESANAN & TRANSAKSI PELANGGAN AKTIF (PRESISI BERDASARKAN EMAIL)
   // ============================================================================
   const customerOrders = useMemo(() => {
     if (!selectedChatUserEmail) return [];
 
-    const clean = (str?: string) => (str || '').toLowerCase().replace(/[\.\_\-\s]/g, '');
-    const targetClean = clean(selectedChatUserEmail);
-    const targetNameClean = clean(activeUserObj.name);
+    const targetEmail = selectedChatUserEmail.trim().toLowerCase();
 
-    // Cari dari database pesanan DataContext
+    // Cari dari database pesanan DataContext secara presisi 100% berdasarkan email
     const matched = (orders || []).filter(o => {
-      const oEmailClean = clean(o.customerEmail);
-      const oNameClean = clean(o.customerName);
-      return (
-        (oEmailClean && (oEmailClean === targetClean || oEmailClean.includes(targetClean) || targetClean.includes(oEmailClean))) ||
-        (oNameClean && (oNameClean === targetNameClean || oNameClean.includes(targetNameClean) || targetNameClean.includes(oNameClean)))
-      );
+      const oEmail = (o.customerEmail || '').trim().toLowerCase();
+      return oEmail === targetEmail;
     });
 
     if (matched.length > 0) return matched;
 
-    // Fallback riwayat lengkap transaksi demo jika database baru
-    if (targetClean.includes('nizar') || targetClean.includes('azzuhra')) {
+    // Fallback riwayat lengkap transaksi demo HANYA untuk demo email bawaan nizar.azzuhra@gmail.com
+    if (targetEmail === 'nizar.azzuhra@gmail.com') {
       return [
         {
           id: 'ORD-88219',

@@ -2,36 +2,48 @@
 
 /**
  * ============================================================================
- * CONTEXT: CartContext (Keranjang Belanja & Perhitungan Promo)
- * DESKRIPSI: Mengelola item keranjang belanja, penambahan/pengurangan produk,
- *            serta klaim diskon promo voucher.
- * GUIDELINES: Standardized clean code structure & Bahasa Indonesia.
+ * CONTEXT: CartContext (Keranjang Belanja & Perhitungan Promo Terintegrasi)
+ * DESKRIPSI: Mengelola seluruh siklus hidup keranjang belanja produk restoran:
+ *            - Penambahan kuantitas produk & varian
+ *            - Pengurangan & penghapusan produk
+ *            - Pengosongan keranjang belanja
+ *            - Penyimpanan lokal (localStorage) persisten per-user / guest
+ *            - Dukungan multi-voucher promo (maksimal 2 voucher aktif bersamaan)
+ *            - Kalkulasi subtotal, diskon persentase, nominal rupiah, & syarat minimal belanja
  * ============================================================================
  */
 
-// Mengimpor React, Context API hooks (createContext, useContext, useEffect, useState)
+// Mengimpor React beserta hooks context & state management
 import React, { createContext, useContext, useEffect, useState } from 'react';
-// Mengimpor kustom hook AuthContext untuk mendapatkan status akun user yang sedang login
+// Mengimpor hook AuthContext untuk mendapatkan status autentikasi user aktif
 import { useAuth } from './AuthContext';
-// Mengimpor DataContext & fungsi validasi voucher isVoucherValidNow
+// Mengimpor hook DataContext, validator voucher realtime, dan pembersih kode promo
 import { useData, isVoucherValidNow, cleanPromoCode } from './DataContext';
 
-/** Interface Struktur Data Produk Keranjang */
+/**
+ * Interface CartItemProduct
+ * Mendefinisikan struktur data sebuah item produk hidangan di keranjang
+ */
 export interface CartItemProduct {
-  id: string; // ID unik produk
-  name: string; // Nama hidangan produk
-  category: string; // Kategori menu
-  price: number; // Harga produk (Rp)
-  image: string; // URL/Path gambar produk
-  description?: string; // Deskripsi produk (opsional)
+  id: string; // ID unik produk (misal: 'm1', 'm2')
+  name: string; // Nama menu hidangan (misal: 'Ayam Bakar Madu')
+  category: string; // Kategori menu (misal: 'Makanan Berat', 'Minuman')
+  price: number; // Harga satuan produk dalam Rupiah (Rp)
+  image: string; // URL / Path gambar hidangan
+  description?: string; // Deskripsi singkat mengenai menu (opsional)
 }
 
-/** Interface Line Item dalam Keranjang (Produk + Kuantitas) */
+/**
+ * Interface CartLineItem
+ * Menggabungkan informasi produk dengan jumlah kuantitas yang dipesan pelanggan
+ */
 export interface CartLineItem extends CartItemProduct {
-  quantity: number; // Jumlah kuantitas yang dipesan
+  quantity: number; // Kuantitas pesanan (jumlah porsi yang dimasukkan ke keranjang)
 }
 
-// Master produk fallback jika data produk belum termuat dari API/Database
+/**
+ * Master fallback produk jika data Firestore belum selesai termuat
+ */
 export const MASTER_PRODUCTS: CartItemProduct[] = [
   {
     id: 'm1',
@@ -83,43 +95,72 @@ export const MASTER_PRODUCTS: CartItemProduct[] = [
   }
 ];
 
-// Interface Tipe Nilai yang Disediakan oleh CartContext
-interface CartContextType {
-  cart: { [itemId: string]: number }; // State objek key-value keranjang { itemId: quantity }
-  cartItems: CartLineItem[]; // Array daftar item keranjang beserta detail produk
-  totalCartCount: number; // Akumulasi total kuantitas seluruh item di keranjang
-  subtotal: number; // Total harga kotor sebelum diskon
-  appliedPromo: string | null; // Kode promo yang sedang diterapkan
-  discountPercent: number; // Persentase diskon (%)
-  discountAmount: number; // Nominal potongan harga (Rp)
-  minSpendRequired: number; // Syarat minimal belanja voucher (Rp)
-  isMinSpendMet: boolean; // Apakah syarat minimal belanja terpenuhi
-  addToCart: (productId: string, variant?: string) => void; // Fungsi menambah barang ke keranjang
-  removeFromCart: (productId: string) => void; // Fungsi mengurangi kuantitas 1 barang
-  deleteFromCart: (productId: string) => void; // Fungsi menghapus barang sepenuhnya dari keranjang
-  clearCart: () => void; // Fungsi mengosongkan seluruh keranjang
-  claimPromo: (code: string) => { success: boolean; message: string; percent: number }; // Fungsi klaim kode promo
-  removePromo: () => void; // Fungsi menghapus promo yang terpasang
+/**
+ * Interface AppliedVoucherItem
+ * Mendefinisikan detail masing-masing voucher promo yang sedang aktif digunakan
+ */
+export interface AppliedVoucherItem {
+  code: string; // Kode voucher promo (misal: 'NEFAKKY10')
+  name: string; // Nama judul promosi (misal: 'Diskon Pengguna Baru')
+  discountPercent: number; // Besaran persentase potongan harga (misal: 10)
+  minSpend: number; // Syarat minimal nilai belanja dalam Rupiah (Rp)
 }
 
-// Inisialisasi React Context untuk Cart
+/**
+ * Interface CartContextType
+ * Mendefinisikan seluruh variabel dan fungsi yang diekspos oleh CartContext kepada komponen lain
+ */
+interface CartContextType {
+  cart: { [itemId: string]: number }; // Objek state keranjang mentah: key format 'productId' atau 'productId_variant', value kuantitas
+  cartItems: CartLineItem[]; // Daftar array item keranjang lengkap dengan detail gambar, nama, dan harga
+  totalCartCount: number; // Total jumlah porsi item di dalam keranjang belanja
+  subtotal: number; // Total nilai kotor belanja sebelum dipotong diskon (Rp)
+  appliedPromo: string | null; // Teks kode promo aktif (digabungkan dengan tanda '+' jika menggunakan multi-voucher)
+  appliedPromos: string[]; // Array berisi daftar kode voucher promo yang aktif (maksimal 2 voucher)
+  appliedVouchersList: AppliedVoucherItem[]; // Array rincian objek voucher promo yang aktif
+  discountPercent: number; // Persentase diskon kumulatif total (%)
+  discountAmount: number; // Besaran nominal potongan diskon yang didapat dalam Rupiah (Rp)
+  minSpendRequired: number; // Syarat minimal belanja tertinggi dari voucher yang dipakai (Rp)
+  isMinSpendMet: boolean; // Menandakan apakah subtotal telah memenuhi syarat minimal belanja voucher
+  addToCart: (productId: string, variant?: string) => void; // Fungsi untuk menambahkan 1 porsi hidangan ke keranjang
+  removeFromCart: (productId: string) => void; // Fungsi untuk mengurangi 1 porsi hidangan dari keranjang
+  deleteFromCart: (productId: string) => void; // Fungsi untuk menghapus item hidangan seutuhnya dari keranjang
+  clearCart: () => void; // Fungsi untuk mengosongkan seluruh isi keranjang belanja
+  claimPromo: (code: string) => { success: boolean; message: string; percent: number }; // Fungsi untuk memvalidasi & mengklaim voucher promo
+  removePromo: (code?: string) => void; // Fungsi untuk mencabut/menghapus kode voucher promo tertentu atau seluruhnya
+}
+
+// Membuat React Context untuk Cart
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Provider Component untuk membungkus komponen aplikasi Next.js
+/**
+ * Komponen Provider CartProvider
+ * Membungkus pohon komponen aplikasi agar seluruh halaman memiliki akses ke keranjang belanja
+ */
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth(); // Ambil status user dari AuthContext
-  const { products, vouchers, isVoucherUsedByUser } = useData(); // Ambil daftar produk & voucher dari DataContext
-  const [cart, setCart] = useState<{ [itemId: string]: number }>({}); // State data keranjang
-  const [appliedPromo, setAppliedPromo] = useState<string | null>(null); // State kode promo aktif
-  const [discountPercent, setDiscountPercent] = useState<number>(0); // State persentase diskon
+  // Mengambil informasi akun user login dari AuthContext
+  const { user } = useAuth();
+  // Mengambil daftar produk, daftar voucher, dan fungsi verifikasi voucher yang sudah terpakai dari DataContext
+  const { products, vouchers, isVoucherUsedByUser } = useData();
 
-  // Effect: Muat keranjang dan promo dari localStorage dengan fallback guest & user persistent
+  // State penyimpan data keranjang mentah dalam format { [id_barang]: kuantitas }
+  const [cart, setCart] = useState<{ [itemId: string]: number }>({});
+  // State penyimpan array kode promo voucher yang sedang aktif terpasang (maksimal 2)
+  const [appliedPromos, setAppliedPromos] = useState<string[]>([]);
+
+  /**
+   * Effect: Memuat data keranjang dan promo tersimpan dari localStorage saat aplikasi diinisialisasi / user berganti
+   */
   useEffect(() => {
+    // Pastikan kode hanya berjalan di sisi browser (bukan server-side rendering)
     if (typeof window === 'undefined') return;
 
+    // Menentukan key penyimpanan localStorage berdasarkan status login pengguna
     const cartKey = user?.uid ? `nefakky_cart_${user.uid}` : 'nefakky_cart_guest';
-    const promoKey = user?.uid ? `nefakky_promo_${user.uid}` : 'nefakky_promo_guest';
+    const promosKey = user?.uid ? `nefakky_promos_${user.uid}` : 'nefakky_promos_guest';
+    const oldPromoKey = user?.uid ? `nefakky_promo_${user.uid}` : 'nefakky_promo_guest';
 
+    // 1. Mengambil data keranjang belanja yang tersimpan
     const savedCart = 
       localStorage.getItem(cartKey) || 
       localStorage.getItem('nefakky_cart_active') || 
@@ -133,27 +174,42 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    const savedPromo = 
-      localStorage.getItem(promoKey) || 
-      localStorage.getItem('nefakky_promo_active') || 
-      localStorage.getItem('nefakky_promo_guest');
+    // 2. Mengambil data daftar multi-voucher promo yang tersimpan
+    const savedPromos = 
+      localStorage.getItem(promosKey) || 
+      localStorage.getItem('nefakky_promos_active');
       
-    if (savedPromo) {
+    if (savedPromos) {
       try {
-        const parsed = JSON.parse(savedPromo);
-        if (parsed.code) {
-          setAppliedPromo(parsed.code);
-          const liveV = (vouchers || []).find(v => v.code.toUpperCase() === parsed.code.toUpperCase());
-          setDiscountPercent(liveV?.discountPercent || parsed.percent || 10);
+        const parsed = JSON.parse(savedPromos);
+        if (Array.isArray(parsed)) {
+          // Batasi maksimal 2 voucher promo
+          setAppliedPromos(parsed.slice(0, 2));
+          return;
         }
       } catch (e) {
-        setAppliedPromo(null);
-        setDiscountPercent(0);
+        // Abaikan jika format JSON tidak valid
       }
     }
-  }, [user?.uid, vouchers]);
 
-  // Fungsi helper simpan state keranjang ke localStorage
+    // 3. Fallback jika ada data promo tunggal model lama
+    const legacyPromo = localStorage.getItem(oldPromoKey) || localStorage.getItem('nefakky_promo_active');
+    if (legacyPromo) {
+      try {
+        const parsed = JSON.parse(legacyPromo);
+        if (parsed?.code) {
+          const codes = String(parsed.code).split(/[\+\,]/).map((s: string) => s.trim()).filter(Boolean);
+          setAppliedPromos(codes.slice(0, 2));
+        }
+      } catch (e) {
+        // Abaikan error parsing legacy
+      }
+    }
+  }, [user?.uid]);
+
+  /**
+   * Fungsi Helper: Menyimpan perubahan state keranjang ke localStorage secara persisten
+   */
   const saveCart = (newCart: { [itemId: string]: number }) => {
     setCart(newCart);
     if (typeof window !== 'undefined') {
@@ -166,47 +222,74 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Fungsi menghapus promo yang terpasang di keranjang
-  const removePromo = () => {
-    setAppliedPromo(null);
-    setDiscountPercent(0);
+  /**
+   * Fungsi Helper: Menyimpan perubahan daftar voucher promo ke localStorage secara persisten
+   */
+  const savePromos = (promos: string[]) => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('nefakky_promo_active');
-      localStorage.removeItem('nefakky_promo_guest');
+      const payload = JSON.stringify(promos);
+      localStorage.setItem('nefakky_promos_active', payload);
+      // Simpan juga representasi teks gabungan untuk kompabilitas invoice / receipt
+      localStorage.setItem('nefakky_promo_active', JSON.stringify({ code: promos.join(' + ') }));
       if (user?.uid) {
-        localStorage.removeItem(`nefakky_promo_${user.uid}`);
+        localStorage.setItem(`nefakky_promos_${user.uid}`, payload);
+      } else {
+        localStorage.setItem('nefakky_promos_guest', payload);
       }
     }
   };
 
-  // Effect Real-time: Otomatis mencabut promo jika Admin menonaktifkan voucher di DB atau jika user sudah pernah menggunakannya
-  useEffect(() => {
-    if (appliedPromo && vouchers.length > 0) {
-      const foundVoucher = vouchers.find(
-        v => (v.code.toUpperCase() === appliedPromo.toUpperCase() || v.id.toUpperCase() === appliedPromo.toUpperCase())
-      );
-      
-      const { active: isStillActive } = isVoucherValidNow(foundVoucher);
-      const isAlreadyUsed = isVoucherUsedByUser && isVoucherUsedByUser(appliedPromo, user?.uid, user?.email);
+  /**
+   * Fungsi: Menghapus voucher promo yang terpasang di keranjang
+   * @param codeToRemove Kode voucher tertentu yang ingin dihapus. Jika dikosongkan, seluruh voucher dicabut.
+   */
+  const removePromo = (codeToRemove?: string) => {
+    if (codeToRemove) {
+      const cleanToRemove = cleanPromoCode(codeToRemove);
+      const updated = appliedPromos.filter(c => cleanPromoCode(c) !== cleanToRemove);
+      setAppliedPromos(updated);
+      savePromos(updated);
+    } else {
+      setAppliedPromos([]);
+      savePromos([]);
+    }
+  };
 
-      if (!isStillActive || isAlreadyUsed) {
-        removePromo();
-      } else if (foundVoucher && foundVoucher.discountPercent && foundVoucher.discountPercent !== discountPercent) {
-        setDiscountPercent(foundVoucher.discountPercent);
-        if (typeof window !== 'undefined') {
-          const payload = JSON.stringify({ code: foundVoucher.code.toUpperCase(), percent: foundVoucher.discountPercent });
-          localStorage.setItem('nefakky_promo_active', payload);
-          if (user?.uid) {
-            localStorage.setItem(`nefakky_promo_${user.uid}`, payload);
-          } else {
-            localStorage.setItem('nefakky_promo_guest', payload);
-          }
+  /**
+   * Effect Realtime: Otomatis mencabut voucher dari keranjang jika Admin menonaktifkannya di Firestore
+   * atau jika akun user tersebut sudah pernah menggunakan voucher tersebut di transaksi sebelumnya.
+   */
+  useEffect(() => {
+    if (appliedPromos.length > 0 && vouchers.length > 0) {
+      let changed = false;
+      const validPromos: string[] = [];
+
+      for (const promoCode of appliedPromos) {
+        const foundVoucher = vouchers.find(
+          v => (cleanPromoCode(v.code) === cleanPromoCode(promoCode) || cleanPromoCode(v.id) === cleanPromoCode(promoCode))
+        );
+        
+        const isStillActive = foundVoucher ? isVoucherValidNow(foundVoucher).active : false;
+        const isAlreadyUsed = isVoucherUsedByUser && isVoucherUsedByUser(promoCode, user?.uid, user?.email);
+
+        if (!foundVoucher || !isStillActive || isAlreadyUsed) {
+          changed = true;
+        } else {
+          validPromos.push(promoCode);
         }
       }
-    }
-  }, [vouchers, appliedPromo, discountPercent, user, isVoucherUsedByUser]);
 
-  // Memetakan objek cart { key: qty } menjadi array CartLineItem lengkap beserta detail produk
+      if (changed) {
+        setAppliedPromos(validPromos);
+        savePromos(validPromos);
+      }
+    }
+  }, [vouchers, appliedPromos, user, isVoucherUsedByUser]);
+
+  /**
+   * Mengonversi objek state cart { [id]: kuantitas } menjadi array CartLineItem lengkap
+   * beserta nama menu, varian rasa minuman, foto hidangan, harga satuan, dan kuantitas.
+   */
   const cartItems: CartLineItem[] = Object.entries(cart).map(([key, quantity]) => {
     const [baseId, variant] = key.split('_');
     const product = products.find(p => p.id === baseId) || MASTER_PRODUCTS.find(p => p.id === baseId) || {
@@ -220,6 +303,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     let itemImage = product.image;
     let itemName = product.name;
 
+    // Penyesuaian nama dan foto jika item merupakan varian minuman jus
     if (variant) {
       itemName = `Jus ${variant} Segar`;
       if (variant === 'Mangga') itemImage = '/images/jus_mangga.jpg';
@@ -236,24 +320,64 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     };
   });
 
-  // Hitung total akumulasi kuantitas seluruh item di keranjang
+  // Menghitung akumulasi total kuantitas seluruh porsi item di dalam keranjang
   const totalCartCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
 
-  // Hitung subtotal harga kotor seluruh barang
+  // Menghitung subtotal kotor nilai belanja (harga satuan dikali kuantitas per item)
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Cari objek voucher aktif untuk memeriksa batas minimal belanja (minSpend)
-  const activeVoucherObj = (vouchers || []).find(
-    v => appliedPromo && (v.code.toUpperCase() === appliedPromo.toUpperCase() || v.id.toUpperCase() === appliedPromo.toUpperCase())
-  );
-  const minSpendRequired = activeVoucherObj?.minSpend || 0;
-  const isMinSpendMet = subtotal >= minSpendRequired;
+  /**
+   * Membuat daftar rincian objek AppliedVoucherItem untuk setiap voucher aktif
+   */
+  const appliedVouchersList: AppliedVoucherItem[] = appliedPromos.map(code => {
+    const cleanCode = cleanPromoCode(code);
+    const found = (vouchers || []).find(v => cleanPromoCode(v.code) === cleanCode || cleanPromoCode(v.id) === cleanCode);
+    return {
+      code,
+      name: found?.name || code,
+      discountPercent: found?.discountPercent || 10,
+      minSpend: found?.minSpend || 0
+    };
+  });
 
-  // Hitung besaran nominal potongan diskon dalam Rupiah jika syarat minSpend terpenuhi
-  const discountAmount = (isMinSpendMet && discountPercent > 0) ? Math.round(subtotal * (discountPercent / 100)) : 0;
+  // String representasi kode promo gabungan (misal: "NEFAKKY10 + HEMAT20")
+  const appliedPromo = appliedPromos.length > 0 ? appliedPromos.join(' + ') : null;
 
-  // Fungsi untuk mengklaim kode promo voucher
+  // Syarat minimal belanja tertinggi dari daftar voucher yang aktif
+  const minSpendRequired = appliedVouchersList.length > 0 
+    ? Math.max(...appliedVouchersList.map(v => v.minSpend)) 
+    : 0;
+
+  // Menentukan apakah subtotal saat ini sudah memenuhi syarat minimal belanja seluruh voucher yang dipakai
+  const isMinSpendMet = appliedVouchersList.length === 0 || appliedVouchersList.every(v => subtotal >= v.minSpend);
+
+  /**
+   * Menghitung akumulasi persentase diskon dari voucher-voucher yang syarat minimal belanjanya terpenuhi
+   */
+  const activeDiscountPercent = appliedVouchersList.reduce((sum, v) => {
+    if (subtotal >= v.minSpend) {
+      return sum + v.discountPercent;
+    }
+    return sum;
+  }, 0);
+
+  // Batas maksimal persentase diskon adalah 100%
+  const discountPercent = Math.min(100, activeDiscountPercent);
+
+  // Menghitung nominal rupiah potongan harga diskon (dibulatkan ke bilangan bulat terdekat)
+  const discountAmount = Math.min(subtotal, Math.round(subtotal * (discountPercent / 100)));
+
+  /**
+   * Fungsi: Mengklaim dan mengaktifkan voucher promo ke keranjang belanja
+   * Aturan:
+   * 1. Pengguna wajib login terlebih dahulu
+   * 2. Maksimal 2 voucher promo dapat digunakan secara bersamaan
+   * 3. Tidak boleh memasukkan kode voucher yang sama lebih dari 1 kali
+   * 4. Voucher belum pernah dipakai oleh akun pengguna sebelumnya (1x per akun)
+   * 5. Status voucher harus aktif dan kuota belum habis di database
+   */
   const claimPromo = (code: string) => {
+    // 1. Validasi status login pengguna
     if (!user) {
       return {
         success: false,
@@ -263,9 +387,37 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const upper = code.trim().toUpperCase();
+    const cleanCode = cleanPromoCode(upper);
+
+    if (!cleanCode) {
+      return {
+        success: false,
+        message: 'Silakan masukkan kode voucher yang valid.',
+        percent: 0
+      };
+    }
+
+    // 2. Cegah memasang voucher yang sudah aktif di keranjang
+    if (appliedPromos.some(p => cleanPromoCode(p) === cleanCode)) {
+      return {
+        success: false,
+        message: `Voucher promo "${upper}" sudah aktif di keranjang Anda.`,
+        percent: 0
+      };
+    }
+
+    // 3. Batasi kuota maksimal 2 voucher promo secara bersamaan
+    if (appliedPromos.length >= 2) {
+      return {
+        success: false,
+        message: `Maksimal 2 voucher promo yang dapat digunakan bersamaan (saat ini aktif: ${appliedPromos.join(' & ')}). Hapus salah satu voucher di keranjang jika ingin mengganti.`,
+        percent: 0
+      };
+    }
     
+    // 4. Cari data voucher di database DataContext
     const foundVoucher = vouchers.find(
-      v => v.code.toUpperCase() === upper || v.id.toUpperCase() === upper
+      v => cleanPromoCode(v.code) === cleanCode || cleanPromoCode(v.id) === cleanCode
     );
 
     if (!foundVoucher || foundVoucher.isDeleted) {
@@ -276,9 +428,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
+    // 5. Cek apakah pengguna sudah pernah menggunakan voucher ini sebelumnya
     if (isVoucherUsedByUser && isVoucherUsedByUser(upper, user?.uid, user?.email)) {
-      removePromo();
-      const isNewCust = cleanPromoCode(upper) === 'NEFAKKY10' || cleanPromoCode(upper).includes('NEWUSER') || cleanPromoCode(upper).includes('PELANGGANBARU');
+      removePromo(upper);
+      const isNewCust = cleanCode === 'NEFAKKY10' || cleanCode.includes('NEWUSER') || cleanCode.includes('PELANGGANBARU');
       return {
         success: false,
         message: isNewCust 
@@ -288,10 +441,11 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
+    // 6. Validasi keaktifan voucher dan kuota sisa
     const { active: isVoucherActive, reason } = isVoucherValidNow(foundVoucher);
 
     if (!isVoucherActive) {
-      removePromo();
+      removePromo(upper);
       return {
         success: false,
         message: reason || `Maaf, promosi "${foundVoucher.name}" (${upper}) sedang NON-AKTIF atau tidak dapat digunakan saat ini.`,
@@ -302,20 +456,13 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     const percent = foundVoucher.discountPercent || 10;
     const minSpend = foundVoucher.minSpend || 0;
 
-    setAppliedPromo(upper);
-    setDiscountPercent(percent);
+    // 7. Tambahkan kode voucher ke daftar promo aktif
+    const newAppliedPromos = [...appliedPromos, upper];
+    setAppliedPromos(newAppliedPromos);
+    savePromos(newAppliedPromos);
 
-    if (typeof window !== 'undefined') {
-      const payload = JSON.stringify({ code: upper, percent });
-      localStorage.setItem('nefakky_promo_active', payload);
-      if (user?.uid) {
-        localStorage.setItem(`nefakky_promo_${user.uid}`, payload);
-      } else {
-        localStorage.setItem('nefakky_promo_guest', payload);
-      }
-    }
-
-    let message = `Kode promo "${upper}" (${foundVoucher.name}) BERHASIL digunakan! Diskon ${percent}% diterapkan pada pesanan Anda.`;
+    // Siapkan pesan notifikasi keberhasilan
+    let message = `Kode promo "${upper}" (${foundVoucher.name}) BERHASIL digunakan! Diskon +${percent}% ditambahkan (Total ${newAppliedPromos.length}/2 voucher aktif).`;
     if (minSpend > 0 && subtotal > 0 && subtotal < minSpend) {
       message = `Voucher "${upper}" berhasil dipasang! Minimal belanja Rp ${minSpend.toLocaleString('id-ID')} (belanja Anda saat ini Rp ${subtotal.toLocaleString('id-ID')}). Tambah menu untuk mengaktifkan potongan diskon ${percent}%.`;
     }
@@ -327,14 +474,21 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     };
   };
 
-  // Fungsi menambah kuantitas barang ke keranjang
+  /**
+   * Fungsi: Menambahkan 1 porsi hidangan ke keranjang belanja
+   * @param productId ID produk yang ingin ditambahkan
+   * @param variant Varian rasa minuman jika produk memiliki varian (misal: 'Mangga', 'Sirsak', 'Jambu')
+   */
   const addToCart = (productId: string, variant?: string) => {
     const cartKey = variant ? `${productId}_${variant}` : productId;
     const updated = { ...cart, [cartKey]: (cart[cartKey] || 0) + 1 };
     saveCart(updated);
   };
 
-  // Fungsi mengurangi 1 kuantitas barang di keranjang
+  /**
+   * Fungsi: Mengurangi 1 porsi kuantitas produk dari keranjang belanja
+   * @param productId Key produk di keranjang yang ingin dikurangi
+   */
   const removeFromCart = (productId: string) => {
     const updated = { ...cart };
     if (updated[productId] > 1) {
@@ -345,18 +499,24 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     saveCart(updated);
   };
 
-  // Fungsi menghapus barang sepenuhnya dari keranjang
+  /**
+   * Fungsi: Menghapus item produk seutuhnya dari keranjang belanja
+   * @param productId Key produk di keranjang yang ingin dihapus
+   */
   const deleteFromCart = (productId: string) => {
     const updated = { ...cart };
     delete updated[productId];
     saveCart(updated);
   };
 
-  // Fungsi mengosongkan keranjang belanja
+  /**
+   * Fungsi: Mengosongkan seluruh isi keranjang belanja
+   */
   const clearCart = () => {
     saveCart({});
   };
 
+  // Mengembalikan Provider dengan seluruh nilai state & method handler
   return (
     <CartContext.Provider value={{
       cart,
@@ -364,6 +524,8 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       totalCartCount,
       subtotal,
       appliedPromo,
+      appliedPromos,
+      appliedVouchersList,
       discountPercent,
       discountAmount,
       minSpendRequired,
@@ -380,12 +542,14 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// Custom Hook useCart untuk mempermudah akses CartContext di komponen
+/**
+ * Custom Hook useCart
+ * Mempermudah komponen manapun untuk membaca dan mengelola keranjang belanja
+ */
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider'); // Lempar error jika dipanggil di luar Provider
+    throw new Error('useCart must be used within a CartProvider'); // Proteksi jika dipanggil di luar CartProvider
   }
   return context;
 };
-

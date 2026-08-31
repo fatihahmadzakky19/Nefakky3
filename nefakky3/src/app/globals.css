@@ -165,3 +165,24 @@ body {
 .animate-float-pop {
   animation: floatPop 3.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Sembunyikan ikon mata/reveal password bawaan browser (Edge, Chrome, WebKit) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
+input[type="password"]::-webkit-contacts-auto-fill-button,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+  visibility: hidden !important;
+  display: none !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  right: 0 !important;
+}

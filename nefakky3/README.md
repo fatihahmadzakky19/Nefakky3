@@ -44,11 +44,13 @@ Seluruh dokumen teknis, spesifikasi, dan panduan proyek tersimpan rapi di dalam 
 ## 🚀 Fitur Utama
 
 ### 🛒 1. Modul Pelanggan (Customer Facing)
+* **Single Active Order Protection**: Proteksi cerdas yang membatasi pesanan baru jika pesanan sebelumnya masih dalam tahap proses memasak/pengantaran, dilengkapi pop-up modal pelacakan otomatis.
+* **Multi-Voucher Promo Stacking**: Penggunaan hingga 2 voucher promo bersamaan di keranjang/checkout dengan kalkulasi diskon kumulatif dan tombol hapus individual.
 * **Hero Showcase Carousel**: Slider hidangan nusantara otentik dengan ulasan pelanggan dan navigasi instan.
 * **Katalog Menu & Live Search**: Filter kategori (*Makanan Berat*, *Minuman*, *Menu Hemat*), live search, dan sorting dinamis.
 * **Modal Varian Rasa & Nutrisi**: Informasi kalori, protein, lemak, level kepedasan, dan pilihan 3 varian rasa jus.
 * **Checkout 4-Tahap & Midtrans Snap**: Pembayaran instan via Virtual Account (BCA/BNI/Mandiri/BRI), QRIS, Kartu Kredit, atau Cash on Delivery (COD).
-* **Live GPS Tracking (OpenStreetMap)**: Visualisasi rute kurir bergerak dari Dapur Pusat (*Bojong Gede, Bogor*) ke lokasi pembeli dengan kalkulator jarak Haversine.
+* **Live GPS Tracking & Geocoding (OpenStreetMap)**: Validasi alamat pengiriman realtime dengan formula jarak Haversine presisi dan kalkulasi ongkir otomatis.
 * **Cetak Struk Resmi (Invoice PDF)**: Unduh nota transaksi dan struk digital resmi siap cetak.
 * **Ulasan Rasa & Komunitas**: Form ulasan dengan rating bintang interaktif, lampiran foto, dan balasan resmi admin resto.
 * **3-Way Avatar Studio**: Pemilihan foto profil via galeri file, live webcam capture, atau sinkronisasi Google SSO.

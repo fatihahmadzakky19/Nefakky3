@@ -286,6 +286,16 @@ export interface AdminOrder {
   deletedAt?: string;
 }
 
+/** Helper untuk memeriksa apakah suatu pesanan masih dalam proses aktif (belum selesai / belum sampai) */
+export const isOrderActive = (order?: AdminOrder | null): boolean => {
+  if (!order) return false;
+  if (order.isDeleted) return false;
+  if (order.status === 'COMPLETED' || order.status === 'CANCELLED' || order.customerConfirmed) {
+    return false;
+  }
+  return true;
+};
+
 export interface ReviewReply {
   id: string;
   authorName: string;
@@ -1864,9 +1874,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     const hasUsedInOrders = userOrders.some(o => {
-      const ordVoucher = cleanPromoCode(o.voucherCode || o.appliedPromo);
-      if (!ordVoucher) return false;
-      return ordVoucher === cleanTargetCode;
+      const raw = o.voucherCode || o.appliedPromo;
+      if (!raw) return false;
+      const codes = String(raw).split(/[,+\s]+/).map(c => cleanPromoCode(c)).filter(Boolean);
+      return codes.includes(cleanTargetCode);
     });
 
     if (hasUsedInOrders) return true;
@@ -1938,120 +1949,120 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   /** Helper function untuk mengklaim penggunaan voucher & mematikan promo otomatis secara realtime jika kuota habis */
   const claimVoucherRedemption = async (voucherCode: string, userUid?: string | null, userEmail?: string | null): Promise<boolean> => {
     if (!voucherCode) return false;
-    const cleanCode = cleanPromoCode(voucherCode);
-    if (!cleanCode) return false;
+    const codes = String(voucherCode).split(/[,+\s]+/).map(c => cleanPromoCode(c)).filter(Boolean);
+    if (codes.length === 0) return false;
 
-    try {
-      // 1. Simpan langsung ke localStorage user & session browser agar instan ter-filter dari tampilan
-      if (typeof window !== 'undefined') {
-        const keysToSave = [
-          userUid ? `nefakky_used_vouchers_${userUid}` : null,
-          userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase().trim()}` : null,
-          'nefakky_used_vouchers_session'
-        ].filter(Boolean) as string[];
+    for (const cleanCode of codes) {
+      try {
+        // 1. Simpan langsung ke localStorage user & session browser agar instan ter-filter dari tampilan
+        if (typeof window !== 'undefined') {
+          const keysToSave = [
+            userUid ? `nefakky_used_vouchers_${userUid}` : null,
+            userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase().trim()}` : null,
+            'nefakky_used_vouchers_session'
+          ].filter(Boolean) as string[];
 
-        for (const storageKey of keysToSave) {
-          try {
-            const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            if (!existing.some(c => cleanPromoCode(c) === cleanCode)) {
-              existing.push(cleanCode);
-              localStorage.setItem(storageKey, JSON.stringify(existing));
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      }
-
-      // 2. Simpan catatan riwayat klaim ke Firestore collection 'voucher_redemptions'
-      if (db) {
-        try {
-          const redemptionsCol = collection(db, 'voucher_redemptions');
-          await addDoc(redemptionsCol, {
-            voucherCode: cleanCode,
-            userId: userUid || 'anonymous',
-            userEmail: userEmail || '',
-            redeemedAt: Date.now()
-          });
-        } catch (e) {
-          console.warn("Firestore redemption record error:", e);
-        }
-      }
-
-      // 3. Update kuota dan redemptions voucher di Firestore secara realtime
-      if (db) {
-        const q = collection(db, 'vouchers');
-        const snapshot = await getDocs(q);
-        const targetDoc = snapshot.docs.find(d => {
-          const data = d.data();
-          const docCode = cleanPromoCode(data.code || d.id);
-          return docCode === cleanCode;
-        });
-
-        if (targetDoc) {
-          const v = targetDoc.data();
-          const isNewCust = v.event === 'Pelanggan Baru' || cleanPromoCode(v.code).includes('NEFAKKY10');
-          const isTanpaBatas = (v.redemptions === 'Tanpa Batas' || (v.redemptions && String(v.redemptions).toLowerCase().includes('tanpa batas'))) && !isNewCust;
-
-          if (isNewCust) {
-            const newUsed = (v.usedCount || 0) + 1;
-            await updateDoc(doc(db, 'vouchers', targetDoc.id), {
-              usedCount: newUsed,
-              redemptions: '1x Per Pengguna Baru',
-              expiry: 'Selamanya',
-              status: 'Active',
-              isActive: true
-            });
-          } else if (isTanpaBatas) {
-            const newUsed = (v.usedCount || 0) + 1;
-            await updateDoc(doc(db, 'vouchers', targetDoc.id), {
-              usedCount: newUsed,
-              redemptions: 'Tanpa Batas',
-              expiry: 'Selamanya',
-              status: 'Active',
-              isActive: true
-            });
-          } else {
-            let usedCount = v.usedCount;
-            let totalLimit = v.totalLimit;
-
-            if ((usedCount === undefined || totalLimit === undefined) && v.redemptions) {
-              const parts = String(v.redemptions).split('/');
-              if (parts.length === 2) {
-                usedCount = parseInt(parts[0].trim(), 10);
-                totalLimit = parseInt(parts[1].trim(), 10);
+          for (const storageKey of keysToSave) {
+            try {
+              const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+              if (!existing.some(c => cleanPromoCode(c) === cleanCode)) {
+                existing.push(cleanCode);
+                localStorage.setItem(storageKey, JSON.stringify(existing));
               }
+            } catch (e) {
+              console.error(e);
             }
-
-            const newUsed = (usedCount || 0) + 1;
-            const limit = totalLimit || 500;
-            const isNowExpired = newUsed >= limit;
-            const newRedemptions = `${newUsed}/${limit}`;
-
-            await updateDoc(doc(db, 'vouchers', targetDoc.id), {
-              usedCount: newUsed,
-              totalLimit: limit,
-              redemptions: newRedemptions,
-              status: isNowExpired ? 'Expired' : 'Active',
-              isActive: !isNowExpired
-            });
           }
         }
-      }
 
-      // 4. Perbarui state lokal vouchers agar langsung re-render
-      setVouchersState(prev => prev.map(v => {
-        if (cleanPromoCode(v.code) === cleanCode) {
-          return { ...v, usedCount: (v.usedCount || 0) + 1 };
+        // 2. Simpan catatan riwayat klaim ke Firestore collection 'voucher_redemptions'
+        if (db) {
+          try {
+            const redemptionsCol = collection(db, 'voucher_redemptions');
+            await addDoc(redemptionsCol, {
+              voucherCode: cleanCode,
+              userId: userUid || 'anonymous',
+              userEmail: userEmail || '',
+              redeemedAt: Date.now()
+            });
+          } catch (e) {
+            console.warn("Firestore redemption record error:", e);
+          }
         }
-        return v;
-      }));
 
-      return true;
-    } catch (err) {
-      console.error('Error claiming voucher redemption:', err);
-      return false;
+        // 3. Update kuota dan redemptions voucher di Firestore secara realtime
+        if (db) {
+          const q = collection(db, 'vouchers');
+          const snapshot = await getDocs(q);
+          const targetDoc = snapshot.docs.find(d => {
+            const data = d.data();
+            const docCode = cleanPromoCode(data.code || d.id);
+            return docCode === cleanCode;
+          });
+
+          if (targetDoc) {
+            const v = targetDoc.data();
+            const isNewCust = v.event === 'Pelanggan Baru' || cleanPromoCode(v.code).includes('NEFAKKY10');
+            const isTanpaBatas = (v.redemptions === 'Tanpa Batas' || (v.redemptions && String(v.redemptions).toLowerCase().includes('tanpa batas'))) && !isNewCust;
+
+            if (isNewCust) {
+              const newUsed = (v.usedCount || 0) + 1;
+              await updateDoc(doc(db, 'vouchers', targetDoc.id), {
+                usedCount: newUsed,
+                redemptions: '1x Per Pengguna Baru',
+                expiry: 'Selamanya',
+                status: 'Active',
+                isActive: true
+              });
+            } else if (isTanpaBatas) {
+              const newUsed = (v.usedCount || 0) + 1;
+              await updateDoc(doc(db, 'vouchers', targetDoc.id), {
+                usedCount: newUsed,
+                redemptions: 'Tanpa Batas',
+                expiry: 'Selamanya',
+                status: 'Active',
+                isActive: true
+              });
+            } else {
+              let usedCount = v.usedCount || 0;
+              let totalLimit = v.totalLimit || 500;
+
+              if (v.redemptions && String(v.redemptions).includes('/')) {
+                const parts = String(v.redemptions).split('/');
+                if (parts.length === 2) {
+                  usedCount = parseInt(parts[0].trim(), 10) || usedCount;
+                  totalLimit = parseInt(parts[1].trim(), 10) || totalLimit;
+                }
+              }
+
+              const newUsed = usedCount + 1;
+              const isNowExpired = newUsed >= totalLimit;
+              const newRedemptions = `${newUsed}/${totalLimit}`;
+
+              await updateDoc(doc(db, 'vouchers', targetDoc.id), {
+                usedCount: newUsed,
+                totalLimit,
+                redemptions: newRedemptions,
+                status: isNowExpired ? 'Expired' : 'Active',
+                isActive: !isNowExpired
+              });
+            }
+          }
+        }
+
+        // 4. Perbarui state lokal vouchers agar langsung re-render
+        setVouchersState(prev => prev.map(v => {
+          if (cleanPromoCode(v.code) === cleanCode) {
+            return { ...v, usedCount: (v.usedCount || 0) + 1 };
+          }
+          return v;
+        }));
+      } catch (err) {
+        console.warn('Error claiming single voucher code:', cleanCode, err);
+      }
     }
+
+    return true;
   };
 
   const addReview = (reviewData: Omit<UserReview, 'id' | 'date' | 'likesCount'>): UserReview => {

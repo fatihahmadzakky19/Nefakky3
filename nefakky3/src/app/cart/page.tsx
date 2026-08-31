@@ -17,7 +17,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { useData, isVoucherValidNow } from '@/context/DataContext';
+import { useData, isVoucherValidNow, isOrderActive } from '@/context/DataContext';
 import { formatCurrentRealtimeOrderDate } from '@/lib/orderTimeUtils';
 import { 
   validateAddressGeocode, 
@@ -29,11 +29,9 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AutoMapPickerModal from '@/components/AutoMapPickerModal';
 import AuthRequiredModal from '@/components/AuthRequiredModal';
+import ActiveOrderBlockerModal from '@/components/ActiveOrderBlockerModal';
 import { 
-  Search, 
-  Bell, 
   ShoppingBag, 
-  User, 
   Trash2, 
   Plus, 
   Minus, 
@@ -48,30 +46,31 @@ import {
   MapPin, 
   Edit,
   Navigation,
-  Info,
-  Bike,
+  Info, 
+  Bike, 
   Building2,
   Wallet,
   QrCode,
   CreditCard,
   Truck,
-  Sparkles,
   Zap,
   Copy,
-  Lock,
-  Smartphone,
+  Lock, 
+  Clock,
   ExternalLink
 } from 'lucide-react';
 
 export default function CartCheckoutWorkflowPage() {
   const router = useRouter();
   const { user, addAddress, updateProfile } = useAuth();
-  const { vouchers, addOrder, claimVoucherRedemption } = useData();
+  const { orders, vouchers, addOrder, claimVoucherRedemption } = useData();
   const { 
     cartItems, 
     totalCartCount, 
     subtotal, 
     appliedPromo, 
+    appliedPromos,
+    appliedVouchersList,
     discountPercent, 
     discountAmount, 
     minSpendRequired,
@@ -83,6 +82,20 @@ export default function CartCheckoutWorkflowPage() {
     removePromo, 
     clearCart 
   } = useCart();
+
+  // Deteksi apakah pengguna memiliki pesanan aktif yang sedang berjalan / belum selesai
+  const userActiveOrder = React.useMemo(() => {
+    if (!user) return null;
+    const currentUid = user.uid;
+    const currentEmail = (user.email || '').toLowerCase().trim();
+    return (orders || []).find(o => {
+      const isUidMatch = Boolean(currentUid && o.userId && o.userId === currentUid);
+      const isEmailMatch = Boolean(currentEmail && o.customerEmail && o.customerEmail.toLowerCase().trim() === currentEmail);
+      return (isUidMatch || isEmailMatch) && isOrderActive(o);
+    }) || null;
+  }, [orders, user]);
+
+  const [showActiveOrderModal, setShowActiveOrderModal] = useState<boolean>(false);
 
   // Workflow State: 'cart' | 'address' | 'payment' | 'success'
   const [step, setStep] = useState<'cart' | 'address' | 'payment' | 'success'>('cart');
@@ -304,6 +317,10 @@ export default function CartCheckoutWorkflowPage() {
       setShowAuthModal(true);
       return;
     }
+    if (userActiveOrder) {
+      setShowActiveOrderModal(true);
+      return;
+    }
     if (cartItems.length === 0) return;
 
     if (!deliveryAddress.trim()) {
@@ -328,6 +345,16 @@ export default function CartCheckoutWorkflowPage() {
    * - Jika metode Online (VA / E-Wallet / QRIS / CC): Memanggil API Route Midtrans Charge
    */
   const handleInitiatePayment = async () => {
+    if (!user) {
+      setAuthActionName('melakukan transaksi pembayaran');
+      setShowAuthModal(true);
+      return;
+    }
+    if (userActiveOrder) {
+      setShowActiveOrderModal(true);
+      return;
+    }
+
     if (selectedPaymentMethod === 'cod') {
       // Pembayaran Bayar di Tempat (COD) langsung dieksekusi secara instan
       handleExecutePayment();
@@ -529,6 +556,41 @@ export default function CartCheckoutWorkflowPage() {
                   </p>
                 </div>
 
+                {/* Banner Peringatan Pesanan Masih Berjalan / Belum Selesai */}
+                {userActiveOrder && (
+                  <div className="bg-amber-50/90 border border-amber-300 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
+                    <div className="flex items-start sm:items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-200/80 text-amber-900 flex items-center justify-center shrink-0 shadow-2xs">
+                        <Clock className="w-6 h-6 animate-pulse" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200 text-amber-900 px-2 py-0.5 rounded">
+                            PESANAN MASIH DALAM PROSES
+                          </span>
+                          <span className="font-mono font-bold text-xs text-amber-900">
+                            #{userActiveOrder.id}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-sm text-[#25160E] mt-1">
+                          Selesaikan Pesanan Saat Ini Sebelum Membeli Lagi
+                        </h4>
+                        <p className="text-xs text-amber-800 font-light mt-0.5 leading-relaxed max-w-2xl">
+                          Akun Anda memiliki transaksi yang sedang diproses dapur/kurir. Transaksi baru dapat dilakukan setelah pesanan <strong>#{userActiveOrder.id}</strong> sampai di lokasi Anda dan diselesaikan.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/notifications')}
+                      className="px-4 py-3 bg-[#25160E] hover:bg-black text-amber-200 font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                    >
+                      <span>Lacak Pesanan #{userActiveOrder.id}</span>
+                      <ArrowRight className="w-4 h-4 text-amber-300" />
+                    </button>
+                  </div>
+                )}
+
                 {/* Toast Notification */}
                 {promoMessage && (
                   <div className={`p-4 rounded-xl text-xs sm:text-sm flex items-center gap-2 mb-6 font-medium shadow-xs ${
@@ -622,6 +684,22 @@ export default function CartCheckoutWorkflowPage() {
 
                     {cartItems.length > 0 && (
                       <div className="bg-white p-6 rounded-2xl shadow-xs border border-stone-200 flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Tag className="w-4 h-4 text-[#25160E]" />
+                            <h3 className="font-semibold text-xs text-neutral-900">Voucher & Kupon Promo</h3>
+                          </div>
+                          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                            (appliedPromos?.length || 0) >= 2 
+                              ? 'bg-amber-100 text-amber-800' 
+                              : (appliedPromos?.length || 0) === 1
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-stone-100 text-stone-600'
+                          }`}>
+                            {appliedPromos?.length || 0}/2 Voucher Digunakan (Maks. 2)
+                          </span>
+                        </div>
+
                         <form onSubmit={handleApplyPromo} className="flex flex-col sm:flex-row gap-3">
                           <div className="flex-1 bg-stone-50 border border-stone-200 rounded-xl flex items-center px-4 gap-2 focus-within:ring-2 focus-within:ring-black">
                             <Tag className="w-4 h-4 text-stone-400" />
@@ -629,51 +707,68 @@ export default function CartCheckoutWorkflowPage() {
                               type="text"
                               value={promoInput}
                               onChange={(e) => setPromoInput(e.target.value)}
-                              placeholder="Masukkan kode promo (misal: DISKON50, WEEKENDSERU)"
-                              className="bg-transparent border-none outline-none text-xs text-black w-full h-12 placeholder-stone-400 font-medium"
+                              disabled={(appliedPromos?.length || 0) >= 2}
+                              placeholder={(appliedPromos?.length || 0) >= 2 ? "Maksimal 2 voucher promo telah aktif di keranjang" : "Masukkan kode promo (misal: DISKON50, WEEKENDSERU)"}
+                              className="bg-transparent border-none outline-none text-xs text-black w-full h-12 placeholder-stone-400 font-medium disabled:opacity-50"
                             />
                           </div>
-                          <button type="submit" className="bg-[#25160E] text-white h-12 px-6 rounded-xl font-semibold text-xs tracking-wide hover:bg-black transition-colors cursor-pointer shrink-0">
+                          <button 
+                            type="submit" 
+                            disabled={(appliedPromos?.length || 0) >= 2}
+                            className="bg-[#25160E] text-white h-12 px-6 rounded-xl font-semibold text-xs tracking-wide hover:bg-black transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
                             Gunakan Kode
                           </button>
                         </form>
 
-                        {appliedPromo && (
-                          <div className={`border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                            isMinSpendMet 
-                              ? 'bg-emerald-50 text-emerald-900 border-emerald-200' 
-                              : 'bg-amber-50 text-amber-900 border-amber-200'
-                          }`}>
-                            <div className="flex items-start sm:items-center gap-3">
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isMinSpendMet ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                <Tag className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <div className="font-semibold text-xs flex items-center gap-2 flex-wrap">
-                                  <span>Voucher: <strong className="font-bold font-mono">{appliedPromo}</strong> (Diskon {discountPercent}%)</span>
-                                  {isMinSpendMet ? (
-                                    <span className="text-[10px] bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded font-bold">
-                                      Diskon Aktif (-Rp {discountAmount.toLocaleString('id-ID')})
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">
-                                      Min. Belanja Rp {minSpendRequired.toLocaleString('id-ID')}
-                                    </span>
-                                  )}
+                        {/* List Voucher Aktif (Hingga Maksimal 2 Voucher) */}
+                        {appliedVouchersList && appliedVouchersList.length > 0 && (
+                          <div className="space-y-2.5 pt-1">
+                            {appliedVouchersList.map((vItem) => {
+                              const isThisMet = subtotal >= vItem.minSpend;
+                              return (
+                                <div 
+                                  key={vItem.code}
+                                  className={`border rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                                    isThisMet 
+                                      ? 'bg-emerald-50/80 text-emerald-900 border-emerald-200' 
+                                      : 'bg-amber-50/80 text-amber-900 border-amber-200'
+                                  }`}
+                                >
+                                  <div className="flex items-start sm:items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isThisMet ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                      <Tag className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <div className="font-semibold text-xs flex items-center gap-2 flex-wrap">
+                                        <span>Voucher: <strong className="font-bold font-mono">{vItem.code}</strong> (Diskon {vItem.discountPercent}%)</span>
+                                        {isThisMet ? (
+                                          <span className="text-[10px] bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded font-bold">
+                                            Diskon Aktif (-Rp {Math.round(subtotal * (vItem.discountPercent / 100)).toLocaleString('id-ID')})
+                                          </span>
+                                        ) : (
+                                          <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">
+                                            Min. Belanja Rp {vItem.minSpend.toLocaleString('id-ID')}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {!isThisMet && (
+                                        <p className="text-[11px] text-amber-800 font-light mt-0.5">
+                                          Tambah menu senilai <strong className="font-bold">Rp {(vItem.minSpend - subtotal).toLocaleString('id-ID')}</strong> lagi untuk mengaktifkan potongan diskon voucher ini.
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <button 
+                                    type="button"
+                                    onClick={() => removePromo(vItem.code)} 
+                                    className="font-bold text-[11px] text-rose-600 hover:text-rose-800 transition-colors uppercase tracking-wider self-end sm:self-auto cursor-pointer"
+                                  >
+                                    Hapus
+                                  </button>
                                 </div>
-                                {!isMinSpendMet && (
-                                  <p className="text-[11px] text-amber-800 font-light mt-0.5">
-                                    Tambah menu senilai <strong className="font-bold">Rp {(minSpendRequired - subtotal).toLocaleString('id-ID')}</strong> lagi untuk menikmati potongan diskon {discountPercent}%.
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <button 
-                              onClick={removePromo} 
-                              className="font-bold text-[11px] text-rose-600 hover:text-rose-800 transition-colors uppercase tracking-wider self-end sm:self-auto cursor-pointer"
-                            >
-                              Hapus
-                            </button>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -746,13 +841,30 @@ export default function CartCheckoutWorkflowPage() {
                             setShowAuthModal(true);
                             return;
                           }
+                          if (userActiveOrder) {
+                            setShowActiveOrderModal(true);
+                            return;
+                          }
                           setStep('address');
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
-                        className="bg-[#25160E] text-white h-14 rounded-xl flex items-center justify-center font-semibold text-xs tracking-wide w-full gap-2 hover:bg-black transition-all shadow-lg disabled:opacity-50 cursor-pointer"
+                        className={`h-14 rounded-xl flex items-center justify-center font-semibold text-xs tracking-wide w-full gap-2 transition-all shadow-lg cursor-pointer ${
+                          userActiveOrder
+                            ? 'bg-amber-900/80 hover:bg-amber-950 text-amber-200'
+                            : 'bg-[#25160E] hover:bg-black text-white disabled:opacity-50'
+                        }`}
                       >
-                        <span>Lanjutkan Ke Alamat Pengiriman</span>
-                        <ArrowRight className="w-4 h-4" />
+                        {userActiveOrder ? (
+                          <>
+                            <Clock className="w-4 h-4 text-amber-300 animate-pulse" />
+                            <span>Pesanan #{userActiveOrder.id} Belum Selesai</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Lanjutkan Ke Alamat Pengiriman</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
                       </button>
 
                       <div className="flex items-center justify-center gap-1.5 opacity-70">
@@ -1698,6 +1810,13 @@ export default function CartCheckoutWorkflowPage() {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         actionName={authActionName}
+      />
+
+      {/* MODAL PESANAN AKTIF SEDANG BERJALAN */}
+      <ActiveOrderBlockerModal
+        isOpen={showActiveOrderModal}
+        onClose={() => setShowActiveOrderModal(false)}
+        activeOrder={userActiveOrder || null}
       />
 
       {/* 7. FOOTER EDITORIAL TERPADU */}
