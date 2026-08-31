@@ -1,126 +1,173 @@
 <?php
 
+// -----------------------------------------------------------------------------
+// NAMESPACE: Mengelompokkan class Review ke dalam namespace App\Models.
+// Konsep PBO: Isolasi nama class ulasan pelanggan.
+// -----------------------------------------------------------------------------
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+// -----------------------------------------------------------------------------
+// IMPORT DEPENDENCY: Mengimpor class dasar Eloquent & tipe relasi database.
+// Konsep PBO: Pola Pewarisan (Inheritance) & Asosiasi Objek.
+// -----------------------------------------------------------------------------
+use Illuminate\Database\Eloquent\Model;               // Superclass Model Eloquent
+use Illuminate\Database\Eloquent\Relations\BelongsTo; // Tipe relasi Many-to-One
 
 /**
- * Model Review
- * 
- * Model Eloquent ini merepresentasikan tabel 'user_reviews' di database.
- * Menyimpan ulasan kepuasan pelanggan, rating bintang (1-5), lencana status,
- * moderasi admin, timestamp review (datetime), dan balasan penjual.
+ * =============================================================================
+ * CLASS: Review (Pemrograman Berorientasi Objek / PBO)
+ * =============================================================================
+ * Blueprint objek ulasan & penilaian (rating) kepuasan pelanggan atas hidangan.
+ *
+ * Konsep PBO yang Diterapkan:
+ * 1. INHERITANCE   : Mewarisi operasi database dari parent class 'Model'.
+ * 2. ENKAPSULASI   : Mengamankan properti, casting tipe data, & status moderasi.
+ * 3. ASOSIASI/RELASI: Menghubungkan ulasan ke ProductItem dan User.
+ * 4. BUSINESS LOGIC: Pengelolaan balasan resmi admin (addReply) & counter like.
+ * =============================================================================
  */
 class Review extends Model
 {
-    // Menentukan nama tabel secara eksplisit pada database
+    // -------------------------------------------------------------------------
+    // ENKAPSULASI TABEL & PRIMARY KEY:
+    // -------------------------------------------------------------------------
+    // Menentukan nama tabel khusus di database (bukan default 'reviews')
     protected $table = 'user_reviews';
 
     // Mengatur Primary Key menggunakan string custom (contoh: "REV-001")
     protected $primaryKey = 'review_id';
+    
+    // Memberitahu Eloquent bahwa primary key ini bukan integer auto-increment
     public $incrementing = false;
+    
+    // Menetapkan tipe data primary key sebagai string
     protected $keyType = 'string';
 
     /**
-     * Kolom-kolom yang dapat diisi secara massal.
+     * ENKAPSULASI MASS ASSIGNMENT ($fillable):
+     * Kolom-kolom yang diizinkan untuk diisi secara massal saat Review::create().
      *
      * @var list<string>
      */
     protected $fillable = [
-        'review_id',      // String (30)
-        'product_id',     // String (30)
-        'user_id',        // Foreign Key
-        'order_id',       // String (30)
-        'author_name',    // String (100)
-        'author_email',   // String (150)
-        'author_badge',   // ENUM: 'PLATINUM', 'GOLD', 'SILVER', 'VERIFIED BUYER', 'CUSTOMER'
-        'avatar',         // String (500)
-        'rating',         // UNSIGNED TINYINTEGER (1 - 5)
-        'date',           // String (50)
-        'review_date',    // DATETIME
-        'product_name',   // String (150)
-        'product_image',  // String (500)
-        'comment',        // TEXT
-        'likes_count',    // UNSIGNED INTEGER
-        'status',         // ENUM: 'PUBLISHED', 'PENDING', 'FLAGGED', 'APPROVED', 'REJECTED'
-        'flagged_reason', // String (255)
-        'is_pinned',      // BOOLEAN
-        'is_hidden',      // BOOLEAN
-        'photos',         // JSON Array
-        'replies',        // JSON Array
-        'replied_at',     // DATETIME
+        'review_id',      // String (30) Primary Key Unik (e.g. "REV-001")
+        'product_id',     // Foreign Key ID produk yang diulas (e.g. "PROD-001")
+        'user_id',        // Foreign Key ID Pengguna yang menulis ulasan
+        'order_id',       // ID Transaksi pesanan terkait
+        'author_name',    // Nama lengkap penulis ulasan
+        'author_email',   // Email penulis ulasan
+        'author_badge',   // ENUM Lencana: 'PLATINUM', 'GOLD', 'SILVER', 'VERIFIED BUYER', 'CUSTOMER'
+        'avatar',         // URL foto avatar pelanggan
+        'rating',         // UNSIGNED TINYINTEGER Skor bintang kepuasan (1 - 5)
+        'date',           // String format tanggal display
+        'review_date',    // DATETIME Timestamp ulasan dibuat
+        'product_name',   // Snapshot nama produk saat diulas
+        'product_image',  // Snapshot foto produk saat diulas
+        'comment',        // TEXT Isi pesan ulasan dan testimoni rasa
+        'likes_count',    // UNSIGNED INTEGER Total jumlah like dari komunitas
+        'status',         // ENUM Status moderasi: 'PUBLISHED', 'PENDING', 'FLAGGED', 'APPROVED', 'REJECTED'
+        'flagged_reason', // Alasan pelaporan jika ulasan ditandai melanggar
+        'is_pinned',      // BOOLEAN Penanda disematkan di urutan teratas
+        'is_hidden',      // BOOLEAN Penanda disembunyikan oleh admin
+        'photos',         // JSON Array kumpulan URL foto hidangan dari pelanggan
+        'replies',        // JSON Array balasan resmi dari tim resto
+        'replied_at',     // DATETIME Timestamp balasan terakhir diberikan
     ];
 
     /**
-     * Konversi tipe data otomatis.
+     * ENKAPSULASI CASTING TIPE DATA ($casts):
+     * Otomatis mengonversi kolom JSON tabel ke array PHP dan tanggal ke objek DateTime.
      *
      * @var array<string, string>
      */
     protected $casts = [
-        'rating' => 'integer',
-        'likes_count' => 'integer',
-        'is_pinned' => 'boolean',
-        'is_hidden' => 'boolean',
-        'review_date' => 'datetime',
-        'replied_at' => 'datetime',
-        'photos' => 'array',
-        'replies' => 'array',
+        'rating'      => 'integer',   // Otomatis dikonversi ke integer
+        'likes_count' => 'integer',   // Otomatis dikonversi ke integer
+        'is_pinned'   => 'boolean',   // Otomatis dikonversi ke boolean
+        'is_hidden'   => 'boolean',   // Otomatis dikonversi ke boolean
+        'review_date' => 'datetime',  // Dikonversi ke objek DateTime Carbon
+        'replied_at'  => 'datetime',  // Dikonversi ke objek DateTime Carbon
+        'photos'      => 'array',     // Otomatis didekode dari JSON menjadi Array PHP
+        'replies'     => 'array',     // Otomatis didekode dari JSON menjadi Array PHP
     ];
 
     /**
-     * Relasi Many-to-One ke ProductItem.
+     * =========================================================================
+     * RELASI PBO: BelongsTo (Many-to-One) ke Model ProductItem
+     * =========================================================================
+     * Menghubungkan objek ulasan ke hidangan yang dinilai.
      *
      * @return BelongsTo
      */
     public function product(): BelongsTo
     {
+        // Relasi: Banyak ulasan (Review) ditujukan untuk Satu produk hidangan (ProductItem)
         return $this->belongsTo(ProductItem::class, 'product_id', 'item_id');
     }
 
     /**
-     * Relasi Many-to-One ke User.
+     * =========================================================================
+     * RELASI PBO: BelongsTo (Many-to-One) ke Model User
+     * =========================================================================
+     * Menghubungkan objek ulasan ke akun pengguna pembuatnya.
      *
      * @return BelongsTo
      */
     public function user(): BelongsTo
     {
+        // Relasi: Banyak ulasan (Review) ditulis oleh Satu pengguna (User)
         return $this->belongsTo(User::class);
     }
 
     /**
-     * Metode Bisnis PBO: Menambahkan tanggapan/balasan resmi dari penjual.
+     * =========================================================================
+     * METODE LOGIKA BISNIS PBO: addReply()
+     * =========================================================================
+     * Mengenkapsulasi penambahan balasan apresiasi resmi dari resto ke dalam ulasan.
      *
-     * @param string $authorName
-     * @param string $comment
-     * @param string|null $authorEmail
+     * @param string $authorName Nama staf/admin yang membalas
+     * @param string $comment Isi balasan
+     * @param string|null $authorEmail Surel resmi admin
      * @return bool
      */
     public function addReply(string $authorName, string $comment, ?string $authorEmail = null): bool
     {
+        // 1. Ambil daftar balasan saat ini atau inisialisasi array kosong
         $currentReplies = $this->replies ?? [];
+        
+        // 2. Tambahkan objek balasan baru ke array
         $currentReplies[] = [
-            'id' => 'reply-' . (count($currentReplies) + 1),
-            'authorName' => $authorName,
+            'id'          => 'reply-' . (count($currentReplies) + 1),
+            'authorName'  => $authorName,
             'authorEmail' => $authorEmail ?? 'admin@nefakky.com',
-            'comment' => $comment,
-            'date' => now()->translatedFormat('d M Y, H:i'),
+            'comment'     => $comment,
+            'date'        => now()->translatedFormat('d M Y, H:i'),
         ];
 
+        // 3. Perbarui properti state internal objek
         $this->replies = $currentReplies;
         $this->replied_at = now();
+        
+        // 4. Simpan ke database
         return $this->save();
     }
 
     /**
-     * Metode Bisnis PBO: Menambah jumlah respon suka (Like).
+     * =========================================================================
+     * METODE LOGIKA BISNIS PBO: incrementLikes()
+     * =========================================================================
+     * Mengenkapsulasi penambahan respon 'Suka' (Like) pada ulasan.
      *
-     * @return int
+     * @return int Jumlah total like terbaru
      */
     public function incrementLikes(): int
     {
+        // Tambahkan counter like sebanyak 1
         $this->likes_count = ($this->likes_count ?? 0) + 1;
+        // Simpan perubahan ke database
         $this->save();
+        // Kembalikan nilai total like terbaru
         return $this->likes_count;
     }
 }
+
