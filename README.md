@@ -1,4 +1,4 @@
-# 🍲 Nefakky — Artisanal Culinary Marketplace & Enterprise Operations Platform
+# 🍲 Nefakky — Culinary Marketplace 
 
 [![Next.js](https://img.shields.io/badge/Next.js-14.2.3-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-18.3.1-blue?style=for-the-badge&logo=react)](https://reactjs.org/)
@@ -100,10 +100,3 @@ Platform ini dirancang untuk memberikan pengalaman kuliner terbaik bagi pelangga
 * **`spatie/laravel-activitylog`**: Pencatatan audit trail riwayat seluruh aksi admin dan perubahan status.
 * **`spatie/laravel-query-builder`**: Pustaka filter, pencarian, dan pengurutan dinamis pada endpoint REST API.
 * **`dedoc/scramble`**: Generator dokumentasi interaktif OpenAPI otomatis (`/docs/api`).
-
----
-
-## ⚖️ Hak Cipta
-
-Seluruh hak cipta dilindungi undang-undang.  
-Dibuat untuk **Nefakky Culinary Marketplace & Resto**.
