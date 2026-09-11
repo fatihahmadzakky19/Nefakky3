@@ -283,8 +283,8 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm p-3 sm:p-6 md:p-10 flex items-center justify-center animate-fade-in font-sans">
-      <div className="bg-[#FBF9F5] w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl border border-stone-200/90 relative my-auto max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm p-3 sm:p-6 md:p-10 flex items-center justify-center animate-fade-in font-sans">
+      <div className="bg-white w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl border border-slate-200/90 relative my-auto max-h-[92vh] overflow-y-auto">
         
         {/* Close Button */}
         <button
@@ -670,7 +670,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                   <>
                     <button
                       onClick={handleAddToCart}
-                      className="flex-1 py-2.5 px-3 bg-white border border-stone-300 hover:bg-stone-50 active:scale-[0.99] text-stone-900 font-medium text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 py-2.5 px-3 bg-white border border-slate-300 hover:bg-slate-50 active:scale-[0.99] text-[#0F172A] font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <ShoppingBag className="w-3.5 h-3.5" />
                       <span>Tambah</span>
@@ -678,7 +678,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
                     <button
                       onClick={handleBuyNow}
-                      className="py-2.5 px-4 bg-black hover:bg-neutral-800 active:scale-[0.99] text-white font-medium text-xs rounded-xl shadow-sm transition-all whitespace-nowrap cursor-pointer"
+                      className="py-2.5 px-4 bg-[#FF5400] hover:bg-[#E04800] active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-md shadow-[#FF5400]/25 transition-all whitespace-nowrap cursor-pointer"
                     >
                       Beli Langsung (Rp {totalPrice.toLocaleString('id-ID')})
                     </button>

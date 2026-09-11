@@ -200,7 +200,7 @@ export default function CommentsPage() {
   const displayedReviews = sortedReviews.slice(0, visibleReviewsCount);
 
   return (
-    <div className="bg-[#FAF8F5] font-sans text-[#25160E] min-h-screen selection:bg-[#934b19]/20 selection:text-[#934b19] flex flex-col justify-between">
+    <div className="bg-[#F8FAFC] font-sans text-[#0F172A] min-h-screen selection:bg-[#FF5400]/20 selection:text-[#FF5400] flex flex-col justify-between">
       
       {/* 1. NAVBAR UTAMA TERPADU */}
       <Navbar />
@@ -211,18 +211,18 @@ export default function CommentsPage() {
           
           {/* Hero Section Banner Komunitas */}
           <section className="flex flex-col space-y-3 text-left">
-            <div className="inline-flex items-center gap-2 self-start px-3.5 py-1.5 bg-stone-200/80 rounded-full">
-              <Users className="w-4 h-4 text-[#25160E]" />
-              <span className="font-semibold text-xs text-[#25160E] uppercase tracking-widest">
+            <div className="inline-flex items-center gap-2 self-start px-3.5 py-1.5 bg-[#FF5400]/10 rounded-full">
+              <Users className="w-4 h-4 text-[#FF5400]" />
+              <span className="font-bold text-xs text-[#FF5400] uppercase tracking-widest font-mono">
                 Komunitas Pecinta Kuliner
               </span>
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-[#25160E] font-bold tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-[#0F172A] font-black tracking-tight">
               Ulasan &amp; Pengalaman Pelanggan
             </h1>
 
-            <p className="text-sm sm:text-base text-stone-600 font-light max-w-2xl leading-relaxed">
+            <p className="text-sm sm:text-base text-slate-600 font-normal max-w-2xl leading-relaxed">
               Jelajahi cerita dan pengalaman otentik dari pelanggan yang telah menikmati kelezatan menu kami. Bagikan momen kuliner Anda bersama Nefakky.
             </p>
           </section>

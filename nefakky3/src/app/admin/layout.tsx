@@ -158,7 +158,7 @@ export default function AdminLayout({
         <AdminHeader
           onPrintPDF={handlePrintPDFReport}
           onExportCSV={handleExportCSV}
-          managerName={user?.displayName || 'Fatih Ahmad Zakky'}
+          managerName={user?.displayName || 'Store Manager'}
           managerRole="Store Manager"
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
           unreadChatCount={unreadChatCount}
@@ -166,28 +166,28 @@ export default function AdminLayout({
         />
 
         {/* AREA BODY UNTUK HALAMAN SUB-ROUTE */}
-        <main className="pt-20 px-4 sm:px-8 pb-24 max-w-[1280px] mx-auto space-y-8 print:pt-4 print:px-4">
+        <main className="pt-20 px-4 sm:px-8 pb-24 max-w-[1360px] mx-auto space-y-8 print:pt-4 print:px-4">
           {children}
         </main>
       </div>
 
       {/* 3. FLOATING TOAST NOTIFIKASI PESAN MASUK REALTIME */}
       {latestChatNotification && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-[#25160E] text-white rounded-3xl p-4 shadow-2xl border-2 border-amber-500/40 animate-fade-in">
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-[#0F172A] text-white rounded-3xl p-4 shadow-2xl border-2 border-[#FF5400]/40 animate-fade-in">
           {/* Baris Header Notifikasi */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#934B19] text-white flex items-center justify-center font-bold text-sm shrink-0">
-                <MessageCircle className="w-5 h-5 text-amber-300" />
+              <div className="w-10 h-10 rounded-2xl bg-[#FF5400] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
+                <MessageCircle className="w-5 h-5 text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-500/30">
-                    💬 Pesan Baru CS
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#FFB703] bg-black/40 px-2 py-0.5 rounded-full border border-[#FFB703]/30 font-mono">
+                    Pesan Baru CS
                   </span>
-                  <span className="text-[10px] text-stone-400">{latestChatNotification.timestamp}</span>
+                  <span className="text-[10px] text-slate-400 font-mono">{latestChatNotification.timestamp}</span>
                 </div>
-                <h4 className="text-xs font-bold text-amber-100 mt-1">
+                <h4 className="text-xs font-bold text-white mt-1">
                   {latestChatNotification.userName || latestChatNotification.userEmail.split('@')[0]}
                 </h4>
               </div>
@@ -195,14 +195,14 @@ export default function AdminLayout({
             {/* Tombol Tutup Notifikasi */}
             <button 
               onClick={() => setLatestChatNotification(null)}
-              className="text-stone-400 hover:text-white p-1 rounded-lg"
+              className="text-slate-400 hover:text-white p-1 rounded-lg"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Cuplikan Teks Pesan Chat */}
-          <p className="text-xs text-stone-300 font-light mt-2 line-clamp-2 bg-stone-900/60 p-2.5 rounded-xl border border-stone-800">
+          <p className="text-xs text-slate-300 font-normal mt-2 line-clamp-2 bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
             "{latestChatNotification.text}"
           </p>
 
@@ -213,7 +213,7 @@ export default function AdminLayout({
                 setLatestChatNotification(null);
                 router.push(`/admin/chat?chat=${encodeURIComponent(latestChatNotification.userEmail)}`);
               }}
-              className="px-4 py-2 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-4 py-2 bg-[#FF5400] hover:bg-[#E04800] text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
             >
               <span>Balas Chat Sekarang</span>
               <ArrowRight className="w-3.5 h-3.5" />
