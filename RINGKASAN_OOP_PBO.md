@@ -304,9 +304,15 @@ return DB::transaction(function () use ($data, $itemsData) {
 - **Inheritance & Polimorfisme**: `MidtransPaymentService(BasePaymentService)` meng-override metode tersebut untuk menghubungi endpoint Midtrans Snap API.
 - **Class Method**: `HaversineDistanceCalculator` menggunakan dekorator `@classmethod` untuk perhitungan jarak tanpa instansiasi objek.
 
-### 2. Type-Safe OOP di Next.js TypeScript (`src/lib/mapService.ts`)
-- Menerapkan kontrak interface bertipe ketat (`MapCoordinates`, `MapSettings`).
-- Menyediakan enkapsulasi pembacaan dan penyimpanan pengaturan ke `localStorage`.
+### 2. Type-Safe OOP & Design Patterns di Next.js TypeScript
+- **Factory Pattern (`createMaskIcon` & `createColoredIcon`)**:
+  Fungsi pabrik (*factory function*) di `src/components/icons/CustomIcons.tsx` yang secara dinamis memproduksi komponen ikon SVG/CSS-mask dengan enkapsulasi styling ukuran, peran aksesibilitas (`role="img"`), dan `aria-label`.
+- **Strategy Pattern (`MapProvider`)**:
+  Enkapsulasi algoritma penyedia peta di `src/lib/mapService.ts` yang memungkinkan pertukaran strategi antara OpenStreetMap/Nominatim dan Google Maps Platform tanpa mengubah kode konsumen pemanggil.
+- **State Pattern (5-Stage Order Lifecycle)**:
+  Mesin status di `AdminOrdersTab.tsx` dan `RealtimeOrderTracker.tsx` yang membatasi transisi tahapan pemrosesan pesanan secara sekuensial (`RECEIVED` -> `PREPARING` -> `READY` -> `DELIVERING` -> `DELIVERED` / `COMPLETED`).
+- **Observer Pattern (WebSocket Telemetry & Context Providers)**:
+  `useRealtimeBroadcaster.ts` dan `DataContext.tsx` bertindak sebagai *subscriber/observer* yang mendengarkan siaran event dari server Laravel Reverb dan secara reaktif memperbarui state antarmuka pelanggan dan dapur.
 
 ---
 
@@ -322,6 +328,7 @@ return DB::transaction(function () use ($data, $itemsData) {
 | **6** | **Trait** | *Mengapa menggunakan Trait di Laravel?* | Untuk berbagi fungsi lintas Controller tanpa pewarisan bertingkat yang rumit, seperti `ApiResponseTrait` (format JSON) dan `BroadcastSafelyTrait` (WebSocket). |
 | **7** | **Static Method** | *Kapan Static Method digunakan?* | Pada `Voucher::getCurrentISOWeek()` yang bisa dipanggil langsung tanpa perlu membuat objek instan baru (`new Voucher`). |
 | **8** | **ACID Transaction** | *Bagaimana PBO menjamin keamanan data saat checkout?* | Menggunakan `DB::transaction()` yang memastikan pembuatan `Order`, penyimpanan `OrderItem`, dan pemotongan stok di `ProductItem` berhasil seluruhnya atau dibatalkan semua jika gagal (*Rollback*). |
+| **9** | **Design Pattern** | *Design Pattern apa saja yang diterapkan di frontend?* | **Factory Pattern** pada generator ikon `createMaskIcon`, **Strategy Pattern** pada pemilihan provider peta OpenStreetMap/Google Maps, serta **Observer Pattern** pada sinkronisasi WebSocket Reverb. |
 
 ---
 

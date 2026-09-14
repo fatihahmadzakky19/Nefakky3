@@ -1,9 +1,8 @@
-# Skema Basis Data & Relasi (DATABASE.md) — Nefakky Marketplace
+# Skema Basis Data & Desain Relasi — Nefakky Marketplace
 
-**Sistem Manajemen Basis Data**: MySQL 8.0+ / PostgreSQL 15+ / SQLite 3  
-**ORM (Object-Relational Mapping)**: Laravel Eloquent ORM  
-**Versi Skema**: 3.6.0  
-**Penulis**: Tim Pengembang Nefakky (Fatih Ahmad Zakky)  
+**Sistem Manajemen Basis Data**: Dual-Storage Architecture (MySQL 8.0+ / SQLite untuk Laravel Backend, Google Firebase Firestore untuk Sinkronisasi Realtime Cloud, serta LocalStorage Resilient Enkapsulasi Klien)  
+**Versi Skema**: 4.5.0 (Updated September 2026 — 5-Stage Kitchen POS, High Demand Telemetry & Annual Archive)  
+**ORM / Data Driver**: Laravel Eloquent ORM & Firebase Web SDK v10+  
 
 ---
 
@@ -17,217 +16,152 @@ erDiagram
     
     CATEGORIES ||--o{ PRODUCTS : "contains"
     
-    PRODUCTS ||--o{ PRODUCT_ITEMS : "has"
     PRODUCTS ||--o{ ORDER_ITEMS : "ordered_in"
     PRODUCTS ||--o{ REVIEWS : "reviewed_in"
     
     ORDERS ||--|{ ORDER_ITEMS : "consists_of"
-    ORDERS ||--o| VOUCHERS : "uses"
-    
+    ORDERS ||--o| VOUCHERS : "applies"
+
+    STORE_SETTINGS ||--o{ ORDERS : "calibrates"
+    ANNUAL_ARCHIVES ||--o{ ORDERS : "summarizes"
+
     USERS {
-        bigint id PK
-        string name
-        string email UK
-        string password
-        string role "admin|customer"
-        string phone
-        text address
-        string avatar
-        datetime created_at
+        string uid PK "Firebase UID / User ID"
+        string name "Nama Lengkap"
+        string email UK "Email Pengguna"
+        string role "admin | customer"
+        string phone "Nomor WhatsApp"
+        text default_address "Alamat Pengiriman Tetap"
+        string avatar_url "URL Foto Avatar"
+        datetime created_at "Waktu Terdaftar"
     }
 
     PRODUCTS {
-        bigint id PK
-        string product_id UK
-        bigint category_id FK
-        string name
-        text description
-        decimal price
-        int stock
-        string image
-        boolean is_available
-        boolean is_visible
-        json nutrition_facts
+        string id PK "Product UUID"
+        string name "Nama Hidangan Kuliner"
+        string category "Makanan Utama | Minuman Segar | Camilan"
+        text description "Deskripsi Racikan Rempah & Komposisi"
+        decimal price "Harga Jual Satuan (IDR)"
+        int stock "Sisa Kuota Stok Harian"
+        boolean is_available "Saklar Ketersediaan (In-Stock)"
+        string image_url "URL Gambar WebP"
+        json nutrition_facts "Kalori (Kkal), Protein (g), Lemak (g)"
+        json spice_levels "Pilihan Level Sambal"
     }
 
     ORDERS {
-        string order_id PK
-        bigint user_id FK
-        string customer_name
-        string customer_email
-        text address
-        string phone
-        string payment_method
-        string payment_badge "PAID|AWAITING"
-        string status "RECEIVED|COOKING|READY|DELIVERING|COMPLETED|CANCELLED"
-        decimal subtotal
-        decimal shipping_cost
-        decimal discount
-        decimal total
-        decimal distance_km
-        datetime order_datetime
-        datetime paid_at
-        datetime delivered_at
+        string order_id PK "Format: NFK-YYYYMMDD-XXXX"
+        string user_id FK "Relasi ke USERS"
+        string customer_name "Nama Pemesan"
+        string customer_email "Email Notifikasi"
+        string phone "Nomor Telepon"
+        text address "Alamat Lengkap Pengantaran"
+        float latitude "Koordinat Lintang Pengiriman"
+        float longitude "Koordinat Bujur Pengiriman"
+        float distance_km "Jarak Haversine dari Dapur Pusat"
+        decimal subtotal "Total Belanja Hidangan"
+        decimal shipping_fee "Ongkos Kirim Bertingkat"
+        decimal discount_amount "Potongan Diskon Kupon"
+        decimal total_amount "Total Tagihan Akhir"
+        string payment_method "midtrans | cod"
+        string payment_status "pending | settlement | expire | cancel"
+        string delivery_status "RECEIVED | PREPARING | READY | DELIVERING | DELIVERED | COMPLETED"
+        string proof_photo_url "Foto Bukti Kurir / POD Kamera Langsung"
+        string customer_proof_url "Foto Apresiasi Pelanggan Saat Tiba"
+        boolean is_high_demand_order "Penanda Jam Sibuk Dapur"
+        datetime created_at "Stempel Waktu Pesanan Dibuat"
     }
 
     ORDER_ITEMS {
-        bigint id PK
-        string order_id FK
-        string product_id FK
-        string product_name
-        int quantity
-        decimal price
-        decimal subtotal
+        string id PK "Item UUID"
+        string order_id FK "Relasi ke ORDERS"
+        string product_id FK "Relasi ke PRODUCTS"
+        string product_name "Nama Hidangan Saat Dipesan"
+        int quantity "Jumlah Porsi"
+        decimal unit_price "Harga Satuan Saat Transaksi"
+        decimal subtotal "Total Harga Item"
+        string spice_level "Varian Kepedasan Dipilih"
+        string notes "Catatan Khusus Koki Dapur"
     }
 
     VOUCHERS {
-        bigint id PK
-        string code UK
-        string discount_type "percentage|fixed"
-        decimal discount_value
-        decimal min_spend
-        int quota
-        int used_count
-        boolean is_active
-        datetime start_date
-        datetime end_date
+        string id PK "Voucher UUID"
+        string code UK "Kode Kupon (misal: NEFAKKYHEMAT)"
+        string discount_type "percentage | fixed"
+        decimal discount_value "Nilai Diskon (% atau Rp)"
+        decimal min_purchase "Syarat Minimal Belanja"
+        decimal max_discount "Batas Plafon Diskon Maksimal"
+        int usage_limit "Kuota Pemakaian Global"
+        int usage_per_user "Batas Penggunaan per Pelanggan"
+        datetime valid_until "Batas Waktu Kadaluarsa"
+        boolean is_active "Status Keaktifan Kupon"
     }
 
     REVIEWS {
-        bigint id PK
-        bigint user_id FK
-        string product_id FK
-        int rating "1-5"
-        text comment
-        string photo_url
-        string status "approved|flagged|pinned|hidden"
-        text admin_reply
-        datetime replied_at
+        string id PK "Review UUID"
+        string order_id FK "Relasi ke ORDERS"
+        string user_id FK "Relasi ke USERS"
+        string product_id FK "Relasi ke PRODUCTS"
+        int rating "Skor Bintang Emas (1-5)"
+        text comment "Ulasan Komentar Rasa"
+        string photo_url "URL Foto Masakan Nyata"
+        boolean is_verified_purchase "Badge Pembeli Terverifikasi"
+        boolean is_visible "Moderasi Tampilan Publik"
+        text admin_reply "Balasan Resmi Tim Dapur"
+        datetime created_at "Waktu Ulasan Dikirim"
     }
 
-    SALES_REPORTS {
-        bigint id PK
-        string year
-        string month_year
-        decimal gross_revenue
-        decimal net_profit
-        int total_orders
-        string event_tag
-        boolean is_bazar
+    STORE_SETTINGS {
+        string id PK "Primary Key Tunggal"
+        string store_name "Nama Resto Resmi"
+        string emergency_phone "Kontak Call Center Dapur"
+        float central_kitchen_lat "Lintang Dapur Pusat"
+        float central_kitchen_lng "Bujur Dapur Pusat"
+        text central_kitchen_address "Alamat Fisik Dapur Pusat"
+        string map_provider "openstreetmap | google_maps"
+        string google_maps_api_key "API Key Opsional Google Maps"
+        boolean is_high_demand "Saklar Resto Membludak Global"
+        int high_demand_extra_minutes "Tambahan Estimasi Masak (+15m)"
     }
 
-    CHAT_MESSAGES {
-        bigint id PK
-        string chat_id
-        string user_email
-        string user_name
-        string sender "customer|admin"
-        text text
-        boolean is_read
-        datetime created_at
+    ANNUAL_ARCHIVES {
+        int year PK "Tahun Kalender (misal: 2026)"
+        decimal total_revenue "Total Omset Penjualan Setahun"
+        decimal net_profit "Estimasi Laba Bersih Tahunan"
+        int total_orders "Total Transaksi Selesai"
+        int total_customers "Jumlah Pelanggan Unik"
+        json monthly_summary "Rincian Omset per Bulan (Jan-Des)"
+        datetime archived_at "Stempel Waktu Tutup Buku"
     }
 ```
 
 ---
 
-## 2. Struktur Tabel & Kamus Data
+## 2. Koleksi Firebase Firestore (NoSQL Cloud Architecture)
 
-### 2.1 Tabel `users`
-Menyimpan data identitas akun pengguna (Pelanggan dan Administrator).
-* `id` (`BIGINT UNSIGNED`, PK, Auto-Increment)
-* `name` (`VARCHAR(100)`, Not Null): Nama lengkap pengguna.
-* `email` (`VARCHAR(150)`, UK, Not Null): Alamat email login.
-* `password` (`VARCHAR(255)`, Nullable): Hash Bcrypt (nullable jika login via Google SSO).
-* `role` (`ENUM('customer', 'admin')`, Default: `'customer'`): Hak akses sistem.
-* `phone` (`VARCHAR(20)`, Nullable): Nomor kontak telepon/WhatsApp.
-* `avatar` (`VARCHAR(500)`, Nullable): URL foto profil pengguna.
-* `remember_token` (`VARCHAR(100)`, Nullable)
-* `created_at`, `updated_at` (`TIMESTAMP`)
+Dalam implementasi frontend web Next.js (`DataContext.tsx`), struktur dokumen Firestore diorganisasikan ke dalam koleksi terisolasi:
 
----
-
-### 2.2 Tabel `products`
-Menyimpan katalog master menu hidangan kuliner artisanal.
-* `id` (`BIGINT UNSIGNED`, PK, Auto-Increment)
-* `product_id` (`VARCHAR(30)`, UK, Not Null): Identifier unik string (misal: `m1`, `m2`).
-* `category_id` (`BIGINT UNSIGNED`, FK, Nullable): Relasi ke tabel `categories`.
-* `name` (`VARCHAR(150)`, Not Null): Nama menu masakan.
-* `description` (`TEXT`, Nullable): Deskripsi rasa dan rempah.
-* `price` (`DECIMAL(12,2)`, Not Null): Harga jual per porsi.
-* `stock` (`INT UNSIGNED`, Default: 0): Sisa kuantitas porsi tersedia.
-* `image` (`VARCHAR(500)`, Nullable): Path berkas foto menu.
-* `is_available` (`BOOLEAN`, Default: true): Status ketersediaan menu.
-* `is_visible` (`BOOLEAN`, Default: true): Status tampil di katalog frontend.
-* `nutrition_facts` (`JSON`, Nullable): Data kalori, protein, lemak.
+1. **`products`**:
+   - Berisi katalog hidangan kuliner, stok bahan, nilai nutrisi, dan saklar ketersediaan.
+2. **`orders`**:
+   - Berisi rekam jejak pesanan, status alur 5-tahap, foto bukti serah terima kurir, dan riwayat pembayaran Midtrans.
+3. **`vouchers`**:
+   - Berisi kupon promosi aktif beserta batasan minimum belanja dan tanggal kadaluarsa.
+4. **`reviews`**:
+   - Berisi testimoni komunitas, rating bintang, dan lampiran foto sajian.
+5. **`chatMessages`**:
+   - Berisi percakapan live chat antara akun pengguna dan meja operator CS.
+6. **`storeSettings`**:
+   - Berisi koordinat GPS Central Kitchen, provider peta aktif, dan status darurat *High Demand*.
 
 ---
 
-### 2.3 Tabel `orders`
-Menyimpan transaksi pemesanan makanan, status pembayaran, dan logistik kurir.
-* `order_id` (`VARCHAR(30)`, PK): Nomor invoice unik (misal: `ORD-88219` atau `NFK-91283`).
-* `user_id` (`BIGINT UNSIGNED`, FK, Nullable): Relasi ke tabel `users`.
-* `customer_name` (`VARCHAR(100)`, Not Null): Nama penerima pesanan.
-* `customer_email` (`VARCHAR(150)`, Not Null): Email pembeli.
-* `phone` (`VARCHAR(20)`, Not Null): Nomor telepon pengiriman.
-* `address` (`TEXT`, Not Null): Alamat lengkap pengantaran.
-* `payment_method` (`VARCHAR(50)`, Not Null): `midtrans_va`, `midtrans_qris`, `cod`.
-* `payment_badge` (`ENUM('PAID', 'AWAITING')`, Default: `'AWAITING'`): Status pembayaran.
-* `status` (`ENUM('RECEIVED', 'COOKING', 'READY', 'DELIVERING', 'COMPLETED', 'CANCELLED')`, Default: `'RECEIVED'`): Status alur 5-tahap dapur.
-* `subtotal` (`DECIMAL(12,2)`, Not Null): Total harga hidangan.
-* `shipping_cost` (`DECIMAL(10,2)`, Default: 0.00): Ongkos kirim Haversine.
-* `discount` (`DECIMAL(10,2)`, Default: 0.00): Nilai potongan kupon voucher.
-* `total` (`DECIMAL(12,2)`, Not Null): Total akhir yang dibayar pelanggan.
-* `distance_km` (`DECIMAL(6,2)`, Default: 0.00): Jarak dapur ke alamat dalam Km.
-* `voucher_code` (`VARCHAR(50)`, Nullable): Kode voucher yang digunakan.
-* `notes` (`TEXT`, Nullable): Catatan khusus rasa / patokan kurir.
-* `order_datetime`, `paid_at`, `delivered_at` (`DATETIME`, Nullable)
+## 3. Strategi Indexing & Optimasi Query
 
----
-
-### 2.4 Tabel `order_items`
-Menyimpan rincian item hidangan dalam satu nomor pesanan.
-* `id` (`BIGINT UNSIGNED`, PK, Auto-Increment)
-* `order_id` (`VARCHAR(30)`, FK): Relasi ke tabel `orders`.
-* `product_id` (`VARCHAR(30)`, FK): Relasi ke tabel `products`.
-* `product_name` (`VARCHAR(150)`, Not Null): Nama produk saat dipesan.
-* `quantity` (`INT UNSIGNED`, Not Null): Kuantitas porsi.
-* `price` (`DECIMAL(12,2)`, Not Null): Harga satuan saat dipesan.
-* `subtotal` (`DECIMAL(12,2)`, Not Null): Total harga item (`quantity * price`).
-
----
-
-### 2.5 Tabel `vouchers`
-Menyimpan aturan kupon promo diskon.
-* `id` (`BIGINT UNSIGNED`, PK, Auto-Increment)
-* `code` (`VARCHAR(50)`, UK, Not Null): Kode kupon unik (misal: `WEEKENDSERU`).
-* `discount_type` (`ENUM('percentage', 'fixed')`, Default: `'percentage'`): Tipe potongan.
-* `discount_value` (`DECIMAL(10,2)`, Not Null): Nilai persentase atau nominal rupiah.
-* `min_spend` (`DECIMAL(12,2)`, Default: 0.00): Batas minimum belanja.
-* `quota` (`INT UNSIGNED`, Default: 100): Kuota total pemakaian.
-* `used_count` (`INT UNSIGNED`, Default: 0): Jumlah kupon yang telah diklaim.
-* `is_active` (`BOOLEAN`, Default: true): Status aktivasi kupon.
-* `start_date`, `end_date` (`DATE`, Nullable): Rentang tanggal berlaku.
-
----
-
-### 2.6 Tabel `sales_reports`
-Menyimpan rekapitulasi data keuangan bulanan dan bazar offline.
-* `id` (`BIGINT UNSIGNED`, PK, Auto-Increment)
-* `year` (`VARCHAR(10)`, Not Null): Tahun periode (misal: `2026`).
-* `month_year` (`VARCHAR(50)`, Not Null): Label bulan (misal: `Agustus 2026 (Live)`).
-* `gross_revenue` (`DECIMAL(14,2)`, Default: 0.00): Omset kotor pendapatan.
-* `net_profit` (`DECIMAL(14,2)`, Default: 0.00): Margin laba bersih pembukuan.
-* `total_orders` (`INT UNSIGNED`, Default: 0): Jumlah pesanan terselesaikan.
-* `event_tag` (`VARCHAR(200)`, Nullable): Label bazar / event festival kuliner.
-* `is_bazar` (`BOOLEAN`, Default: false): Penanda transaksi bazar kuliner.
-
----
-
-## 3. Indeks Kinerja Basis Data (Performance Indexes)
-
-Untuk menjamin performa query yang cepat pada lalu lintas tinggi:
-1. `orders_customer_email_index`: Mempercepat pencarian riwayat pesanan per pelanggan.
-2. `orders_status_index`: Mempercepat filter antrian dapur di dashboard admin.
-3. `products_is_visible_category_id_index`: Mempercepat rendering katalog menu aktif.
-4. `vouchers_code_is_active_index`: Mempercepat validasi kupon saat checkout.
-5. `chat_messages_user_email_index`: Mempercepat loading pesan live chat.
+Untuk menjamin kueri cepat tanpa hambatan:
+* **Composite Index**:
+  - `orders`: `user_id` ASC + `created_at` DESC (untuk mengambil riwayat pesanan pengguna secara instan).
+  - `orders`: `delivery_status` ASC + `created_at` ASC (untuk antrean dapur FIFO).
+  - `reviews`: `product_id` ASC + `is_visible` ASC + `created_at` DESC (untuk render tab review menu).
+* **Tabular Numbers Format**:
+  - Seluruh kolom moneter disimpan dalam format integer atau float tanpa desimal pembulatan untuk menjaga akurasi perhitungan laporan keuangan.

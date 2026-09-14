@@ -1,7 +1,7 @@
 # Alur Kerja Bisnis & Operasional (WORKFLOW.md) — Nefakky Marketplace
 
-**Versi Dokumen**: 3.6.0  
-**Target Modul**: Alur Hidup Pesanan (Order Lifecycle), State Machine 5-Tahap Dapur, Webhook Gateway Pembayaran, Pemulihan Stok (ACID Rollback), dan Siklus Rekapitulasi Keuangan.  
+**Versi Dokumen**: 4.5.0 (Updated September 2026 — 5-Stage Kitchen POS, Proof-of-Delivery Telemetry, & Annual Archiving)  
+**Target Modul**: Alur Hidup Pesanan (Order Lifecycle), State Machine 5-Tahap Dapur, Webhook Gateway Pembayaran Midtrans, Live Camera Snapshot Capture, dan Tutup Buku Tahunan.  
 **Penulis**: Tim Pengembang Nefakky (Fatih Ahmad Zakky)  
 
 ---
@@ -12,114 +12,110 @@ Setiap transaksi pesanan makanan di Nefakky melalui mesin status (*State Machine
 
 ```mermaid
 stateDiagram-v2
-    [*] --> RECEIVED : Pesanan Dibuat Pelanggan (Stok Dikurangi)
+    [*] --> RECEIVED : Checkout Pelanggan (Stok Dikurangi)
     
-    RECEIVED --> COOKING : Dapur Mulai Memasak (Advance Stage)
-    RECEIVED --> CANCELLED : Dibatalkan (Stok Dipulihkan)
+    RECEIVED --> PREPARING : Staf Dapur Tekan "Mulai Masak"
+    RECEIVED --> CANCELLED : Dibatalkan Pelanggan/Dapur (Stok Dipulihkan)
     
-    COOKING --> READY : Masakan Siap & Dikemas (Packaging)
-    COOKING --> CANCELLED : Dibatalkan Darurat
+    PREPARING --> READY : Koki Tekan "Makanan Siap & Dikemas"
+    PREPARING --> CANCELLED : Dibatalkan Darurat
     
-    READY --> DELIVERING : Kurir Mengambil Paket & Meluncur
+    READY --> DELIVERING : Kurir Ambil Makanan & Upload Bukti POD
     
-    DELIVERING --> COMPLETED : Pesanan Tiba & Dikonfirmasi Pelanggan / Kurir
+    DELIVERING --> DELIVERED : Kurir / Pelanggan Konfirmasi Tiba
     
-    COMPLETED --> [*] : Transaksi Selesai (Masuk Laporan Omset)
-    CANCELLED --> [*] : Transaksi Gugur (Audit Log Tercatat)
+    DELIVERED --> COMPLETED : Verifikasi Pelunasan Kasir COD / Midtrans Settlement
+    
+    COMPLETED --> [*] : Transaksi Selesai & Masuk Buku Besar
+    CANCELLED --> [*] : Transaksi Batal (Audit Log Tercatat)
 ```
 
 ---
 
 ## 2. Rincian 5 Tahapan Alur Kerja Dapur
 
-### Tahap 1: `RECEIVED` (Pesanan Diterima Dapur)
-* **Pemicu**: Pelanggan menekan tombol "Konfirmasi Pesanan" di `/cart`.
+### Tahap 1: `RECEIVED` (Pesanan Masuk & Diterima Dapur)
+* **Pemicu**: Pelanggan menekan tombol "Konfirmasi Pesanan" di halaman `/cart`.
 * **Proses Sistem**:
-  1. Memvalidasi ketersediaan stok setiap item menu (`stock >= quantity`).
-  2. Mengunci baris database via transaksi ACID (`DB::transaction`) dan mengurangi kuantitas stok produk secara atomik.
-  3. Menerbitkan nomor invoice unik (`ORD-XXXXX` atau `NFK-XXXXX`).
-  4. Memicu siaran WebSocket `OrderPlacedEvent` ke channel publik `orders` dan `activity-feed`.
-  5. Menampilkan lonceng notifikasi dan pop-up transaksi masuk di layar Admin Kitchen Desk.
+  1. Validasi ketersediaan stok setiap item menu (`stock >= quantity`).
+  2. Mengurangi kuantitas stok produk secara atomik.
+  3. Menerbitkan nomor order unik (format: `NFK-YYYYMMDD-XXXX`).
+  4. Memicu siaran WebSocket `OrderPlaced` ke kanal `orders`.
+  5. Pop-up alert dan notifikasi banner berbunyi pada layar Admin Kitchen Desk.
 
-### Tahap 2: `COOKING` (Sedang Dimasak Chef)
-* **Pemicu**: Admin / Kitchen staff menekan tombol **"Mulai Masak"** di Admin Orders Tab.
+### Tahap 2: `PREPARING` (Sedang Dimasak Koki)
+* **Pemicu**: Staf dapur menekan tombol aksi **"Mulai Masak"** di [AdminOrdersTab.tsx](file:///f:/UKK/nefakky3/src/components/admin/AdminOrdersTab.tsx).
 * **Proses Sistem**:
-  1. Status pesanan diperbarui menjadi `COOKING`.
-  2. Memicu broadcast `OrderStatusUpdatedEvent` ke channel privat `orders.{id}`.
-  3. Layar pelacakan pelanggan (`/notifications`) mengaktifkan animasi kompor memasak dan estimasi waktu masak.
+  1. Status pesanan diperbarui menjadi `PREPARING`.
+  2. Mengaktifkan durasi waktu memasak standar (~30 menit) atau mode lonjakan (*High Demand*) (~45 menit).
+  3. Layar pelacakan pelanggan (`/notifications`) menampilkan animasi wajan masak `CookingPot` kustom dan estimasi menit hidangan matang.
 
 ### Tahap 3: `READY` (Makanan Siap & Dikemas Rapi)
-* **Pemicu**: Chef menyelesaikan hidangan dan menekan tombol **"Makanan Siap"**.
+* **Pemicu**: Koki menyelesaikan hidangan dan menekan tombol **"Makanan Siap"**.
 * **Proses Sistem**:
   1. Status diperbarui menjadi `READY`.
-  2. Memicu notifikasi persiapan kurir penjemputan paket.
-  3. Menampilkan status "Menunggu Kurir" pada stepper pelacakan pembeli.
+  2. Masakan dibungkus dengan kemasan higienis berstempel segel sanitasi.
+  3. Mengirimkan sinyal kesiapan paket ke kurir pengantar.
 
-### Tahap 4: `DELIVERING` (Dalam Pengantaran Kurir)
-* **Pemicu**: Kurir mengambil paket pesanan dan admin menekan tombol **"Kirim Kurir"**.
+### Tahap 4: `DELIVERING` (Dalam Perjalanan Kurir)
+* **Pemicu**: Kurir mengambil paket pesanan dan admin/kurir menekan tombol **"Kirim Kurir"**.
 * **Proses Sistem**:
-  1. Status diperbarui menjadi `DELIVERING`.
-  2. Mengaktifkan peta rute interaktif OpenStreetMap di layar pembeli dengan simulasi pergerakan titik kurir menuju alamat tujuan.
-  3. Mengaktifkan estimasi waktu tiba (ETA) berhitung mundur (*countdown timer*).
+  1. Mengaktifkan fitur **Live Camera Capture** (`LiveCameraModal.tsx`) untuk mengambil foto kurir membawa paket hidangan.
+  2. Foto disimpan sebagai bukti serah terima paket (*Proof-of-Delivery / POD*).
+  3. Pelanggan melihat status kurir sedang meluncur menuju koordinat alamat tujuan.
 
-### Tahap 5: `COMPLETED` (Pesanan Selesai & Diterima)
-* **Pemicu**: Pelanggan menekan tombol **"Konfirmasi Pesanan Telah Sampai"** atau kurir mengunggah bukti serah terima.
+### Tahap 5: `DELIVERED` & `COMPLETED` (Tiba di Lokasi & Transaksi Selesai)
+* **Pemicu**: Pelanggan menekan tombol *"Konfirmasi Pesanan Diterima"* di aplikasi atau kurir menyelesaikan pengantaran.
 * **Proses Sistem**:
-  1. Status diperbarui menjadi `COMPLETED` dan kolom `delivered_at` diisi timestamp waktu saat itu.
-  2. Jika metode pembayaran adalah COD, admin menandai `payment_badge = 'PAID'`.
-  3. Memicu efek selebrasi konfeti pada antarmuka pelanggan dan membuka opsi untuk mencetak invoice PDF serta mengirimkan ulasan rasa.
-  4. Nilai transaksi otomatis terakumulasi ke dalam metrik dashboard omset penjualan.
+  1. Pelanggan dapat mengunggah foto makanan yang sampai dan memberikan skor ulasan 1-5 bintang emas.
+  2. Untuk transaksi tunai (COD), kurir menyetorkan uang fisik ke kasir resto, dan status diubah menjadi `COMPLETED`.
+  3. Transaksi dicatat ke dalam buku besar omset dan grafik pendapatan bulanan.
 
 ---
 
-## 3. Alur Pembayaran Digital & Webhook Midtrans
+## 3. Alur Verifikasi Pembayaran Digital Midtrans Snap
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Customer as Pelanggan (Next.js)
-    participant Laravel as Backend Laravel 12
-    participant Midtrans as Midtrans Gateway
-    actor Admin as Admin Resto (Dashboard)
+    actor C as Pelanggan
+    participant F as Frontend (Next.js)
+    participant B as Backend API
+    participant M as Midtrans Gateway
 
-    Customer->>Laravel: POST /api/midtrans/token (Order Data & Total)
-    Laravel->>Midtrans: Request Snap Token (Server Key Auth)
-    Midtrans-->>Laravel: Mengembalikan Snap Token & Redirect URL
-    Laravel-->>Customer: Mengembalikan snap_token ke browser
-    Customer->>Customer: Membuka Modal Midtrans Snap (Pilih VA / QRIS)
-    Customer->>Midtrans: Melakukan Transfer Pembayaran
-    Midtrans->>Laravel: POST /api/midtrans/webhook (Status: settlement)
-    Laravel->>Laravel: Verifikasi Signature Key Hash
-    Laravel->>Laravel: Update orders (payment_badge = 'PAID', paid_at = NOW)
-    Laravel->>Customer: Broadcast WebSocket (OrderStatusUpdatedEvent)
-    Laravel-->>Midtrans: Response 200 OK
-    Customer->>Customer: Layar berubah hijau otomatis "Pembayaran Lunas"
+    C->>F: Pilih Pembayaran Digital (QRIS / VA / E-Wallet)
+    F->>B: POST /api/midtrans/create-snap-token
+    B->>M: Request Snap Token (Gross Amount, Customer Details)
+    M-->>B: Snap Token & Redirect URL
+    B-->>F: Return Snap Token
+    F->>M: Buka Modal Snap Popup (window.snap.pay)
+    C->>M: Selesaikan Pembayaran di Aplikasi Bank / E-Wallet
+    M-->>F: Callback onPending / onSuccess
+    M->>B: HTTP POST Webhook /api/midtrans/notification
+    Note over B: Verifikasi Signature Key SHA512
+    B->>B: Update payment_status = settlement
+    B->>F: WebSocket Broadcast (OrderStatusUpdated)
+    F-->>C: Notifikasi "Pembayaran Berhasil Diverifikasi!"
 ```
 
 ---
 
-## 4. Alur Pembatalan Pesanan & Pemulihan Stok (Rollback Engine)
+## 4. Protokol Darurat Lonjakan Pesanan (High Demand Surge Protocol)
 
-Jika pesanan dibatalkan karena pembeli membatalkan atau dapur kehabisan bahan darurat:
-1. Endpoint `POST /api/orders/{id}/cancel` dieksekusi.
-2. Controller menjalankan transaksi database terisolasi:
-   ```php
-   DB::transaction(function () use ($order) {
-       foreach ($order->items as $item) {
-           Product::where('product_id', $item->product_id)->increment('stock', $item->quantity);
-           // Memicu siaran WebSocket stok produk pulih
-           broadcast(new ProductStockUpdatedEvent($item->product_id, $newStock));
-       }
-       $order->update(['status' => 'CANCELLED']);
-   });
-   ```
-3. Kuantitas stok di katalog belanja pelanggan seketika bertambah kembali tanpa jeda.
+Ketika dapur mengalami lonjakan pesanan ekstrem (misal: jam makan siang kantor atau bazar kuliner weekend):
+1. Admin mengaktifkan saklar **"Mode Resto Membludak (High Demand)"** di [AdminSettingsTab.tsx](file:///f:/UKK/nefakky3/src/components/admin/AdminSettingsTab.tsx).
+2. Sistem secara global:
+   - Menambahkan durasi memasak otomatis (+15 menit).
+   - Menampilkan banner peringatan darurat bernuansa amber di beranda dan keranjang belanja pelanggan: *"Dapur saat ini sedang melayani pesanan padat. Waktu memasak bertambah ~15 menit untuk menjaga kualitas rasa terbaik."*
+   - Memperbarui estimasi stepper pelacakan dari ~30m menjadi ~45m.
+3. Setelah antrean dapur kembali terkendali, admin mematikan saklar dan sistem kembali ke waktu normal secara instan.
 
 ---
 
-## 5. Alur Pembukuan & Laporan Keuangan Bulanan
+## 5. Alur Sensor Tutup Buku & Arsip Tahunan Otomatis
 
-1. Setiap pesanan berstatus `COMPLETED` dan `PAID` menyumbangkan nilai ke omset kotor (*Gross Revenue*).
-2. Estimasi laba bersih dihitung secara konsisten $40\% - 50\%$ setelah dikurangi HPP bahan baku dapur.
-3. Admin dapat menambahkan pencatatan transaksi offline/bazar festival kuliner via modul **POS Logger**.
-4. Laporan dapat diekspor sewaktu-waktu ke berkas spreadsheet resmi Microsoft Excel (.xlsx) menggunakan `FastExcel` melalui tombol **"Unduh Excel (.xlsx)"** pada endpoint `GET /api/reports/sales/export-excel`.
+1. Komponen `annualArchive.ts` membaca waktu kalender nyata sistem.
+2. Ketika tahun berganti (misal: dari 2026 ke 2027):
+   - Sistem secara otomatis mengunci seluruh rekapitulasi data pesanan tahun 2026.
+   - Membuat rekaman arsip permanen `AnnualArchiveRecord` yang berisi ringkasan omset bulanan (Jan–Des).
+   - Menyediakan tombol 1-klik untuk mengunduh laporan pembukuan resmi dalam format **Excel Spreadsheet** dan **PDF Akuntansi Resmi**.

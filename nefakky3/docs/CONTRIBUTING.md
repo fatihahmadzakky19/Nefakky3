@@ -7,97 +7,76 @@ Terima kasih atas minat Anda untuk berkontribusi pada pengembangan **Nefakky Art
 ## 1. Kode Etik & Standar Pengembangan
 
 Kami berkomitmen untuk menyediakan lingkungan kolaborasi yang profesional, ramah, dan inklusif. Seluruh kontributor diharapkan mematuhi standar berikut:
-* Bersikap saling menghargai dan terbuka terhadap kritik konstruktif.
+* Bersikap saling menghargai dan terbuka terhadap masukan teknis konstruktif.
 * Mengutamakan kualitas kode, keamanan data, dan kepuasan pengalaman pengguna (*User Experience*).
-* Menjaga integritas dokumentasi dan kelengkapan komentar kode fungsi.
+* Menjaga integritas dokumentasi dan kelengkapan komentar kode fungsi berbahasa Indonesia.
 
 ---
 
 ## 2. Standar Gaya Penulisan Kode (Coding Guidelines)
 
-### 2.1 Backend Laravel (PHP)
-* **Standar PSR**: Wajib mematuhi standar **PSR-12 (Extended Coding Style)** dan **PSR-4 (Autoloading)**.
-* **Type Hinting & Return Types**: Gunakan *explicit type declarations* pada seluruh argumen fungsi dan tipe nilai balik (*return types*).
-* **Form Requests**: Validasi request mutasi (`POST`, `PUT`) wajib menggunakan class `FormRequest` khusus di `app/Http/Requests/`.
-* **API Resources**: Respons data wajib dibungkus menggunakan `JsonResource` di `app/Http/Resources/` untuk konsistensi struktur JSON.
-* **Komentar Kode (PHPDoc)**: Setiap class, method, dan event wajib dilengkapi docblock berbahasa Indonesia yang jelas.
+### 2.1 Kebijakan Desain "Anti-AI-Slop" (Ketat)
+* **Dilarang Keras**: Menambahkan emoji kartun 3D murahan (`📦`, `🍳`, `🛵`, `📍`, `🎉`) atau ikon generator AI generik yang merusak estetika editorial restoran artisanal.
+* **Standar Ikon**: Seluruh ikon baru wajib melalui script generator `scripts/gen_icons.py` dan didaftarkan di `src/components/icons/CustomIcons.tsx` dengan teknik rendering CSS `mask-image`.
 
 ### 2.2 Frontend Next.js & React (TypeScript)
-* **TypeScript Strict Mode**: Kode harus 100% type-safe. Dilarang menggunakan tipe data implisit `any` tanpa alasan khusus yang terdokumentasi.
-* **Komponen & Naming Conventions**:
-  * Nama komponen menggunakan format **PascalCase** (contoh: `MenuDetailModal.tsx`, `AdminDashboardTab.tsx`).
-  * Nama hooks kustom menggunakan awalan **camelCase** `use` (contoh: `useAuth.ts`, `useCart.ts`).
-  * Nama utilitas menggunakan **camelCase** (contoh: `mapService.ts`, `exportUtils.ts`).
+* **TypeScript Strict Mode**: Kode harus 100% type-safe. Dilarang meninggalkan linting error atau tipe data implisit `any`.
+* **Kompilasi Valid**: Sebelum commit, wajib menjalankan `npx tsc --noEmit` dan memastikan **0 errors**.
+* **Penamaan Komponen & File**:
+  * Komponen UI: **PascalCase** (misal: `LiveCameraModal.tsx`, `AdminOrdersTab.tsx`).
+  * Hooks Kustom: **camelCase** dengan awalan `use` (misal: `useAuth.ts`, `useRealtimeBroadcaster.ts`).
+  * Utilitas: **camelCase** (misal: `mapService.ts`, `annualArchive.ts`).
 * **Styling Tailwind CSS**:
-  * Gunakan utility classes Tailwind yang konsisten dengan palet desain Google Stitch Artisanal Luxury.
-  * Hindari *inline CSS styles* kecuali untuk nilai dinamis murni (seperti posisi koordinat kanvas).
-* **Aksesibilitas (A11y)**: Seluruh tombol ikon wajib menyertakan atribut `aria-label` deskriptif.
+  * Gunakan token desain yang seragam (*Nordic Citrus Orange* `#FF5400`, *Gold Amber* `#FFB703`, *Deep Navy* `#0B0F19`, *Slate Canvas* `#F8FAFC`).
+* **Aksesibilitas (WCAG 2.1 AA)**: Seluruh tombol ikon interaktif wajib menyertakan atribut `aria-label` deskriptif.
+
+### 2.3 Backend Laravel (PHP)
+* **Standar PSR**: Wajib mematuhi standar **PSR-12** dan **PSR-4**.
+* **Type Hinting & Return Types**: Gunakan *explicit type declarations* pada seluruh argumen fungsi dan nilai balik.
+* **Form Requests**: Validasi request mutasi (`POST`, `PUT`, `PATCH`) wajib menggunakan class `FormRequest` khusus.
 
 ---
 
-## 3. Alur Kerja Git & Percabangan (Git Workflow)
+## 3. Alur Penambahan Ikon Kustom Baru
 
-```mermaid
-gitGraph
-    commit id: "v3.5.0"
-    branch develop
-    checkout develop
-    commit id: "dev-init"
-    branch feature/excel-export
-    checkout feature/excel-export
-    commit id: "add-fastexcel"
-    commit id: "add-export-route"
-    checkout develop
-    merge feature/excel-export
-    branch fix/modal-closing-tag
-    checkout fix/modal-closing-tag
-    commit id: "fix-dangling-div"
-    checkout develop
-    merge fix/modal-closing-tag
-    checkout main
-    merge develop tag: "v3.6.0"
-```
-
-### 3.1 Penamaan Cabang (Branch Naming)
-* Fitur Baru: `feature/nama-fitur` (contoh: `feature/pdf-invoice-generator`)
-* Perbaikan Bug: `fix/nama-bug` (contoh: `fix/cart-stepper-offset`)
-* Dokumentasi: `docs/nama-dokumen` (contoh: `docs/api-reference-update`)
-* Refactoring: `refactor/nama-modul` (contoh: `refactor/auth-context-cleanup`)
-
-### 3.2 Konvensi Pesan Commit (Conventional Commits)
-Gunakan format standar: `<type>(<scope>): <deskripsi singkat berbahasa Indonesia>`
-* `feat`: Penambahan fitur baru (contoh: `feat(order): tambahkan ekspor laporan penjualan excel via FastExcel`)
-* `fix`: Perbaikan bug atau error (contoh: `fix(cart): perbaiki referensi BagIcon menjadi ShoppingBag`)
-* `docs`: Pembaruan dokumentasi (contoh: `docs: perbarui spesifikasi PRD dan database schema`)
-* `style`: Perapihan format kode atau UI tanpa mengubah logika (contoh: `style(navbar): sesuaikan padding container header`)
-* `refactor`: Refaktorisasi kode untuk peningkatan performa/keterbacaan (contoh: `refactor(context): pisahkan logic cart store ke zustand`)
-* `test`: Penambahan atau perbaikan unit test (contoh: `test(auth): tambahkan verifikasi register validation`)
+Jika Anda ingin menambahkan icon kustom baru ke platform:
+1. Simpan gambar PNG transparan beresolusi tinggi (disarankan siluet garis hitam bersih 512x512) ke folder aset.
+2. Buka berkas generator `scripts/gen_icons.py`.
+3. Daftarkan mapping nama berkas baru pada dictionary `icon_map`.
+4. Jalankan script generator di terminal:
+   ```bash
+   python scripts/gen_icons.py
+   ```
+5. Buka `src/components/icons/CustomIcons.tsx` dan pastikan ekspor komponen baru beserta alias drop-in yang relevan telah terdaftar rapi.
+6. Uji kompilasi proyek:
+   ```bash
+   npx tsc --noEmit
+   ```
 
 ---
 
-## 4. Checklist Sebelum Mengajukan Pull Request (PR)
+## 4. Alur Kerja Git & Format Pesan Commit
 
-Sebelum mengajukan Pull Request ke branch `develop` atau `main`, pastikan Anda telah menjalankan verifikasi lokal:
-
-```bash
-# 1. Pengecekan tipe TypeScript Frontend
-cd f:\UKK\nefakky3
-npx tsc --noEmit
-
-# 2. Eksekusi Test Suite Frontend
-cd f:\UKK\nefakky3
-npm test
-
-# 3. Eksekusi Test Suite Backend Laravel
-cd f:\UKK\Laravel
-php artisan test
-
-# 4. Validasi Daftar Route Backend
-cd f:\UKK\Laravel
-php artisan route:list
+### 4.1 Format Pesan Commit (Conventional Commits)
+Gunakan format standar deskriptif:
 ```
+<tipe>(<cakupan opsional>): <deskripsi singkat perubahan>
+```
+* **Contoh Tipe Commit**:
+  - `feat`: Penambahan fitur baru (misal: `feat(icons): add 3 bespoke cooking, megaphone and settings icons`)
+  - `fix`: Perbaikan bug atau broken import (misal: `fix(orders): resolve courier camera capture permission`)
+  - `docs`: Pembaruan dokumentasi (misal: `docs: update PRD and architecture to v4.5.0`)
+  - `refactor`: Perapian kode tanpa mengubah perilaku fitur (misal: `refactor(navbar): migrate utensils to custom icon`)
+  - `chore`: Pemeliharaan dependensi atau konfigurasi CI/CD.
 
-### Kriteria Kelayakan Penggabungan (Merge Criteria):
-1. ✅ Seluruh perintah di atas berhasil tanpa galat (`0 errors, 100% tests passed`).
-2. ✅ Kode baru telah dilengkapi komentar baris per baris berbahasa Indonesia.
-3. ✅ Tidak ada berkas sementara, berkas build (`.next/`, `vendor/`), atau kunci rahasia (`.env`) yang terikutsertakan.
+### 4.2 Prosedur Pull Request (PR)
+1. Fork repositori dan buat branch fitur baru dari branch `main`:
+   ```bash
+   git checkout -b feat/nama-fitur-baru
+   ```
+2. Lakukan perubahan kode dan pastikan `npx tsc --noEmit` lolos bersih.
+3. Commit dan push branch Anda ke remote repository:
+   ```bash
+   git push origin feat/nama-fitur-baru
+   ```
+4. Buka Pull Request di GitHub dengan rincian pengujian yang jelas dan tangkapan layar antarmuka.
