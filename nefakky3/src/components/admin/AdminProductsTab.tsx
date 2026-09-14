@@ -13,26 +13,20 @@
 import React, { useState, useRef } from 'react';
 import {
   Plus,
-  Pencil,
-  Trash2,
   X,
   Check,
   Sparkles,
-  Flame,
   Info,
   Image as ImageIcon,
-  Search,
-  Hourglass,
-  Clock,
-  Eye,
   EyeOff,
   Upload,
   FolderOpen,
-  MapPin,
   Store,
   Building2,
-  Navigation
+  Navigation,
+  GlassWater
 } from 'lucide-react';
+import { Search, MapPin, Clock, Flame, Hourglass, Pencil, Trash2, Eye } from '@/components/icons/CustomIcons';
 import { ProductItem } from '@/context/DataContext';
 import { getMapSettings, DEFAULT_CENTRAL_KITCHEN } from '@/lib/mapService';
 
@@ -534,8 +528,8 @@ export default function AdminProductsTab({
                             
                             <div className="space-y-0.5 text-[10px] font-mono bg-stone-50 p-1.5 rounded-lg border border-stone-200/80 shadow-2xs">
                               <div className="flex justify-between items-center text-stone-700">
-                                <span className="flex items-center gap-1 font-sans">
-                                  <span>🥭</span>
+                                <span className="flex items-center gap-1.5 font-sans">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
                                   <span>Mangga:</span>
                                 </span>
                                 <span className={`font-bold ${manggaStock > 0 ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
@@ -543,8 +537,8 @@ export default function AdminProductsTab({
                                 </span>
                               </div>
                               <div className="flex justify-between items-center text-stone-700">
-                                <span className="flex items-center gap-1 font-sans">
-                                  <span>🍈</span>
+                                <span className="flex items-center gap-1.5 font-sans">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                                   <span>Sirsak:</span>
                                 </span>
                                 <span className={`font-bold ${sirsakStock > 0 ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
@@ -552,8 +546,8 @@ export default function AdminProductsTab({
                                 </span>
                               </div>
                               <div className="flex justify-between items-center text-stone-700">
-                                <span className="flex items-center gap-1 font-sans">
-                                  <span>🍓</span>
+                                <span className="flex items-center gap-1.5 font-sans">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
                                   <span>Jambu:</span>
                                 </span>
                                 <span className={`font-bold ${jambuStock > 0 ? 'text-emerald-700' : 'text-rose-600 font-extrabold'}`}>
@@ -812,7 +806,7 @@ export default function AdminProductsTab({
                         <div className="space-y-2 p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl">
                           <div className="flex items-center justify-between">
                             <label className="font-label-caps text-amber-950 uppercase text-[11px] font-bold flex items-center gap-1.5">
-                              <span>🍹</span>
+                              <GlassWater className="w-3.5 h-3.5 text-amber-800" />
                               <span>Stok Per Varian Rasa Jus:</span>
                             </label>
                             <span className="font-mono font-bold text-xs bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded-md">
@@ -822,7 +816,10 @@ export default function AdminProductsTab({
 
                           <div className="grid grid-cols-3 gap-2 pt-1">
                             <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-stone-700 truncate">🥭 Jus Mangga</label>
+                              <label className="text-[10px] font-bold text-stone-700 truncate flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                                <span>Jus Mangga</span>
+                              </label>
                               <input
                                 type="number"
                                 min="0"
@@ -834,7 +831,10 @@ export default function AdminProductsTab({
                             </div>
 
                             <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-stone-700 truncate">🍈 Jus Sirsak</label>
+                              <label className="text-[10px] font-bold text-stone-700 truncate flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                                <span>Jus Sirsak</span>
+                              </label>
                               <input
                                 type="number"
                                 min="0"
@@ -846,7 +846,10 @@ export default function AdminProductsTab({
                             </div>
 
                             <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-stone-700 truncate">🍓 Jus Jambu</label>
+                              <label className="text-[10px] font-bold text-stone-700 truncate flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+                                <span>Jus Jambu</span>
+                              </label>
                               <input
                                 type="number"
                                 min="0"

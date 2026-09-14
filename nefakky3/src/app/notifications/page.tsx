@@ -21,29 +21,19 @@ import { useData, AdminOrder } from '@/context/DataContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { 
-  Search, 
-  Bell, 
-  ShoppingBag, 
-  User, 
-  Receipt, 
-  CookingPot, 
   Truck, 
-  CheckCircle2, 
-  MapPin, 
-  FileText, 
   ArrowRight, 
   X, 
-  Printer, 
   CreditCard,
-  Utensils,
   Store,
   Navigation,
   Bike,
-  Clock,
   ExternalLink,
   Layers,
-  Compass
+  Compass,
+  Banknote
 } from 'lucide-react';
+import { Search, ShoppingBag, MapPin, User, Clock, Receipt, FileText, Printer, CheckCircle2, Bell, CookingPot, Utensils } from '@/components/icons/CustomIcons';
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -371,7 +361,8 @@ export default function NotificationsPage() {
 
                         {activeOrder.paymentMethod?.toLowerCase().includes('cod') && activeOrder.paymentBadge !== 'PAID' && (
                           <div className="p-2.5 bg-amber-100/90 border border-amber-300 rounded-xl text-xs text-amber-950 flex items-center gap-2">
-                            <span>💵 <strong>Pembayaran COD:</strong> Pastikan Anda telah menyerahkan uang pas sebesar <strong>Rp {(activeOrder.total || 0).toLocaleString('id-ID')}</strong> kepada kurir.</span>
+                            <Banknote className="w-4 h-4 text-amber-800 shrink-0" />
+                            <span><strong>Pembayaran COD:</strong> Pastikan Anda telah menyerahkan uang pas sebesar <strong>Rp {(activeOrder.total || 0).toLocaleString('id-ID')}</strong> kepada kurir.</span>
                           </div>
                         )}
 

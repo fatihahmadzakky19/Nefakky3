@@ -21,27 +21,17 @@ import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
 import AuthRequiredModal from '@/components/AuthRequiredModal';
 import Navbar from '@/components/Navbar';
 import { 
-  Star, 
   ArrowRight, 
   ChevronLeft, 
   ChevronRight, 
   Plus, 
   Minus,
-  Hourglass,
-  Leaf,
   Sparkles,
-  CheckCircle2,
   AlertCircle,
-  Ticket,
-  Clock,
-  ShieldCheck,
-  Utensils,
-  MapPin,
-  Flame,
   Award,
-  Heart,
-  MessageSquare
+  Heart
 } from 'lucide-react';
+import { Clock, Leaf, Ticket, ShieldCheck, Flame, Star, Hourglass, MessageSquare, CheckCircle2, Utensils } from '@/components/icons/CustomIcons';
 
 export default function HomePage() {
   const router = useRouter();

@@ -13,16 +13,11 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   Store,
-  Phone,
-  MapPin,
   Truck,
-  CheckCircle2,
   Globe,
-  Search,
   Navigation,
   Compass,
   ExternalLink,
-  MessageCircle,
   ArrowRight,
   AlertCircle,
   Map,
@@ -31,6 +26,7 @@ import {
   Calculator,
   Coins
 } from 'lucide-react';
+import { Phone, MapPin, Search, MessageCircle, CheckCircle2 } from '@/components/icons/CustomIcons';
 import { 
   getMapSettings, 
   saveMapSettings, 

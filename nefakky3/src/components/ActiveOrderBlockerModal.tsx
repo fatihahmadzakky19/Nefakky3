@@ -15,13 +15,11 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 // Mengimpor ikon-ikon modern dan relevan dari Lucide React
 import { 
-  Clock, 
-  CookingPot, 
   Truck, 
   ArrowRight, 
-  X, 
-  CheckCircle2
+  X
 } from 'lucide-react';
+import { Clock, CheckCircle2, CookingPot } from '@/components/icons/CustomIcons';
 // Mengimpor tipe data pesanan AdminOrder dari DataContext
 import { AdminOrder } from '@/context/DataContext';
 

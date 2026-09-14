@@ -1,9 +1,9 @@
 # Spesifikasi Desain Antarmuka: Customer Facing Application — Nefakky Marketplace
 
-**Versi Dokumen**: 3.6.0  
-**Target Modul**: Antarmuka Belanja Pelanggan (Beranda, Katalog Menu, Detail & Varian Menu, Cart Checkout Stepper, Live GPS Tracking, Ulasan Rasa, Profil Akun)  
-**Framework Frontend**: Next.js 14.2 (App Router), React 18, Tailwind CSS v3.4, Lucide React, Sonner, Framer Motion, Leaflet / OpenStreetMap  
-**Status**: Production Standard (100% Passed Test Suite, Type-Safe, WCAG AA Accessible)  
+**Versi Dokumen**: 4.0.0 (Anti-AI-Slop Editorial Design, Realtime Community Reviews, & Priority Reservation System)  
+**Target Modul**: Antarmuka Belanja Pelanggan (Beranda, Katalog Menu, Detail & Varian Menu, Cart Checkout Stepper, Live GPS Tracking, Ulasan Rasa Komunitas, Profil Akun & CS Chat)  
+**Framework Frontend**: Next.js 14.2 (App Router), React 18, Tailwind CSS v3.4, Lucide React, Leaflet / OpenStreetMap, Midtrans Snap SDK  
+**Status**: Production Standard (100% Passed Test Suite, Type-Safe, WCAG 2.1 AA Accessible)  
 **Penulis**: Tim Pengembang Nefakky & Google Stitch AI Design System  
 
 ---
@@ -12,15 +12,15 @@
 
 ```mermaid
 graph TD
-    A["1. Beranda / Landing Page (Hero Carousel & Promo Strip)"] --> B["2. Katalog Menu & Filter Kategori (/menu)"]
-    B --> C["3. Modal Interaktif Detail Menu, Nutrisi & Varian Rasa"]
-    C --> D["4. Keranjang Belanja & Validasi Kupon Diskon (/cart)"]
-    D --> E["5. Alamat Pengiriman & Titik Koordinat GPS Map Picker"]
-    E --> F["6. Pilihan Pembayaran: Midtrans Snap / QRIS / VA / COD"]
-    F --> G["7. Layar Konfirmasi Transaksi Sukses & Kode Pesanan"]
-    G --> H["8. Live Order Tracking 5-Tahap & Peta Rute (/notifications)"]
-    H --> I["9. Konfirmasi Pesanan Sampai & Cetak Struk PDF"]
-    I --> J["10. Berbagi Pengalaman & Ulasan Bintang Komunitas (/comments)"]
+    A["1. Beranda / Landing Page (Hero Showcase & Voucher Strip)"] --> B["2. Katalog Menu & Filter Kategori (/menu)"]
+    B --> C["3. Modal Rincian Menu, Nutrisi, Varian Rasa, & Reservasi Prioritas"]
+    C --> D["4. Keranjang Belanja & Validasi Voucher Diskon (/cart)"]
+    D --> E["5. Titik Antar GPS Map Picker & Kalkulator Ongkir Haversine"]
+    E --> F["6. Pilihan Pembayaran: Midtrans Snap (VA/QRIS) atau Tunai COD"]
+    F --> G["7. Layar Sukses Transaksi & Kode Pesanan Resmi"]
+    G --> H["8. Live Order Tracking 5-Tahap & Peta Rute Kurir (/notifications)"]
+    H --> I["9. Tombol Konfirmasi Pesanan Tiba & Unduh Invoice PDF"]
+    I --> J["10. Ulasan Rasa Realtime & Diskusi Komunitas (/comments)"]
 ```
 
 ---
@@ -28,117 +28,123 @@ graph TD
 ## 2. Rincian Desain Antarmuka per Halaman
 
 ### 2.1 Beranda Utama (`/`)
-* **Bilah Navigasi Terpadu (Navbar)**:
-  * Brand wordmark *NEFAKKY* dengan logo monogram serif.
-  * Tautan desktop: *Beranda*, *Katalog Menu*, *Ulasan Rasa*, *Status Pesanan*.
-  * Indikator keranjang belanja dinamis dengan counter badge kuantitas item.
-  * Avatar profil pengguna dengan dropdown aksi cepat dan tombol pintasan Panel Admin (bagi role administrator).
-  * Bottom navigation bar 5-kolom simetris untuk perangkat seluler.
-* **Hero Showcase Carousel**:
-  * Menampilkan hidangan unggulan Nusantara (Ayam Bakar Madu, Gudeg Komplit, Nasi Bakar Cumi) dengan slider otomatis dan kontrol manual interaktif.
-  * Tagline editorial berwibawa dengan rating bintang dan jumlah ulasan terverifikasi.
-  * Tombol CTA ganda: *Eksplorasi Menu* (primary amber) dan *Lihat Detail* (secondary outline).
-* **Floating Category Filter Bar**:
-  * Pilihan pill tombol cepat: *Semua*, *Makanan Berat*, *Minuman*, *Menu Hemat*.
-* **Active Voucher Promo Strip**:
-  * Banner pita promo berjalan yang menampilkan kupon aktif (misal: diskon 30% `WEEKENDSERU`) dengan tombol salin / klaim instan.
-* **Katalog Best Seller (6-Grid Card)**:
-  * Kartu menu presisi rounded-3xl dengan efek hover zoom halus.
-  * Badge terpopuler, harga per porsi, rating bintang, dan kontrol stepper kuantitas keranjang (+/-).
-* **Section Filosofi Dapur & Keunggulan Kuliner**:
-  * Panel split yang menguraikan komitmen bahan baku rempah alami tanpa pengawet, higienitas pengolahan, dan ketepatan waktu pengiriman.
+* **Header Navigasi Terintegrasi (`Navbar.tsx`)**:
+  * Wordmark bersih *NEFAKKY* dengan tipografi tebal bergaya artisanal.
+  * Tautan desktop: *Beranda*, *Menu*, *Ulasan Rasa*, *Status Pesanan*.
+  * Indikator keranjang belanja dinamis dengan penghitung item realtime.
+  * Avatar profil pengguna dengan pintasan cepat ke *Profil Akun*, *Live Chat*, dan *Panel Admin* (bagi role administrator).
+  * Bottom navigation bar 5-kolom dengan ikon Lucide untuk perangkat mobile.
+* **Hero Showcase Banner**:
+  * Foto hidangan beresolusi tinggi dengan pencahayaan hangat menggugah selera (Bebek Betutu, Nasi Bakar Rempah, Ayam Taliwang).
+  * Tagline editorial berwibawa: *Cita Rasa Warisan Nusantara yang Diolah Jujur Tanpa Pengawet*.
+  * Tombol CTA ganda: *Eksplorasi Menu* (Nordic Citrus Orange `#FF5400`) dan *Lihat Ulasan Pelanggan* (outline elegan).
+* **Floating Category Bar**:
+  * Tombol pill rounded-full: *Semua*, *Makanan Berat*, *Minuman Segar*, *Menu Hemat*.
+* **Voucher Promo Strip**:
+  * Pita informasi kupon aktif dengan tombol salin kode kupon 1-klik.
+* **Section Filosofi Dapur**:
+  * 3 Nilai Inti: *100% Rempah Segar Pilihan*, *Bebas Bahan Pengawet Sintetis*, dan *Pengiriman Cepat Tepat Waktu*.
 
 ---
 
-### 2.2 Katalog Menu Lengkap (`/menu`)
-* **Sticky Control Bar**:
-  * Tab filter kategori dinamis (*Semua*, *Makanan Berat*, *Minuman*, *Menu Hemat*, *Segera Hadir*).
-  * Bilah pencarian teks realtime dengan ikon kaca pembesar.
-  * Dropdown pengurutan (*Terpopuler*, *Rating Tertinggi*, *Harga Rendah-Tinggi*, *Harga Tinggi-Rendah*).
-* **Modal Detail Menu & Informasi Nutrisi (`MenuDetailModal.tsx`)**:
-  * Galeri foto hidangan resolusi tinggi dengan badge status.
-  * Informasi kalori, protein, lemak, dan estimasi waktu masak.
-  * Pilihan tingkat kepedasan (Level 1-5) dan catatan request khusus.
-  * Pemilihan varian rasa untuk produk minuman (Mangga Aromanis, Sirsak Madu, Jambu Merah).
+### 2.2 Katalog Menu & Modal Rincian Hidangan (`/menu`, `MenuDetailModal.tsx`)
+* **Kontrol Katalog**:
+  * Bilah pencarian teks realtime dengan debounce mulus.
+  * Dropdown urutan: *Terpopuler*, *Rating Tertinggi*, *Harga Termurah*, *Harga Termahal*.
+* **Kartu Produk Anti-AI-Slop**:
+  * Bingkai kartu minimalis berjarak lega (`p-4`), sudut melengkung `rounded-2xl`, tanpa badge kartun berlebihan.
+  * Tag kategori elegan dan badge level kepedasan.
+* **Modal Rincian Menu & Nutrisi Lengkap**:
+  * Galeri foto hidangan resolusi tinggi.
+  * Informasi kalori (Kkal), protein (g), dan lemak sehat (g).
+  * Pilihan level sambal/kepedasan dan kolom catatan resep kustom.
+  * Pilihan varian rasa khusus menu minuman jus (Mangga, Sirsak, Jambu) dengan visual dot indikator warna.
+* **Sistem Reservasi Prioritas Menu Habis**:
+  * Jika stok produk 0 (Habis), tombol belanja otomatis berganti menjadi **"Kirim Reservasi Prioritas"**.
+  * Menekan tombol ini akan mengirimkan notifikasi terstruktur `[RESERVASI PRODUK HABIS]` langsung ke Live Chat CS admin sehingga pelanggan diprioritaskan saat stok kembali dimasak.
 
 ---
 
 ### 2.3 Alur Checkout 4-Tahap (`/cart`)
 
 #### Tahap 1: Keranjang Belanja (Cart Review)
-* Daftar item pesanan lengkap dengan foto thumbnail, nama menu, harga satuan, dan kontrol kuantitas.
-* Fitur klaim voucher kupon promo dengan validasi batas minimum transaksi (*Min Spend*).
-* Ringkasan biaya otomatis: Subtotal, Potongan Diskon, dan Estimasi Ongkir.
+* Daftar item pesanan lengkap dengan foto thumbnail, nama menu, varian rasa, harga satuan, dan kontrol kuantitas (+/-).
+* Fitur klaim voucher kupon promo dengan validasi otomatis minimum belanja (*Min Spend*).
+* Ringkasan biaya otomatis: Subtotal, Potongan Diskon, Biaya Kemasan Higienis, dan Estimasi Ongkir.
 
-#### Tahap 2: Pengiriman & Catatan Dapur
+#### Tahap 2: Pengiriman & Titik Antar GPS
 * Pilihan multi-alamat tersimpan dari akun profil pengguna atau input alamat baru.
 * **Peta GPS Picker (`AutoMapPickerModal.tsx`)**:
-  * Menggunakan OpenStreetMap / Leaflet untuk memilih titik koordinat presisi.
-  * Reverse geocoding otomatis yang mengisi teks alamat lengkap.
-* Pilihan label alamat cepat (*Rumah*, *Kantor*, *Apartemen*, *Kos*).
-* Dua kolom catatan khusus:
-  1. *Catatan Kurir*: Panduan patokan jalan atau warna pagar.
-  2. *Catatan Dapur*: Request resep (misal: sambal dipisah, bumbu banyak).
+  * Menggunakan Leaflet / OpenStreetMap untuk memilih titik koordinat presisi pemesan.
+  * Reverse geocoding otomatis yang mengisi alamat jalan, kelurahan, dan kecamatan.
+* **Kalkulator Ongkos Kirim Haversine**:
+  $$\text{Ongkir} = \begin{cases} 
+  \text{Rp } 10.000 & \text{jika jarak} \le 10\text{ km} \\ 
+  \text{Rp } 10.000 + \left\lceil \dfrac{\text{jarak} - 10}{3} \right\rceil \times \text{Rp } 2.500 & \text{jika jarak} > 10\text{ km} 
+  \end{cases}$$
+* Kolom catatan khusus kurir (patokan pagar/gang) dan catatan khusus dapur.
 
-#### Tahap 3: Metode Pembayaran
-* **Midtrans Snap Online**: Virtual Account (BCA, BNI, BRI, Mandiri), QRIS (GoPay, ShopeePay, Dana, OVO), Kartu Kredit/Debit.
-* **Cash on Delivery (COD)**: Bayar tunai langsung saat kurir menyerahkan pesanan.
-* **Simulator Sandbox Midtrans**:
-  * Modal konsol payment tester dengan nomor VA riil dan tombol salin.
-  * Background polling otomatis memeriksa status transaksi setiap 2.5 detik.
+#### Tahap 3: Pembayaran Multi-Channel
+* **Midtrans Snap Gateway**:
+  * Virtual Account Bank (BCA, BNI, BRI, Mandiri, Permata).
+  * E-Wallet & QRIS Instan (GoPay, ShopeePay, Dana, OVO, LinkAja).
+  * Kartu Kredit / Debit Online dengan enkripsi 3D Secure.
+* **Cash on Delivery (COD)**:
+  * Pembayaran tunai saat hidangan tiba di tangan pembeli.
+  * Banner pengingat nominal uang pas dengan ikon vektor `<Banknote />`.
 
-#### Tahap 4: Konfirmasi Pesanan Berhasil
-* Menampilkan Order ID resmi (`#NFK-XXXXXX`) dan animasi selebrasi.
-* Rincian tagihan lunas dan tautan langsung ke halaman pelacakan status pengiriman.
+#### Tahap 4: Konfirmasi Sukses Transaksi
+* Kode Order ID unik (misal: `ORD-88219`) dengan ringkasan status pembayaran *PAID* atau *MENUNGGU COD*.
+* Tautan instan ke halaman pelacakan status pesanan.
 
 ---
 
-### 2.4 Pelacakan Pesanan & Status Pengiriman (`/notifications`)
-* **Pulsing Realtime Countdown Timer**: Estimasi waktu pengantaran hidangan tiba di lokasi pembeli.
+### 2.4 Pelacakan Pesanan & Status Pengiriman (`/notifications`, `/order-status`)
 * **Stepper Alur 5-Tahap Status**:
-  1. `RECEIVED` - Pesanan Diterima & Masuk Antrian
-  2. `COOKING` - Sedang Dimasak oleh Chef
-  3. `READY` - Makanan Telah Dikemas Rapi
-  4. `DELIVERING` - Kurir Menuju Alamat Pengantaran
-  5. `COMPLETED` - Pesanan Tiba & Diserahkan
-* **Peta Rute GPS Interaktif**:
-  * Visualisasi jalur perjalanan kurir dari Dapur Pusat (*Bojong Gede, Bogor*) ke lokasi pembeli.
-  * Switcher mode tampilan: *OpenStreetMap Geografis* atau *Ilustrasi Rute Dapur*.
-* **Konfirmasi Penerimaan**: Tombol bagi pelanggan untuk mengonfirmasi pesanan telah tiba dengan selamat.
-* **Nota Struk Digital**: Modal pratinjau invoice lengkap dengan tombol cetak PDF resmi (`/api/orders/{id}/invoice-pdf`).
+  1. `RECEIVED` - Pesanan Diterima Dapur
+  2. `PREPARING` - Sedang Disiapkan & Dimasak
+  3. `READY` - Pesanan Telah Dikemas Rapi
+  4. `DELIVERING` - Kurir Sedang Menuju Lokasi Anda
+  5. `COMPLETED` - Pesanan Selesai & Diterima
+* **Live Courier Route Map**:
+  * Visualisasi jalur perjalanan kurir dari Dapur Utama (*Bojong Gede, Bogor*) ke lokasi pemesan pada peta interaktif Leaflet.
+* **Konfirmasi Penerimaan oleh Pelanggan**:
+  * Tombol *Konfirmasi Pesanan Telah Sampai* yang secara instan mengirimkan sinyal ke dashboard admin dengan status *Dikonfirmasi Pembeli*.
+* **Nota & Invoice Resmi**:
+  * Pratinjau nota digital dan tombol unduh PDF resmi.
 
 ---
 
 ### 2.5 Ulasan Rasa & Komunitas Pelanggan (`/comments`)
-* **Formulir Ulasan Interaktif**:
-  * Dropdown pilihan menu hidangan yang pernah dipesan.
-  * Rating bintang dinamis (skala 1.0 s/d 5.0) dengan pratinjau bintang pecahan (half star).
-  * Kolom deskripsi ulasan pengalaman rasa.
-  * Lampiran foto masakan dari galeri perangkat.
-* **Feed Ulasan Komunitas**:
-  * Kartu ulasan terverifikasi dengan badge bintang, tag nama menu, dan avatar pelanggan.
-  * Thread diskusi untuk melihat tanggapan dan balasan resmi dari tim **CS Admin Resto**.
+* **Realtime Discussion Feed**:
+  * Menampilkan ulasan autentik dari para pelanggan yang telah memesan hidangan.
+  * Rating bintang presisi (skala 1.0 s/d 5.0).
+  * Lampiran foto masakan yang difoto langsung oleh pembeli.
+* **Thread Balasan Resmi Resto**:
+  * Menampilkan respon hangat dari tim CS Admin Resto dengan badge verifikasi resmi *Official Resto Response*.
+* **Formulir Kirim Ulasan**:
+  * Modal input ulasan dengan pilihan menu hidangan, bintang interaktif, dan upload foto masakan.
 
 ---
 
 ### 2.6 Profil Akun & Pusat Bantuan (`/profile`)
-* **Banner Profil Utama**:
-  * Pengaturan nama, nomor telepon, dan foto avatar.
-  * Dukungan 3 sumber foto avatar: Unggah dari Galeri, Kamera Langsung (Webcam Selfie), atau Sinkronisasi Foto Akun Google.
+* **Pengaturan Akun**:
+  * Nama pengguna, email terverifikasi, nomor WhatsApp, dan upload avatar (Galeri, Kamera Webcam Langsung, atau Google Sync).
 * **Buku Alamat Pengiriman**: Pengelolaan multi-alamat (Tambah, Edit, Hapus, Jadikan Alamat Utama).
-* **Live Chat Customer Service**: Layanan chat interaktif langsung ke admin dapur resto dengan quick-reply chips.
-* **Riwayat Pesanan**: Tab filter pesanan (*Semua*, *Aktif*, *Selesai*) dengan tombol *Pesan Lagi (Re-order)* dan *Lacak Status*.
+* **Live Chat Terintegrasi**:
+  * Layanan chat langsung ke tim Customer Service dapur.
+  * Notifikasi instan saat pesanan yang direservasi telah kembali tersedia (*Restock Alert*).
+* **Riwayat Pesanan**: Tab filter pesanan (*Semua*, *Aktif*, *Selesai*) dengan tombol *Pesan Lagi* dan *Lacak Pengiriman*.
 
 ---
 
-## 3. Palet Warna & Tipografi Customer Facing
+## 3. Desain Komponen & Standar Visual Semantik
 
-| Elemen | Token Warna / Hex | Kegunaan |
+| Komponen | Token Desain / Tailwind | Karakteristik UI |
 | :--- | :--- | :--- |
-| **Primary Base** | `#25160E` (Deep Espresso) | Warna teks judul utama, navbar, tombol primer |
-| **Accent Tone** | `#934B19` (Warm Amber) | Warna hover link, aksen tombol aktif, highlight harga |
-| **Surface Background** | `#FAF8F5` (Warm Cream) | Warna latar belakang seluruh halaman |
-| **Card Surface** | `#FFFFFF` (Pure White) | Warna kartu produk, modal container, form input |
-| **Success Indicator** | `#10B981` (Emerald) | Status pembayaran lunas, order completed, voucher valid |
-| **Warning Indicator** | `#F59E0B` (Amber) | Status pending cooking, stock low |
-| **Font Family** | Sans-serif & Serif Editorial | Font sans untuk keterbacaan data, serif untuk brand & headline |
+| **Navbar Desktop** | `bg-white/95 backdrop-blur border-b border-slate-200` | Rapi, mengapung halus saat di-scroll, bayangan subtil. |
+| **Kartu Produk** | `bg-white border border-slate-200/80 rounded-2xl` | Sudut membulat modern, efek zoom gambar mikro saat hover. |
+| **Tombol CTA Utama** | `bg-[#FF5400] hover:bg-[#E04800] text-white rounded-xl` | Warna oranye Nordic Citrus berenergi, kontras tinggi. |
+| **Badge Diskon** | `bg-amber-100 text-amber-900 border border-amber-300` | Tipografi tegas, mudah terbaca, anti-AI-slop. |
+| **Status COD Alert** | `bg-amber-50 border border-amber-200 text-amber-950` | Dilengkapi ikon `<Banknote />` tanpa emoji kartun. |
+| **Banner Konfirmasi** | `bg-emerald-50 border border-emerald-300 text-emerald-900` | Ikon `<CheckCircle2 />` penanda sukses. |

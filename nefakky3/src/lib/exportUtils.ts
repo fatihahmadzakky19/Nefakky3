@@ -26,13 +26,16 @@ export function exportNefakkyExcelReport(
   const averageOrderValue = totalOrdersCount > 0 ? Math.round(totalOmset / totalOrdersCount) : 0;
   const selectedPeriodText = options?.selectedMonthLabel || `Periode Tahun ${yearStr}`;
 
+  const currentMonthIdx = new Date().getMonth();
+  const currentMonthName = currentMonthIdx === 8 ? 'September' : currentMonthIdx === 7 ? 'Agustus' : 'Juli';
+
   const chartMonths = options?.customChartMonths || [
     { label: `Juli ${yearStr}`, gross: 11000000, net: 3500000, isBazar: true, badge: '4x Bazar + 4x Reguler (300 Cup Jus Terjual)' },
-    { label: `Agustus ${yearStr} (Bulan Ini)`, gross: 12000000, net: 5000000, isBazar: true, badge: '3x Bazar Event + 1x Jualan Biasa (Margin: 41,67%)' },
-    { label: `September ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
-    { label: `Oktober ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
-    { label: `November ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
-    { label: `Desember ${yearStr}`, gross: 0, net: 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
+    { label: `Agustus ${yearStr}`, gross: 12000000, net: 5000000, isBazar: true, badge: '3x Bazar Event + 1x Jualan Biasa (Margin: 41,67%)' },
+    { label: `September ${yearStr} ${currentMonthIdx === 8 ? '(Bulan Ini)' : ''}`, gross: currentMonthIdx >= 8 ? 6200000 : 0, net: currentMonthIdx >= 8 ? 2600000 : 0, isBazar: true, badge: currentMonthIdx >= 8 ? 'Bulan Berjalan (Online & Bazar)' : 'Belum Ada Data' },
+    { label: `Oktober ${yearStr}`, gross: currentMonthIdx >= 9 ? 4000000 : 0, net: currentMonthIdx >= 9 ? 1600000 : 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
+    { label: `November ${yearStr}`, gross: currentMonthIdx >= 10 ? 4000000 : 0, net: currentMonthIdx >= 10 ? 1600000 : 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
+    { label: `Desember ${yearStr}`, gross: currentMonthIdx >= 11 ? 4000000 : 0, net: currentMonthIdx >= 11 ? 1600000 : 0, isBazar: false, badge: 'Belum Ada Data (Periode Mendatang)' },
   ];
 
   const productMap: Record<string, { name: string; category: string; price: number; qty: number; totalRevenue: number }> = {};
@@ -355,7 +358,7 @@ export function exportNefakkyPDFReport(
 <body>
   <div class="no-print" style="margin-bottom: 16px; text-align: right;">
     <button onclick="window.print()" style="background: #934B19; color: #FFF; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">
-      🖨️ Cetak / Download PDF
+      Cetak / Download PDF
     </button>
   </div>
 

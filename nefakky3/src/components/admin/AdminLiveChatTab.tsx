@@ -15,33 +15,21 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   Send,
-  User,
   Paperclip,
   Film,
   X,
-  Phone,
   Building2,
-  MapPin,
   Truck,
-  CheckCircle2,
-  MessageCircle,
-  Mail,
   Smile,
-  Search,
-  MessageSquare,
-  Clock,
   Sparkles,
-  ShoppingBag,
   ExternalLink,
   ChevronRight,
   Info,
-  Receipt,
   CreditCard,
-  Calendar,
-  UtensilsCrossed,
   BadgePercent,
   Check
 } from 'lucide-react';
+import { Phone, MapPin, Search, ShoppingBag, User, Mail, Clock, Tag, MessageCircle, MessageSquare, Receipt, CheckCircle2, UtensilsCrossed } from '@/components/icons/CustomIcons';
 import { ChatMessage, useData } from '@/context/DataContext';
 
 interface AdminLiveChatTabProps {
@@ -74,11 +62,11 @@ export default function AdminLiveChatTab({
 
   // Preset Template Balasan Cepat CS
   const QUICK_REPLY_TEMPLATES = [
-    '🍳 Pesanan sedang kami siapkan di dapur.',
-    '🛵 Kurir kami sedang meluncur menuju lokasi Anda.',
-    '📸 Boleh kirimkan foto atau detail kendalanya kak?',
-    '🙏 Terima kasih banyak telah berbelanja di Nefakky!',
-    '✅ Catatan tambahan pesanan Anda telah kami perbarui.'
+    'Pesanan sedang kami siapkan di dapur.',
+    'Kurir kami sedang meluncur menuju lokasi Anda.',
+    'Boleh kirimkan foto atau detail kendalanya kak?',
+    'Terima kasih banyak telah berbelanja di Nefakky!',
+    'Catatan tambahan pesanan Anda telah kami perbarui.'
   ];
 
   // Auto select chat from URL query param
@@ -373,7 +361,7 @@ export default function AdminLiveChatTab({
 
     replyChatMessage(
       selectedChatUserEmail,
-      finalMessage || (adminMediaType === 'video' ? '📹 [Video Balasan CS]' : '📷 [Foto Balasan CS]'),
+      finalMessage || (adminMediaType === 'video' ? '[Video Balasan CS]' : '[Foto Balasan CS]'),
       adminMediaUrl || undefined,
       adminMediaType
     );
@@ -650,7 +638,7 @@ export default function AdminLiveChatTab({
                       {/* Reservation Tag if Customer Sent a Reservation Request */}
                       {!isAdmin && (msg.text?.includes('[RESERVASI PRODUK HABIS]') || msg.text?.includes('[RESERVASI MENU HABIS]')) && (
                         <div className="mb-1.5 flex items-center gap-1.5 bg-amber-100/90 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-2xs">
-                          <span>🏷️</span>
+                          <Tag className="w-3 h-3 text-amber-800" />
                           <span>PERMINTAAN RESERVASI PRODUK HABIS</span>
                         </div>
                       )}
@@ -707,12 +695,12 @@ export default function AdminLiveChatTab({
                           <button
                             type="button"
                             onClick={() => {
-                              setAdminReplyInput('Halo kak! Kabar gembira, menu yang kakak pesan/reservasi kemarin kini telah KEMBALI TERSEDIA (RESTOCK) di dapur kami dan siap dipesan. Silakan melakukan pemesanan langsung melalui aplikasi ya kak! Selamat menikmati! 🍲✨');
+                              setAdminReplyInput('Halo kak! Kabar gembira, menu yang kakak pesan/reservasi kemarin kini telah KEMBALI TERSEDIA (RESTOCK) di dapur kami dan siap dipesan. Silakan melakukan pemesanan langsung melalui aplikasi ya kak! Selamat menikmati!');
                             }}
-                            className="text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-0.5 rounded-md shadow-2xs transition-colors cursor-pointer flex items-center gap-1"
+                            className="text-[10px] bg-amber-600 hover:bg-amber-700 text-white font-bold px-2 py-0.5 rounded-md shadow-2xs transition-colors cursor-pointer flex items-center gap-1"
                             title="Klik untuk mengisi pesan balasan restock otomatis"
                           >
-                            <span>⚡ Kabari Restock</span>
+                            <span>Kabari Restock</span>
                           </button>
                         )}
                       </div>
@@ -824,16 +812,8 @@ export default function AdminLiveChatTab({
                   value={adminReplyInput}
                   onChange={(e) => setAdminReplyInput(e.target.value)}
                   placeholder={`Ketik balasan untuk ${activeUserObj.name}...`}
-                  className="w-full bg-stone-100 focus:bg-white pl-4 pr-10 py-3 rounded-full text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-[#934B19] border border-stone-200 transition-all placeholder:text-stone-400 font-medium"
+                  className="w-full bg-stone-100 focus:bg-white px-4 py-3 rounded-full text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-[#934B19] border border-stone-200 transition-all placeholder:text-stone-400 font-medium"
                 />
-                <button 
-                  type="button" 
-                  onClick={() => setAdminReplyInput(prev => prev + ' 😊')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-[#934B19] transition-colors cursor-pointer p-1"
-                  title="Tambah Emoji"
-                >
-                  <Smile className="w-4 h-4" />
-                </button>
               </div>
 
               {/* Send Button */}

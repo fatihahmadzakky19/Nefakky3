@@ -12,7 +12,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Mail, ArrowLeft, CheckCircle2, Lock, KeyRound, AlertCircle } from 'lucide-react';
+import { ArrowLeft, KeyRound, AlertCircle } from 'lucide-react';
+import { Mail, Lock, CheckCircle2 } from '@/components/icons/CustomIcons';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ForgotPasswordPage() {

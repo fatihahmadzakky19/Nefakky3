@@ -23,37 +23,26 @@ import Footer from '@/components/Footer';
 import AutoMapPickerModal from '@/components/AutoMapPickerModal';
 import { validateAddressGeocode } from '@/lib/mapService';
 import { 
-  User, 
-  Edit3, 
-  Phone, 
-  Home, 
   Briefcase, 
   Headphones, 
   Bot, 
   Send, 
-  Flame, 
-  MapPin, 
   ArrowRight, 
   Check, 
   X, 
-  CheckCircle2, 
   AlertCircle,
   Navigation,
-  LogOut, 
-  Camera, 
   Image as ImageIcon, 
   RotateCcw, 
   Upload, 
   Plus, 
-  Trash2, 
-  Clock, 
   ExternalLink, 
-  ShieldCheck, 
   Paperclip, 
   RefreshCw, 
   Globe, 
   Link2 
 } from 'lucide-react';
+import { Phone, Home, MapPin, User, Clock, Flame, LogOut, ShieldCheck, Edit3, CheckCircle2, Camera, Trash2 } from '@/components/icons/CustomIcons';
 
 /** Helper Kompresi & Konversi Gambar ke Data URL Base64 yang Optimal */
 const compressImageFile = (file: File, maxWidth = 400, maxHeight = 400, quality = 0.85): Promise<string> => {

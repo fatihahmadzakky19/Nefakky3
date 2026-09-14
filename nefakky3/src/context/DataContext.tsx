@@ -691,7 +691,7 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     id: 'ORD-88219',
     customerName: 'Nizar Azzuhra',
     customerEmail: 'nizarazzuhra@gmail.com',
-    avatar: 'https://ui-avatars.com/api/?name=Nizar+Azzuhra&background=F97316&color=ffffff',
+    avatar: 'https://ui-avatars.com/api/?name=Nizar+Azzuhra&background=FF5400&color=ffffff',
     address: 'Jl. Kebon Jeruk No. 12, Jakarta Barat',
     phone: '081234567890',
     items: [
@@ -702,13 +702,13 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     paymentMethod: 'QRIS / GoPay',
     paymentBadge: 'PAID',
     deliveryType: 'KURIR NEFAKKY',
-    status: 'DELIVERING', // Status: Pesanan Diantar / Di Jalan
+    status: 'DELIVERING',
     subtotal: 100000,
     shippingCost: 12000,
     discount: 10000,
     total: 102000,
-    date: 'Senin, 24 Agu 2026 • 12:45:00 WIB',
-    createdAt: 1787575500000,
+    date: 'Jumat, 11 Sep 2026 • 05:15:00 WIB',
+    createdAt: 1789125300000, // 11 Sep 2026 05:15:00 WIB
     customerConfirmed: false
   },
   {
@@ -731,10 +731,10 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     shippingCost: 15000,
     discount: 15000,
     total: 161000,
-    date: 'Minggu, 23 Agu 2026 • 10:15:00 WIB',
-    createdAt: 1787480100000,
+    date: 'Kamis, 10 Sep 2026 • 19:30:00 WIB',
+    createdAt: 1789089000000, // 10 Sep 2026 19:30:00 WIB
     customerConfirmed: true,
-    confirmedAt: 'Minggu, 23 Agu 2026 • 11:30:00 WIB'
+    confirmedAt: 'Kamis, 10 Sep 2026 • 20:15:00 WIB'
   },
   {
     id: 'ORD-88217',
@@ -756,8 +756,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     shippingCost: 10000,
     discount: 0,
     total: 104000,
-    date: 'Kamis, 20 Agu 2026 • 13:10:00 WIB',
-    createdAt: 1787224200000,
+    date: 'Selasa, 8 Sep 2026 • 13:10:00 WIB',
+    createdAt: 1788894600000, // 8 Sep 2026 13:10:00 WIB
     customerConfirmed: false
   },
   {
@@ -780,8 +780,8 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     shippingCost: 10000,
     discount: 5000,
     total: 62000,
-    date: 'Selasa, 18 Agu 2026 • 13:20:00 WIB',
-    createdAt: 1787052000000,
+    date: 'Jumat, 4 Sep 2026 • 14:20:00 WIB',
+    createdAt: 1788549600000, // 4 Sep 2026 14:20:00 WIB
     customerConfirmed: false
   },
   {
@@ -798,11 +798,34 @@ export const DEFAULT_ORDERS: AdminOrder[] = [
     paymentMethod: 'COD (Bayar di Tempat)',
     paymentBadge: 'AWAITING',
     deliveryType: 'STANDARD',
-    status: 'RECEIVED',
+    status: 'COMPLETED',
     subtotal: 38000,
     shippingCost: 10000,
     discount: 0,
     total: 48000,
+    date: 'Senin, 24 Agu 2026 • 11:00:00 WIB',
+    createdAt: 1787572800000, // 24 Agu 2026
+    customerConfirmed: true
+  },
+  {
+    id: 'ORD-88214',
+    customerName: 'Ahmad Fauzi',
+    customerEmail: 'ahmad@example.com',
+    avatar: 'https://ui-avatars.com/api/?name=Ahmad+Fauzi&background=10B981&color=ffffff',
+    address: 'Jl. Pemuda No. 45, Rawamangun, Jakarta',
+    phone: '081298765432',
+    items: [
+      { id: 'm1', name: 'Ayam Bakar', price: 35000, quantity: 1, image: '/images/ayam_bakar.jpg' }
+    ],
+    itemCount: 1,
+    paymentMethod: 'COD (Bayar di Tempat)',
+    paymentBadge: 'AWAITING',
+    deliveryType: 'STANDARD',
+    status: 'RECEIVED',
+    subtotal: 35000,
+    shippingCost: 10000,
+    discount: 0,
+    total: 45000,
     date: 'Sabtu, 15 Agu 2026 • 13:30:00 WIB',
     createdAt: 1786793400000,
     customerConfirmed: false
@@ -830,7 +853,7 @@ export const DEFAULT_REVIEWS: UserReview[] = [
         id: 'rep-1',
         authorName: 'Siti Rahmawati',
         authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-        comment: 'Wah setuju banget kak! Sambal kecap rempahnya emang nagih parah 👍',
+        comment: 'Wah setuju banget kak! Sambal kecap rempahnya emang nagih parah.',
         date: 'Kemarin'
       }
     ]

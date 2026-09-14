@@ -23,20 +23,16 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AuthRequiredModal from '@/components/AuthRequiredModal';
 import { 
-  ShoppingBag, 
-  Star, 
   Plus, 
   Minus, 
   ArrowLeft,
   Share2,
-  CheckCircle2,
   Store,
   Check,
-  Lock,
   AlertCircle,
-  MessageSquare,
   ArrowRight
 } from 'lucide-react';
+import { ShoppingBag, Lock, Star, MessageSquare, CheckCircle2 } from '@/components/icons/CustomIcons';
 
 const DRINK_VARIANTS = [
   { 
@@ -664,7 +660,7 @@ export default function MenuDetailPage() {
               <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs space-y-2 animate-fade-in">
                 <div className="flex items-center gap-2 font-bold text-sm">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Reservasi Prioritas Berhasil Terkirim! 📋</span>
+                  <span>Reservasi Prioritas Berhasil Terkirim!</span>
                 </div>
                 <p className="text-xs text-emerald-700 leading-relaxed font-light">
                   Permintaan prioritas untuk {quantity}x {isDrink ? `Jus ${selectedVariant}` : product.name} telah diterima oleh Tim CS. Kami akan segera menghubungi Anda saat stok kembali tersedia.

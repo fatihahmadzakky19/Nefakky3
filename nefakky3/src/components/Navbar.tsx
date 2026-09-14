@@ -15,20 +15,12 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { 
-  ShoppingBag, 
-  ShieldCheck, 
-  User, 
   Menu, 
   X, 
-  Home, 
-  Utensils, 
-  MessageSquare, 
-  Clock,
-  LogOut,
-  Sparkles,
-  ChevronDown,
-  Flame
+  Sparkles, 
+  ChevronDown
 } from 'lucide-react';
+import { ShoppingBag, Home, User, Clock, ShieldCheck, LogOut, Flame, MessageSquare, Utensils } from '@/components/icons/CustomIcons';
 
 interface NavbarProps {
   showSearch?: boolean;

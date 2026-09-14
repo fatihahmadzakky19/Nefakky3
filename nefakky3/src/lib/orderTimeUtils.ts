@@ -26,6 +26,59 @@ const MONTH_NAMES = [
 const SHORT_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
 /**
+ * Parser string tanggal bahasa Indonesia (misal: "Senin, 24 Agu 2026 • 12:45:00 WIB" atau "11 September 2026")
+ */
+export const parseIndonesianDateStringToDate = (str?: string): Date | null => {
+  if (!str || typeof str !== 'string') return null;
+
+  const MONTH_DICT: Record<string, number> = {
+    jan: 0, januari: 0,
+    feb: 1, februari: 1,
+    mar: 2, maret: 2,
+    apr: 3, april: 3,
+    mei: 4, may: 4,
+    jun: 5, juni: 5,
+    jul: 6, juli: 6,
+    agu: 7, agustus: 7, aug: 7, august: 7,
+    sep: 8, september: 8,
+    okt: 9, oktober: 9, oct: 9, october: 9,
+    nov: 10, november: 10,
+    des: 11, desember: 11, dec: 11, december: 11
+  };
+
+  // 1. Check format ISO YYYY-MM-DD
+  const isoMatch = str.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    const y = parseInt(isoMatch[1], 10);
+    const m = parseInt(isoMatch[2], 10) - 1;
+    const d = parseInt(isoMatch[3], 10);
+    const timeMatch = str.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    const hr = timeMatch ? parseInt(timeMatch[1], 10) : 12;
+    const min = timeMatch ? parseInt(timeMatch[2], 10) : 0;
+    const sec = timeMatch && timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
+    return new Date(y, m, d, hr, min, sec);
+  }
+
+  // 2. Check format Indonesia: misal "24 Agu 2026" atau "11 September 2026"
+  const dateMatch = str.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
+  if (dateMatch) {
+    const d = parseInt(dateMatch[1], 10);
+    const mKey = dateMatch[2].toLowerCase();
+    const y = parseInt(dateMatch[3], 10);
+    const m = MONTH_DICT[mKey] ?? MONTH_DICT[mKey.slice(0, 3)];
+    if (m !== undefined) {
+      const timeMatch = str.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+      const hr = timeMatch ? parseInt(timeMatch[1], 10) : 12;
+      const min = timeMatch ? parseInt(timeMatch[2], 10) : 0;
+      const sec = timeMatch && timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
+      return new Date(y, m, d, hr, min, sec);
+    }
+  }
+
+  return null;
+};
+
+/**
  * Mengonversi order apa pun (berdasarkan createdAt timestamp atau string tanggal)
  * menjadi objek tanggal terperinci yang memuat Hari, Tanggal, Bulan, Tahun, Jam & Detik.
  */
@@ -40,14 +93,11 @@ export const getDetailedOrderDateTime = (order: any, fallbackIdx: number = 0): D
     }
   }
 
-  // 2. Cek jika order.date adalah format ISO atau tanggal valid
+  // 2. Cek jika order.date adalah format string tanggal
   if (!d && order?.date && typeof order.date === 'string') {
-    // Jika format ISO (misal 2026-08-24T12:00:00Z)
-    if (order.date.includes('-') && !order.date.toLowerCase().includes('hari')) {
-      const parsedIso = new Date(order.date);
-      if (!isNaN(parsedIso.getTime())) {
-        d = parsedIso;
-      }
+    const parsed = parseIndonesianDateStringToDate(order.date);
+    if (parsed && !isNaN(parsed.getTime())) {
+      d = parsed;
     }
   }
 

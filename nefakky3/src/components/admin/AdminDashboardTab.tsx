@@ -20,35 +20,21 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   TrendingUp,
-  Receipt,
-  ShoppingBag,
-  BarChart3,
-  Star,
   Plus,
-  Printer,
-  FileSpreadsheet,
-  Flame,
   AlertTriangle,
-  Download,
   X,
   Check,
   RotateCcw,
-  Calendar,
-  Search,
   Filter,
   RefreshCw,
-  Eye,
-  FileText,
   ChevronDown,
   Sparkles,
   Info,
-  CalendarClock,
-  Edit3,
-  Sliders,
   DollarSign,
   PartyPopper,
   Store
 } from 'lucide-react';
+import { ShoppingBag, Flame, Search, BarChart3, Star, Calendar, CalendarClock, Receipt, Printer, FileSpreadsheet, Download, FileText, Eye, Edit3, Sliders } from '@/components/icons/CustomIcons';
 import { ProductItem, AdminOrder, useData } from '@/context/DataContext';
 import { 
   checkAndTriggerAnnualArchive, 
@@ -88,42 +74,99 @@ export interface ChartMonthConfig {
   isUpcoming: boolean;
 }
 
-const DEFAULT_CHART_MONTHS: ChartMonthConfig[] = [
-  { 
-    label: 'Jul', 
-    fullTitle: 'Bulan Juli 2026', 
-    grossPercent: 73, 
-    netPercent: 23, 
-    grossAmount: 'Rp 11.0 Jt', 
-    netAmount: 'Rp 3.5 Jt', 
-    grossRaw: 11000000, 
-    netRaw: 3500000, 
-    ordersCount: 250, 
-    isBazar: true, 
-    badge: '4x Bazar + 4x Reguler', 
-    isUpcoming: false, 
-    eventName: '4x Bazar (Habis) + 4x Reguler (300 Cup Jus Terjual)' 
-  },
-  { 
-    label: 'Agu', 
-    fullTitle: 'Bulan Agustus 2026 (Bulan Ini)', 
-    grossPercent: 80, 
-    netPercent: 33, 
-    grossAmount: 'Rp 12.0 Jt', 
-    netAmount: 'Rp 5.0 Jt', 
-    grossRaw: 12000000, 
-    netRaw: 5000000, 
-    ordersCount: 320, 
-    isBazar: true, 
-    badge: '3x Bazar Event', 
-    isUpcoming: false, 
-    eventName: '3x Bazar Event + 1x Jualan Biasa (Margin: 41,67%)' 
-  },
-  { label: 'Sep', fullTitle: 'Bulan September 2026', grossPercent: 0, netPercent: 0, grossAmount: 'Rp 0', netAmount: 'Rp 0', grossRaw: 0, netRaw: 0, ordersCount: 0, isBazar: false, isUpcoming: true, eventName: 'Belum dimulai' },
-  { label: 'Okt', fullTitle: 'Bulan Oktober 2026', grossPercent: 0, netPercent: 0, grossAmount: 'Rp 0', netAmount: 'Rp 0', grossRaw: 0, netRaw: 0, ordersCount: 0, isBazar: false, isUpcoming: true, eventName: 'Belum dimulai' },
-  { label: 'Nov', fullTitle: 'Bulan November 2026', grossPercent: 0, netPercent: 0, grossAmount: 'Rp 0', netAmount: 'Rp 0', grossRaw: 0, netRaw: 0, ordersCount: 0, isBazar: false, isUpcoming: true, eventName: 'Belum dimulai' },
-  { label: 'Des', fullTitle: 'Bulan Desember 2026', grossPercent: 0, netPercent: 0, grossAmount: 'Rp 0', netAmount: 'Rp 0', grossRaw: 0, netRaw: 0, ordersCount: 0, isBazar: false, isUpcoming: true, eventName: 'Belum dimulai' },
-];
+export const getDefaultChartMonths = (currentMonthIdx: number = new Date().getMonth()): ChartMonthConfig[] => {
+  return [
+    { 
+      label: 'Jul', 
+      fullTitle: 'Bulan Juli 2026', 
+      grossPercent: 73, 
+      netPercent: 23, 
+      grossAmount: 'Rp 11.0 Jt', 
+      netAmount: 'Rp 3.5 Jt', 
+      grossRaw: 11000000, 
+      netRaw: 3500000, 
+      ordersCount: 250, 
+      isBazar: true, 
+      badge: '4x Bazar + 4x Reguler', 
+      isUpcoming: false, 
+      eventName: '4x Bazar (Habis) + 4x Reguler (300 Cup Jus Terjual)' 
+    },
+    { 
+      label: 'Agu', 
+      fullTitle: 'Bulan Agustus 2026', 
+      grossPercent: 80, 
+      netPercent: 33, 
+      grossAmount: 'Rp 12.0 Jt', 
+      netAmount: 'Rp 5.0 Jt', 
+      grossRaw: 12000000, 
+      netRaw: 5000000, 
+      ordersCount: 320, 
+      isBazar: true, 
+      badge: '3x Bazar Event', 
+      isUpcoming: false, 
+      eventName: '3x Bazar Event + 1x Jualan Biasa (Margin: 41,67%)' 
+    },
+    { 
+      label: 'Sep', 
+      fullTitle: currentMonthIdx === 8 ? 'Bulan September 2026 (Bulan Ini)' : 'Bulan September 2026', 
+      grossPercent: 55, 
+      netPercent: 24, 
+      grossAmount: 'Rp 6.2 Jt', 
+      netAmount: 'Rp 2.6 Jt', 
+      grossRaw: 6200000, 
+      netRaw: 2600000, 
+      ordersCount: 165, 
+      isBazar: true, 
+      badge: currentMonthIdx === 8 ? 'Bulan Berjalan' : '2x Bazar Event', 
+      isUpcoming: currentMonthIdx < 8, 
+      eventName: 'Penjualan Berjalan September 2026 (Bazar & Pesanan Online Realtime)' 
+    },
+    { 
+      label: 'Okt', 
+      fullTitle: currentMonthIdx === 9 ? 'Bulan Oktober 2026 (Bulan Ini)' : 'Bulan Oktober 2026', 
+      grossPercent: currentMonthIdx >= 9 ? 35 : 0, 
+      netPercent: currentMonthIdx >= 9 ? 15 : 0, 
+      grossAmount: currentMonthIdx >= 9 ? 'Rp 4.0 Jt' : 'Rp 0', 
+      netAmount: currentMonthIdx >= 9 ? 'Rp 1.6 Jt' : 'Rp 0', 
+      grossRaw: currentMonthIdx >= 9 ? 4000000 : 0, 
+      netRaw: currentMonthIdx >= 9 ? 1600000 : 0, 
+      ordersCount: currentMonthIdx >= 9 ? 90 : 0, 
+      isBazar: false, 
+      isUpcoming: currentMonthIdx < 9, 
+      eventName: currentMonthIdx >= 9 ? 'Penjualan Berjalan Oktober 2026' : 'Belum dimulai' 
+    },
+    { 
+      label: 'Nov', 
+      fullTitle: currentMonthIdx === 10 ? 'Bulan November 2026 (Bulan Ini)' : 'Bulan November 2026', 
+      grossPercent: currentMonthIdx >= 10 ? 35 : 0, 
+      netPercent: currentMonthIdx >= 10 ? 15 : 0, 
+      grossAmount: currentMonthIdx >= 10 ? 'Rp 4.0 Jt' : 'Rp 0', 
+      netAmount: currentMonthIdx >= 10 ? 'Rp 1.6 Jt' : 'Rp 0', 
+      grossRaw: currentMonthIdx >= 10 ? 4000000 : 0, 
+      netRaw: currentMonthIdx >= 10 ? 1600000 : 0, 
+      ordersCount: currentMonthIdx >= 10 ? 90 : 0, 
+      isBazar: false, 
+      isUpcoming: currentMonthIdx < 10, 
+      eventName: currentMonthIdx >= 10 ? 'Penjualan Berjalan November 2026' : 'Belum dimulai' 
+    },
+    { 
+      label: 'Des', 
+      fullTitle: currentMonthIdx === 11 ? 'Bulan Desember 2026 (Bulan Ini)' : 'Bulan Desember 2026', 
+      grossPercent: currentMonthIdx >= 11 ? 35 : 0, 
+      netPercent: currentMonthIdx >= 11 ? 15 : 0, 
+      grossAmount: currentMonthIdx >= 11 ? 'Rp 4.0 Jt' : 'Rp 0', 
+      netAmount: currentMonthIdx >= 11 ? 'Rp 1.6 Jt' : 'Rp 0', 
+      grossRaw: currentMonthIdx >= 11 ? 4000000 : 0, 
+      netRaw: currentMonthIdx >= 11 ? 1600000 : 0, 
+      ordersCount: currentMonthIdx >= 11 ? 90 : 0, 
+      isBazar: false, 
+      isUpcoming: currentMonthIdx < 11, 
+      eventName: currentMonthIdx >= 11 ? 'Penjualan Berjalan Desember 2026' : 'Belum dimulai' 
+    },
+  ];
+};
+
+const DEFAULT_CHART_MONTHS = getDefaultChartMonths();
 
 export default function AdminDashboardTab({
   productList,
@@ -133,18 +176,23 @@ export default function AdminDashboardTab({
   onPrintPDF
 }: AdminDashboardTabProps) {
   const { products, orders } = useData();
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('Bulan Ini (Aug 2026)');
-  const [showPeriodDropdown, setShowPeriodDropdown] = useState<boolean>(false);
-  const [searchOrderQuery, setSearchOrderQuery] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   // Realtime Calendar & Clock API Sync (Ticking every second)
   const [liveCalendarInfo, setLiveCalendarInfo] = useState<RealtimeCalendarInfo>(() => getRealtimeCalendarNow());
 
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(() => {
+    const cal = getRealtimeCalendarNow();
+    return `Bulan Ini (${cal.shortMonth} ${cal.year})`;
+  });
+  const [showPeriodDropdown, setShowPeriodDropdown] = useState<boolean>(false);
+  const [searchOrderQuery, setSearchOrderQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+
   useEffect(() => {
     // Sinkronkan jam dengan Server Calendar API saat inisialisasi
     syncRealtimeCalendarClock().then(() => {
-      setLiveCalendarInfo(getRealtimeCalendarNow());
+      const now = getRealtimeCalendarNow();
+      setLiveCalendarInfo(now);
     });
 
     const timer = setInterval(() => {
@@ -157,30 +205,39 @@ export default function AdminDashboardTab({
 
   // Timeframe sinkron dengan selectedPeriod
   const chartTimeframe: '1M' | '6M' | '1Y' = useMemo(() => {
-    if (selectedPeriod === 'Jul - Dec 2026') return '6M';
-    if (selectedPeriod === '1 Tahun Terakhir') return '1Y';
+    const lower = selectedPeriod.toLowerCase();
+    if (lower.includes('tahun') || lower.includes('1y')) return '1Y';
+    if (lower.includes('des') || lower.includes('dec') || lower.includes('semester') || lower.includes('6m') || lower.includes('jul -')) return '6M';
     return '1M';
   }, [selectedPeriod]);
 
   // Detail Modal ketika Bar Chart diklik
   const [selectedChartDetail, setSelectedChartDetail] = useState<ChartMonthConfig | null>(null);
 
-  // Custom Chart Data State (Bisa Diedit Manual oleh Admin)
+  // Custom Chart Data State (Bisa Diedit Manual oleh Admin & Otomatis Aktif di Bulan Berjalan)
   const [customChartData, setCustomChartData] = useState<ChartMonthConfig[]>(() => {
+    const curIdx = new Date().getMonth();
+    const defaults = getDefaultChartMonths(curIdx);
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('nefakky_custom_chart_data');
       if (saved) {
         try { 
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
+          if (Array.isArray(parsed) && parsed.length > 0) {
             const filtered = parsed.filter((m: ChartMonthConfig) => m.label !== 'Jun');
             const hasOldDummy = filtered.some((m: ChartMonthConfig) => m.grossRaw > 50000000);
-            if (filtered.length > 0 && !hasOldDummy) return filtered;
+            const sepItem = filtered.find((m: ChartMonthConfig) => m.label === 'Sep');
+            // Jika kalender sudah masuk September (curIdx >= 8) dan data Sep masih 0 / upcoming, auto-upgrade ke data September aktif
+            const needsSepUpgrade = curIdx >= 8 && (!sepItem || sepItem.grossRaw === 0 || sepItem.isUpcoming);
+
+            if (!hasOldDummy && !needsSepUpgrade && filtered.length > 0) {
+              return filtered;
+            }
           }
         } catch (e) {}
       }
     }
-    return DEFAULT_CHART_MONTHS;
+    return defaults;
   });
 
   const [showEditChartModal, setShowEditChartModal] = useState<boolean>(false);
@@ -457,8 +514,10 @@ export default function AdminDashboardTab({
     // ------------------------------------------------------------------------
     // 1M: WEEKLY DATASET FOR SELECTED MONTH (Minggu 1 s/d Minggu 4)
     // ------------------------------------------------------------------------
-    const isJulySelected = selectedPeriod.toLowerCase().includes('juli') || selectedPeriod.toLowerCase().includes('jul');
-    
+    const pLower = selectedPeriod.toLowerCase();
+    const isJulySelected = (pLower.includes('juli') || pLower.includes('jul')) && !pLower.includes('des') && !pLower.includes('dec') && !pLower.includes('-');
+    const isAugustSelected = (pLower.includes('agustus') || pLower.includes('agu')) && !pLower.includes('des') && !pLower.includes('dec') && !pLower.includes('-');
+
     let weekly1MData: ChartMonthConfig[] = [];
 
     if (isJulySelected) {
@@ -525,15 +584,15 @@ export default function AdminDashboardTab({
           eventName: 'Bazar 2jt (Habis) | Jus 375rb (75 cup) + Makanan 375rb'
         }
       ];
-    } else {
-      // Default: Minggu 1 s/d 4 Agustus 2026
+    } else if (isAugustSelected) {
+      // Minggu 1 s/d 4 Agustus 2026
       const onlineAguRev = onlineMonthlyStats['Agu']?.revenue || 0;
       const onlineAguProf = onlineMonthlyStats['Agu']?.profit || 0;
       const onlineAguCount = onlineMonthlyStats['Agu']?.count || 0;
       
-      const mgg4Gross = 1500000 + onlineAguRev + (manualOmsetData ? manualRev : 0);
-      const mgg4Net = 700000 + onlineAguProf + (manualOmsetData ? manualProf : 0);
-      const mgg4Orders = 35 + onlineAguCount + (manualOmsetData ? manualOrders : 0);
+      const mgg4Gross = 1500000 + onlineAguRev;
+      const mgg4Net = 700000 + onlineAguProf;
+      const mgg4Orders = 35 + onlineAguCount;
 
       weekly1MData = [
         {
@@ -583,7 +642,7 @@ export default function AdminDashboardTab({
         },
         {
           label: 'Mgg 4',
-          fullTitle: 'Minggu 4 (Bulan Agustus 2026 - Berjalan)',
+          fullTitle: 'Minggu 4 (Bulan Agustus 2026)',
           grossPercent: Math.min(100, Math.round((mgg4Gross / 4500000) * 100)),
           netPercent: Math.min(100, Math.round((mgg4Net / 4500000) * 100)),
           grossAmount: mgg4Gross >= 1000000 ? `Rp ${(mgg4Gross / 1000000).toFixed(1)} Jt` : `Rp ${(mgg4Gross / 1000).toFixed(0)} Rb`,
@@ -597,6 +656,78 @@ export default function AdminDashboardTab({
           eventName: 'Jualan Biasa (Tanpa Bazar) + Pesanan Online Realtime'
         }
       ];
+    } else {
+      // Default: Bulan Berjalan (September 2026)
+      const onlineSepRev = onlineMonthlyStats['Sep']?.revenue || 0;
+      const onlineSepProf = onlineMonthlyStats['Sep']?.profit || 0;
+      const onlineSepCount = onlineMonthlyStats['Sep']?.count || 0;
+      
+      const mgg2Gross = 3400000 + onlineSepRev + (manualOmsetData ? manualRev : 0);
+      const mgg2Net = 1450000 + onlineSepProf + (manualOmsetData ? manualProf : 0);
+      const mgg2Orders = 90 + onlineSepCount + (manualOmsetData ? manualOrders : 0);
+
+      weekly1MData = [
+        {
+          label: 'Mgg 1',
+          fullTitle: 'Minggu 1 (1 - 7 September 2026)',
+          grossPercent: Math.round((2800000 / 4500000) * 100),
+          netPercent: Math.round((1150000 / 4500000) * 100),
+          grossAmount: 'Rp 2.8 Jt',
+          netAmount: 'Rp 1.15 Jt',
+          grossRaw: 2800000,
+          netRaw: 1150000,
+          ordersCount: 75,
+          isBazar: true,
+          badge: 'Bazar Akbar 1',
+          isUpcoming: false,
+          eventName: 'Bazar Akbar Minggu 1 • Habis Terjual (0% Sisa)'
+        },
+        {
+          label: 'Mgg 2',
+          fullTitle: `Minggu 2 (8 - 14 September 2026 - Berjalan)`,
+          grossPercent: Math.min(100, Math.round((mgg2Gross / 4500000) * 100)),
+          netPercent: Math.min(100, Math.round((mgg2Net / 4500000) * 100)),
+          grossAmount: mgg2Gross >= 1000000 ? `Rp ${(mgg2Gross / 1000000).toFixed(1)} Jt` : `Rp ${(mgg2Gross / 1000).toFixed(0)} Rb`,
+          netAmount: mgg2Net >= 1000000 ? `Rp ${(mgg2Net / 1000000).toFixed(1)} Jt` : `Rp ${(mgg2Net / 1000).toFixed(0)} Rb`,
+          grossRaw: mgg2Gross,
+          netRaw: mgg2Net,
+          ordersCount: mgg2Orders,
+          isBazar: true,
+          badge: onlineSepCount > 0 ? `${onlineSepCount}x Online` : 'Bulan Berjalan',
+          isUpcoming: false,
+          eventName: 'Minggu 2 Berjalan + Pesanan Online Realtime'
+        },
+        {
+          label: 'Mgg 3',
+          fullTitle: 'Minggu 3 (15 - 21 September 2026)',
+          grossPercent: 0,
+          netPercent: 0,
+          grossAmount: 'Rp 0',
+          netAmount: 'Rp 0',
+          grossRaw: 0,
+          netRaw: 0,
+          ordersCount: 0,
+          isBazar: false,
+          badge: 'Mendatang',
+          isUpcoming: true,
+          eventName: 'Minggu ke-3 Belum dimulai'
+        },
+        {
+          label: 'Mgg 4',
+          fullTitle: 'Minggu 4 (22 - 30 September 2026)',
+          grossPercent: 0,
+          netPercent: 0,
+          grossAmount: 'Rp 0',
+          netAmount: 'Rp 0',
+          grossRaw: 0,
+          netRaw: 0,
+          ordersCount: 0,
+          isBazar: false,
+          badge: 'Mendatang',
+          isUpcoming: true,
+          eventName: 'Minggu ke-4 Belum dimulai'
+        }
+      ];
     }
 
     return {
@@ -607,9 +738,9 @@ export default function AdminDashboardTab({
         { label: 'Q2', fullTitle: 'Kuartal 2 (Apr - Jun 2026)', grossPercent: 0, netPercent: 0, grossAmount: 'Rp 0', netAmount: 'Rp 0', grossRaw: 0, netRaw: 0, ordersCount: 0, isBazar: false, isUpcoming: true, eventName: 'Sebelum Beroperasi' },
         { 
           label: 'Q3', 
-          fullTitle: 'Kuartal 3 (Jul - Sep 2026 - Berjalan)', 
-          grossPercent: Math.min(100, Math.round((activeTotalGross / 25000000) * 100)), 
-          netPercent: Math.min(100, Math.round((activeTotalNet / 25000000) * 100)), 
+          fullTitle: `Kuartal 3 (Jul - Sep 2026 - Berjalan)`, 
+          grossPercent: Math.min(100, Math.round((activeTotalGross / 35000000) * 100)), 
+          netPercent: Math.min(100, Math.round((activeTotalNet / 35000000) * 100)), 
           grossAmount: `Rp ${(activeTotalGross / 1000000).toFixed(1)} Jt`, 
           netAmount: `Rp ${(activeTotalNet / 1000000).toFixed(1)} Jt`, 
           grossRaw: activeTotalGross, 
@@ -618,7 +749,7 @@ export default function AdminDashboardTab({
           isBazar: true, 
           badge: 'Online & Bazar Aktif', 
           isUpcoming: false, 
-          eventName: `🎉 Penjualan Konsolidasi Realtime Kuartal 3 (Rp ${(activeTotalGross / 1000000).toFixed(1)} Jt)` 
+          eventName: `Penjualan Konsolidasi Realtime Kuartal 3 (Rp ${(activeTotalGross / 1000000).toFixed(1)} Jt)` 
         },
         { label: 'Q4', fullTitle: 'Kuartal 4 (Okt - Des 2026)', grossPercent: 0, netPercent: 0, grossAmount: 'Rp 0', netAmount: 'Rp 0', grossRaw: 0, netRaw: 0, ordersCount: 0, isBazar: false, isUpcoming: true, eventName: 'Belum dimulai' },
       ]
@@ -634,21 +765,24 @@ export default function AdminDashboardTab({
     let gross = 0;
     let net = 0;
     let totalOrd = 0;
-    let grossGrowth = '+9.1%';
-    let aovGrowth = '+4.8%';
-    let marginText = 'Margin 41,67%';
+    let grossGrowth = '+14.2%';
+    let aovGrowth = '+6.1%';
+    let marginText = 'Margin 41,94%';
 
-    const isJulySelected = selectedPeriod.toLowerCase().includes('juli') || selectedPeriod.toLowerCase().includes('jul');
+    const pLower = selectedPeriod.toLowerCase();
+    const isJulyOnly = (pLower.includes('juli') || pLower.includes('jul')) && !pLower.includes('des') && !pLower.includes('dec') && !pLower.includes('-');
+    const isAugustOnly = (pLower.includes('agustus') || pLower.includes('agu')) && !pLower.includes('des') && !pLower.includes('dec') && !pLower.includes('-');
+    const isSemester = pLower.includes('jul -') || pLower.includes('semester') || pLower.includes('6 bulan');
+    const isYear = pLower.includes('1 tahun') || pLower.includes('tahun');
 
-    if (isJulySelected) {
+    if (isJulyOnly) {
       gross = 11000000;
       net = 3500000;
       totalOrd = 250;
       grossGrowth = '+100%';
       aovGrowth = '+5.0%';
       marginText = 'Margin 31,82%';
-    } else if (selectedPeriod === 'Bulan Ini (Aug 2026)' || selectedPeriod === '1 Bulan') {
-      // Bulan Agustus (aktif dari dataset 6M)
+    } else if (isAugustOnly) {
       const agu = chartDatasets['6M'].find(b => b.label === 'Agu') || chartDatasets['6M'][1];
       gross = agu.grossRaw;
       net = agu.netRaw;
@@ -656,24 +790,34 @@ export default function AdminDashboardTab({
       grossGrowth = '+9.1%';
       aovGrowth = '+4.8%';
       marginText = 'Margin 41,67%';
-    } else if (selectedPeriod === 'Jul - Dec 2026') {
-      // Sum seluruh bulan aktif di 6M (Juli s/d Agustus)
+    } else if (isSemester) {
+      // Sum seluruh bulan aktif di 6M (Juli s/d Bulan berjalan)
       const activeMonths = chartDatasets['6M'].filter(b => !b.isUpcoming);
       gross = activeMonths.reduce((acc, b) => acc + b.grossRaw, 0);
       net = activeMonths.reduce((acc, b) => acc + b.netRaw, 0);
       totalOrd = activeMonths.reduce((acc, b) => acc + b.ordersCount, 0);
-      grossGrowth = '+100%';
+      grossGrowth = '+24.6%';
       aovGrowth = '+7.2%';
-      marginText = 'Margin 36,96%';
-    } else {
-      // 1 Tahun Terakhir (Sum seluruh kuartal aktif Q1 s/d Q3)
+      marginText = 'Margin 38,50%';
+    } else if (isYear) {
+      // 1 Tahun Terakhir (Sum seluruh kuartal aktif Q1 s/d Q4)
       const activeQuarters = chartDatasets['1Y'].filter(b => !b.isUpcoming);
       gross = activeQuarters.reduce((acc, b) => acc + b.grossRaw, 0);
       net = activeQuarters.reduce((acc, b) => acc + b.netRaw, 0);
       totalOrd = activeQuarters.reduce((acc, b) => acc + b.ordersCount, 0);
-      grossGrowth = '+100%';
+      grossGrowth = '+24.6%';
       aovGrowth = '+7.2%';
-      marginText = 'Margin 36,96%';
+      marginText = 'Margin 38,50%';
+    } else {
+      // Default: Bulan Ini (September 2026 atau bulan kalender saat ini)
+      const curShort = liveCalendarInfo.shortMonth; // e.g. "Sep"
+      const curMonthData = chartDatasets['6M'].find(b => b.label === curShort) || chartDatasets['6M'].find(b => b.label === 'Sep') || chartDatasets['6M'][2];
+      gross = curMonthData.grossRaw;
+      net = curMonthData.netRaw;
+      totalOrd = curMonthData.ordersCount;
+      grossGrowth = '+14.2%';
+      aovGrowth = '+6.1%';
+      marginText = 'Margin 41,94%';
     }
 
     const aov = totalOrd > 0 ? Math.round(gross / totalOrd) : 0;
@@ -991,7 +1135,7 @@ export default function AdminDashboardTab({
             Tinjauan Bisnis Nefakky
           </h1>
           <p className="font-body-base text-xs sm:text-sm text-on-surface-variant">
-            Data analitik performa komersial &amp; tren omset real-time sampai Agustus 2026.
+            Data analitik performa komersial &amp; tren omset real-time per {liveCalendarInfo.dayName}, {liveCalendarInfo.dateNum} {liveCalendarInfo.monthName} {liveCalendarInfo.year}.
           </p>
         </div>
 
@@ -1015,7 +1159,7 @@ export default function AdminDashboardTab({
               onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
               className="flex items-center gap-2 bg-white hover:bg-stone-50 shadow-xs border border-stone-300 rounded-full px-4 py-2 cursor-pointer transition-colors text-stone-900 font-bold"
             >
-              <span className="material-symbols-outlined text-[18px] text-[#934B19]">calendar_month</span>
+              <span className="material-symbols-outlined text-[18px] text-[#FF5400]">calendar_month</span>
               <span className="font-label-caps uppercase tracking-wider text-[11px] text-stone-800">
                 {selectedPeriod}
               </span>
@@ -1032,10 +1176,11 @@ export default function AdminDashboardTab({
 
             {/* Solid Dropdown Menu */}
             {showPeriodDropdown && (
-              <div className="absolute left-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-stone-200 py-1.5 z-50 animate-fade-in text-xs font-semibold text-stone-900">
+              <div className="absolute left-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-stone-200 py-1.5 z-50 animate-fade-in text-xs font-semibold text-stone-900">
                 {[
-                  { key: 'Bulan Ini (Aug 2026)', desc: '1 Bulan' },
-                  { key: 'Jul - Dec 2026', desc: '6 Bulan' },
+                  { key: `Bulan Ini (${liveCalendarInfo.shortMonth} ${liveCalendarInfo.year})`, desc: '1 Bulan' },
+                  { key: `Bulan Lalu (${liveCalendarInfo.shortMonth === 'Sep' ? 'Agu' : 'Jul'} ${liveCalendarInfo.year})`, desc: '1 Bulan' },
+                  { key: `Jul - Des ${liveCalendarInfo.year}`, desc: 'Semester 2' },
                   { key: '1 Tahun Terakhir', desc: '1 Tahun' }
                 ].map((item) => (
                   <button
@@ -1046,11 +1191,14 @@ export default function AdminDashboardTab({
                       setShowPeriodDropdown(false);
                     }}
                     className={`w-full text-left px-4 py-2.5 hover:bg-stone-100 transition-colors flex items-center justify-between cursor-pointer ${
-                      selectedPeriod === item.key ? 'bg-amber-50 text-[#934B19] font-bold' : 'text-stone-700'
+                      selectedPeriod === item.key ? 'bg-amber-50 text-[#FF5400] font-bold' : 'text-stone-700'
                     }`}
                   >
-                    <span>{item.key}</span>
-                    {selectedPeriod === item.key && <Check className="w-4 h-4 text-[#934B19]" />}
+                    <div className="flex flex-col">
+                      <span>{item.key}</span>
+                      <span className="text-[10px] text-stone-400 font-normal">{item.desc}</span>
+                    </div>
+                    {selectedPeriod === item.key && <Check className="w-4 h-4 text-[#FF5400]" />}
                   </button>
                 ))}
               </div>
@@ -1242,10 +1390,10 @@ export default function AdminDashboardTab({
               <div className="flex items-center flex-wrap gap-2">
                 <h2 className="font-headline-sm text-on-surface font-bold text-base sm:text-lg">
                   {chartTimeframe === '1M' 
-                    ? `Analisis Penjualan Mingguan (${selectedPeriod.includes('Jul') ? 'Juli 2026' : 'Agustus 2026'})` 
+                    ? `Analisis Penjualan Mingguan (${selectedPeriod})` 
                     : chartTimeframe === '1Y' 
-                    ? 'Analisis Kinerja Kuartalan (1 Tahun)' 
-                    : 'Analisis Tren Omset & Laba Bersih (6 Bulan)'}
+                    ? `Analisis Kinerja Kuartalan (${liveCalendarInfo.year})` 
+                    : `Analisis Tren Omset & Laba Bersih (${liveCalendarInfo.year})`}
                 </h2>
                 
                 {/* Tombol Edit Chart */}
@@ -1255,7 +1403,7 @@ export default function AdminDashboardTab({
                   className="px-2.5 py-0.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-[11px] flex items-center gap-1 border border-stone-300 transition-colors cursor-pointer"
                   title="Edit dan Sesuaikan Nilai Grafik"
                 >
-                  <Edit3 className="w-3 h-3 text-[#934B19]" />
+                  <Edit3 className="w-3 h-3 text-[#FF5400]" />
                   <span>Edit Grafik</span>
                 </button>
 
@@ -1265,18 +1413,18 @@ export default function AdminDashboardTab({
               </div>
               <p className="font-body-sm text-on-surface-variant text-xs mt-0.5">
                 {chartTimeframe === '1M'
-                  ? `Menampilkan data rincian perolehan jualan per minggu (Minggu 1 s/d Minggu 4) khusus bulan ${selectedPeriod.includes('Jul') ? 'Juli 2026' : 'Agustus 2026'}.`
+                  ? `Menampilkan data rincian perolehan jualan per minggu (Minggu 1 s/d Minggu 4) khusus ${selectedPeriod}.`
                   : chartTimeframe === '1Y'
-                  ? 'Data kinerja penjualan berbasis Kuartal Q1 s/d Q4 Tahun 2026.'
-                  : 'Data terisi aktif sampai Agustus 2026. September - Desember belum dimulai.'}
+                  ? `Data kinerja penjualan berbasis Kuartal Q1 s/d Q4 Tahun ${liveCalendarInfo.year}.`
+                  : `Data terisi aktif sampai ${liveCalendarInfo.monthName} ${liveCalendarInfo.year}. Bulan mendatang belum dimulai.`}
               </p>
             </div>
 
             {/* Timeframe Selector Pills (Sinkronisasi Dua Arah dengan Dropdown) */}
             <div className="flex bg-surface-container rounded-full p-1 self-start sm:self-auto border border-outline-variant/20">
               {[
-                { tf: '1M', label: '1 Bulan', periodName: 'Bulan Ini (Aug 2026)' },
-                { tf: '6M', label: '6 Bulan', periodName: 'Jul - Dec 2026' },
+                { tf: '1M', label: '1 Bulan', periodName: `Bulan Ini (${liveCalendarInfo.shortMonth} ${liveCalendarInfo.year})` },
+                { tf: '6M', label: '6 Bulan', periodName: `Jul - Des ${liveCalendarInfo.year}` },
                 { tf: '1Y', label: '1 Tahun', periodName: '1 Tahun Terakhir' }
               ].map((item) => (
                 <button
@@ -2213,7 +2361,7 @@ export default function AdminDashboardTab({
                     }`}
                   >
                     <PartyPopper className="w-4 h-4 text-amber-700" />
-                    <span>🎉 Ada Event Bazar / Promo</span>
+                    <span>Ada Event Bazar / Promo</span>
                   </button>
 
                   <button
@@ -2226,7 +2374,7 @@ export default function AdminDashboardTab({
                     }`}
                   >
                     <Store className="w-4 h-4 text-stone-500" />
-                    <span>🏬 Penjualan Reguler Standar</span>
+                    <span>Penjualan Reguler Standar</span>
                   </button>
                 </div>
 
@@ -2530,8 +2678,9 @@ export default function AdminDashboardTab({
             
             <div className="flex justify-between items-center border-b border-stone-200 pb-3">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
-                  ⚙️ Otomatisasi Sistem Aktif
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                  <span>Otomatisasi Sistem Aktif</span>
                 </span>
                 <h3 className="font-headline-md text-base sm:text-lg font-bold text-stone-900 mt-1">
                   Arsip &amp; Tutup Buku Tahunan Otomatis
@@ -2557,8 +2706,9 @@ export default function AdminDashboardTab({
                 </p>
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-[11px] font-semibold text-stone-500">Status Saat Ini:</span>
-                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[11px] rounded-md border border-emerald-300">
-                    🟢 Standby (Tahun Aktif 2026 - Berjalan Normal)
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[11px] rounded-md border border-emerald-300 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                    <span>Standby (Tahun Aktif 2026 - Berjalan Normal)</span>
                   </span>
                 </div>
               </div>

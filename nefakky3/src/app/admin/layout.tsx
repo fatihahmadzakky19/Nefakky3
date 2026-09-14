@@ -26,8 +26,8 @@ import { exportNefakkyExcelReport } from '@/lib/exportUtils';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 // Mengimpor komponen header admin
 import AdminHeader from '@/components/admin/AdminHeader';
-// Mengimpor ikon-ikon semantik dari Lucide React
-import { MessageCircle, X, ArrowRight } from 'lucide-react';
+import { X, ArrowRight } from 'lucide-react';
+import { MessageCircle } from '@/components/icons/CustomIcons';
 
 /**
  * Komponen Utama: AdminLayout

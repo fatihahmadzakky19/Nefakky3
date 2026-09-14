@@ -12,27 +12,19 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  ShoppingBag,
-  Clock,
   Truck,
-  CheckCircle2,
   Filter,
-  Calendar,
-  Printer,
   AlertTriangle,
-  Flame,
-  Bell,
-  Camera,
-  Eye,
   UploadCloud,
   X,
   Maximize2,
   ExternalLink,
-  Search,
   Check,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  PackageCheck
 } from 'lucide-react';
+import { ShoppingBag, Search, MapPin, Clock, Flame, Calendar, Printer, CheckCircle2, Camera, Eye, Bell, ChefHat } from '@/components/icons/CustomIcons';
 import { AdminOrder, useData } from '@/context/DataContext';
 import { getDetailedOrderDateTime } from '@/lib/orderTimeUtils';
 import { createOrderCalendarUrl } from '@/lib/googleCalendar';
@@ -556,14 +548,14 @@ export default function AdminOrdersTab({
                               : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
                           }`}
                         >
-                          <option value="RECEIVED">📥 RECEIVED (Pesanan Diterima)</option>
-                          <option value="PREPARING">🍳 PREPARING (Pesanan Disiapkan)</option>
-                          <option value="COOKING">🔥 COOKING (Sedang Dimasak)</option>
-                          <option value="READY">📦 READY (Pesanan Siap)</option>
-                          <option value="DELIVERING">🛵 DELIVERING (Sedang Diantar)</option>
-                          <option value="DELIVERED">📍 DELIVERED (Tiba di Lokasi)</option>
-                          <option value="COMPLETED">✅ COMPLETED (Selesai & Lunas)</option>
-                          <option value="CANCELLED">❌ CANCELLED (Dibatalkan)</option>
+                          <option value="RECEIVED">RECEIVED (Pesanan Diterima)</option>
+                          <option value="PREPARING">PREPARING (Pesanan Disiapkan)</option>
+                          <option value="COOKING">COOKING (Sedang Dimasak)</option>
+                          <option value="READY">READY (Pesanan Siap)</option>
+                          <option value="DELIVERING">DELIVERING (Sedang Diantar)</option>
+                          <option value="DELIVERED">DELIVERED (Tiba di Lokasi)</option>
+                          <option value="COMPLETED">COMPLETED (Selesai & Lunas)</option>
+                          <option value="CANCELLED">CANCELLED (Dibatalkan)</option>
                         </select>
                         <span className="material-symbols-outlined pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[14px] text-stone-600">
                           expand_more
@@ -699,9 +691,10 @@ export default function AdminOrdersTab({
                       <button 
                         type="button"
                         onClick={() => updateOrderStatus(order.id, 'PREPARING')}
-                        className="flex-1 py-2 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
+                        className="flex-1 py-2 bg-[#934B19] hover:bg-[#783603] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                       >
-                        <span>🍳 Siapkan Pesanan</span>
+                        <ChefHat className="w-3.5 h-3.5" />
+                        <span>Siapkan Pesanan</span>
                       </button>
                     )}
 
@@ -709,9 +702,10 @@ export default function AdminOrdersTab({
                       <button 
                         type="button"
                         onClick={() => updateOrderStatus(order.id, 'READY')}
-                        className="flex-1 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
+                        className="flex-1 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                       >
-                        <span>📦 Pesanan Siap</span>
+                        <PackageCheck className="w-3.5 h-3.5" />
+                        <span>Pesanan Siap</span>
                       </button>
                     )}
 
@@ -719,9 +713,10 @@ export default function AdminOrdersTab({
                       <button 
                         type="button"
                         onClick={() => updateOrderStatus(order.id, 'DELIVERING')}
-                        className="flex-1 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
+                        className="flex-1 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                       >
-                        <span>🛵 Berangkat Antar</span>
+                        <Truck className="w-3.5 h-3.5" />
+                        <span>Berangkat Antar</span>
                       </button>
                     )}
 
@@ -729,9 +724,10 @@ export default function AdminOrdersTab({
                       <button 
                         type="button"
                         onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                        className="flex-1 py-2 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
+                        className="flex-1 py-2 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                       >
-                        <span>📍 Tiba di Lokasi</span>
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>Tiba di Lokasi</span>
                       </button>
                     )}
 
@@ -739,9 +735,10 @@ export default function AdminOrdersTab({
                       <button 
                         type="button"
                         onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
-                        className="flex-1 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-98"
+                        className="flex-1 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
                       >
-                        <span>✅ Selesai &amp; Lunas</span>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Selesai &amp; Lunas</span>
                       </button>
                     )}
 

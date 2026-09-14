@@ -31,21 +31,15 @@ import Footer from '@/components/Footer';
 import AuthRequiredModal from '@/components/AuthRequiredModal';
 // Mengimpor ikon-ikon semantik dan jelas dari Lucide React
 import { 
-  Star, 
-  Camera, 
   Send, 
-  Utensils, 
   Quote, 
-  MessageSquare, 
   Headphones, 
   X, 
-  CheckCircle2, 
   Users, 
   ChevronDown,
-  User,
-  Lock,
   UserCheck
 } from 'lucide-react';
+import { User, Lock, Star, MessageSquare, Camera, CheckCircle2, Utensils } from '@/components/icons/CustomIcons';
 
 /**
  * Komponen Utama CommentsPage

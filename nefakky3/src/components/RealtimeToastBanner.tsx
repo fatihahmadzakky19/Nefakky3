@@ -18,17 +18,13 @@ import {
   RealtimeActivityPayload 
 } from '@/hooks/useRealtimeBroadcaster';
 import { 
-  ShoppingBag, 
   Truck, 
-  MessageSquare, 
   Package, 
-  Bell, 
   X, 
   Sparkles, 
-  Radio, 
-  CheckCircle2, 
   ChevronRight 
 } from 'lucide-react';
+import { ShoppingBag, MessageSquare, CheckCircle2, Bell, Radio } from '@/components/icons/CustomIcons';
 import Link from 'next/link';
 
 interface ToastItem {
@@ -133,7 +129,7 @@ export default function RealtimeToastBanner() {
       className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-3 sm:px-0"
     >
       {toasts.map((t) => {
-        let Icon = Bell;
+        let Icon: React.ComponentType<any> = Bell;
         let bgGradient = 'from-amber-500/10 to-orange-500/10 border-amber-200/80 text-amber-900';
         let iconBg = 'bg-amber-600 text-white';
 

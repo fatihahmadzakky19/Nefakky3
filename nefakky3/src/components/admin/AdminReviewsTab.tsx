@@ -12,21 +12,16 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  Star,
-  MessageCircle,
   Send,
-  Camera,
   Maximize2,
   X,
   ExternalLink,
-  Search,
   Filter,
-  Trash2,
-  Edit,
   Check,
   AlertCircle,
   History
 } from 'lucide-react';
+import { Search, Star, MessageCircle, Camera, Trash2, Edit } from '@/components/icons/CustomIcons';
 import { sortReviewsNewestFirst, useData } from '@/context/DataContext';
 
 interface AdminReviewsTabProps {

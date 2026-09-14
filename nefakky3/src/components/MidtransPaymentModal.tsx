@@ -3,14 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
 import { 
-  ShieldCheck, 
   X, 
   Copy, 
   ExternalLink, 
   RefreshCw, 
-  Download, 
-  Clock, 
-  CheckCircle2, 
   AlertCircle, 
   ChevronDown, 
   ChevronUp, 
@@ -23,6 +19,7 @@ import {
   Smartphone,
   Info
 } from 'lucide-react';
+import { Clock, ShieldCheck, Download, CheckCircle2 } from '@/components/icons/CustomIcons';
 
 interface MidtransTxData {
   orderId: string;

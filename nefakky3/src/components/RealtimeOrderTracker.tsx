@@ -14,17 +14,14 @@
 import React, { useState, useEffect } from 'react';
 // Mengimpor ikon-ikon modern dari Lucide React
 import { 
-  Clock, 
-  CheckCircle2, 
-  ChefHat, 
   PackageCheck, 
   Bike, 
   Check, 
   AlertTriangle,
   Sparkles,
-  Flame,
   Truck
 } from 'lucide-react';
+import { Clock, Flame, CheckCircle2, ChefHat } from '@/components/icons/CustomIcons';
 // Mengimpor tipe data pesanan dari DataContext
 import { AdminOrder } from '@/context/DataContext';
 

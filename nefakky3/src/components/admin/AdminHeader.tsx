@@ -11,7 +11,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Menu, LogOut, MessageCircle, ArrowRight, Printer, FileSpreadsheet, Sparkles, ChevronRight, User } from 'lucide-react';
+import { Menu, ArrowRight, Sparkles, ChevronRight } from 'lucide-react';
+import { User, LogOut, MessageCircle, Printer, FileSpreadsheet } from '@/components/icons/CustomIcons';
 import { ChatMessage } from '@/context/DataContext';
 
 interface AdminHeaderProps {

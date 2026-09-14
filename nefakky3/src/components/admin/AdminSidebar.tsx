@@ -11,6 +11,15 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Store, X, ArrowUpRight, Sparkles } from 'lucide-react';
+import { 
+  BarChart3, 
+  ShoppingBag, 
+  CookingPot, 
+  Megaphone, 
+  Star, 
+  MessageSquare, 
+  Settings 
+} from '@/components/icons/CustomIcons';
 
 interface AdminSidebarProps {
   pendingOrdersCount?: number;
@@ -38,43 +47,43 @@ export default function AdminSidebar({
     {
       href: '/admin',
       label: 'Business Overview',
-      icon: 'analytics',
+      Icon: BarChart3,
       badge: null
     },
     {
       href: '/admin/products',
       label: 'Katalog Produk',
-      icon: 'inventory_2',
+      Icon: ShoppingBag,
       badge: null
     },
     {
       href: '/admin/orders',
       label: 'Dapur & Pesanan',
-      icon: 'countertops',
+      Icon: CookingPot,
       badge: pendingOrdersCount > 0 ? pendingOrdersCount : null
     },
     {
       href: '/admin/promotions',
       label: 'Kupon & Promosi',
-      icon: 'campaign',
+      Icon: Megaphone,
       badge: null
     },
     {
       href: '/admin/reviews',
       label: 'Moderasi Ulasan',
-      icon: 'reviews',
+      Icon: Star,
       badge: null
     },
     {
       href: '/admin/chat',
       label: 'CS Live Desk',
-      icon: 'forum',
+      Icon: MessageSquare,
       badge: unreadChatCount > 0 ? unreadChatCount : null
     },
     {
       href: '/admin/settings',
       label: 'Pengaturan & GPS',
-      icon: 'settings',
+      Icon: Settings,
       badge: null
     }
   ];
@@ -125,6 +134,7 @@ export default function AdminSidebar({
 
           {navItems.map((item) => {
             const active = isNavActive(item.href);
+            const Icon = item.Icon;
             return (
               <Link
                 key={item.href}
@@ -137,9 +147,7 @@ export default function AdminSidebar({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-[20px]">
-                    {item.icon}
-                  </span>
+                  <Icon className="w-5 h-5 shrink-0" />
                   <span className="tracking-wide">
                     {item.label}
                   </span>

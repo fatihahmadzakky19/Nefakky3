@@ -19,21 +19,13 @@ import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
 import AuthRequiredModal from '@/components/AuthRequiredModal';
 import Navbar from '@/components/Navbar';
 import { 
-  Star, 
-  Search, 
   Plus, 
   Minus, 
-  SlidersHorizontal, 
-  UtensilsCrossed, 
   Sparkles,
   Heart,
-  Clock,
-  Flame,
-  ChefHat,
-  X,
-  ShieldCheck,
-  Leaf
+  X
 } from 'lucide-react';
+import { Search, Clock, Flame, ShieldCheck, Leaf, Star, SlidersHorizontal, UtensilsCrossed, ChefHat } from '@/components/icons/CustomIcons';
 
 export default function MenuCatalogPage() {
   const { user } = useAuth();

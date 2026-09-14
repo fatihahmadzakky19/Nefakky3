@@ -21,22 +21,17 @@ import { useData, sortReviewsNewestFirst } from '@/context/DataContext';
 import AuthRequiredModal from './AuthRequiredModal';
 import { 
   X, 
-  Star, 
   Plus, 
   Minus, 
-  ShoppingBag, 
-  CheckCircle2,
   AlertCircle,
-  MessageSquare,
   ArrowRight,
   Store,
   Check,
-  MapPin,
   Navigation,
   Copy,
-  Clock,
   ExternalLink
 } from 'lucide-react';
+import { ShoppingBag, MapPin, Clock, Star, MessageSquare, CheckCircle2 } from '@/components/icons/CustomIcons';
 
 export interface DetailProduct {
   id: string;
@@ -611,7 +606,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                 <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs space-y-2 animate-fade-in">
                   <div className="flex items-center gap-2 font-bold">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Reservasi Prioritas Berhasil Terkirim! 📋</span>
+                    <span>Reservasi Prioritas Berhasil Terkirim!</span>
                   </div>
                   <p className="text-[11px] text-emerald-700 leading-relaxed font-light">
                     Permintaan prioritas untuk {quantity}x {isDrink ? `Jus ${selectedVariant}` : liveProduct.name} telah diterima oleh Tim CS. Kami akan segera menghubungi Anda saat stok kembali tersedia.

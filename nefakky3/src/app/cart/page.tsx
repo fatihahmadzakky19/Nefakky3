@@ -32,20 +32,13 @@ import AuthRequiredModal from '@/components/AuthRequiredModal';
 import ActiveOrderBlockerModal from '@/components/ActiveOrderBlockerModal';
 import MidtransPaymentModal from '@/components/MidtransPaymentModal';
 import { 
-  ShoppingBag, 
-  Trash2, 
   Plus, 
   Minus, 
   ArrowRight, 
   ArrowLeft,
-  Tag, 
-  ShieldCheck, 
-  CheckCircle2, 
   AlertCircle,
   Check, 
   X, 
-  MapPin, 
-  Edit,
   Navigation,
   Info, 
   Bike, 
@@ -56,10 +49,9 @@ import {
   Truck,
   Zap,
   Copy,
-  Lock, 
-  Clock,
   ExternalLink
 } from 'lucide-react';
+import { ShoppingBag, MapPin, Lock, Clock, Tag, ShieldCheck, Trash2, CheckCircle2, Edit } from '@/components/icons/CustomIcons';
 
 export default function CartCheckoutWorkflowPage() {
   const router = useRouter();

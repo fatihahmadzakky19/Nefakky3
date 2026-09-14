@@ -13,28 +13,20 @@
 
 import React, { useState, useRef } from 'react';
 import {
-  Tag,
   Plus,
-  Trash2,
   X,
   Check,
-  Calendar,
   Sparkles,
   Percent,
-  Clock,
-  Flame,
-  Search,
-  Eye,
   Gift,
   RotateCcw,
-  CheckCircle,
   HelpCircle,
   TrendingUp,
-  BarChart2,
   Upload,
   FolderOpen,
   Users
 } from 'lucide-react';
+import { Search, Clock, Tag, Flame, Calendar, BarChart2, Trash2, Eye, CheckCircle } from '@/components/icons/CustomIcons';
 import { AdminVoucher, useData } from '@/context/DataContext';
 import { createPromoCalendarUrl } from '@/lib/googleCalendar';
 

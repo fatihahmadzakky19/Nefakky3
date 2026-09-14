@@ -19,7 +19,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 // Mengimpor ikon-ikon modern dari Lucide React
 import { 
-  Camera, 
   RefreshCw, 
   X, 
   Check, 
@@ -34,6 +33,7 @@ import {
   Maximize2,
   RotateCcw
 } from 'lucide-react';
+import { Camera } from '@/components/icons/CustomIcons';
 
 /** Interface Properti Modal Kamera Live */
 interface LiveCameraModalProps {

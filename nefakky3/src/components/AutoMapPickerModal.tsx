@@ -2,18 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  MapPin, 
   Navigation, 
   Check, 
   X, 
-  Search, 
   Sparkles, 
   AlertCircle, 
   Compass, 
   Layers, 
-  Settings2,
   Key
 } from 'lucide-react';
+import { MapPin, Search, Settings2 } from '@/components/icons/CustomIcons';
 import { 
   MapProvider, 
   getMapSettings, 
