@@ -469,10 +469,12 @@ export default function CartCheckoutWorkflowPage() {
       createdAt: Date.now()
     };
 
+    let savedFinalOrder: any = orderData;
     try {
-      // Menyimpan transaksi ke DataContext (LocalStorage & Firebase Sync)
+      // Menyimpan transaksi ke DataContext (LocalStorage & Realtime Bus Sync)
       if (addOrder) {
-        addOrder(orderData);
+        const resOrder = addOrder(orderData);
+        if (resOrder) savedFinalOrder = resOrder;
       }
 
       // Catat klaim penggunaan voucher promo oleh user ini secara permanen
@@ -485,7 +487,7 @@ export default function CartCheckoutWorkflowPage() {
     }
 
     // Menyimpan pesanan yang baru diselesaikan ke state selesai
-    setCompletedOrder(orderData);
+    setCompletedOrder(savedFinalOrder);
 
     // Otomatis simpan alamat baru ke profil pengguna jika belum ada
     if (user && deliveryAddress && deliveryAddress.trim()) {
@@ -1579,7 +1581,7 @@ export default function CartCheckoutWorkflowPage() {
                     {/* Actions */}
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Link 
-                        href="/notifications" 
+                        href={completedOrder?.id ? `/notifications?id=${completedOrder.id}` : '/notifications'} 
                         className="flex-1 bg-stone-900 text-white py-3.5 px-4 rounded-xl text-xs font-semibold shadow-md hover:bg-black transition-colors flex items-center justify-center gap-2"
                       >
                         <Truck className="w-4 h-4" />

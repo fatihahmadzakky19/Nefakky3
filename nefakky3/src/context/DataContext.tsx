@@ -419,7 +419,7 @@ interface DataContextType {
   updateVoucher: (id: string, updated: Partial<AdminVoucher>) => void;
   deleteVoucher: (id: string) => void;
   toggleVoucherStatus: (id: string) => void;
-  addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
+  addOrder: (orderData: Partial<AdminOrder> & Omit<AdminOrder, 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   confirmOrderReceived: (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => void;
   customerConfirmOrder: (id: string) => void;
@@ -1058,7 +1058,7 @@ interface DataContextType {
   claimVoucherRedemption: (code: string, userUid?: string | null, userEmail?: string | null) => Promise<boolean>;
   resetVoucherUsage: (voucherIdOrCode: string) => Promise<boolean>;
   isVoucherUsedByUser: (code: string, userUid?: string | null, userEmail?: string | null) => boolean;
-  addOrder: (orderData: Omit<AdminOrder, 'id' | 'date'>) => AdminOrder;
+  addOrder: (orderData: Partial<AdminOrder> & Omit<AdminOrder, 'date'>) => AdminOrder;
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
   confirmOrderReceived: (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => void;
@@ -1080,7 +1080,20 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProductsState] = useState<ProductItem[]>(DEFAULT_PRODUCTS);
   const [promotions, setPromotionsState] = useState<PromotionItem[]>(DEFAULT_PROMOTIONS);
   const [vouchers, setVouchersState] = useState<AdminVoucher[]>(DEFAULT_VOUCHERS);
-  const [orders, setOrdersState] = useState<AdminOrder[]>(DEFAULT_ORDERS);
+  const [orders, setOrdersState] = useState<AdminOrder[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('nefakky_live_orders');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch (e) {}
+    }
+    return DEFAULT_ORDERS;
+  });
   const [reviews, setReviewsState] = useState<UserReview[]>(DEFAULT_REVIEWS);
   const [chatMessages, setChatMessagesState] = useState<ChatMessage[]>(DEFAULT_CHAT_MESSAGES);
 
@@ -1175,27 +1188,31 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }, (err) => console.error('Vouchers Firestore error:', err));
 
-    // 4. Orders Listener & Test Order Cleanup
-    const testOrderIds = ['ORD-3097', 'ORD-9528', 'ORD-8621', 'ORD-9127', 'ORD-8909', 'ORD-4164', 'ORD-8560', 'ORD-9296', 'ORD-4837'];
-    testOrderIds.forEach(testId => {
-      deleteDoc(doc(db, 'orders', testId)).catch(() => {});
-    });
-
-    const unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
-      if (snapshot.empty) {
-        const batch = writeBatch(db);
-        DEFAULT_ORDERS.forEach(o => {
-          batch.set(doc(db, 'orders', o.id), o);
-        });
-        batch.commit().catch(err => console.error('Error seeding orders:', err));
-        setOrdersState(DEFAULT_ORDERS);
-      } else {
-        const ords = snapshot.docs
-          .map(d => ({ ...d.data(), id: d.id }) as AdminOrder)
-          .filter(o => !testOrderIds.includes(o.id));
-        setOrdersState(ords);
-      }
-    }, (err) => console.error('Orders Firestore error:', err));
+    // 4. Orders Listener & Persistent Synchronization
+    let unsubOrders = () => {};
+    try {
+      unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
+        if (!snapshot.empty) {
+          const ords = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminOrder);
+          setOrdersState(prev => {
+            const mergedMap = new Map<string, AdminOrder>();
+            prev.forEach(o => mergedMap.set(o.id, o));
+            ords.forEach(o => mergedMap.set(o.id, { ...(mergedMap.get(o.id) || {}), ...o }));
+            const merged = Array.from(mergedMap.values());
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('nefakky_live_orders', JSON.stringify(merged));
+              } catch (e) {}
+            }
+            return merged;
+          });
+        }
+      }, (err) => {
+        console.warn('Orders Firestore snapshot notice (active with local persistent realtime bus):', err?.message);
+      });
+    } catch (err) {
+      console.warn('Orders Firestore init notice:', err);
+    }
 
     // 5. Reviews Listener
     const unsubRev = onSnapshot(collection(db, 'reviews'), (snapshot) => {
@@ -1234,6 +1251,72 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       unsubOrders();
       unsubRev();
       unsubChat();
+    };
+  }, []);
+
+  // --------------------------------------------------------------------------
+  // CROSS-TAB REALTIME SYNCHRONIZATION BUS (BroadcastChannel + Storage Event)
+  // Menjamin tab Admin (Kitchen Desk / Overview) & tab User (Status Pesanan)
+  // menerima pesanan baru & update status instan 0ms tanpa perlu refresh.
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('nefakky_orders_channel');
+      bc.onmessage = (event) => {
+        const data = event?.data;
+        if (!data || !data.type) return;
+
+        if (data.type === 'ORDER_CREATED' && data.order) {
+          setOrdersState(prev => {
+            if (prev.some(o => o.id === data.order.id)) return prev;
+            const updated = [data.order, ...prev];
+            try {
+              localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+          });
+        } else if (data.type === 'ORDER_STATUS_UPDATED' && data.orderId) {
+          setOrdersState(prev => {
+            const updated = prev.map(o => o.id === data.orderId ? { ...o, ...(data.updates || {}), status: data.status || o.status } : o);
+            try {
+              localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+          });
+        } else if (data.type === 'ORDER_DELETED' && data.orderId) {
+          setOrdersState(prev => {
+            const updated = prev.filter(o => o.id !== data.orderId);
+            try {
+              localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+          });
+        }
+      };
+    } catch (e) {
+      console.warn('BroadcastChannel notice (active with storage event fallback)');
+    }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'nefakky_live_orders' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setOrdersState(parsed);
+          }
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      if (bc) {
+        try { bc.close(); } catch (e) {}
+      }
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
@@ -1572,20 +1655,57 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const addOrder = (orderData: Omit<AdminOrder, 'id' | 'date'>): AdminOrder => {
-    const orderNum = Math.floor(1000 + Math.random() * 9000);
-    const newId = `ORD-${orderNum}`;
+  const addOrder = (orderData: Partial<AdminOrder> & Omit<AdminOrder, 'date'>): AdminOrder => {
+    const callerId = (orderData as any).id || (orderData as any).orderId;
+    const newId = callerId ? String(callerId).trim() : `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
     const now = new Date();
     const nowStr = formatCurrentRealtimeOrderDate(now);
     const newOrder: AdminOrder = {
-      ...orderData,
       id: newId,
-      date: nowStr,
-      createdAt: orderData.createdAt || now.getTime()
+      customerName: (orderData.customerName || 'Pelanggan Nefakky').trim(),
+      customerEmail: orderData.customerEmail || '',
+      userId: orderData.userId || '',
+      avatar: orderData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(orderData.customerName || 'Pelanggan')}&background=1C1917&color=ffffff`,
+      address: (orderData.address || 'Alamat Pengiriman').trim(),
+      phone: orderData.phone || '',
+      items: orderData.items || [],
+      itemCount: orderData.itemCount || (orderData.items ? orderData.items.reduce((sum, item) => sum + (item.quantity || 1), 0) : 1),
+      paymentMethod: orderData.paymentMethod || 'Online Midtrans',
+      paymentBadge: orderData.paymentBadge || 'PAID',
+      deliveryType: orderData.deliveryType || 'KURIR NEFAKKY',
+      distance: orderData.distance || '4.2 Km',
+      status: orderData.status || 'RECEIVED',
+      subtotal: orderData.subtotal || 0,
+      shippingCost: orderData.shippingCost || 0,
+      discount: orderData.discount || 0,
+      total: orderData.total || 0,
+      voucherCode: orderData.voucherCode || '',
+      appliedPromo: orderData.appliedPromo || '',
+      date: orderData.date || nowStr,
+      createdAt: typeof orderData.createdAt === 'number' && orderData.createdAt > 0 ? orderData.createdAt : now.getTime(),
+      customerConfirmed: false
     };
 
-    // Immediate local React state update so order appears 100% reliably
-    setOrdersState(prev => [newOrder, ...prev.filter(o => o.id !== newId)]);
+    // 1. Immediate local React state update & LocalStorage persistence
+    setOrdersState(prev => {
+      const filtered = prev.filter(o => o.id !== newId);
+      const updated = [newOrder, ...filtered];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    // 2. Broadcast cross-tab event
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel('nefakky_orders_channel');
+        bc.postMessage({ type: 'ORDER_CREATED', order: newOrder });
+        bc.close();
+      } catch (e) {}
+    }
 
     // Deduct stock for ordered products & variants in realtime
     if (Array.isArray(newOrder.items) && newOrder.items.length > 0) {
@@ -1629,7 +1749,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
                 const updatedVarStocks = { ...pCopy.variantStocks };
 
                 if (detectedVariant) {
-                  // Temukan key varian yang cocok tanpa mempedulikan huruf besar/kecil
                   const matchingKey = Object.keys(updatedVarStocks).find(
                     k => k.toLowerCase() === detectedVariant!.toLowerCase()
                   ) || detectedVariant;
@@ -1637,7 +1756,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
                   const currentVarStock = Number(updatedVarStocks[matchingKey] ?? 15);
                   updatedVarStocks[matchingKey] = Math.max(0, currentVarStock - qty);
                 } else {
-                  // Jika tidak ada varian spesifik, kurangi stok pertama yang masih tersedia
                   for (const k of Object.keys(updatedVarStocks)) {
                     if (updatedVarStocks[k] > 0) {
                       updatedVarStocks[k] = Math.max(0, updatedVarStocks[k] - qty);
@@ -1647,14 +1765,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
                 }
 
                 pCopy.variantStocks = updatedVarStocks;
-                // Total stok adalah jumlah seluruh varian yang tersisa
                 pCopy.stock = Object.values(updatedVarStocks).reduce((sum, v) => sum + (Number(v) || 0), 0);
               } else {
-                // Produk reguler tanpa varian (Ayam Bakar, Nasi Bakar, Krecek, Gudeg, Garang Asam)
                 pCopy.stock = Math.max(0, (Number(pCopy.stock) || 0) - qty);
               }
 
-              // Update status stok jika habis
               if (pCopy.stock <= 0) {
                 pCopy.status = 'Low Stock';
               }
@@ -1663,9 +1778,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
           if (isModified) {
             const cleanProd = cleanForFirestore(pCopy);
-            updateDoc(doc(db, 'products', p.id), cleanProd).catch(console.error);
-            setRtdb(ref(rtdb, `products/${p.id}`), cleanProd).catch(console.error);
-            setRtdb(ref(rtdb, `live_products/${p.id}`), cleanProd).catch(console.error);
+            updateDoc(doc(db, 'products', p.id), cleanProd).catch(() => {});
+            setRtdb(ref(rtdb, `products/${p.id}`), cleanProd).catch(() => {});
+            setRtdb(ref(rtdb, `live_products/${p.id}`), cleanProd).catch(() => {});
           }
 
           return pCopy;
@@ -1684,15 +1799,15 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const cleanOrder = cleanForFirestore(newOrder);
-    setDoc(doc(db, 'orders', newId), cleanOrder).catch(console.error);
-    setRtdb(ref(rtdb, `orders/${newId}`), cleanOrder).catch(console.error);
+    setDoc(doc(db, 'orders', newId), cleanOrder).catch(() => {});
+    setRtdb(ref(rtdb, `orders/${newId}`), cleanOrder).catch(() => {});
     setRtdb(ref(rtdb, `live_orders/${newId}`), {
       id: newId,
       status: newOrder.status,
       customerName: newOrder.customerName,
       total: newOrder.total,
       updatedAt: Date.now()
-    }).catch(console.error);
+    }).catch(() => {});
     return newOrder;
   };
 
@@ -1700,38 +1815,89 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const target = orders.find(o => o.id === id);
     const isCod = target?.paymentMethod?.toLowerCase().includes('cod') || target?.paymentMethod?.toLowerCase().includes('cash on delivery');
     
-    const updates: any = {
+    const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const updates: Partial<AdminOrder> & Record<string, any> = {
       status,
       updatedAt: Date.now()
     };
 
     if (status === 'COMPLETED') {
-      const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       updates.customerConfirmed = true;
-      updates.confirmedAt = `Hari ini, ${timeStr}`;
+      updates.confirmedAt = `Hari ini, ${timeStr} WIB`;
       if (isCod) {
         updates.paymentBadge = 'PAID';
       }
     }
 
-    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
-    updateDoc(doc(db, 'orders', id), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(console.error);
+    setOrdersState(prev => {
+      const updated = prev.map(o => o.id === id ? { ...o, ...updates } : o);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel('nefakky_orders_channel');
+        bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status, updates });
+        bc.close();
+      } catch (e) {}
+    }
+
+    updateDoc(doc(db, 'orders', id), cleanForFirestore(updates)).catch(() => {});
+    updateRtdb(ref(rtdb, `orders/${id}`), cleanForFirestore(updates)).catch(() => {});
+    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(() => {});
   };
 
   const updatePaymentStatus = (id: string, badge: AdminOrder['paymentBadge']) => {
-    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, paymentBadge: badge } : o));
-    updateDoc(doc(db, 'orders', id), { paymentBadge: badge }).catch(console.error);
-    updateRtdb(ref(rtdb, `orders/${id}`), { paymentBadge: badge, updatedAt: Date.now() }).catch(console.error);
+    setOrdersState(prev => {
+      const updated = prev.map(o => o.id === id ? { ...o, paymentBadge: badge } : o);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel('nefakky_orders_channel');
+        bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, updates: { paymentBadge: badge } });
+        bc.close();
+      } catch (e) {}
+    }
+
+    updateDoc(doc(db, 'orders', id), { paymentBadge: badge }).catch(() => {});
+    updateRtdb(ref(rtdb, `orders/${id}`), { paymentBadge: badge, updatedAt: Date.now() }).catch(() => {});
   };
 
   const deleteOrder = (id: string) => {
-    setOrdersState(prev => prev.filter(o => o.id !== id));
+    setOrdersState(prev => {
+      const updated = prev.filter(o => o.id !== id);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel('nefakky_orders_channel');
+        bc.postMessage({ type: 'ORDER_DELETED', orderId: id });
+        bc.close();
+      } catch (e) {}
+    }
+
     try {
-      deleteDoc(doc(db, 'orders', id)).catch(console.error);
-      removeRtdb(ref(rtdb, `orders/${id}`)).catch(console.error);
-      removeRtdb(ref(rtdb, `live_orders/${id}`)).catch(console.error);
+      deleteDoc(doc(db, 'orders', id)).catch(() => {});
+      removeRtdb(ref(rtdb, `orders/${id}`)).catch(() => {});
+      removeRtdb(ref(rtdb, `live_orders/${id}`)).catch(() => {});
     } catch (e) {
       console.warn('Catch deleteOrder error:', e);
     }
@@ -1743,12 +1909,31 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       const updates = {
         status: 'CANCELLED' as AdminOrder['status'],
         paymentBadge: target.paymentBadge === 'PAID' ? ('REFUNDED' as AdminOrder['paymentBadge']) : target.paymentBadge,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
+        cancelReason: reason || 'Dibatalkan oleh sistem/admin'
       };
-      setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
-      updateDoc(doc(db, 'orders', id), updates).catch(console.error);
-      updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
-      updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'CANCELLED', updatedAt: Date.now() }).catch(console.error);
+
+      setOrdersState(prev => {
+        const updated = prev.map(o => o.id === id ? { ...o, ...updates } : o);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+          } catch (e) {}
+        }
+        return updated;
+      });
+
+      if (typeof window !== 'undefined') {
+        try {
+          const bc = new BroadcastChannel('nefakky_orders_channel');
+          bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status: 'CANCELLED', updates });
+          bc.close();
+        } catch (e) {}
+      }
+
+      updateDoc(doc(db, 'orders', id), cleanForFirestore(updates)).catch(() => {});
+      updateRtdb(ref(rtdb, `orders/${id}`), cleanForFirestore(updates)).catch(() => {});
+      updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'CANCELLED', updatedAt: Date.now() }).catch(() => {});
     }
   };
 
@@ -1757,7 +1942,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const isCod = targetOrder?.paymentMethod?.toLowerCase().includes('cod') || targetOrder?.paymentMethod?.toLowerCase().includes('cash on delivery');
 
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = `Hari ini, ${timeStr}`;
+    const dateStr = `Hari ini, ${timeStr} WIB`;
     const updates: any = {
       status: 'COMPLETED' as AdminOrder['status'],
       customerConfirmed: true,
@@ -1770,20 +1955,27 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       updates.paymentBadge = 'PAID';
     }
 
-    const cleanUpdates = cleanForFirestore(updates);
-    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
-    updateDoc(doc(db, 'orders', id), cleanUpdates).catch(console.error);
-    updateRtdb(ref(rtdb, `orders/${id}`), cleanUpdates).catch(console.error);
-    updateRtdb(ref(rtdb, `live_orders/${id}`), {
-      id,
-      status: 'COMPLETED',
-      customerConfirmed: true,
-      confirmedAt: dateStr,
-      receivedOnTime: true,
-      customerName: targetOrder?.customerName || 'Pelanggan',
-      paymentBadge: isCod ? 'PAID' : (targetOrder?.paymentBadge || 'PAID'),
-      updatedAt: Date.now()
-    }).catch(console.error);
+    setOrdersState(prev => {
+      const updated = prev.map(o => o.id === id ? { ...o, ...updates } : o);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel('nefakky_orders_channel');
+        bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status: 'COMPLETED', updates });
+        bc.close();
+      } catch (e) {}
+    }
+
+    updateDoc(doc(db, 'orders', id), cleanForFirestore(updates)).catch(() => {});
+    updateRtdb(ref(rtdb, `orders/${id}`), cleanForFirestore(updates)).catch(() => {});
+    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(() => {});
   };
 
   const confirmOrderReceived = (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => {
@@ -1808,9 +2000,26 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (isCod) updates.paymentBadge = 'PAID';
 
     const cleanUpdates = cleanForFirestore(updates);
-    setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
-    updateDoc(doc(db, 'orders', id), cleanUpdates).catch(console.error);
-    updateRtdb(ref(rtdb, `orders/${id}`), cleanUpdates).catch(console.error);
+    setOrdersState(prev => {
+      const updated = prev.map(o => o.id === id ? { ...o, ...updates } : o);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel('nefakky_orders_channel');
+        bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status: 'COMPLETED', updates });
+        bc.close();
+      } catch (e) {}
+    }
+
+    updateDoc(doc(db, 'orders', id), cleanUpdates).catch(() => {});
+    updateRtdb(ref(rtdb, `orders/${id}`), cleanUpdates).catch(() => {});
     updateRtdb(ref(rtdb, `live_orders/${id}`), {
       id,
       status: 'COMPLETED',
@@ -1821,7 +2030,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       proofPhoto: activeProofPhoto || null,
       paymentProofPhoto: activePaymentProofPhoto || null,
       updatedAt: Date.now()
-    }).catch(console.error);
+    }).catch(() => {});
   };
 
   const uploadOrderProofPhoto = (id: string, proofPhotoUrl: string) => {

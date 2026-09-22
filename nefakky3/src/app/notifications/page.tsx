@@ -34,6 +34,7 @@ import {
   Banknote
 } from 'lucide-react';
 import { Search, ShoppingBag, MapPin, User, Clock, Receipt, FileText, Printer, CheckCircle2, Bell, CookingPot, Utensils } from '@/components/icons/CustomIcons';
+import { getDetailedOrderDateTime } from '@/lib/orderTimeUtils';
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -47,6 +48,17 @@ export default function NotificationsPage() {
   const [mapViewMode, setMapViewMode] = useState<'openstreetmap' | 'illustration'>('openstreetmap');
   const [countdownMinutes, setCountdownMinutes] = useState<number>(18);
   const [countdownSeconds, setCountdownSeconds] = useState<number>(45);
+
+  // Ambil parameter order id dari URL jika ada (misal dari checkout success)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlId = params.get('id') || params.get('orderId');
+      if (urlId) {
+        setSelectedOrderId(urlId);
+      }
+    }
+  }, []);
 
   // Timer countdown realtime untuk live tracking
   useEffect(() => {
@@ -66,6 +78,8 @@ export default function NotificationsPage() {
 
   // Saring pesanan murni milik user yang sedang login secara realtime
   const myOrders = (orders || []).filter(order => {
+    // Izinkan tracking jika order ID secara spesifik sedang dipilih oleh user di URL
+    if (selectedOrderId && order.id === selectedOrderId) return true;
     if (!user) return false;
     const orderEmail = (order.customerEmail || '').toLowerCase().trim();
     const orderUserId = order.userId || '';
@@ -84,6 +98,12 @@ export default function NotificationsPage() {
     if (typeof ord.createdAt === 'number' && ord.createdAt > 0) return ord.createdAt;
     if ((ord.createdAt as any)?.seconds) return (ord.createdAt as any).seconds * 1000;
     if ((ord.createdAt as any)?.toDate) return (ord.createdAt as any).toDate().getTime();
+    
+    // Gunakan parser tanggal terpadu WIB dari orderTimeUtils
+    const parsed = getDetailedOrderDateTime(ord);
+    if (parsed && parsed.dateObj && !isNaN(parsed.dateObj.getTime()) && parsed.dateObj.getTime() > 0) {
+      return parsed.dateObj.getTime();
+    }
     
     // Parse order ID jika numerik (misal NFK-987654 atau ORD-88218)
     const numFromId = parseInt((ord.id || '').replace(/\D/g, ''), 10);
@@ -274,7 +294,9 @@ export default function NotificationsPage() {
                             <div className="flex flex-col gap-0.5 pt-0.5">
                               <span className="font-bold text-sm text-black">Pesanan Diterima</span>
                               <span className="text-xs text-stone-500 font-light">Restoran sedang memeriksa dan mengonfirmasi pesanan Anda.</span>
-                              <span className="font-mono text-[11px] text-stone-400 mt-0.5">12:30 PM</span>
+                              <span className="font-mono text-[11px] text-stone-400 mt-0.5">
+                                {activeOrder ? getDetailedOrderDateTime(activeOrder).shortTimeStr : 'Tercatat'}
+                              </span>
                             </div>
                           </div>
 
@@ -286,7 +308,11 @@ export default function NotificationsPage() {
                             <div className="flex flex-col gap-0.5 pt-0.5">
                               <span className="font-bold text-sm text-black">Pesanan Disiapkan &amp; Dimasak</span>
                               <span className="text-xs text-stone-500 font-light">Dapur sedang menyiapkan bahan segar dan memasak hidangan dengan sepenuh hati.</span>
-                              <span className="font-mono text-[11px] text-stone-400 mt-0.5">12:35 PM</span>
+                              {currentStage >= 2 && (
+                                <span className="font-mono text-[11px] text-emerald-600 font-semibold mt-0.5">
+                                  Sedang Diproses Dapur
+                                </span>
+                              )}
                             </div>
                           </div>
 

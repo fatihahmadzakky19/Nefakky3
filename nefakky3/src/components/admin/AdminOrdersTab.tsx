@@ -26,7 +26,13 @@ import {
 } from 'lucide-react';
 import { ShoppingBag, Search, MapPin, Clock, Flame, Calendar, Printer, CheckCircle2, Camera, Eye, Bell, ChefHat } from '@/components/icons/CustomIcons';
 import { AdminOrder, useData } from '@/context/DataContext';
-import { getDetailedOrderDateTime } from '@/lib/orderTimeUtils';
+import { 
+  getDetailedOrderDateTime, 
+  isOrderToday, 
+  isOrderThisWeek, 
+  isOrderThisMonth, 
+  isOrderThisYear 
+} from '@/lib/orderTimeUtils';
 import { createOrderCalendarUrl } from '@/lib/googleCalendar';
 import { 
   RealtimeCalendarInfo, 
@@ -49,6 +55,7 @@ export default function AdminOrdersTab({
   // DATA CONTEXT & STATE MANAGEMENT
   // --------------------------------------------------------------------------
   const { 
+    orders: contextOrders,
     isHighDemand, 
     highDemandMessage, 
     toggleHighDemand, 
@@ -61,7 +68,7 @@ export default function AdminOrdersTab({
   const adminFileInputRef = useRef<HTMLInputElement>(null);
   const [productSearch, setProductSearch] = useState<string>('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PENDING' | 'PREPARING' | 'READY' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED'>('ALL');
-  const [timeFilter, setTimeFilter] = useState<'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH'>('ALL');
+  const [timeFilter, setTimeFilter] = useState<'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'THIS_YEAR'>('ALL');
 
   // Live Realtime Calendar & Clock Ticker
   const [liveCalendarInfo, setLiveCalendarInfo] = useState<RealtimeCalendarInfo>(() => getRealtimeCalendarNow());
@@ -120,24 +127,17 @@ export default function AdminOrdersTab({
     setTimeout(() => setSaveDemandSuccess(false), 2500);
   };
 
-  const realOrders = orderList || [];
+  const realOrders = (orderList && orderList.length > 0) ? orderList : (contextOrders || []);
 
   // Timestamp extraction helper
   const getOrderTimestamp = (ord: AdminOrder): number => {
-    if (typeof ord.createdAt === 'number') return ord.createdAt;
+    if (typeof ord.createdAt === 'number' && ord.createdAt > 0) return ord.createdAt;
     if (ord.createdAt && typeof (ord.createdAt as any).seconds === 'number') {
       return (ord.createdAt as any).seconds * 1000;
     }
-    if (ord.date) {
-      const dStr = ord.date.toLowerCase();
-      const now = new Date();
-      if (dStr.includes('baru saja') || dStr.includes('just now')) return now.getTime();
-      const minsMatch = dStr.match(/(\d+)\s*(m|mnt|menit)\s*lalu/i);
-      if (minsMatch) return now.getTime() - parseInt(minsMatch[1], 10) * 60 * 1000;
-      const hoursMatch = dStr.match(/(\d+)\s*(jam|h|hour)\s*lalu/i);
-      if (hoursMatch) return now.getTime() - parseInt(hoursMatch[1], 10) * 3600 * 1000;
-      const parsed = Date.parse(ord.date);
-      if (!isNaN(parsed)) return parsed;
+    const detailed = getDetailedOrderDateTime(ord);
+    if (detailed && detailed.dateObj && !isNaN(detailed.dateObj.getTime())) {
+      return detailed.dateObj.getTime();
     }
     return 0;
   };
@@ -160,38 +160,13 @@ export default function AdminOrdersTab({
   const completedTodayCount = sortedOrders.filter(o => o.status === 'COMPLETED').length;
   const confirmedOrdersCount = sortedOrders.filter(o => o.customerConfirmed === true).length;
 
-  // Helper filter rentang waktu
-  const isWithinTimeRange = (order: AdminOrder, filter: 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH'): boolean => {
+  // Helper filter rentang waktu menggunakan standardisasi Asia/Jakarta (WIB)
+  const isWithinTimeRange = (order: AdminOrder, filter: 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'THIS_YEAR'): boolean => {
     if (filter === 'ALL') return true;
-
-    const ts = getOrderTimestamp(order);
-    const dateStr = (order.date || '').toLowerCase();
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const startOfWeek = startOfToday - (7 * 24 * 60 * 60 * 1000);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
-    if (filter === 'TODAY') {
-      if (dateStr.includes('hari ini') || dateStr.includes('today') || dateStr.includes('baru saja') || dateStr.includes('lalu')) {
-        return true;
-      }
-      return ts >= startOfToday;
-    }
-
-    if (filter === 'THIS_WEEK') {
-      if (dateStr.includes('hari ini') || dateStr.includes('kemarin') || dateStr.includes('lalu')) {
-        return true;
-      }
-      return ts >= startOfWeek;
-    }
-
-    if (filter === 'THIS_MONTH') {
-      if (dateStr.includes('agt') || dateStr.includes('agustus') || dateStr.includes('hari ini') || dateStr.includes('kemarin') || dateStr.includes('lalu')) {
-        return true;
-      }
-      return ts >= startOfMonth;
-    }
-
+    if (filter === 'TODAY') return isOrderToday(order);
+    if (filter === 'THIS_WEEK') return isOrderThisWeek(order);
+    if (filter === 'THIS_MONTH') return isOrderThisMonth(order);
+    if (filter === 'THIS_YEAR') return isOrderThisYear(order);
     return true;
   };
 
@@ -439,6 +414,7 @@ export default function AdminOrdersTab({
             { key: 'TODAY' as const, label: 'Hari Ini', icon: 'today' },
             { key: 'THIS_WEEK' as const, label: 'Minggu Ini', icon: 'date_range' },
             { key: 'THIS_MONTH' as const, label: 'Bulan Ini', icon: 'calendar_month' },
+            { key: 'THIS_YEAR' as const, label: 'Tahun Ini', icon: 'event' },
           ].map((tf) => (
             <button
               key={tf.key}

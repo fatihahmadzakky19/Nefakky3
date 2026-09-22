@@ -141,7 +141,7 @@ export default function AdminLayout({
 
   return (
     // Kontainer utama seluruh layout panel admin
-    <div className="min-h-screen bg-[#fbf9f5] text-[#1b1c1a] font-sans selection:bg-[#934b19]/10 selection:text-[#934b19] relative">
+    <div className="min-h-screen bg-[#F8F7F4] text-stone-900 font-sans selection:bg-[#C2410C]/10 selection:text-[#C2410C] relative">
       
       {/* 1. SIDEBAR NAVIGASI ADMIN */}
       <AdminSidebar 
@@ -166,26 +166,26 @@ export default function AdminLayout({
         />
 
         {/* AREA BODY UNTUK HALAMAN SUB-ROUTE */}
-        <main className="pt-20 px-4 sm:px-8 pb-24 max-w-[1360px] mx-auto space-y-8 print:pt-4 print:px-4">
+        <main className="pt-20 px-4 sm:px-8 pb-20 max-w-[1360px] mx-auto space-y-6 print:pt-4 print:px-4">
           {children}
         </main>
       </div>
 
       {/* 3. FLOATING TOAST NOTIFIKASI PESAN MASUK REALTIME */}
       {latestChatNotification && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-[#0F172A] text-white rounded-3xl p-4 shadow-2xl border-2 border-[#FF5400]/40 animate-fade-in">
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-stone-900 text-white rounded-2xl p-4 shadow-xl border border-stone-700/90 animate-fade-in">
           {/* Baris Header Notifikasi */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#FF5400] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
-                <MessageCircle className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-[#C2410C] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                <MessageCircle className="w-4 h-4 text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#FFB703] bg-black/40 px-2 py-0.5 rounded-full border border-[#FFB703]/30 font-mono">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-black/40 px-2 py-0.5 rounded-full border border-amber-400/30 font-mono">
                     Pesan Baru CS
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">{latestChatNotification.timestamp}</span>
+                  <span className="text-[10px] text-stone-400 font-mono">{latestChatNotification.timestamp}</span>
                 </div>
                 <h4 className="text-xs font-bold text-white mt-1">
                   {latestChatNotification.userName || latestChatNotification.userEmail.split('@')[0]}
@@ -195,14 +195,15 @@ export default function AdminLayout({
             {/* Tombol Tutup Notifikasi */}
             <button 
               onClick={() => setLatestChatNotification(null)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg"
+              className="text-stone-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              aria-label="Tutup notifikasi chat"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Cuplikan Teks Pesan Chat */}
-          <p className="text-xs text-slate-300 font-normal mt-2 line-clamp-2 bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+          <p className="text-xs text-stone-300 font-normal mt-2 line-clamp-2 bg-stone-950/70 p-2.5 rounded-xl border border-stone-800">
             "{latestChatNotification.text}"
           </p>
 
@@ -213,7 +214,7 @@ export default function AdminLayout({
                 setLatestChatNotification(null);
                 router.push(`/admin/chat?chat=${encodeURIComponent(latestChatNotification.userEmail)}`);
               }}
-              className="px-4 py-2 bg-[#FF5400] hover:bg-[#E04800] text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              className="px-3.5 py-2 bg-[#C2410C] hover:bg-[#9A3412] text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
             >
               <span>Balas Chat Sekarang</span>
               <ArrowRight className="w-3.5 h-3.5" />

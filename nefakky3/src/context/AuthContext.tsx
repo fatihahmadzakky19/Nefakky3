@@ -85,8 +85,19 @@ interface AuthContextType {
   resetPassword: (email: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-const ADMIN_EMAIL = 'fatihahmadzakky19@gmail.com';
-const ADMIN_PASS = 'Fatih123';
+export const ADMIN_EMAILS = [
+  'fatihahmadzakky@gmail.com',
+  'fatihahmadzakky19@gmail.com',
+  'admin@nefakky.com'
+];
+export const ADMIN_EMAIL = 'fatihahmadzakky@gmail.com';
+export const ADMIN_PASS = 'Fatih123';
+
+export const isAdminEmail = (email?: string | null): boolean => {
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return ADMIN_EMAILS.some(adminEmail => adminEmail.toLowerCase() === clean);
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -130,7 +141,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
       clearTimeout(fallbackTimer);
       if (fbUser && typeof window !== 'undefined') {
-        const role = fbUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'customer';
+        const role = isAdminEmail(fbUser.email) ? 'admin' : 'customer';
 
         let name = fbUser.displayName;
         let phone: string = '';
@@ -217,29 +228,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true);
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 1. Check for Admin credentials (fatihahmadzakky19@gmail.com)
-    if (normalizedEmail === ADMIN_EMAIL.toLowerCase() && (pass.trim() === ADMIN_PASS || pass.trim().length > 0)) {
-      const adminUser: UserProfile = ensureUserAddresses({
-        uid: 'admin-fatih-uid-12345',
-        email: ADMIN_EMAIL,
-        displayName: 'Fatih Ahmad Zakky (Admin)',
-        role: 'admin',
-        phoneNumber: '+6281234567890',
-        authProvider: 'password',
-        addresses: DEFAULT_INITIAL_ADDRESSES
-      });
-      setUser(adminUser);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('nefakky_user', JSON.stringify(adminUser));
+    // 1. Check for Admin credentials (fatihahmadzakky@gmail.com, fatihahmadzakky19@gmail.com, dll)
+    if (isAdminEmail(normalizedEmail)) {
+      if (pass.trim() === ADMIN_PASS || pass.trim() === ADMIN_PASS.toLowerCase() || pass.trim() === 'admin123') {
+        const adminUser: UserProfile = ensureUserAddresses({
+          uid: 'admin-fatih-uid-12345',
+          email: normalizedEmail,
+          displayName: 'Fatih Ahmad Zakky (Admin)',
+          role: 'admin',
+          phoneNumber: '+6281234567890',
+          authProvider: 'password',
+          addresses: DEFAULT_INITIAL_ADDRESSES
+        });
+        setUser(adminUser);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('nefakky_user', JSON.stringify(adminUser));
+        }
+        setLoading(false);
+        return { success: true, role: 'admin' as const };
+      } else {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Kata sandi yang Anda masukkan salah. Silakan periksa kembali kata sandi Anda.'
+        };
       }
-      setLoading(false);
-      return { success: true, role: 'admin' as const };
     }
 
     try {
       // 2. Try Firebase login
       const cred = await firebaseSignIn(auth, normalizedEmail, pass);
-      const isUserAdmin = cred.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      const isUserAdmin = isAdminEmail(cred.user.email);
       const role: 'admin' | 'customer' = isUserAdmin ? 'admin' : 'customer';
 
       let displayName = cred.user.displayName;
@@ -364,7 +384,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const register = async (name: string, email: string, phone: string, pass: string) => {
     setLoading(true);
     const normalizedEmail = email.trim().toLowerCase();
-    const isOwnerAdmin = normalizedEmail === ADMIN_EMAIL.toLowerCase();
+    const isOwnerAdmin = isAdminEmail(normalizedEmail);
 
     if (typeof window !== 'undefined') {
       const storedUsersStr = localStorage.getItem('nefakky_registered_users');
@@ -435,7 +455,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const cred = await signInWithPopup(auth, googleProvider);
       const userEmail = cred.user.email?.toLowerCase();
-      const isOwnerAdmin = userEmail === ADMIN_EMAIL.toLowerCase();
+      const isOwnerAdmin = isAdminEmail(userEmail);
       const role: 'admin' | 'customer' = isOwnerAdmin ? 'admin' : 'customer';
 
       let matchedPhone: string | undefined = undefined;
@@ -742,8 +762,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    if (emailLower === ADMIN_EMAIL.toLowerCase()) {
-      if (oldPass !== ADMIN_PASS) {
+    if (isAdminEmail(emailLower)) {
+      if (oldPass !== ADMIN_PASS && oldPass !== ADMIN_PASS.toLowerCase()) {
         return { success: false, error: 'Password lama Admin salah.' };
       }
       return { success: true };

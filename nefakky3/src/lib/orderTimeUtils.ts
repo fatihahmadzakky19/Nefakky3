@@ -168,16 +168,117 @@ export const getDetailedOrderDateTime = (order: any, fallbackIdx: number = 0): D
 };
 
 /**
- * Format string tanggal & waktu saat ini untuk pesanan baru yang masuk realtime.
+ * Mengonversi waktu apa pun ke objek Date dengan kalender dan jam Asia/Jakarta (WIB).
+ */
+export const getJakartaDate = (input?: Date | number | string): Date => {
+  let d: Date;
+  if (!input) {
+    d = new Date();
+  } else if (typeof input === 'number') {
+    d = new Date(input);
+  } else if (input instanceof Date) {
+    d = input;
+  } else {
+    const parsed = parseIndonesianDateStringToDate(input);
+    d = parsed || new Date(input);
+  }
+
+  if (isNaN(d.getTime())) {
+    d = new Date();
+  }
+
+  try {
+    const jakartaFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false
+    });
+    const parts = jakartaFormatter.formatToParts(d);
+    const getPart = (type: string) => parseInt(parts.find(p => p.type === type)?.value || '0', 10);
+    return new Date(
+      getPart('year'),
+      getPart('month') - 1,
+      getPart('day'),
+      getPart('hour') % 24,
+      getPart('minute'),
+      getPart('second')
+    );
+  } catch (e) {
+    return d;
+  }
+};
+
+/**
+ * Memeriksa apakah pesanan dilakukan pada Hari Ini (WIB Asia/Jakarta).
+ */
+export const isOrderToday = (order: any, nowRef?: Date): boolean => {
+  const orderDateTime = getDetailedOrderDateTime(order);
+  const orderJak = getJakartaDate(orderDateTime.dateObj);
+  const nowJak = getJakartaDate(nowRef || new Date());
+  return (
+    orderJak.getFullYear() === nowJak.getFullYear() &&
+    orderJak.getMonth() === nowJak.getMonth() &&
+    orderJak.getDate() === nowJak.getDate()
+  );
+};
+
+/**
+ * Memeriksa apakah pesanan dilakukan pada Minggu Berjalan (Senin - Minggu WIB Asia/Jakarta).
+ */
+export const isOrderThisWeek = (order: any, nowRef?: Date): boolean => {
+  const orderDateTime = getDetailedOrderDateTime(order);
+  const orderJak = getJakartaDate(orderDateTime.dateObj);
+  const nowJak = getJakartaDate(nowRef || new Date());
+
+  const dayOfWeek = nowJak.getDay(); // 0 = Minggu, 1 = Senin
+  const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+  const monday = new Date(nowJak.getFullYear(), nowJak.getMonth(), nowJak.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+  return orderJak.getTime() >= monday.getTime() && orderJak.getTime() <= sunday.getTime();
+};
+
+/**
+ * Memeriksa apakah pesanan dilakukan pada Bulan Berjalan (WIB Asia/Jakarta).
+ */
+export const isOrderThisMonth = (order: any, nowRef?: Date): boolean => {
+  const orderDateTime = getDetailedOrderDateTime(order);
+  const orderJak = getJakartaDate(orderDateTime.dateObj);
+  const nowJak = getJakartaDate(nowRef || new Date());
+  return (
+    orderJak.getFullYear() === nowJak.getFullYear() &&
+    orderJak.getMonth() === nowJak.getMonth()
+  );
+};
+
+/**
+ * Memeriksa apakah pesanan dilakukan pada Tahun Berjalan (WIB Asia/Jakarta).
+ */
+export const isOrderThisYear = (order: any, nowRef?: Date): boolean => {
+  const orderDateTime = getDetailedOrderDateTime(order);
+  const orderJak = getJakartaDate(orderDateTime.dateObj);
+  const nowJak = getJakartaDate(nowRef || new Date());
+  return orderJak.getFullYear() === nowJak.getFullYear();
+};
+
+/**
+ * Format string tanggal & waktu saat ini untuk pesanan baru yang masuk realtime (WIB).
  */
 export const formatCurrentRealtimeOrderDate = (dateObj: Date = new Date()): string => {
-  const dayName = DAYS_OF_WEEK[dateObj.getDay()];
-  const dateNum = dateObj.getDate();
-  const shortMonth = SHORT_MONTH_NAMES[dateObj.getMonth()];
-  const year = dateObj.getFullYear();
-  const hours = String(dateObj.getHours()).padStart(2, '0');
-  const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-  const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+  const jakDate = getJakartaDate(dateObj);
+  const dayName = DAYS_OF_WEEK[jakDate.getDay()];
+  const dateNum = jakDate.getDate();
+  const shortMonth = SHORT_MONTH_NAMES[jakDate.getMonth()];
+  const year = jakDate.getFullYear();
+  const hours = String(jakDate.getHours()).padStart(2, '0');
+  const minutes = String(jakDate.getMinutes()).padStart(2, '0');
+  const seconds = String(jakDate.getSeconds()).padStart(2, '0');
 
   return `${dayName}, ${dateNum} ${shortMonth} ${year} • ${hours}:${minutes}:${seconds} WIB`;
 };
