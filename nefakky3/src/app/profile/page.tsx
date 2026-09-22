@@ -449,19 +449,19 @@ export default function UserProfilePage() {
       <Navbar />
 
       {/* 2. AREA KONTEN UTAMA PROFIL PENGGUNA */}
-      <main className="w-full flex-1">
+      <main className="w-full flex-1 pb-28 lg:pb-12">
         <div className="flex flex-col w-full">
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-6 sm:py-8 flex flex-col gap-8 text-left">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 flex flex-col gap-6 sm:gap-8 text-left">
               
               {/* ========================================================================= */}
-              {/* BANNER PROFIL UTAMA ROUNDED-[32PX] */}
+              {/* BANNER PROFIL UTAMA (Mobile-First Responsive, Proportional Avatar) */}
               {/* ========================================================================= */}
-              <section className="w-full bg-white shadow-md rounded-[32px] p-6 sm:p-8 lg:p-10 flex flex-col lg:flex-row gap-8 justify-between items-start relative z-10 border border-stone-200">
+              <section className="w-full bg-white shadow-subtle rounded-2xl sm:rounded-3xl p-4 sm:p-7 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-8 justify-between items-start relative z-10 border border-stone-200">
                 
-                {/* Left: Avatar & Info */}
-                <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-                  <div className="relative group cursor-pointer" onClick={() => setShowEditModal(true)}>
-                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden shadow-sm bg-stone-100 border border-stone-200">
+                {/* Left: Avatar & User Identity */}
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center w-full lg:w-auto">
+                  <div className="relative group cursor-pointer shrink-0" onClick={() => setShowEditModal(true)}>
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full overflow-hidden shadow-subtle bg-stone-100 border border-stone-200">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
@@ -471,45 +471,50 @@ export default function UserProfilePage() {
                     </div>
                     <button 
                       type="button"
-                      className="absolute bottom-0 right-0 w-9 h-9 bg-black text-white rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform"
+                      className="absolute bottom-0 right-0 w-8 h-8 sm:w-9 sm:h-9 bg-stone-900 text-white rounded-full shadow-subtle flex items-center justify-center hover:scale-105 transition-transform active:scale-95"
                       title="Ganti Foto"
+                      aria-label="Ganti Foto Profil"
                     >
-                      <Edit3 className="w-4 h-4" />
+                      <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-black tracking-tight leading-none">
+                  <div className="flex flex-col gap-1.5 min-w-0 flex-1 w-full">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-stone-900 tracking-tight leading-snug break-words">
                         {editName}
                       </h1>
-                      <span className="px-2.5 py-1 bg-stone-100 text-stone-700 font-semibold text-[10px] rounded-md uppercase tracking-wider shadow-2xs border border-stone-200">
-                        {user?.role === 'admin' ? 'Administrator' : 'Google SSO'}
+                      <span className="px-2.5 py-0.5 bg-stone-100 text-stone-600 font-semibold text-[10px] rounded-md uppercase tracking-wider border border-stone-200">
+                        {user?.role === 'admin' ? 'Administrator' : 'Pelanggan'}
                       </span>
                     </div>
                     
-                    <p className="font-mono text-xs sm:text-sm text-stone-500">{userEmail}</p>
+                    <p className="font-mono text-xs text-stone-500 break-all">{userEmail}</p>
 
-                    <div className="flex flex-wrap items-center gap-3 mt-3">
+                    {/* Action Buttons: Primary (Edit Profil) -> Secondary (Panel Admin) -> Tertiary (Keluar) */}
+                    <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-3 w-full">
                       <button 
                         onClick={() => setShowEditModal(true)}
-                        className="bg-black text-white px-5 py-2.5 rounded-xl font-semibold text-xs shadow-sm hover:bg-neutral-800 transition-colors cursor-pointer"
+                        className="h-11 sm:h-10 px-5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs sm:text-sm shadow-subtle active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        Edit Profil
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit Profil</span>
                       </button>
                       
                       {user?.role === 'admin' && (
                         <Link 
                           href="/admin"
-                          className="bg-stone-100 text-black px-5 py-2.5 rounded-xl font-semibold text-xs border border-stone-200 shadow-2xs hover:bg-stone-200 transition-colors"
+                          className="h-11 sm:h-10 px-4 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-900 font-semibold text-xs border border-stone-200 shadow-subtle hover:border-stone-300 transition-all flex items-center justify-center gap-1.5 active:scale-95"
                         >
-                          Panel Administrator (Dashboard)
+                          <ShieldCheck className="w-4 h-4 text-[#D97706]" />
+                          <span>Panel Admin</span>
                         </Link>
                       )}
 
                       <button 
                         onClick={() => logout && logout()}
-                        className="text-stone-500 hover:text-rose-600 px-3 py-2 rounded-xl font-semibold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                        className="h-11 sm:h-10 px-3.5 text-stone-500 hover:text-rose-600 font-medium text-xs transition-colors flex items-center justify-center gap-1.5 rounded-xl hover:bg-rose-50 cursor-pointer"
+                        aria-label="Keluar dari akun"
                       >
                         <LogOut className="w-3.5 h-3.5" />
                         <span>Keluar</span>
@@ -519,37 +524,37 @@ export default function UserProfilePage() {
                 </div>
 
                 {/* Right: Contact & Primary Address */}
-                <div className="w-full lg:w-80 flex flex-col gap-3">
-                  <div className="bg-stone-50 p-4 rounded-2xl flex items-center gap-4 border border-stone-200 shadow-2xs">
-                    <div className="w-11 h-11 rounded-full bg-stone-200 flex items-center justify-center text-black shrink-0">
-                      <Phone className="w-5 h-5" />
+                <div className="w-full lg:w-80 flex flex-col sm:flex-row lg:flex-col gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-stone-100">
+                  <div className="flex-1 bg-stone-50 p-3.5 sm:p-4 rounded-2xl flex items-center gap-3.5 border border-stone-200 shadow-subtle min-h-[64px]">
+                    <div className="w-10 h-10 rounded-xl bg-stone-200/80 flex items-center justify-center text-stone-800 shrink-0">
+                      <Phone className="w-4 h-4" />
                     </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-widest">Telepon</span>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-widest block mb-0.5">Telepon</span>
                       {user?.phoneNumber ? (
-                        <span className="font-mono font-bold text-xs text-black truncate">{user.phoneNumber}</span>
+                        <span className="font-mono font-bold text-xs text-stone-900 break-words">{user.phoneNumber}</span>
                       ) : (
-                        <span className="text-xs text-stone-400 italic">Belum diatur</span>
+                        <span className="text-xs text-stone-400 italic font-light">Belum diatur</span>
                       )}
                     </div>
                   </div>
 
-                  <div className="bg-stone-50 p-4 rounded-2xl flex items-start gap-4 border border-stone-200 shadow-2xs relative overflow-hidden group">
-                    <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center text-white shrink-0 z-10">
-                      <Home className="w-5 h-5" />
+                  <div className="flex-1 bg-stone-50 p-3.5 sm:p-4 rounded-2xl flex items-start gap-3.5 border border-stone-200 shadow-subtle relative overflow-hidden group min-h-[64px]">
+                    <div className="w-10 h-10 rounded-xl bg-stone-900 flex items-center justify-center text-white shrink-0 z-10 mt-0.5">
+                      <Home className="w-4 h-4" />
                     </div>
-                    <div className="flex flex-col min-w-0 z-10">
+                    <div className="flex flex-col min-w-0 flex-1 z-10">
                       <div className="flex items-center gap-1">
-                        <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-widest">Alamat Rumah</span>
+                        <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-widest">Alamat Rumah</span>
                         {primaryAddress && <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />}
                       </div>
                       {primaryAddress ? (
-                        <p className="text-xs text-black line-clamp-2 mt-1 font-light leading-relaxed">
+                        <p className="text-xs text-stone-900 line-clamp-2 mt-0.5 font-normal leading-relaxed break-words">
                           {primaryAddress.address}
                         </p>
                       ) : (
-                        <p className="text-xs text-stone-400 italic mt-1 font-light">
-                          Belum ada alamat tersimpan (Otomatis saat checkout)
+                        <p className="text-xs text-stone-400 italic mt-0.5 font-light">
+                          Belum ada alamat tersimpan
                         </p>
                       )}
                     </div>
@@ -561,58 +566,61 @@ export default function UserProfilePage() {
               {/* ========================================================================= */}
               {/* TWO-COLUMN LAYOUT (CS LIVE CHAT & MAIN CONTENT) */}
               {/* ========================================================================= */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 relative">
                 
                 {/* LEFT SIDEBAR: CS Live Chat (4 Cols) */}
                 <aside className="lg:col-span-4 flex flex-col">
-                  <div className="bg-white shadow-md rounded-[32px] p-6 flex flex-col h-[700px] relative overflow-hidden border border-stone-200">
+                  <div className="bg-white shadow-subtle rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col h-[480px] sm:h-[580px] lg:h-[700px] relative overflow-hidden border border-stone-200">
                     
                     {/* Chat Header */}
-                    <div className="flex items-center justify-between pb-4 mb-3 border-b border-stone-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white">
-                          <Headphones className="w-5 h-5" />
+                    <div className="flex items-center justify-between pb-3.5 mb-2.5 border-b border-stone-100">
+                      <div className="flex items-center gap-2.5 sm:gap-3">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-stone-900 flex items-center justify-center text-white shrink-0">
+                          <Headphones className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
-                        <h2 className="font-serif text-lg font-bold text-black">Support Desk</h2>
+                        <div>
+                          <h2 className="font-serif text-base sm:text-lg font-bold text-stone-900 leading-tight">Support Desk</h2>
+                          <p className="text-[10px] text-stone-500 font-medium">Bantuan Langsung Dapur</p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 px-3 py-1 bg-stone-100 rounded-full border border-stone-200">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 rounded-full border border-emerald-200">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span className="text-[11px] font-semibold text-stone-700">Online</span>
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-800">Online</span>
                       </div>
                     </div>
 
                     {/* Quick Chips */}
-                    <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-1 px-1">
                       <button 
                         onClick={() => handleSendChat('Pesanan saya belum sampai, mohon dicek ya.')}
-                        className="whitespace-nowrap px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl text-[11px] font-semibold text-black transition-colors cursor-pointer"
+                        className="whitespace-nowrap px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg text-[11px] font-medium text-stone-800 transition-colors cursor-pointer shrink-0"
                       >
                         Pesanan Belum Sampai
                       </button>
                       <button 
                         onClick={() => handleSendChat('Bagaimana cara konfirmasi kendala pembayaran Midtrans?')}
-                        className="whitespace-nowrap px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl text-[11px] font-semibold text-black transition-colors cursor-pointer"
+                        className="whitespace-nowrap px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg text-[11px] font-medium text-stone-800 transition-colors cursor-pointer shrink-0"
                       >
                         Kendala Bayar
                       </button>
                       <button 
                         onClick={() => handleSendChat('Halo admin, boleh minta rekomendasi menu terlaris?')}
-                        className="whitespace-nowrap px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-xl text-[11px] font-semibold text-black transition-colors cursor-pointer"
+                        className="whitespace-nowrap px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg text-[11px] font-medium text-stone-800 transition-colors cursor-pointer shrink-0"
                       >
                         Rekomendasi Menu
                       </button>
                     </div>
 
                     {/* Chat Feed */}
-                    <div className="flex-1 overflow-y-auto py-3 flex flex-col gap-3 pr-1">
-                      <p className="text-[11px] font-mono text-stone-400 text-center my-1">Hari ini, Live CS Support</p>
+                    <div className="flex-1 overflow-y-auto py-2 flex flex-col gap-2.5 pr-1">
+                      <p className="text-[10px] sm:text-[11px] font-mono text-stone-400 text-center my-0.5">Hari ini, Live CS Support</p>
 
                       {/* Default Welcome Message */}
-                      <div className="flex gap-2 max-w-[85%]">
-                        <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center shrink-0">
-                          <Bot className="w-4 h-4 text-black" />
+                      <div className="flex gap-2 max-w-[90%] sm:max-w-[85%]">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-stone-200 flex items-center justify-center shrink-0 mt-0.5">
+                          <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-stone-900" />
                         </div>
-                        <div className="bg-stone-100 p-3.5 rounded-2xl rounded-tl-none text-xs text-black font-light leading-relaxed">
+                        <div className="bg-stone-100 p-3 rounded-2xl rounded-tl-none text-xs text-stone-900 font-normal leading-relaxed">
                           Halo {editName}! Ada yang bisa kami bantu dengan pesanan kuliner Nefakky Anda hari ini?
                         </div>
                       </div>
@@ -623,19 +631,19 @@ export default function UserProfilePage() {
                         return (
                           <div 
                             key={idx} 
-                            className={`flex gap-2 max-w-[85%] ${isFromUser ? 'self-end flex-row-reverse' : ''}`}
+                            className={`flex gap-2 max-w-[90%] sm:max-w-[85%] ${isFromUser ? 'self-end flex-row-reverse' : ''}`}
                           >
                             {!isFromUser && (
-                              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shrink-0">
-                                <Headphones className="w-4 h-4" />
+                              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-stone-900 text-white flex items-center justify-center shrink-0 mt-0.5">
+                                <Headphones className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               </div>
                             )}
-                            <div className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
+                            <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
                               isFromUser 
-                                ? 'bg-black text-white rounded-tr-none font-light' 
-                                : 'bg-stone-100 text-black rounded-tl-none font-light'
+                                ? 'bg-stone-900 text-white rounded-tr-none font-normal' 
+                                : 'bg-stone-100 text-stone-900 rounded-tl-none font-normal'
                             }`}>
-                              <p>{msg.text}</p>
+                              <p className="break-words">{msg.text}</p>
                               <span className="text-[9px] opacity-60 block text-right mt-1">{msg.timestamp || 'Baru saja'}</span>
                             </div>
                           </div>
@@ -646,12 +654,13 @@ export default function UserProfilePage() {
                     {/* Chat Input Bar */}
                     <form 
                       onSubmit={(e) => { e.preventDefault(); handleSendChat(); }}
-                      className="pt-3 border-t border-stone-100 flex items-center gap-2"
+                      className="pt-2.5 border-t border-stone-100 flex items-center gap-2"
                     >
                       <button 
                         type="button" 
                         onClick={() => alert('Fitur upload berkas ke CS aktif.')}
-                        className="w-11 h-11 rounded-xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors shrink-0"
+                        className="w-11 h-11 rounded-xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors shrink-0 cursor-pointer"
+                        aria-label="Unggah Berkas ke CS"
                       >
                         <Paperclip className="w-4 h-4" />
                       </button>
@@ -662,13 +671,14 @@ export default function UserProfilePage() {
                           value={chatInput}
                           onChange={(e) => setChatInput(e.target.value)}
                           placeholder="Ketik pesan ke CS..."
-                          className="w-full bg-transparent text-xs text-black placeholder-stone-400 focus:outline-none"
+                          className="w-full bg-transparent text-xs text-stone-900 placeholder-stone-400 focus:outline-none"
                         />
                       </div>
 
                       <button 
                         type="submit"
-                        className="w-11 h-11 rounded-xl bg-black hover:bg-neutral-800 flex items-center justify-center text-white transition-colors shrink-0 shadow-xs cursor-pointer"
+                        className="w-11 h-11 rounded-xl bg-stone-900 hover:bg-[#C2410C] flex items-center justify-center text-white transition-colors shrink-0 shadow-subtle cursor-pointer active:scale-95"
+                        aria-label="Kirim Pesan CS"
                       >
                         <Send className="w-4 h-4" />
                       </button>
@@ -681,13 +691,13 @@ export default function UserProfilePage() {
                 <div className="lg:col-span-8 flex flex-col gap-6">
                   
                   {/* Alert Banner (Dynamic Resto Demand) */}
-                  <div className="w-full bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-2xl shadow-2xs flex items-center gap-4">
-                    <Flame className="w-6 h-6 text-amber-600 shrink-0 animate-bounce" />
+                  <div className="w-full bg-amber-50/80 border border-amber-200 text-amber-900 p-3.5 sm:p-4 rounded-2xl shadow-subtle flex items-center gap-3.5">
+                    <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 shrink-0" />
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="font-bold text-xs uppercase tracking-wider">
                         {isHighDemand ? 'Resto Sedang Membludak!' : 'Dapur Siap Melayani Pesanan'}
                       </span>
-                      <span className="text-xs font-light opacity-90">
+                      <span className="text-xs font-normal opacity-90 leading-relaxed">
                         {highDemandMessage || 'Waktu tunggu pengiriman standar 20-35 menit langsung dari dapur kami.'}
                       </span>
                     </div>
@@ -695,14 +705,14 @@ export default function UserProfilePage() {
 
                   {/* Section A: Manage Addresses */}
                   <section className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div className="flex items-center gap-2">
-                        <MapPin className="w-5 h-5 text-black" />
-                        <h3 className="font-serif text-xl font-bold text-black tracking-tight">Kelola Alamat Pengiriman</h3>
+                        <MapPin className="w-5 h-5 text-stone-900" />
+                        <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 tracking-tight">Kelola Alamat Pengiriman</h3>
                       </div>
                       <button
                         onClick={handleOpenAddAddress}
-                        className="px-3.5 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+                        className="h-10 sm:h-9 px-3.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-subtle cursor-pointer active:scale-95"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Tambah Alamat</span>
@@ -710,37 +720,37 @@ export default function UserProfilePage() {
                     </div>
 
                     {addresses.length === 0 ? (
-                      <div className="bg-white p-8 rounded-2xl shadow-xs border border-dashed border-stone-300 text-center flex flex-col items-center justify-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-400">
-                          <MapPin className="w-6 h-6" />
+                      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-subtle border border-dashed border-stone-300 text-center flex flex-col items-center justify-center gap-3">
+                        <div className="w-11 h-11 rounded-full bg-stone-100 flex items-center justify-center text-stone-400">
+                          <MapPin className="w-5 h-5" />
                         </div>
                         <div className="space-y-1 max-w-sm">
-                          <h4 className="font-serif text-sm font-bold text-neutral-900">Belum Ada Alamat Tersimpan</h4>
-                          <p className="text-xs text-stone-500 font-light leading-relaxed">
+                          <h4 className="font-serif text-sm font-bold text-stone-900">Belum Ada Alamat Tersimpan</h4>
+                          <p className="text-xs text-stone-500 font-normal leading-relaxed">
                             Alamat Anda akan otomatis tersimpan saat pertama kali checkout, atau Anda dapat menambahkannya sekarang.
                           </p>
                         </div>
                         <button
                           onClick={handleOpenAddAddress}
-                          className="mt-1 px-4 py-2 bg-black text-white text-xs font-semibold rounded-xl hover:bg-neutral-800 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                          className="mt-1 h-10 px-4 bg-stone-900 text-white text-xs font-semibold rounded-xl hover:bg-stone-800 transition-all shadow-subtle flex items-center gap-1.5 cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Tambah Alamat Baru</span>
                         </button>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
                         {addresses.map((addr) => (
                           <div 
                             key={addr.id}
-                            className="bg-white p-5 rounded-2xl shadow-xs border border-stone-200 flex flex-col gap-3 relative overflow-hidden group justify-between"
+                            className="bg-white p-4 sm:p-5 rounded-2xl shadow-subtle border border-stone-200 flex flex-col gap-3 relative overflow-hidden group justify-between"
                           >
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-2">
-                                <div className="p-2 bg-black text-white rounded-lg">
-                                  {addr.label?.toLowerCase().includes('kantor') ? <Briefcase className="w-4 h-4" /> : <Home className="w-4 h-4" />}
+                                <div className="p-2 bg-stone-900 text-white rounded-lg">
+                                  {addr.label?.toLowerCase().includes('kantor') ? <Briefcase className="w-3.5 h-3.5" /> : <Home className="w-3.5 h-3.5" />}
                                 </div>
-                                <span className="font-bold text-xs text-black">{addr.label}</span>
+                                <span className="font-bold text-xs text-stone-900">{addr.label}</span>
                               </div>
                               {addr.isDefault && (
                                 <span className="px-2.5 py-0.5 bg-stone-100 text-stone-700 font-bold text-[10px] rounded-md uppercase tracking-wider border border-stone-200">
@@ -749,15 +759,15 @@ export default function UserProfilePage() {
                               )}
                             </div>
 
-                            <p className="text-xs text-stone-600 font-light line-clamp-2 leading-relaxed">
+                            <p className="text-xs text-stone-600 font-normal line-clamp-2 leading-relaxed break-words">
                               {addr.address}
                             </p>
 
-                            <div className="flex items-center justify-between mt-auto pt-2 border-t border-stone-100">
+                            <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-stone-100">
                               <div className="flex items-center gap-2">
                                 <button 
                                   onClick={() => handleOpenEditAddress(addr)}
-                                  className="font-semibold text-xs text-black hover:underline cursor-pointer"
+                                  className="font-semibold text-xs text-stone-900 hover:text-[#C2410C] transition-colors cursor-pointer py-1"
                                 >
                                   Edit
                                 </button>
@@ -767,7 +777,7 @@ export default function UserProfilePage() {
                                     <span className="text-stone-300">/</span>
                                     <button 
                                       onClick={() => handleSetPrimaryAddress(addr.id)}
-                                      className="font-semibold text-xs text-stone-500 hover:text-black cursor-pointer"
+                                      className="font-semibold text-xs text-stone-500 hover:text-stone-900 transition-colors cursor-pointer py-1"
                                     >
                                       Jadikan Utama
                                     </button>
@@ -777,10 +787,11 @@ export default function UserProfilePage() {
 
                               <button
                                 onClick={() => handleDeleteAddress(addr.id)}
-                                className="text-stone-400 hover:text-rose-600 transition-colors p-1"
+                                className="w-8 h-8 rounded-lg flex items-center justify-center text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                                 title="Hapus Alamat"
+                                aria-label="Hapus Alamat"
                               >
-                                <X className="w-3.5 h-3.5" />
+                                <X className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
@@ -790,32 +801,32 @@ export default function UserProfilePage() {
                   </section>
 
                   {/* Section B: Order History */}
-                  <section className="flex flex-col gap-4 mt-2">
+                  <section className="flex flex-col gap-3.5 mt-2">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <h3 className="font-serif text-xl font-bold text-black tracking-tight">Riwayat Pesanan</h3>
+                      <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 tracking-tight">Riwayat Pesanan</h3>
                       
                       {/* Tabs */}
-                      <div className="flex p-1 bg-stone-100 rounded-xl border border-stone-200 w-fit">
+                      <div className="flex p-1 bg-stone-100 rounded-xl border border-stone-200 w-full sm:w-fit overflow-x-auto no-scrollbar">
                         <button 
                           onClick={() => setOrderTab('all')}
-                          className={`px-4 py-1.5 font-semibold text-xs rounded-lg transition-colors ${
-                            orderTab === 'all' ? 'bg-white text-black shadow-xs' : 'text-stone-600 hover:text-black'
+                          className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-1.5 font-semibold text-xs rounded-lg transition-colors cursor-pointer ${
+                            orderTab === 'all' ? 'bg-white text-stone-900 shadow-subtle' : 'text-stone-600 hover:text-stone-900'
                           }`}
                         >
                           Semua
                         </button>
                         <button 
                           onClick={() => setOrderTab('active')}
-                          className={`px-4 py-1.5 font-semibold text-xs rounded-lg transition-colors ${
-                            orderTab === 'active' ? 'bg-white text-black shadow-xs' : 'text-stone-600 hover:text-black'
+                          className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-1.5 font-semibold text-xs rounded-lg transition-colors cursor-pointer ${
+                            orderTab === 'active' ? 'bg-white text-stone-900 shadow-subtle' : 'text-stone-600 hover:text-stone-900'
                           }`}
                         >
                           Aktif
                         </button>
                         <button 
                           onClick={() => setOrderTab('completed')}
-                          className={`px-4 py-1.5 font-semibold text-xs rounded-lg transition-colors ${
-                            orderTab === 'completed' ? 'bg-white text-black shadow-xs' : 'text-stone-600 hover:text-black'
+                          className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-1.5 font-semibold text-xs rounded-lg transition-colors cursor-pointer ${
+                            orderTab === 'completed' ? 'bg-white text-stone-900 shadow-subtle' : 'text-stone-600 hover:text-stone-900'
                           }`}
                         >
                           Selesai
@@ -823,10 +834,10 @@ export default function UserProfilePage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-3.5 sm:gap-4">
                       {myOrders.length === 0 ? (
-                        <div className="bg-white rounded-2xl p-8 text-center border border-stone-200 shadow-xs space-y-2">
-                          <p className="text-xs text-stone-500 font-light">Tidak ada pesanan di kategori ini.</p>
+                        <div className="bg-white rounded-2xl p-6 sm:p-8 text-center border border-stone-200 shadow-subtle space-y-2">
+                          <p className="text-xs text-stone-500 font-normal">Tidak ada pesanan di kategori ini.</p>
                         </div>
                       ) : (
                         myOrders.map((ord: any) => {
@@ -835,27 +846,27 @@ export default function UserProfilePage() {
                           return (
                             <div 
                               key={ord.id}
-                              className={`bg-white p-5 rounded-2xl border flex flex-col sm:flex-row gap-5 items-center justify-between shadow-xs transition-all ${
-                                isActive ? 'border-stone-300' : 'border-stone-200 opacity-90'
+                              className={`bg-white p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row gap-4 sm:gap-5 items-stretch sm:items-center justify-between shadow-subtle transition-all ${
+                                isActive ? 'border-stone-300' : 'border-stone-200 opacity-95'
                               }`}
                             >
-                              <div className="w-full sm:w-28 h-28 rounded-xl bg-stone-100 overflow-hidden shrink-0 border border-stone-200 relative">
+                              <div className="w-full sm:w-24 h-40 sm:h-24 rounded-xl bg-stone-100 overflow-hidden shrink-0 border border-stone-200 relative">
                                 <Image 
                                   src={ord.items?.[0]?.image || '/images/ayam_bakar.jpg'} 
                                   alt={ord.items?.[0]?.name || 'Menu'} 
                                   fill 
                                   className="object-cover" 
-                                  sizes="112px"
+                                  sizes="(max-width: 640px) 100vw, 96px"
                                 />
                               </div>
 
                               <div className="flex-1 flex flex-col gap-2 w-full">
-                                <div className="flex justify-between items-start w-full">
+                                <div className="flex justify-between items-start w-full gap-2">
                                   <div>
-                                    <span className="font-mono text-[11px] text-stone-400">
+                                    <span className="font-mono text-[11px] text-stone-400 block">
                                       #{ord.id} • {ord.date || 'Hari ini'}
                                     </span>
-                                    <h4 className="font-serif text-base font-bold text-black mt-0.5">
+                                    <h4 className="font-serif text-sm sm:text-base font-bold text-stone-900 mt-0.5">
                                       {ord.items?.[0]?.name || 'Nefakky Signature Bundle'}
                                     </h4>
                                   </div>
@@ -869,30 +880,30 @@ export default function UserProfilePage() {
                                     const isDeliv = st === 'DELIVERING' || st === 'SHIPPING' || st === 'ON_DELIVERY';
                                     const isArrived = st === 'DELIVERED';
 
-                                    let badgeStyle = 'bg-amber-100 text-amber-900 border-amber-200';
+                                    let badgeStyle = 'bg-amber-50 text-amber-800 border-amber-200';
                                     let badgeText = 'Diterima';
                                     if (isComp) {
-                                      badgeStyle = 'bg-emerald-100 text-emerald-900 border-emerald-200';
+                                      badgeStyle = 'bg-emerald-50 text-emerald-800 border-emerald-200';
                                       badgeText = 'Selesai';
                                     } else if (isCanc) {
-                                      badgeStyle = 'bg-rose-100 text-rose-900 border-rose-200';
+                                      badgeStyle = 'bg-rose-50 text-rose-800 border-rose-200';
                                       badgeText = 'Dibatalkan';
                                     } else if (isPrep) {
-                                      badgeStyle = 'bg-orange-100 text-orange-900 border-orange-200';
+                                      badgeStyle = 'bg-orange-50 text-orange-800 border-orange-200';
                                       badgeText = 'Disiapkan';
                                     } else if (isRdy) {
-                                      badgeStyle = 'bg-purple-100 text-purple-900 border-purple-200';
+                                      badgeStyle = 'bg-purple-50 text-purple-800 border-purple-200';
                                       badgeText = 'Siap Antar';
                                     } else if (isDeliv) {
-                                      badgeStyle = 'bg-blue-100 text-blue-900 border-blue-200';
+                                      badgeStyle = 'bg-blue-50 text-blue-800 border-blue-200';
                                       badgeText = 'Diantar Kurir';
                                     } else if (isArrived) {
-                                      badgeStyle = 'bg-cyan-100 text-cyan-900 border-cyan-200';
+                                      badgeStyle = 'bg-cyan-50 text-cyan-800 border-cyan-200';
                                       badgeText = 'Tiba di Alamat';
                                     }
 
                                     return (
-                                      <div className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border ${badgeStyle}`}>
+                                      <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border shrink-0 ${badgeStyle}`}>
                                         {isActive && <RefreshCw className="w-3 h-3 animate-spin" />}
                                         <span>{badgeText}</span>
                                       </div>
@@ -900,19 +911,19 @@ export default function UserProfilePage() {
                                   })()}
                                 </div>
 
-                                <p className="text-xs text-stone-500 font-light line-clamp-1">
+                                <p className="text-xs text-stone-500 font-normal line-clamp-2">
                                   {ord.items?.map((it: any) => `${it.quantity}x ${it.name}`).join(', ')}
                                 </p>
 
-                                <div className="flex items-center justify-between pt-2 border-t border-stone-100">
-                                  <span className="font-mono font-bold text-xs text-black">
+                                <div className="flex items-center justify-between pt-2 border-t border-stone-100 mt-1">
+                                  <span className="font-mono font-bold text-xs sm:text-sm text-stone-900">
                                     Rp {(ord.total || ord.subtotal || 145000).toLocaleString('id-ID')}
                                   </span>
 
                                   {isActive ? (
                                     <Link 
                                       href="/notifications" 
-                                      className="font-semibold text-xs text-black hover:text-stone-700 flex items-center gap-1"
+                                      className="h-10 px-3.5 rounded-lg bg-stone-900 hover:bg-[#C2410C] text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-subtle active:scale-95"
                                     >
                                       <span>Lacak Status</span>
                                       <ArrowRight className="w-3.5 h-3.5" />
@@ -920,7 +931,7 @@ export default function UserProfilePage() {
                                   ) : (
                                     <button 
                                       onClick={() => handleReorder(ord)}
-                                      className="font-semibold text-xs text-black bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                      className="h-10 px-3.5 rounded-lg font-semibold text-xs text-stone-900 bg-stone-100 hover:bg-stone-200 transition-colors cursor-pointer active:scale-95"
                                     >
                                       Pesan Lagi
                                     </button>

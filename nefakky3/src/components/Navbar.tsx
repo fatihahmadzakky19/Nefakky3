@@ -47,13 +47,13 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
   return (
     <>
       <header className="sticky top-0 w-full z-50 bg-[#FBFBFA]/95 backdrop-blur-md border-b border-stone-200 transition-colors">
-        <div className="h-18 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div className="h-16 sm:h-18 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           
           {/* Brand Logo & Mobile Toggle */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-4">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 -ml-2 rounded-lg text-stone-800 hover:bg-stone-100 lg:hidden transition-colors cursor-pointer"
+              className="w-10 h-10 -ml-1 rounded-xl text-stone-800 hover:bg-stone-100 lg:hidden transition-colors flex items-center justify-center cursor-pointer active:scale-95"
               aria-label="Buka Menu Navigasi"
             >
               {isMobileMenuOpen ? <X className="w-5 h-5 text-[#C2410C]" /> : <Menu className="w-5 h-5" />}
@@ -61,13 +61,13 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
 
             {/* Nefakky Editorial Culinary Brand */}
             <Link href="/" className="flex flex-col group select-none">
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-stone-900 group-hover:text-[#C2410C] transition-colors">
+              <div className="flex items-baseline gap-1 sm:gap-1.5">
+                <span className="font-serif text-lg sm:text-2xl font-bold tracking-tight text-stone-900 group-hover:text-[#C2410C] transition-colors">
                   NEFAKKY
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-[#C2410C]"></span>
               </div>
-              <span className="text-[10px] tracking-widest text-stone-500 font-medium uppercase -mt-0.5">
+              <span className="text-[9px] sm:text-[10px] tracking-widest text-stone-500 font-medium uppercase -mt-0.5">
                 Dapur Otentik
               </span>
             </Link>
@@ -133,33 +133,35 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
           </nav>
 
           {/* Action Icons & Profile Controls */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
 
             {/* Admin Guard Link */}
             {isAdmin && (
               <Link
                 href="/admin"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-stone-100 text-xs font-medium rounded-lg transition-colors border border-stone-800"
+                className="inline-flex items-center justify-center w-10 h-10 sm:w-auto sm:h-auto sm:px-3 sm:py-2 bg-stone-900 hover:bg-stone-800 text-stone-100 text-xs font-medium rounded-lg transition-colors border border-stone-800 shrink-0"
                 title="Masuk ke Panel Admin"
+                aria-label="Panel Administrator"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#D97706]" />
-                <span className="hidden sm:inline">Panel Admin</span>
+                <ShieldCheck className="w-4 h-4 text-[#D97706]" />
+                <span className="hidden sm:inline sm:ml-1.5">Panel Admin</span>
               </Link>
             )}
 
             {/* Cart Button with Refined Counter Badge */}
             <Link 
               href="/cart"
-              className={`relative p-2 rounded-lg border transition-all duration-150 group flex items-center justify-center ${
+              className={`relative w-10 h-10 rounded-lg border transition-all duration-150 group flex items-center justify-center shrink-0 ${
                 isCartActive 
                   ? 'bg-[#C2410C] text-white border-[#C2410C]' 
                   : 'bg-white hover:bg-stone-50 text-stone-800 border-stone-200 hover:border-stone-300'
               }`}
               title="Keranjang Belanja"
+              aria-label="Keranjang Belanja"
             >
-              <ShoppingBag className="w-5 h-5 group-hover:scale-105 transition-transform" />
+              <ShoppingBag className="w-4 h-4 group-hover:scale-105 transition-transform" />
               {totalCartCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-[#C2410C] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#FBFBFA]">
+                <span className="absolute -top-1 -right-1 bg-[#C2410C] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#FBFBFA]">
                   {totalCartCount}
                 </span>
               )}
@@ -171,8 +173,13 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                 <button
                   type="button"
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="flex items-center gap-2 p-1 sm:pr-2.5 rounded-lg bg-white border border-stone-200 hover:border-stone-300 transition-colors cursor-pointer"
+                  className={`flex items-center gap-1.5 h-10 p-1 sm:pr-2.5 rounded-lg bg-white border transition-colors cursor-pointer shrink-0 ${
+                    isProfileActive 
+                      ? 'border-[#C2410C] ring-1 ring-[#C2410C]/25 bg-amber-50/30' 
+                      : 'border-stone-200 hover:border-stone-300'
+                  }`}
                   aria-expanded={isProfileMenuOpen}
+                  aria-label="Menu Profil Pengguna"
                 >
                   <div className="w-7 h-7 rounded-md bg-stone-900 flex items-center justify-center text-white shrink-0 overflow-hidden">
                     {userAvatar ? (
@@ -345,39 +352,39 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
         )}
       </header>
 
-      {/* Fixed Mobile Bottom Navigation Bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 select-none shadow-subtle">
-        <div className="max-w-md mx-auto grid grid-cols-5 items-center py-2 px-1">
+      {/* Fixed Mobile Bottom Navigation Bar with Safe Area Support */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FBFBFA]/95 backdrop-blur-md border-t border-stone-200 select-none shadow-elevated pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="max-w-md mx-auto grid grid-cols-5 items-center py-1.5 px-1 sm:px-2">
           <Link
             href="/"
-            className={`flex flex-col items-center justify-center gap-1 py-1 rounded-lg transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 py-1.5 min-h-[48px] rounded-xl transition-colors active:scale-95 ${
               isHomeActive ? 'text-[#C2410C] font-semibold' : 'text-stone-500 hover:text-stone-900'
             }`}
           >
-            <Home className="w-4 h-4" />
+            <Home className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-[10px] leading-none">Beranda</span>
           </Link>
 
           <Link
             href="/menu"
-            className={`flex flex-col items-center justify-center gap-1 py-1 rounded-lg transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 py-1.5 min-h-[48px] rounded-xl transition-colors active:scale-95 ${
               isMenuActive ? 'text-[#C2410C] font-semibold' : 'text-stone-500 hover:text-stone-900'
             }`}
           >
-            <Utensils className="w-4 h-4" />
+            <Utensils className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-[10px] leading-none">Menu</span>
           </Link>
 
           <Link
             href="/cart"
-            className={`relative flex flex-col items-center justify-center gap-1 py-1 rounded-lg transition-colors ${
+            className={`relative flex flex-col items-center justify-center gap-1 py-1.5 min-h-[48px] rounded-xl transition-colors active:scale-95 ${
               isCartActive ? 'text-[#C2410C] font-semibold' : 'text-stone-500 hover:text-stone-900'
             }`}
           >
             <div className="relative">
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
               {totalCartCount > 0 && (
-                <span className="absolute -top-1.5 -right-2 bg-[#C2410C] text-white text-[9px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1.5 -right-2 bg-[#C2410C] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
                   {totalCartCount}
                 </span>
               )}
@@ -387,21 +394,21 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
 
           <Link
             href="/notifications"
-            className={`flex flex-col items-center justify-center gap-1 py-1 rounded-lg transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 py-1.5 min-h-[48px] rounded-xl transition-colors active:scale-95 ${
               isNotificationsActive ? 'text-[#C2410C] font-semibold' : 'text-stone-500 hover:text-stone-900'
             }`}
           >
-            <Clock className="w-4 h-4" />
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-[10px] leading-none">Status</span>
           </Link>
 
           <Link
             href="/profile"
-            className={`flex flex-col items-center justify-center gap-1 py-1 rounded-lg transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 py-1.5 min-h-[48px] rounded-xl transition-colors active:scale-95 ${
               isProfileActive ? 'text-[#C2410C] font-semibold' : 'text-stone-500 hover:text-stone-900'
             }`}
           >
-            <User className="w-4 h-4" />
+            <User className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="text-[10px] leading-none">Profil</span>
           </Link>
         </div>

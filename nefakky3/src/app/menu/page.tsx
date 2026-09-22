@@ -97,37 +97,37 @@ export default function MenuCatalogPage() {
       <Navbar />
 
       {/* 2. MAIN CONTENT */}
-      <main className="w-full flex-1 pb-20 lg:pb-12">
+      <main className="w-full flex-1 pb-28 lg:pb-12">
         
         {/* Editorial Culinary Header */}
-        <section className="w-full bg-[#FBFBFA] text-stone-900 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 border-b border-stone-200">
-          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <section className="w-full bg-[#FBFBFA] text-stone-900 px-4 sm:px-6 lg:px-8 py-8 sm:py-14 border-b border-stone-200">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
             
             {/* Left: Headline */}
-            <div className="lg:col-span-7 flex flex-col items-start gap-3.5 text-left">
+            <div className="lg:col-span-7 flex flex-col items-start gap-3 sm:gap-3.5 text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-md border border-stone-200 text-xs font-medium text-stone-700 shadow-subtle">
                 <UtensilsCrossed className="w-3.5 h-3.5 text-[#C2410C]" />
                 <span>Koleksi Dapur Nusantara</span>
               </div>
-              <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-stone-900 leading-tight">
+              <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-bold text-stone-900 leading-tight">
                 Cita Rasa Otentik, Diracik Sepenuh Hati
               </h1>
-              <p className="text-sm sm:text-base text-stone-600 font-normal max-w-xl leading-relaxed">
+              <p className="text-xs sm:text-base text-stone-600 font-normal max-w-xl leading-relaxed">
                 Setiap menu dimasak segar saat pesanan masuk dengan paduan bumbu rempah pilihan petani lokal, siap diantar hangat ke kediaman Anda.
               </p>
             </div>
 
             {/* Right: Highlights */}
-            <div className="lg:col-span-5 grid grid-cols-2 gap-4">
-              <div className="p-4 sm:p-5 rounded-xl bg-white border border-stone-200 shadow-subtle space-y-2">
-                <ChefHat className="w-5 h-5 text-[#C2410C]" />
+            <div className="lg:col-span-5 grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="p-3.5 sm:p-5 rounded-xl bg-white border border-stone-200 shadow-subtle space-y-1.5 sm:space-y-2">
+                <ChefHat className="w-4 h-4 sm:w-5 sm:h-5 text-[#C2410C]" />
                 <h3 className="text-xs sm:text-sm font-semibold text-stone-900">Resep Warisan</h3>
-                <p className="text-[11px] text-stone-500 leading-relaxed">Bumbu alami tanpa bahan pengawet sintesis.</p>
+                <p className="text-[10px] sm:text-[11px] text-stone-500 leading-relaxed">Bumbu alami tanpa bahan pengawet sintesis.</p>
               </div>
-              <div className="p-4 sm:p-5 rounded-xl bg-white border border-stone-200 shadow-subtle space-y-2">
-                <Flame className="w-5 h-5 text-[#D97706]" />
+              <div className="p-3.5 sm:p-5 rounded-xl bg-white border border-stone-200 shadow-subtle space-y-1.5 sm:space-y-2">
+                <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-[#D97706]" />
                 <h3 className="text-xs sm:text-sm font-semibold text-stone-900">Dimasak Segar</h3>
-                <p className="text-[11px] text-stone-500 leading-relaxed">Made-by-order untuk menjaga kelezatan optimal.</p>
+                <p className="text-[10px] sm:text-[11px] text-stone-500 leading-relaxed">Made-by-order untuk kelezatan optimal.</p>
               </div>
             </div>
 
@@ -135,11 +135,11 @@ export default function MenuCatalogPage() {
         </section>
 
         {/* 3. STICKY FILTER & SEARCH CONTROL BAR */}
-        <section className="sticky top-18 z-30 bg-[#FBFBFA]/95 backdrop-blur-md border-b border-stone-200 py-3.5 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <section className="sticky top-16 sm:top-18 z-30 bg-[#FBFBFA]/95 backdrop-blur-md border-b border-stone-200 py-2.5 sm:py-3.5 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
             
-            {/* Category Navigation Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar">
+            {/* Category Navigation Pills with Edge-to-Edge mobile scroll */}
+            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto -mx-4 px-4 sm:mx-0 sm:px-0 py-0.5 no-scrollbar">
               {categories.map((cat) => {
                 const isActive = activeCategory === cat;
                 const count = categoryCounts[cat] || 0;
@@ -147,14 +147,14 @@ export default function MenuCatalogPage() {
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-3.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
                       isActive
-                        ? 'bg-stone-900 text-white'
-                        : 'bg-white text-stone-600 hover:text-stone-900 hover:bg-stone-50 border border-stone-200'
+                        ? 'bg-stone-900 text-white shadow-subtle'
+                        : 'bg-white text-stone-700 hover:text-stone-900 hover:bg-stone-50 border border-stone-200'
                     }`}
                   >
                     <span>{cat}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-medium ${
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ${
                       isActive ? 'bg-[#C2410C] text-white' : 'bg-stone-100 text-stone-600'
                     }`}>
                       {count}
@@ -165,22 +165,22 @@ export default function MenuCatalogPage() {
             </div>
 
             {/* Search Input & Sort Selector */}
-            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div className="flex items-center gap-2.5 sm:gap-3 w-full md:w-auto">
               
               {/* Search Box */}
               <div className="relative flex-1 md:w-64">
-                <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Cari hidangan..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-7 py-1.5 bg-white rounded-md border border-stone-200 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-[#C2410C] focus:border-[#C2410C] transition-colors shadow-subtle"
+                  className="w-full h-11 sm:h-10 pl-9 pr-8 bg-white rounded-lg border border-stone-200 text-xs sm:text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-[#C2410C] focus:border-[#C2410C] transition-colors shadow-subtle"
                 />
                 {searchQuery && (
                   <button 
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-0.5"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 p-1"
                     aria-label="Hapus pencarian"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -189,11 +189,11 @@ export default function MenuCatalogPage() {
               </div>
 
               {/* Sort Selector */}
-              <div className="relative">
+              <div className="relative shrink-0">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="appearance-none pl-3 pr-7 py-1.5 bg-white rounded-md border border-stone-200 text-xs font-medium text-stone-800 focus:outline-none focus:ring-1 focus:ring-[#C2410C] focus:border-[#C2410C] cursor-pointer shadow-subtle"
+                  className="h-11 sm:h-10 appearance-none pl-3.5 pr-8 bg-white rounded-lg border border-stone-200 text-xs sm:text-sm font-medium text-stone-800 focus:outline-none focus:ring-1 focus:ring-[#C2410C] focus:border-[#C2410C] cursor-pointer shadow-subtle"
                   aria-label="Urutkan menu"
                 >
                   <option value="popular">Terpopuler</option>
@@ -201,7 +201,7 @@ export default function MenuCatalogPage() {
                   <option value="price-low">Harga: Rendah ke Tinggi</option>
                   <option value="price-high">Harga: Tinggi ke Rendah</option>
                 </select>
-                <SlidersHorizontal className="w-3.5 h-3.5 text-stone-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-stone-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
 
             </div>
@@ -210,7 +210,7 @@ export default function MenuCatalogPage() {
         </section>
 
         {/* 4. PRODUCTS GRID */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
           
           {/* Empty State */}
           {filteredProducts.length === 0 ? (
@@ -224,14 +224,14 @@ export default function MenuCatalogPage() {
               </p>
               <button
                 onClick={() => { setActiveCategory('Semua'); setSearchQuery(''); }}
-                className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-medium rounded-md transition-colors"
+                className="h-11 px-5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
               >
                 Reset Semua Filter
               </button>
             </div>
           ) : (
             /* Product Cards Grid */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-7">
               {filteredProducts.map((product) => {
                 const inCart = cartItems.find(item => item.id === product.id);
                 const cartQty = inCart ? inCart.quantity : 0;
@@ -246,9 +246,9 @@ export default function MenuCatalogPage() {
                     className="group bg-white rounded-xl border border-stone-200 overflow-hidden shadow-subtle hover:border-stone-300 hover:shadow-card transition-all duration-200 flex flex-col justify-between"
                   >
                     <div>
-                      {/* Image Frame */}
+                      {/* Image Frame - Controlled aspect ratio for mobile */}
                       <div 
-                        className="relative w-full aspect-[4/3] bg-stone-100 overflow-hidden cursor-pointer" 
+                        className="relative w-full aspect-[16/10] sm:aspect-[4/3] bg-stone-100 overflow-hidden cursor-pointer" 
                         onClick={() => setDetailProduct(product)}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -259,14 +259,14 @@ export default function MenuCatalogPage() {
                         />
                         
                         {/* Rating Badge */}
-                        <div className="absolute top-3 left-3 px-2.5 py-0.5 bg-white/95 backdrop-blur-sm rounded-md text-xs font-semibold text-stone-900 border border-stone-200 flex items-center gap-1 shadow-subtle z-10">
+                        <div className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-white/95 backdrop-blur-sm rounded-md text-xs font-semibold text-stone-900 border border-stone-200 flex items-center gap-1 shadow-subtle z-10">
                           <Star className="w-3 h-3 fill-[#D97706] text-[#D97706]" />
                           <span>{rating.toFixed(1)}</span>
                           <span className="text-stone-400 text-[10px] font-normal">({product.reviewsCount || 0})</span>
                         </div>
 
                         {/* Status Badges */}
-                        <div className="absolute bottom-3 left-3 flex flex-col gap-1 z-10">
+                        <div className="absolute bottom-2.5 left-2.5 flex flex-col gap-1 z-10">
                           {isOutOfStock ? (
                             <span className="px-2.5 py-0.5 bg-rose-700 text-white text-[10px] font-medium uppercase rounded">
                               Habis
@@ -287,28 +287,28 @@ export default function MenuCatalogPage() {
                           )}
                         </div>
 
-                        {/* Wishlist Heart Button */}
+                        {/* Wishlist Heart Button - Min 40x40px touch friendly */}
                         <button
                           type="button"
                           onClick={(e) => toggleWishlist(product.id, e)}
-                          className={`absolute top-3 right-3 w-7 h-7 rounded-md flex items-center justify-center backdrop-blur-sm transition-colors z-10 ${
+                          className={`absolute top-2.5 right-2.5 w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center backdrop-blur-sm transition-colors z-10 ${
                             isFav ? 'bg-rose-50 text-rose-600' : 'bg-stone-900/40 text-white hover:bg-stone-900/60'
                           }`}
                           aria-label="Simpan ke Favorit"
                         >
-                          <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`} />
+                          <Heart className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
                         </button>
                       </div>
 
                       {/* Content Body */}
-                      <div className="p-4">
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-stone-500 block mb-0.5">
+                      <div className="p-3.5 sm:p-4">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 block mb-0.5">
                           {product.category}
                         </span>
 
                         <h3 
                           onClick={() => setDetailProduct(product)}
-                          className="font-serif text-base font-bold text-stone-900 group-hover:text-[#C2410C] transition-colors cursor-pointer line-clamp-1"
+                          className="font-serif text-sm sm:text-base font-bold text-stone-900 group-hover:text-[#C2410C] transition-colors cursor-pointer line-clamp-1"
                         >
                           {product.name}
                         </h3>
@@ -320,10 +320,10 @@ export default function MenuCatalogPage() {
                     </div>
 
                     {/* Price & Quantity Controls */}
-                    <div className="p-4 pt-0 flex items-center justify-between border-t border-stone-100 mt-2">
+                    <div className="p-3.5 sm:p-4 pt-0 flex items-center justify-between border-t border-stone-100 mt-2">
                       <div>
                         <span className="text-[10px] uppercase text-stone-400 block font-normal">Harga</span>
-                        <span className="font-semibold text-base text-stone-900">
+                        <span className="font-semibold text-sm sm:text-base text-stone-900">
                           Rp {price.toLocaleString('id-ID')}
                         </span>
                       </div>
@@ -332,27 +332,27 @@ export default function MenuCatalogPage() {
                         {isOutOfStock ? (
                           <button
                             onClick={() => setDetailProduct(product)}
-                            className="px-3 py-1.5 rounded-md text-xs font-medium bg-stone-100 hover:bg-stone-200 text-stone-800 transition-colors cursor-pointer"
+                            className="h-10 sm:h-9 px-3.5 rounded-lg text-xs font-medium bg-stone-100 hover:bg-stone-200 text-stone-800 transition-colors cursor-pointer"
                             title="Produk habis, klik untuk reservasi"
                           >
                             Reservasi
                           </button>
                         ) : cartQty > 0 ? (
-                          <div className="flex items-center gap-1.5 bg-stone-100 p-0.5 rounded-md border border-stone-200">
+                          <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-lg border border-stone-200">
                             <button
                               onClick={() => removeFromCart(product.id)}
-                              className="w-6 h-6 bg-white text-stone-800 rounded flex items-center justify-center font-medium hover:bg-stone-50 transition-colors shadow-subtle"
+                              className="w-8 h-8 sm:w-7 sm:h-7 bg-white text-stone-800 rounded-md flex items-center justify-center font-medium hover:bg-stone-50 transition-colors shadow-subtle active:scale-95"
                               aria-label="Kurangi jumlah"
                             >
-                              <Minus className="w-3 h-3" />
+                              <Minus className="w-3.5 h-3.5" />
                             </button>
-                            <span className="text-xs font-semibold text-stone-900 px-1">{cartQty}</span>
+                            <span className="text-xs font-semibold text-stone-900 px-1.5 min-w-[20px] text-center">{cartQty}</span>
                             <button
                               onClick={() => addToCart(product.id)}
-                              className="w-6 h-6 bg-stone-900 text-white rounded flex items-center justify-center font-medium hover:bg-stone-800 transition-colors shadow-subtle"
+                              className="w-8 h-8 sm:w-7 sm:h-7 bg-stone-900 text-white rounded-md flex items-center justify-center font-medium hover:bg-stone-800 transition-colors shadow-subtle active:scale-95"
                               aria-label="Tambah jumlah"
                             >
-                              <Plus className="w-3 h-3" />
+                              <Plus className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         ) : (
@@ -370,10 +370,10 @@ export default function MenuCatalogPage() {
                               }
                             }}
                             disabled={Boolean(product.isComingSoon)}
-                            className={`px-3.5 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors shadow-subtle cursor-pointer ${
+                            className={`h-11 sm:h-9 px-4 sm:px-3.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-subtle cursor-pointer min-w-[80px] ${
                               product.isComingSoon
                                 ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
-                                : 'bg-stone-900 hover:bg-[#C2410C] text-white active:scale-[0.99]'
+                                : 'bg-stone-900 hover:bg-[#C2410C] text-white active:scale-[0.98]'
                             }`}
                           >
                             <Plus className="w-3.5 h-3.5" />
