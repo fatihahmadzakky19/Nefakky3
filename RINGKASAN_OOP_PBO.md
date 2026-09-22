@@ -11,7 +11,7 @@
 5. [Komposisi Objek & Traits (Solusi Multiple Inheritance)](#5-komposisi-objek--traits)
 6. [Arsitektur Event-Driven & Polimorfisme](#6-arsitektur-event-driven--polimorfisme)
 7. [Enkapsulasi Algoritma Matematika & ACID Transaction](#7-enkapsulasi-algoritma--acid-transaction)
-8. [PBO pada Modul Django (Python) & TypeScript (Next.js)](#8-pbo-pada-modul-django--typescript)
+8. [PBO pada TypeScript (Next.js) & Arsitektur Frontend](#8-pbo-pada-typescript-nextjs--arsitektur-frontend)
 9. [Tabel Tanya Jawab & Rangkuman untuk Sidang UKK](#9-tabel-rangkuman-untuk-sidang-ukk)
 
 ---
@@ -297,12 +297,11 @@ return DB::transaction(function () use ($data, $itemsData) {
 
 ---
 
-## 🐍 8. PBO pada Modul Django & TypeScript
+## 🌐 8. PBO pada TypeScript (Next.js) & Arsitektur Frontend
 
-### 1. Abstract Base Class di Django Python (`backend_django/api/services.py`)
-- **Abstract Base Class**: `BasePaymentService` mendefinisikan kontrak interface `create_snap_transaction()` yang melempar `raise NotImplementedError`.
-- **Inheritance & Polimorfisme**: `MidtransPaymentService(BasePaymentService)` meng-override metode tersebut untuk menghubungi endpoint Midtrans Snap API.
-- **Class Method**: `HaversineDistanceCalculator` menggunakan dekorator `@classmethod` untuk perhitungan jarak tanpa instansiasi objek.
+### 1. Interface & Kontrak Data Bertipe Ketat (`src/context/DataContext.tsx`)
+- Menerapkan kontrak interface bertipe ketat (`ProductItem`, `AdminOrder`, `AdminVoucher`, `UserReview`, `ChatMessage`).
+- Menjamin enkapsulasi data, pencegahan *type mismatch*, dan validasi props tanpa bug runtime.
 
 ### 2. Type-Safe OOP & Design Patterns di Next.js TypeScript
 - **Factory Pattern (`createMaskIcon` & `createColoredIcon`)**:

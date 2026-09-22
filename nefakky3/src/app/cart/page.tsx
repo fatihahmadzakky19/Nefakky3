@@ -443,7 +443,7 @@ export default function CartCheckoutWorkflowPage() {
       userId: user?.uid || '',
       customerName: (customerName || user?.displayName || 'Pelanggan Nefakky').trim(),
       customerEmail: user?.email || '',
-      avatar: user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName || user?.displayName || 'Pelanggan')}&background=25160E&color=ffffff`,
+      avatar: user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName || user?.displayName || 'Pelanggan')}&background=1C1917&color=ffffff`,
       address: (deliveryAddress || 'Alamat Pengiriman').trim(),
       phone: (customerPhone || user?.phoneNumber || '').trim(),
       items: cartItems.map(item => ({
@@ -521,10 +521,10 @@ export default function CartCheckoutWorkflowPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const userAvatar = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=25160E&color=ffffff&bold=true` : (user?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.split('@')[0])}&background=25160E&color=ffffff&bold=true` : null));
+  const userAvatar = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=1C1917&color=ffffff&bold=true` : (user?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.split('@')[0])}&background=1C1917&color=ffffff&bold=true` : null));
 
   return (
-    <div className="bg-[#FAF8F5] font-sans text-[#25160E] min-h-screen selection:bg-[#934b19]/20 selection:text-[#934b19] flex flex-col justify-between">
+    <div className="bg-[#FBFBFA] font-sans text-stone-900 min-h-screen selection:bg-[#C2410C]/15 selection:text-[#C2410C] flex flex-col justify-between">
       
       {/* 1. NAVBAR UTAMA TERPADU */}
       <Navbar />
@@ -541,10 +541,10 @@ export default function CartCheckoutWorkflowPage() {
                 
                 {/* Header Section */}
                 <div className="mb-8 flex flex-col gap-2">
-                  <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-[#25160E] font-bold tracking-tight">
+                  <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-stone-900 font-bold tracking-tight">
                     Keranjang Belanja Anda
                   </h1>
-                  <p className="text-sm sm:text-base text-stone-600 font-light max-w-2xl">
+                  <p className="text-sm sm:text-base text-stone-600 font-normal max-w-2xl">
                     Tinjau daftar porsi makanan otentik sebelum melanjutkan ke tahap checkout pengiriman.
                   </p>
                 </div>
@@ -565,7 +565,7 @@ export default function CartCheckoutWorkflowPage() {
                             #{userActiveOrder.id}
                           </span>
                         </div>
-                        <h4 className="font-bold text-sm text-[#25160E] mt-1">
+                        <h4 className="font-bold text-sm text-stone-900 mt-1">
                           Selesaikan Pesanan Saat Ini Sebelum Membeli Lagi
                         </h4>
                         <p className="text-xs text-amber-800 font-light mt-0.5 leading-relaxed max-w-2xl">
@@ -576,7 +576,7 @@ export default function CartCheckoutWorkflowPage() {
                     <button
                       type="button"
                       onClick={() => router.push('/notifications')}
-                      className="px-4 py-3 bg-[#25160E] hover:bg-black text-amber-200 font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                      className="px-4 py-3 bg-stone-900 hover:bg-black text-amber-200 font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
                     >
                       <span>Lacak Pesanan #{userActiveOrder.id}</span>
                       <ArrowRight className="w-4 h-4 text-amber-300" />
@@ -612,7 +612,7 @@ export default function CartCheckoutWorkflowPage() {
                         </div>
                         <Link
                           href="/menu"
-                          className="inline-flex items-center gap-2 bg-[#25160E] text-white px-6 py-3 rounded-xl font-semibold text-xs hover:bg-black transition-colors shadow-sm"
+                          className="inline-flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl font-semibold text-xs hover:bg-black transition-colors shadow-sm"
                         >
                           <span>Eksplorasi Menu</span>
                           <ArrowRight className="w-4 h-4" />
@@ -635,7 +635,7 @@ export default function CartCheckoutWorkflowPage() {
                                   {item.category || 'Makanan Berat'}
                                 </span>
                                 <div className="flex justify-between items-start gap-4">
-                                  <h3 className="font-serif text-base sm:text-lg font-bold text-[#25160E] leading-snug">
+                                  <h3 className="font-serif text-base sm:text-lg font-bold text-stone-900 leading-snug">
                                     {item.name}
                                   </h3>
                                   <button onClick={() => deleteFromCart(item.id)} className="text-stone-400 hover:text-rose-600 transition-colors p-1" title="Hapus">
@@ -653,12 +653,12 @@ export default function CartCheckoutWorkflowPage() {
                                     <Minus className="w-3.5 h-3.5" />
                                   </button>
                                   <span className="text-xs font-bold text-black w-7 text-center font-mono">{item.quantity}</span>
-                                  <button onClick={() => addToCart(item.id)} className="w-7 h-7 rounded-full flex items-center justify-center bg-[#25160E] text-white shadow-2xs hover:bg-black transition-colors font-bold">
+                                  <button onClick={() => addToCart(item.id)} className="w-7 h-7 rounded-full flex items-center justify-center bg-stone-900 text-white shadow-2xs hover:bg-black transition-colors font-bold">
                                     <Plus className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
 
-                                <span className="font-serif text-base font-bold text-[#25160E]">
+                                <span className="font-serif text-base font-bold text-stone-900">
                                   Rp {(item.price * item.quantity).toLocaleString('id-ID')}
                                 </span>
                               </div>
@@ -669,7 +669,7 @@ export default function CartCheckoutWorkflowPage() {
                     )}
 
                     {cartItems.length > 0 && (
-                      <Link href="/menu" className="flex items-center justify-center gap-2 h-14 w-full bg-stone-100 hover:bg-stone-200/80 text-[#25160E] rounded-2xl transition-colors font-semibold text-xs tracking-wide border border-stone-200">
+                      <Link href="/menu" className="flex items-center justify-center gap-2 h-14 w-full bg-stone-100 hover:bg-stone-200/80 text-stone-900 rounded-2xl transition-colors font-semibold text-xs tracking-wide border border-stone-200">
                         <Plus className="w-4 h-4" />
                         <span>Tambah Menu Makanan Lainnya</span>
                       </Link>
@@ -679,7 +679,7 @@ export default function CartCheckoutWorkflowPage() {
                       <div className="bg-white p-6 rounded-2xl shadow-xs border border-stone-200 flex flex-col gap-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Tag className="w-4 h-4 text-[#25160E]" />
+                            <Tag className="w-4 h-4 text-stone-900" />
                             <h3 className="font-semibold text-xs text-neutral-900">Voucher & Kupon Promo</h3>
                           </div>
                           <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
@@ -708,7 +708,7 @@ export default function CartCheckoutWorkflowPage() {
                           <button 
                             type="submit" 
                             disabled={(appliedPromos?.length || 0) >= 2}
-                            className="bg-[#25160E] text-white h-12 px-6 rounded-xl font-semibold text-xs tracking-wide hover:bg-black transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="bg-stone-900 text-white h-12 px-6 rounded-xl font-semibold text-xs tracking-wide hover:bg-black transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             Gunakan Kode
                           </button>
@@ -771,7 +771,7 @@ export default function CartCheckoutWorkflowPage() {
                   {/* Right: Sticky Summary (4 Cols) */}
                   <div className="lg:col-span-4 relative">
                     <div className="sticky top-28 bg-white rounded-2xl shadow-md border border-stone-200 p-6 flex flex-col gap-6">
-                      <h2 className="font-serif text-xl font-bold text-[#25160E] flex items-center justify-between">
+                      <h2 className="font-serif text-xl font-bold text-stone-900 flex items-center justify-between">
                         <span>Ringkasan Biaya</span>
                         <span className="text-xs font-normal text-stone-500">({totalCartCount} item)</span>
                       </h2>
@@ -802,7 +802,7 @@ export default function CartCheckoutWorkflowPage() {
 
                       <div className="flex justify-between items-end">
                         <span className="text-xs sm:text-sm font-semibold text-stone-600">Total Bayar</span>
-                        <span className="font-serif text-2xl font-bold text-[#25160E]">Rp {(subtotal + shippingCost - discountAmount).toLocaleString('id-ID')}</span>
+                        <span className="font-serif text-2xl font-bold text-stone-900">Rp {(subtotal + shippingCost - discountAmount).toLocaleString('id-ID')}</span>
                       </div>
 
                       {!user && (
@@ -819,7 +819,7 @@ export default function CartCheckoutWorkflowPage() {
                               setAuthActionName('melanjutkan proses checkout');
                               setShowAuthModal(true);
                             }}
-                            className="w-full py-2 bg-[#25160E] hover:bg-black text-amber-200 text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
+                            className="w-full py-2 bg-stone-900 hover:bg-black text-amber-200 text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
                           >
                             Masuk / Daftar Akun
                           </button>
@@ -844,7 +844,7 @@ export default function CartCheckoutWorkflowPage() {
                         className={`h-14 rounded-xl flex items-center justify-center font-semibold text-xs tracking-wide w-full gap-2 transition-all shadow-lg cursor-pointer ${
                           userActiveOrder
                             ? 'bg-amber-900/80 hover:bg-amber-950 text-amber-200'
-                            : 'bg-[#25160E] hover:bg-black text-white disabled:opacity-50'
+                            : 'bg-stone-900 hover:bg-black text-white disabled:opacity-50'
                         }`}
                       >
                         {userActiveOrder ? (
@@ -881,26 +881,26 @@ export default function CartCheckoutWorkflowPage() {
                 
                 {/* Stepper Header */}
                 <div className="mb-8 flex flex-col items-start gap-4">
-                  <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-[#25160E] font-bold tracking-tight">
+                  <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-stone-900 font-bold tracking-tight">
                     Checkout &amp; Alamat
                   </h1>
 
                   {/* 4-Stage Stepper Bar */}
                   <div className="flex items-center w-full max-w-2xl gap-2 mt-2">
                     <div className="flex flex-col items-center gap-1 flex-1 cursor-pointer" onClick={() => setStep('cart')}>
-                      <div className="w-8 h-8 rounded-full bg-[#25160E] text-white flex items-center justify-center shadow-sm relative z-10">
+                      <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center shadow-sm relative z-10">
                         <Check className="w-4 h-4" />
                       </div>
-                      <span className="text-[11px] font-semibold text-[#25160E] uppercase tracking-wider hidden sm:block">1. Keranjang</span>
+                      <span className="text-[11px] font-semibold text-stone-900 uppercase tracking-wider hidden sm:block">1. Keranjang</span>
                     </div>
 
-                    <div className="h-1 bg-[#25160E] flex-1 -mx-4 mb-4 sm:mb-6 rounded-full"></div>
+                    <div className="h-1 bg-stone-900 flex-1 -mx-4 mb-4 sm:mb-6 rounded-full"></div>
 
                     <div className="flex flex-col items-center gap-1 flex-1">
-                      <div className="w-8 h-8 rounded-full bg-[#25160E] text-white flex items-center justify-center shadow-sm relative z-10 ring-4 ring-[#25160E]/20">
+                      <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center shadow-sm relative z-10 ring-4 ring-stone-900/20">
                         <span className="text-xs font-bold">2</span>
                       </div>
-                      <span className="text-[11px] font-bold text-[#25160E] uppercase tracking-wider hidden sm:block">2. Alamat</span>
+                      <span className="text-[11px] font-bold text-stone-900 uppercase tracking-wider hidden sm:block">2. Alamat</span>
                     </div>
 
                     <div className="h-1 bg-stone-200 flex-1 -mx-4 mb-4 sm:mb-6 rounded-full"></div>
@@ -933,14 +933,14 @@ export default function CartCheckoutWorkflowPage() {
                     <section className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
                       <div className="p-5 bg-stone-50 border-b border-stone-200 flex flex-wrap justify-between items-center gap-3">
                         <div className="flex items-center gap-2">
-                          <MapPin className="w-5 h-5 text-[#25160E]" />
-                          <h2 className="font-serif text-lg font-bold text-[#25160E]">Alamat Pengiriman</h2>
+                          <MapPin className="w-5 h-5 text-stone-900" />
+                          <h2 className="font-serif text-lg font-bold text-stone-900">Alamat Pengiriman</h2>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setShowMapPickerModal(true)}
-                            className="px-3.5 py-1.5 bg-[#25160E] hover:bg-black text-amber-200 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                            className="px-3.5 py-1.5 bg-stone-900 hover:bg-black text-amber-200 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                           >
                             <Navigation className="w-3.5 h-3.5 text-amber-300" />
                             <span>Pilih Titik Lokasi Peta GPS</span>
@@ -991,7 +991,7 @@ export default function CartCheckoutWorkflowPage() {
                         {isEditingAddress ? (
                           <div className="space-y-3 pt-1">
                             <div>
-                              <label className="font-semibold text-xs text-[#25160E] block mb-1">
+                              <label className="font-semibold text-xs text-stone-900 block mb-1">
                                 Label Alamat <span className="text-[10px] font-normal text-stone-500">(Bisa diketik manual atau pilih cepat)</span>
                               </label>
                               <div className="space-y-1.5">
@@ -1023,7 +1023,7 @@ export default function CartCheckoutWorkflowPage() {
                             </div>
 
                             <div>
-                              <label className="font-semibold text-xs text-[#25160E] block mb-1">Nama Penerima &amp; Telepon</label>
+                              <label className="font-semibold text-xs text-stone-900 block mb-1">Nama Penerima &amp; Telepon</label>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Nama Lengkap" className="bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-black focus:outline-none focus:ring-2 focus:ring-black" />
                                 <input type="text" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Nomor Telepon" className="bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-black focus:outline-none focus:ring-2 focus:ring-black" />
@@ -1032,7 +1032,7 @@ export default function CartCheckoutWorkflowPage() {
 
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="font-semibold text-xs text-[#25160E]">Alamat Lengkap &amp; Rincian Wilayah</label>
+                                <label className="font-semibold text-xs text-stone-900">Alamat Lengkap &amp; Rincian Wilayah</label>
                                 {isVerifyingAddress && <span className="text-[10px] text-stone-500 italic animate-pulse">Memverifikasi ke satelit...</span>}
                               </div>
                               <textarea 
@@ -1049,14 +1049,14 @@ export default function CartCheckoutWorkflowPage() {
                             </div>
 
                             <div>
-                              <label className="font-semibold text-xs text-[#25160E] block mb-1">Catatan Kurir (Patokan)</label>
+                              <label className="font-semibold text-xs text-stone-900 block mb-1">Catatan Kurir (Patokan)</label>
                               <input type="text" value={courierNotes} onChange={(e) => setCourierNotes(e.target.value)} placeholder="Contoh: Pagar hitam depan warung soto" className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-xs text-black focus:outline-none focus:ring-2 focus:ring-black" />
                             </div>
                           </div>
                         ) : (
                           <div className="bg-[#FBF9F5] rounded-xl p-4 border border-stone-200 relative overflow-hidden group cursor-pointer" onClick={() => setIsEditingAddress(true)}>
                             <div className="absolute top-4 right-4 flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-[#25160E] flex items-center justify-center text-white">
+                              <div className="w-6 h-6 rounded-full bg-stone-900 flex items-center justify-center text-white">
                                 <Check className="w-3.5 h-3.5" />
                               </div>
                             </div>
@@ -1067,8 +1067,8 @@ export default function CartCheckoutWorkflowPage() {
                               </div>
                               <div className="flex flex-col gap-1 pr-8">
                                 <div className="flex items-center gap-2">
-                                  <h3 className="font-bold text-sm text-[#25160E]">{addressLabel}</h3>
-                                  <span className="px-2 py-0.5 bg-[#25160E]/10 text-[#25160E] rounded text-[9px] font-bold uppercase tracking-wider">
+                                  <h3 className="font-bold text-sm text-stone-900">{addressLabel}</h3>
+                                  <span className="px-2 py-0.5 bg-stone-900/10 text-stone-900 rounded text-[9px] font-bold uppercase tracking-wider">
                                     Utama
                                   </span>
                                   {isAddressVerified && (
@@ -1077,7 +1077,7 @@ export default function CartCheckoutWorkflowPage() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs font-semibold text-[#25160E]">
+                                <p className="text-xs font-semibold text-stone-900">
                                   {customerName} <span className="text-stone-500 font-normal">| {customerPhone}</span>
                                 </p>
                                 <p className="text-xs text-stone-600 font-light leading-relaxed mt-0.5">
@@ -1096,7 +1096,7 @@ export default function CartCheckoutWorkflowPage() {
                         {/* Live Delivery Tracking Info */}
                         <div className="flex items-center gap-2.5 px-4 py-3 bg-[#FCF8FA] border border-stone-200 rounded-xl text-xs text-stone-700">
                           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                          <p className="font-medium text-xs text-[#25160E]">
+                          <p className="font-medium text-xs text-stone-900">
                             <span className="font-bold">Navigasi Terhubung:</span> Alamat tujuan otomatis terlacak secara realtime pada rute pengantaran Karyawan Nefakky.
                           </p>
                         </div>
@@ -1106,8 +1106,8 @@ export default function CartCheckoutWorkflowPage() {
                     {/* Kitchen Order Notes */}
                     <section className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
                       <div className="p-5 bg-stone-50 border-b border-stone-200">
-                        <h2 className="font-serif text-lg font-bold text-[#25160E] flex items-center gap-2">
-                          <Edit className="w-5 h-5 text-[#25160E]" />
+                        <h2 className="font-serif text-lg font-bold text-stone-900 flex items-center gap-2">
+                          <Edit className="w-5 h-5 text-stone-900" />
                           <span>Catatan Pesanan</span>
                         </h2>
                       </div>
@@ -1117,7 +1117,7 @@ export default function CartCheckoutWorkflowPage() {
                           value={kitchenNotes}
                           onChange={(e) => setKitchenNotes(e.target.value)}
                           placeholder="Tolong pisahkan sambalnya, atau instruksi khusus lainnya untuk dapur..."
-                          className="w-full p-3 bg-[#FBF9F5] border border-stone-200 rounded-xl text-xs text-[#25160E] focus:outline-none focus:ring-1 focus:ring-black resize-none placeholder-stone-400"
+                          className="w-full p-3 bg-[#FBF9F5] border border-stone-200 rounded-xl text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-black resize-none placeholder-stone-400"
                         />
                         <p className="mt-2 text-xs text-stone-500 font-light flex items-center gap-1.5">
                           <Info className="w-3.5 h-3.5 text-stone-400" />
@@ -1132,7 +1132,7 @@ export default function CartCheckoutWorkflowPage() {
                         <Bike className="w-5 h-5" />
                       </div>
                       <div className="flex flex-col gap-1.5 text-left">
-                        <h3 className="font-bold text-xs text-[#25160E]">Transparansi Ongkos Kirim Realtime</h3>
+                        <h3 className="font-bold text-xs text-stone-900">Transparansi Ongkos Kirim Realtime</h3>
                         <p className="text-xs text-stone-600 font-light leading-relaxed">
                           Kami menggunakan perhitungan jarak berbasis GPS dari dapur kami ke lokasi Anda. Tarif dasar adalah Rp 10.000 (untuk &le; 10 km), dan penyesuaian +Rp 2.500 per 3 km untuk jarak di atas 10 km.
                         </p>
@@ -1155,13 +1155,13 @@ export default function CartCheckoutWorkflowPage() {
                       
                       <div className="bg-white rounded-2xl shadow-md border border-stone-200 overflow-hidden">
                         <div className="p-5 border-b border-stone-200">
-                          <h2 className="font-serif text-lg font-bold text-[#25160E]">Ringkasan</h2>
+                          <h2 className="font-serif text-lg font-bold text-stone-900">Ringkasan</h2>
                         </div>
 
                         <div className="p-6 flex flex-col gap-3 text-xs border-b border-stone-200">
                           <div className="flex justify-between items-center text-stone-600">
                             <span>Subtotal ({totalCartCount} Item)</span>
-                            <span className="font-mono font-semibold text-[#25160E]">Rp {subtotal.toLocaleString('id-ID')}</span>
+                            <span className="font-mono font-semibold text-stone-900">Rp {subtotal.toLocaleString('id-ID')}</span>
                           </div>
 
                           <div className="flex justify-between items-center text-stone-600">
@@ -1169,7 +1169,7 @@ export default function CartCheckoutWorkflowPage() {
                               Ongkos Kirim ({deliveryDistanceKm} Km)
                               <Info className="w-3.5 h-3.5 text-stone-400" />
                             </span>
-                            <span className="font-mono font-semibold text-[#25160E]">Rp {shippingCost.toLocaleString('id-ID')}</span>
+                            <span className="font-mono font-semibold text-stone-900">Rp {shippingCost.toLocaleString('id-ID')}</span>
                           </div>
 
                           {discountAmount > 0 && (
@@ -1182,15 +1182,15 @@ export default function CartCheckoutWorkflowPage() {
 
                         <div className="p-6 bg-stone-50">
                           <div className="flex justify-between items-end">
-                            <span className="font-semibold text-xs text-[#25160E] uppercase tracking-wider">Total Pembayaran</span>
-                            <span className="font-serif text-2xl font-bold text-[#25160E]">Rp {finalPayableTotal.toLocaleString('id-ID')}</span>
+                            <span className="font-semibold text-xs text-stone-900 uppercase tracking-wider">Total Pembayaran</span>
+                            <span className="font-serif text-2xl font-bold text-stone-900">Rp {finalPayableTotal.toLocaleString('id-ID')}</span>
                           </div>
                         </div>
                       </div>
 
                       <button 
                         onClick={handleProceedToPayment}
-                        className="w-full py-4 px-6 bg-[#25160E] text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 shadow-md hover:bg-black transition-all cursor-pointer"
+                        className="w-full py-4 px-6 bg-stone-900 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 shadow-md hover:bg-black transition-all cursor-pointer"
                       >
                         <span>Lanjutkan Ke Pembayaran</span>
                         <ArrowRight className="w-4 h-4" />
@@ -1198,7 +1198,7 @@ export default function CartCheckoutWorkflowPage() {
 
                       <button 
                         onClick={() => { setStep('cart'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                        className="w-full py-3 px-6 bg-transparent border border-stone-300 text-[#25160E] rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-stone-100 transition-colors cursor-pointer"
+                        className="w-full py-3 px-6 bg-transparent border border-stone-300 text-stone-900 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:bg-stone-100 transition-colors cursor-pointer"
                       >
                         <ArrowLeft className="w-4 h-4" />
                         <span>Kembali Ke Keranjang</span>
@@ -1227,7 +1227,7 @@ export default function CartCheckoutWorkflowPage() {
                 {/* Stepper Header */}
                 <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-stone-100 p-6 sm:p-8 rounded-2xl border border-stone-200">
                   <div>
-                    <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#25160E] mb-1">
+                    <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 mb-1">
                       Pembayaran Midtrans
                     </h1>
                     <p className="text-xs sm:text-sm text-stone-600 font-light">Pilih metode pembayaran yang Anda inginkan.</p>
@@ -1251,13 +1251,13 @@ export default function CartCheckoutWorkflowPage() {
                       <span className="text-[10px] font-semibold text-emerald-700">2. Alamat</span>
                     </div>
 
-                    <div className="h-[2px] w-6 sm:w-10 bg-[#25160E]"></div>
+                    <div className="h-[2px] w-6 sm:w-10 bg-stone-900"></div>
 
                     <div className="flex flex-col items-center gap-1">
-                      <div className="w-8 h-8 rounded-full bg-[#25160E] text-white flex items-center justify-center ring-4 ring-[#25160E]/20">
+                      <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center ring-4 ring-stone-900/20">
                         <span className="text-xs font-bold">3</span>
                       </div>
-                      <span className="text-[10px] font-bold text-[#25160E]">3. Pembayaran</span>
+                      <span className="text-[10px] font-bold text-stone-900">3. Pembayaran</span>
                     </div>
 
                     <div className="h-[2px] w-6 sm:w-10 bg-stone-300"></div>
@@ -1279,15 +1279,15 @@ export default function CartCheckoutWorkflowPage() {
                     
                     <div className="flex items-center justify-between bg-white rounded-2xl p-5 border border-stone-200 shadow-xs">
                       <div className="flex items-center gap-3">
-                        <ShieldCheck className="w-7 h-7 text-[#25160E]" />
+                        <ShieldCheck className="w-7 h-7 text-stone-900" />
                         <div>
-                          <h2 className="font-serif text-base sm:text-lg font-bold text-[#25160E]">Metode Pembayaran Resmi</h2>
+                          <h2 className="font-serif text-base sm:text-lg font-bold text-stone-900">Metode Pembayaran Resmi</h2>
                           <p className="text-xs text-stone-500 font-light">Proses checkout aman dengan enkripsi 256-bit.</p>
                         </div>
                       </div>
                       <div className="bg-stone-100 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 border border-stone-200">
-                        <ShieldCheck className="w-4 h-4 text-[#25160E]" />
-                        <span className="text-[10px] font-bold text-[#25160E] uppercase tracking-wider">Secured by Midtrans</span>
+                        <ShieldCheck className="w-4 h-4 text-stone-900" />
+                        <span className="text-[10px] font-bold text-stone-900 uppercase tracking-wider">Secured by Midtrans</span>
                       </div>
                     </div>
 
@@ -1298,16 +1298,16 @@ export default function CartCheckoutWorkflowPage() {
                       <label 
                         onClick={() => setSelectedPaymentMethod('va')}
                         className={`cursor-pointer bg-white p-5 rounded-2xl border flex items-start gap-4 transition-all shadow-xs ${
-                          selectedPaymentMethod === 'va' ? 'border-[#25160E] ring-2 ring-[#25160E] bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
+                          selectedPaymentMethod === 'va' ? 'border-stone-900 ring-2 ring-stone-900 bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
                         }`}
                       >
-                        <Building2 className={`w-6 h-6 mt-0.5 ${selectedPaymentMethod === 'va' ? 'text-[#25160E]' : 'text-stone-400'}`} />
+                        <Building2 className={`w-6 h-6 mt-0.5 ${selectedPaymentMethod === 'va' ? 'text-stone-900' : 'text-stone-400'}`} />
                         <div className="flex-1">
-                          <span className="block font-bold text-xs text-[#25160E] mb-0.5">Virtual Account</span>
+                          <span className="block font-bold text-xs text-stone-900 mb-0.5">Virtual Account</span>
                           <span className="block text-xs text-stone-500 font-light">BCA, Mandiri, BNI, BRI, Permata</span>
                         </div>
                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                          selectedPaymentMethod === 'va' ? 'border-[#25160E] bg-[#25160E] text-white' : 'border-stone-300'
+                          selectedPaymentMethod === 'va' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300'
                         }`}>
                           {selectedPaymentMethod === 'va' && <Check className="w-3 h-3" />}
                         </div>
@@ -1317,16 +1317,16 @@ export default function CartCheckoutWorkflowPage() {
                       <label 
                         onClick={() => setSelectedPaymentMethod('ewallet')}
                         className={`cursor-pointer bg-white p-5 rounded-2xl border flex items-start gap-4 transition-all shadow-xs ${
-                          selectedPaymentMethod === 'ewallet' ? 'border-[#25160E] ring-2 ring-[#25160E] bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
+                          selectedPaymentMethod === 'ewallet' ? 'border-stone-900 ring-2 ring-stone-900 bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
                         }`}
                       >
-                        <Wallet className={`w-6 h-6 mt-0.5 ${selectedPaymentMethod === 'ewallet' ? 'text-[#25160E]' : 'text-stone-400'}`} />
+                        <Wallet className={`w-6 h-6 mt-0.5 ${selectedPaymentMethod === 'ewallet' ? 'text-stone-900' : 'text-stone-400'}`} />
                         <div className="flex-1">
-                          <span className="block font-bold text-xs text-[#25160E] mb-0.5">E-Wallet</span>
+                          <span className="block font-bold text-xs text-stone-900 mb-0.5">E-Wallet</span>
                           <span className="block text-xs text-stone-500 font-light">GoPay, ShopeePay, OVO, DANA</span>
                         </div>
                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                          selectedPaymentMethod === 'ewallet' ? 'border-[#25160E] bg-[#25160E] text-white' : 'border-stone-300'
+                          selectedPaymentMethod === 'ewallet' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300'
                         }`}>
                           {selectedPaymentMethod === 'ewallet' && <Check className="w-3 h-3" />}
                         </div>
@@ -1336,16 +1336,16 @@ export default function CartCheckoutWorkflowPage() {
                       <label 
                         onClick={() => setSelectedPaymentMethod('qris')}
                         className={`cursor-pointer bg-white p-5 rounded-2xl border flex items-start gap-4 transition-all shadow-xs ${
-                          selectedPaymentMethod === 'qris' ? 'border-[#25160E] ring-2 ring-[#25160E] bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
+                          selectedPaymentMethod === 'qris' ? 'border-stone-900 ring-2 ring-stone-900 bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
                         }`}
                       >
-                        <QrCode className={`w-6 h-6 mt-0.5 ${selectedPaymentMethod === 'qris' ? 'text-[#25160E]' : 'text-stone-400'}`} />
+                        <QrCode className={`w-6 h-6 mt-0.5 ${selectedPaymentMethod === 'qris' ? 'text-stone-900' : 'text-stone-400'}`} />
                         <div className="flex-1">
-                          <span className="block font-bold text-xs text-[#25160E] mb-0.5">QRIS Instant</span>
+                          <span className="block font-bold text-xs text-stone-900 mb-0.5">QRIS Instant</span>
                           <span className="block text-xs text-stone-500 font-light">Scan dengan aplikasi bank / e-wallet apa saja</span>
                         </div>
                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                          selectedPaymentMethod === 'qris' ? 'border-[#25160E] bg-[#25160E] text-white' : 'border-stone-300'
+                          selectedPaymentMethod === 'qris' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300'
                         }`}>
                           {selectedPaymentMethod === 'qris' && <Check className="w-3 h-3" />}
                         </div>
@@ -1355,16 +1355,16 @@ export default function CartCheckoutWorkflowPage() {
                       <label 
                         onClick={() => setSelectedPaymentMethod('cc')}
                         className={`cursor-pointer bg-white p-5 rounded-2xl border flex items-start gap-4 transition-all shadow-xs ${
-                          selectedPaymentMethod === 'cc' ? 'border-[#25160E] ring-2 ring-[#25160E] bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
+                          selectedPaymentMethod === 'cc' ? 'border-stone-900 ring-2 ring-stone-900 bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
                         }`}
                       >
-                        <CreditCard className={`w-6 h-6 mt-0.5 ${selectedPaymentMethod === 'cc' ? 'text-[#25160E]' : 'text-stone-400'}`} />
+                        <CreditCard className={`w-6 h-6 mt-0.5 ${selectedPaymentMethod === 'cc' ? 'text-stone-900' : 'text-stone-400'}`} />
                         <div className="flex-1">
-                          <span className="block font-bold text-xs text-[#25160E] mb-0.5">Kartu Kredit / Debit</span>
+                          <span className="block font-bold text-xs text-stone-900 mb-0.5">Kartu Kredit / Debit</span>
                           <span className="block text-xs text-stone-500 font-light">Visa, Mastercard, JCB</span>
                         </div>
                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                          selectedPaymentMethod === 'cc' ? 'border-[#25160E] bg-[#25160E] text-white' : 'border-stone-300'
+                          selectedPaymentMethod === 'cc' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300'
                         }`}>
                           {selectedPaymentMethod === 'cc' && <Check className="w-3 h-3" />}
                         </div>
@@ -1374,18 +1374,18 @@ export default function CartCheckoutWorkflowPage() {
                       <label 
                         onClick={() => setSelectedPaymentMethod('cod')}
                         className={`cursor-pointer bg-white p-5 rounded-2xl border md:col-span-2 flex items-center gap-4 transition-all shadow-xs ${
-                          selectedPaymentMethod === 'cod' ? 'border-[#25160E] ring-2 ring-[#25160E] bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
+                          selectedPaymentMethod === 'cod' ? 'border-stone-900 ring-2 ring-stone-900 bg-stone-50/50' : 'border-stone-200 hover:bg-stone-50'
                         }`}
                       >
-                        <Truck className={`w-6 h-6 ${selectedPaymentMethod === 'cod' ? 'text-[#25160E]' : 'text-stone-400'}`} />
+                        <Truck className={`w-6 h-6 ${selectedPaymentMethod === 'cod' ? 'text-stone-900' : 'text-stone-400'}`} />
                         <div className="flex-1 flex items-center gap-3">
-                          <span className="block font-bold text-xs text-[#25160E]">Cash on Delivery (COD)</span>
+                          <span className="block font-bold text-xs text-stone-900">Cash on Delivery (COD)</span>
                           <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
                             BISA COD
                           </span>
                         </div>
                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                          selectedPaymentMethod === 'cod' ? 'border-[#25160E] bg-[#25160E] text-white' : 'border-stone-300'
+                          selectedPaymentMethod === 'cod' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300'
                         }`}>
                           {selectedPaymentMethod === 'cod' && <Check className="w-3 h-3" />}
                         </div>
@@ -1399,16 +1399,16 @@ export default function CartCheckoutWorkflowPage() {
                   <div className="lg:col-span-4 relative">
                     <div className="bg-white rounded-2xl p-6 shadow-md border border-stone-200 sticky top-28 flex flex-col gap-6">
                       
-                      <h3 className="font-serif text-lg font-bold text-[#25160E]">Order Summary</h3>
+                      <h3 className="font-serif text-lg font-bold text-stone-900">Order Summary</h3>
 
                       <div className="flex flex-col gap-3 text-xs">
                         <div className="flex justify-between items-center text-stone-600">
                           <span>Subtotal ({totalCartCount} items)</span>
-                          <span className="font-mono font-semibold text-[#25160E]">Rp {subtotal.toLocaleString('id-ID')}</span>
+                          <span className="font-mono font-semibold text-stone-900">Rp {subtotal.toLocaleString('id-ID')}</span>
                         </div>
                         <div className="flex justify-between items-center text-stone-600">
                           <span>Ongkos Kirim ({deliveryDistanceKm} Km)</span>
-                          <span className="font-mono font-semibold text-[#25160E]">Rp {shippingCost.toLocaleString('id-ID')}</span>
+                          <span className="font-mono font-semibold text-stone-900">Rp {shippingCost.toLocaleString('id-ID')}</span>
                         </div>
                         {discountAmount > 0 && (
                           <div className="flex justify-between items-center text-emerald-700 font-semibold">
@@ -1421,8 +1421,8 @@ export default function CartCheckoutWorkflowPage() {
                       <div className="h-[1px] bg-stone-200 w-full my-1"></div>
 
                       <div className="flex justify-between items-end">
-                        <span className="font-serif text-base font-bold text-[#25160E]">Total Bayar</span>
-                        <span className="font-serif text-2xl font-bold text-[#25160E]">Rp {finalPayableTotal.toLocaleString('id-ID')}</span>
+                        <span className="font-serif text-base font-bold text-stone-900">Total Bayar</span>
+                        <span className="font-serif text-2xl font-bold text-stone-900">Rp {finalPayableTotal.toLocaleString('id-ID')}</span>
                       </div>
 
                       <div className="flex flex-col gap-3 mt-2">
@@ -1430,7 +1430,7 @@ export default function CartCheckoutWorkflowPage() {
                         <button 
                           disabled={isProcessingPayment}
                           onClick={handleInitiatePayment}
-                          className="w-full bg-[#25160E] hover:bg-black text-white py-4 rounded-xl font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-[0.99]"
+                          className="w-full bg-stone-900 hover:bg-black text-white py-4 rounded-xl font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-[0.99]"
                         >
                           {isProcessingPayment ? (
                             <span>MEMPROSES PESANAN...</span>
@@ -1457,7 +1457,7 @@ export default function CartCheckoutWorkflowPage() {
                         {/* Tombol Navigasi Kembali ke Langkah Sebelumnya */}
                         <button 
                           onClick={() => { setStep('address'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                          className="w-full bg-transparent hover:bg-stone-100 text-[#25160E] py-3 rounded-xl font-semibold text-xs border border-stone-200 transition-colors cursor-pointer"
+                          className="w-full bg-transparent hover:bg-stone-100 text-stone-900 py-3 rounded-xl font-semibold text-xs border border-stone-200 transition-colors cursor-pointer"
                         >
                           Kembali Ke Detail Alamat
                         </button>
@@ -1481,31 +1481,31 @@ export default function CartCheckoutWorkflowPage() {
                 {/* Stepper Header Selesai */}
                 <div className="mb-8 flex justify-between items-center relative before:absolute before:inset-0 before:top-1/2 before:-translate-y-1/2 before:h-px before:w-full before:bg-stone-200 before:z-0">
                   <div className="relative z-10 flex flex-col items-center gap-1 bg-[#FBF9F5] px-2">
-                    <div className="w-8 h-8 rounded-full bg-[#25160E] text-white flex items-center justify-center shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center shadow-sm">
                       <Check className="w-4 h-4" />
                     </div>
                     <span className="text-[10px] font-semibold text-stone-500">1. Keranjang</span>
                   </div>
 
                   <div className="relative z-10 flex flex-col items-center gap-1 bg-[#FBF9F5] px-2">
-                    <div className="w-8 h-8 rounded-full bg-[#25160E] text-white flex items-center justify-center shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center shadow-sm">
                       <Check className="w-4 h-4" />
                     </div>
                     <span className="text-[10px] font-semibold text-stone-500">2. Alamat</span>
                   </div>
 
                   <div className="relative z-10 flex flex-col items-center gap-1 bg-[#FBF9F5] px-2">
-                    <div className="w-8 h-8 rounded-full bg-[#25160E] text-white flex items-center justify-center shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center shadow-sm">
                       <Check className="w-4 h-4" />
                     </div>
                     <span className="text-[10px] font-semibold text-stone-500">3. Pembayaran</span>
                   </div>
 
                   <div className="relative z-10 flex flex-col items-center gap-1 bg-[#FBF9F5] px-2">
-                    <div className="w-8 h-8 rounded-full bg-[#25160E] text-white flex items-center justify-center shadow-sm ring-4 ring-[#25160E]/20">
+                    <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center shadow-sm ring-4 ring-stone-900/20">
                       <span className="text-xs font-bold">4</span>
                     </div>
-                    <span className="text-[10px] font-bold text-[#25160E]">4. Selesai</span>
+                    <span className="text-[10px] font-bold text-stone-900">4. Selesai</span>
                   </div>
                 </div>
 
@@ -1514,8 +1514,8 @@ export default function CartCheckoutWorkflowPage() {
                   
                   {/* Header/Icon */}
                   <div className="p-8 sm:p-10 flex flex-col items-center text-center bg-stone-50/80 relative overflow-hidden">
-                    <div className="w-24 h-24 rounded-full bg-[#25160E]/10 flex items-center justify-center mb-4 relative z-10">
-                      <div className="w-16 h-16 rounded-full bg-[#25160E] flex items-center justify-center shadow-md animate-bounce">
+                    <div className="w-24 h-24 rounded-full bg-stone-900/10 flex items-center justify-center mb-4 relative z-10">
+                      <div className="w-16 h-16 rounded-full bg-stone-900 flex items-center justify-center shadow-md animate-bounce">
                         <CheckCircle2 className="w-8 h-8 text-white" />
                       </div>
                     </div>
@@ -1532,7 +1532,7 @@ export default function CartCheckoutWorkflowPage() {
                       </div>
                     )}
 
-                    <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-[#25160E] mb-2">
+                    <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-stone-900 mb-2">
                       {completedOrder?.paymentMethod === 'cod' || selectedPaymentMethod === 'cod' 
                         ? 'Pesanan Anda Berhasil' 
                         : 'Pembayaran & Pesanan Anda Berhasil'}
@@ -1550,12 +1550,12 @@ export default function CartCheckoutWorkflowPage() {
                       
                       <div className="flex justify-between items-center pb-2 border-b border-stone-200">
                         <span className="text-stone-500 font-light">Order ID</span>
-                        <span className="font-mono font-bold text-[#25160E] tracking-wider">#{completedOrder?.id || 'NFK-892102'}</span>
+                        <span className="font-mono font-bold text-stone-900 tracking-wider">#{completedOrder?.id || 'NFK-892102'}</span>
                       </div>
 
                       <div className="flex justify-between items-center py-1">
                         <span className="text-stone-500 font-light">Metode Pembayaran</span>
-                        <span className="font-semibold text-[#25160E] flex items-center gap-1">
+                        <span className="font-semibold text-stone-900 flex items-center gap-1">
                           <Wallet className="w-3.5 h-3.5 text-stone-600" />
                           <span>{completedOrder?.paymentMethod || 'Midtrans Snap / COD'}</span>
                         </span>
@@ -1569,8 +1569,8 @@ export default function CartCheckoutWorkflowPage() {
                       )}
 
                       <div className="flex justify-between items-center pt-2 border-t border-stone-200 mt-1">
-                        <span className="font-semibold text-sm text-[#25160E]">Total Pembayaran</span>
-                        <span className="font-serif text-lg font-bold text-[#25160E]">
+                        <span className="font-semibold text-sm text-stone-900">Total Pembayaran</span>
+                        <span className="font-serif text-lg font-bold text-stone-900">
                           Rp {(completedOrder?.total || finalPayableTotal).toLocaleString('id-ID')}
                         </span>
                       </div>
@@ -1580,7 +1580,7 @@ export default function CartCheckoutWorkflowPage() {
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Link 
                         href="/notifications" 
-                        className="flex-1 bg-[#25160E] text-white py-3.5 px-4 rounded-xl text-xs font-semibold shadow-md hover:bg-black transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 bg-stone-900 text-white py-3.5 px-4 rounded-xl text-xs font-semibold shadow-md hover:bg-black transition-colors flex items-center justify-center gap-2"
                       >
                         <Truck className="w-4 h-4" />
                         <span>Lacak Status Pengiriman</span>
@@ -1588,7 +1588,7 @@ export default function CartCheckoutWorkflowPage() {
 
                       <Link 
                         href="/menu" 
-                        className="flex-1 bg-white text-[#25160E] border border-stone-300 py-3.5 px-4 rounded-xl text-xs font-semibold hover:bg-stone-100 transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 bg-white text-stone-900 border border-stone-300 py-3.5 px-4 rounded-xl text-xs font-semibold hover:bg-stone-100 transition-colors flex items-center justify-center gap-2"
                       >
                         <ShoppingBag className="w-4 h-4" />
                         <span>Kembali ke Katalog Menu</span>
@@ -1630,7 +1630,7 @@ export default function CartCheckoutWorkflowPage() {
               <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase tracking-wider">
                 PEMBAYARAN TERVERIFIKASI
               </span>
-              <h3 className="font-serif text-2xl font-bold text-[#25160E]">
+              <h3 className="font-serif text-2xl font-bold text-stone-900">
                 Pembayaran Berhasil!
               </h3>
               <p className="text-xs text-stone-600 font-light">
@@ -1649,7 +1649,7 @@ export default function CartCheckoutWorkflowPage() {
                 setStep('success');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="w-full py-3.5 bg-[#25160E] hover:bg-black text-amber-300 font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 bg-stone-900 hover:bg-black text-amber-300 font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Lanjut ke Ringkasan Pesanan</span>
               <ArrowRight className="w-4 h-4 text-amber-300" />

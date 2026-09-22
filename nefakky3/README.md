@@ -73,7 +73,7 @@ cd f:\UKK\nefakky3
 npm install
 
 # 3. Generate 33 ikon kustom
-python scripts/gen_icons.py
+npm run icons
 
 # 4. Jalankan pengecekan TypeScript (wajib 0 error)
 npx tsc --noEmit

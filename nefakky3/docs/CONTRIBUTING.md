@@ -41,11 +41,12 @@ Kami berkomitmen untuk menyediakan lingkungan kolaborasi yang profesional, ramah
 
 Jika Anda ingin menambahkan icon kustom baru ke platform:
 1. Simpan gambar PNG transparan beresolusi tinggi (disarankan siluet garis hitam bersih 512x512) ke folder aset.
-2. Buka berkas generator `scripts/gen_icons.py`.
-3. Daftarkan mapping nama berkas baru pada dictionary `icon_map`.
+2. Buka berkas generator `scripts/gen_icons.mjs`.
+3. Daftarkan mapping nama berkas baru pada dictionary `mapping`.
 4. Jalankan script generator di terminal:
    ```bash
-   python scripts/gen_icons.py
+   npm run icons
+   # Atau: node scripts/gen_icons.mjs
    ```
 5. Buka `src/components/icons/CustomIcons.tsx` dan pastikan ekspor komponen baru beserta alias drop-in yang relevan telah terdaftar rapi.
 6. Uji kompilasi proyek:

@@ -111,7 +111,7 @@ export default function UserProfilePage() {
   const [orderTab, setOrderTab] = useState<'all' | 'active' | 'completed'>('all');
 
   // State Edit Profile Modal
-  const defaultUserPhoto = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=25160E&color=ffffff&bold=true` : 'https://ui-avatars.com/api/?name=User&background=25160E&color=ffffff&bold=true');
+  const defaultUserPhoto = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=1C1917&color=ffffff&bold=true` : 'https://ui-avatars.com/api/?name=User&background=1C1917&color=ffffff&bold=true');
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [editName, setEditName] = useState<string>(user?.displayName || 'Pelanggan Nefakky');
   const [editPhone, setEditPhone] = useState<string>(user?.phoneNumber || '');
@@ -144,7 +144,7 @@ export default function UserProfilePage() {
     if (user) {
       setEditName(user.displayName || 'Pelanggan Nefakky');
       setEditPhone(user.phoneNumber || '');
-      setEditAvatarUrl(user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.email || 'User')}&background=25160E&color=ffffff&bold=true`);
+      setEditAvatarUrl(user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.email || 'User')}&background=1C1917&color=ffffff&bold=true`);
     }
   }, [user]);
 
@@ -233,7 +233,7 @@ export default function UserProfilePage() {
 
   // Handler: Reset ke avatar inisial nama
   const handleResetToInitials = () => {
-    const initialAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(editName || user?.displayName || user?.email || 'User')}&background=25160E&color=ffffff&bold=true`;
+    const initialAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(editName || user?.displayName || user?.email || 'User')}&background=1C1917&color=ffffff&bold=true`;
     setEditAvatarUrl(initialAvatar);
     setPhotoFeedback('Avatar inisial nama diterapkan!');
     setTimeout(() => setPhotoFeedback(null), 3500);
@@ -443,7 +443,7 @@ export default function UserProfilePage() {
   });
 
   return (
-    <div className="bg-[#FAF8F5] font-sans text-[#25160E] min-h-screen selection:bg-[#934b19]/20 selection:text-[#934b19] flex flex-col justify-between">
+    <div className="bg-[#FBFBFA] font-sans text-stone-900 min-h-screen selection:bg-[#C2410C]/15 selection:text-[#C2410C] flex flex-col justify-between">
       
       {/* 1. NAVBAR UTAMA TERPADU */}
       <Navbar />
@@ -1023,9 +1023,9 @@ export default function UserProfilePage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 hover:border-[#934B19] transition-all text-neutral-800 group cursor-pointer shadow-2xs active:scale-95"
+                    className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 hover:border-[#C2410C] transition-all text-neutral-800 group cursor-pointer shadow-2xs active:scale-95"
                   >
-                    <div className="w-8 h-8 rounded-full bg-amber-100/70 text-[#934B19] flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                    <div className="w-8 h-8 rounded-full bg-amber-100/70 text-[#C2410C] flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
                       <ImageIcon className="w-4 h-4" />
                     </div>
                     <span className="font-semibold text-[11px]">Dari Galeri</span>
@@ -1145,7 +1145,7 @@ export default function UserProfilePage() {
               {/* Tombol Buka Map GPS Presisi */}
               <div className="flex items-center justify-between p-3 bg-stone-50 rounded-2xl border border-stone-200">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-[#25160E] text-amber-200 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-stone-900 text-amber-200 flex items-center justify-center shrink-0">
                     <Navigation className="w-4 h-4" />
                   </div>
                   <div>
@@ -1156,7 +1156,7 @@ export default function UserProfilePage() {
                 <button
                   type="button"
                   onClick={() => setShowMapPickerModal(true)}
-                  className="px-3.5 py-2 bg-[#25160E] hover:bg-black text-amber-200 text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
+                  className="px-3.5 py-2 bg-stone-900 hover:bg-black text-amber-200 text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
                 >
                   Buka Peta
                 </button>

@@ -54,11 +54,10 @@ f:\UKK\
 │       ├── context/           # Global Contexts (AuthContext, CartContext, DataContext)
 │       ├── hooks/             # Custom Hooks (useRealtimeBroadcaster WebSocket)
 │       └── lib/               # Layanan Klien (mapService, orderTimeUtils, annualArchive, dll.)
-├── Laravel/                   # Backend REST API Laravel 12 & WebSocket Server Reverb
-│   ├── app/                   # Controllers, Models, Events, & Requests
-│   ├── database/              # Migrations, Factories, & Seeders
-│   └── routes/                # Endpoint api.php & channels.php
-└── backend_django/            # Modul Microservice Referensi Django 5
+└── Laravel/                   # Backend REST API Laravel 12 & WebSocket Server Reverb
+    ├── app/                   # Controllers, Models, Events, & Requests
+    ├── database/              # Migrations, Factories, & Seeders
+    └── routes/                # Endpoint api.php & channels.php
 ```
 
 ---
@@ -69,7 +68,7 @@ f:\UKK\
 ```bash
 cd f:\UKK\nefakky3
 npm install
-python scripts/gen_icons.py
+npm run icons
 npx tsc --noEmit
 npm run dev
 ```

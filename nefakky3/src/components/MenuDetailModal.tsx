@@ -3,11 +3,9 @@
 /**
  * ============================================================================
  * KOMPONEN: MenuDetailModal.tsx (Modal Informasi & Pemesanan Detail Produk)
- * DESKRIPSI: Modal pop-up modern untuk menampilkan rincian produk. Khusus
- *            menu jus, menyediakan 3 opsi gambar galeri dan selector 3 varian
- *            (Mangga, Sirsak, Jambu), sedangkan makanan berat 1 foto tunggal.
- *            Dilengkapi dengan bagian Ulasan Komunitas REALTIME dari DataContext.
- * DESAIN: Artisanal Luxury Editorial sesuai referensi desain Nefakky.
+ * DESKRIPSI: Modal pop-up editorial kuliner untuk rincian produk, varian jus,
+ *            ulasan pelanggan realtime, informasi dapur, dan aksi pemesanan.
+ * TEMA: Nefakky Editorial Culinary (Dapur Otentik Nusantara)
  * ============================================================================
  */
 
@@ -169,21 +167,17 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
     const curProdName = cleanStr(liveProduct.name);
     const curProdId = liveProduct.id;
 
-    // Filter ulasan yang khusus untuk produk ini
     const matching = rawList.filter(rev => {
       if (rev.isHidden) return false;
       if (rev.status && rev.status !== 'PUBLISHED' && rev.status !== 'APPROVED') return false;
 
-      // 1. Pencocokan via Product ID
       if (rev.productId && rev.productId === curProdId) return true;
 
-      // 2. Pencocokan via Product Name
       if (rev.productName) {
         const revName = cleanStr(rev.productName);
         if (revName === curProdName) return true;
         if (revName.includes(curProdName) || curProdName.includes(revName)) return true;
 
-        // Pencocokan kata kunci hidangan nusantara
         if (curProdName.includes('ayam') && revName.includes('ayam')) return true;
         if (curProdName.includes('gudeg') && revName.includes('gudeg')) return true;
         if (curProdName.includes('nasi') && revName.includes('nasi')) return true;
@@ -196,8 +190,6 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
     const sorted = sortReviewsNewestFirst(matching);
 
-    const avatarBgs = ['bg-[#1E293B] text-white', 'bg-[#BFDBFE] text-[#1E3A8A]', 'bg-[#292524] text-white', 'bg-[#0F766E] text-white'];
-    
     return sorted.map((r, idx) => {
       const name = r.authorName || 'Pelanggan Nefakky';
       const initials = name
@@ -212,7 +204,6 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
         id: r.id || `realtime-rev-${idx}`,
         author: name,
         initials,
-        avatarBg: avatarBgs[idx % avatarBgs.length],
         rating: typeof r.rating === 'number' ? r.rating : 5,
         date: r.date || 'Baru saja',
         comment: r.comment || '',
@@ -278,38 +269,38 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm p-3 sm:p-6 md:p-10 flex items-center justify-center animate-fade-in font-sans">
-      <div className="bg-white w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl border border-slate-200/90 relative my-auto max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs p-3 sm:p-6 md:p-8 flex items-center justify-center animate-fade-in font-sans">
+      <div className="bg-white w-full max-w-4xl rounded-2xl overflow-hidden shadow-elevated border border-stone-200 relative my-auto max-h-[92vh] overflow-y-auto">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-stone-600 hover:text-black flex items-center justify-center transition-all shadow-sm active:scale-95"
+          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-600 hover:text-stone-900 flex items-center justify-center transition-colors border border-stone-200 shadow-subtle cursor-pointer"
           aria-label="Tutup"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <div className="p-5 sm:p-8 md:p-10 space-y-6">
+        <div className="p-5 sm:p-7 space-y-6">
           
           {/* Main 2-Column Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
             
             {/* Left: Main Photo & (3 Thumbnails Khusus Minuman) */}
             <div className="lg:col-span-6 space-y-3">
-              <div className="relative w-full h-[280px] sm:h-[360px] md:h-[400px] rounded-2xl overflow-hidden bg-stone-900 border border-stone-200/80 shadow-xs">
+              <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-stone-100 border border-stone-200 shadow-subtle">
                 <Image
                   src={currentMainImage}
                   alt={product.name}
                   fill
-                  className="object-cover object-center transition-all duration-300"
+                  className="object-cover object-center"
                   priority
                 />
               </div>
 
               {/* KHUSUS MENU MINUMAN/JUS: 3 Opsi Thumbnail */}
               {isDrink && (
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-3 gap-2">
                   {DRINK_VARIANTS.map((v) => {
                     const isSelected = selectedVariant === v.id;
                     return (
@@ -317,9 +308,9 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                         key={v.id}
                         type="button"
                         onClick={() => setSelectedVariant(v.id)}
-                        className={`relative aspect-square rounded-xl overflow-hidden bg-stone-100 border-2 transition-all group ${
+                        className={`relative aspect-square rounded-lg overflow-hidden bg-stone-100 border transition-all cursor-pointer ${
                           isSelected 
-                            ? 'border-neutral-900 ring-1 ring-neutral-900 scale-[1.02]' 
+                            ? 'border-stone-900 ring-1 ring-stone-900' 
                             : 'border-stone-200 opacity-75 hover:opacity-100'
                         }`}
                       >
@@ -327,9 +318,9 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                           src={v.image}
                           alt={v.name}
                           fill
-                          className="object-cover group-hover:scale-105 transition-transform"
+                          className="object-cover"
                         />
-                        <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white py-0.5 text-[9px] font-bold text-center">
+                        <div className="absolute inset-x-0 bottom-0 bg-stone-900/70 text-white py-0.5 text-[9px] font-medium text-center">
                           {v.id}
                         </div>
                       </button>
@@ -343,12 +334,12 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
             <div className="lg:col-span-6 space-y-4">
               
               {/* Category & Rating */}
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 bg-stone-100 text-stone-700 text-xs font-semibold rounded-full uppercase tracking-wider">
+              <div className="flex items-center gap-2.5">
+                <span className="px-2.5 py-0.5 bg-stone-100 text-stone-700 text-xs font-medium rounded uppercase">
                   {product.category || (isDrink ? 'MINUMAN' : 'MAKANAN BERAT')}
                 </span>
-                <div className="flex items-center gap-1 text-xs font-semibold text-neutral-800">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <div className="flex items-center gap-1 text-xs font-semibold text-stone-900">
+                  <Star className="w-3.5 h-3.5 fill-[#D97706] text-[#D97706]" />
                   <span>{product.rating ? product.rating.toFixed(1) : (isDrink ? '4.7' : '4.9')}</span>
                   <span className="text-stone-400 font-normal">
                     ({totalReviewsCount} Ulasan)
@@ -358,22 +349,22 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
               {/* Title & Price */}
               <div className="space-y-1">
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-neutral-900 tracking-tight leading-tight">
+                <h2 className="font-serif text-2xl font-bold text-stone-900 leading-tight">
                   {isDrink ? `Jus Segar (${activeDrinkVariant.name})` : product.name}
                 </h2>
-                <div className="font-serif text-2xl font-bold text-neutral-900 pt-0.5">
+                <div className="text-xl font-bold text-stone-900">
                   Rp {product.price.toLocaleString('id-ID')}
                 </div>
               </div>
 
               {/* KHUSUS MENU MINUMAN/JUS: Selector 3 Kartu Varian */}
               {isDrink && (
-                <div className="space-y-2 pt-1">
+                <div className="space-y-1.5 pt-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-neutral-900 tracking-wider uppercase text-[11px]">
-                      PILIH VARIAN JUS
+                    <span className="font-medium text-stone-700 text-[11px] uppercase tracking-wide">
+                      PILIH VARIAN
                     </span>
-                    <span className="text-stone-500 font-medium text-[11px]">
+                    <span className="text-stone-500 text-[11px]">
                       {activeDrinkVariant.name}
                     </span>
                   </div>
@@ -389,32 +380,32 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                           key={v.id}
                           type="button"
                           onClick={() => setSelectedVariant(v.id)}
-                          className={`relative p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between space-y-1.5 cursor-pointer ${
+                          className={`p-2 rounded-lg border text-left transition-colors flex flex-col justify-between space-y-1 cursor-pointer ${
                             isSelected
-                              ? 'bg-white border-neutral-900 ring-1 ring-neutral-900 shadow-xs'
+                              ? 'bg-white border-stone-900 ring-1 ring-stone-900'
                               : isVOutOfStock
-                                ? 'bg-stone-100/70 border-stone-200 opacity-60'
-                                : 'bg-stone-50/80 border-stone-200 hover:bg-white'
+                                ? 'bg-stone-50 border-stone-200 opacity-60'
+                                : 'bg-stone-50 border-stone-200 hover:bg-white'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-1">
-                            <span className="text-xs font-bold text-neutral-900 leading-tight">
+                            <span className="text-xs font-semibold text-stone-900 leading-tight">
                               {v.name.replace(' Segar', '')}
                             </span>
                             {isSelected ? (
-                              <span className="w-3.5 h-3.5 rounded-full bg-neutral-900 text-white flex items-center justify-center shrink-0">
+                              <span className="w-3 h-3 rounded-full bg-stone-900 text-white flex items-center justify-center shrink-0">
                                 <Check className="w-2 h-2" />
                               </span>
                             ) : (
-                              <span className="w-3.5 h-3.5 rounded-full border border-stone-300 shrink-0" />
+                              <span className="w-3 h-3 rounded-full border border-stone-300 shrink-0" />
                             )}
                           </div>
 
                           <div className="flex items-center justify-between gap-1">
-                            <span className="inline-block text-[8px] font-bold text-stone-600 bg-stone-100 px-1 py-0.5 rounded uppercase">
+                            <span className="text-[8px] font-medium text-stone-600 bg-stone-100 px-1 py-0.5 rounded uppercase">
                               {v.tag}
                             </span>
-                            <span className={`text-[8.5px] font-bold font-mono ${isVOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
+                            <span className={`text-[8.5px] font-medium font-mono ${isVOutOfStock ? 'text-rose-600' : 'text-emerald-700'}`}>
                               {isVOutOfStock ? 'Habis' : `Stok ${vStock}`}
                             </span>
                           </div>
@@ -425,41 +416,41 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                 </div>
               )}
 
-              {/* Multi-Varian: Ringkasan Varian di Keranjang Anda */}
+              {/* Multi-Varian Ringkasan Keranjang */}
               {isDrink && variantsInCart.length > 0 && (
-                <div className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-2xl space-y-2 animate-fade-in">
+                <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-stone-900 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
-                      <ShoppingBag className="w-3.5 h-3.5 text-[#934B19]" />
-                      <span>Varian di Keranjang ({totalVariantsInCartCount} Porsi)</span>
+                    <span className="font-semibold text-stone-900 flex items-center gap-1.5 text-[11px]">
+                      <ShoppingBag className="w-3.5 h-3.5 text-[#C2410C]" />
+                      <span>Di Keranjang ({totalVariantsInCartCount} Porsi)</span>
                     </span>
-                    <span className="font-mono font-bold text-[#934B19] text-xs">
+                    <span className="font-semibold text-stone-900 text-xs">
                       Total: Rp {totalVariantsInCartPrice.toLocaleString('id-ID')}
                     </span>
                   </div>
 
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                  <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
                     {variantsInCart.map(v => (
-                      <div key={v.key} className="flex items-center justify-between bg-white p-2 rounded-xl border border-stone-200/70 text-xs shadow-2xs">
+                      <div key={v.key} className="flex items-center justify-between bg-white p-1.5 rounded-md border border-stone-200 text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-stone-800">{v.name}</span>
+                          <span className="font-medium text-stone-800">{v.name}</span>
                           <span className="text-stone-400 font-mono text-[11px]">Rp {v.subtotal.toLocaleString('id-ID')}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => removeFromCart(v.key)}
-                            className="w-5 h-5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded flex items-center justify-center font-bold transition-colors cursor-pointer"
-                            title="Kurangi"
+                            className="w-5 h-5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded flex items-center justify-center font-medium transition-colors cursor-pointer"
+                            aria-label="Kurangi"
                           >
                             <Minus className="w-2.5 h-2.5" />
                           </button>
-                          <span className="font-mono font-bold text-xs px-1">{v.qty}</span>
+                          <span className="font-mono font-medium text-xs px-1">{v.qty}</span>
                           <button
                             type="button"
                             onClick={() => addToCart(liveProduct.id, v.id)}
-                            className="w-5 h-5 bg-neutral-900 hover:bg-black text-white rounded flex items-center justify-center font-bold transition-colors cursor-pointer"
-                            title="Tambah"
+                            className="w-5 h-5 bg-stone-900 hover:bg-stone-800 text-white rounded flex items-center justify-center font-medium transition-colors cursor-pointer"
+                            aria-label="Tambah"
                           >
                             <Plus className="w-2.5 h-2.5" />
                           </button>
@@ -474,22 +465,22 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                       onClose();
                       router.push('/cart');
                     }}
-                    className="w-full py-2 px-3 bg-[#25160E] hover:bg-black text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+                    className="w-full py-1.5 px-3 bg-stone-900 hover:bg-stone-800 text-white text-xs font-medium rounded-md flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    <span>Lanjut Bayar Semua Varian (1 Transaksi)</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Lanjut ke Keranjang</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               )}
 
               {/* Tab Box */}
-              <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-xs space-y-3">
-                <div className="flex items-center gap-5 border-b border-stone-100 pb-2 text-xs font-semibold tracking-wider">
+              <div className="bg-white border border-stone-200 rounded-xl p-3.5 space-y-2.5 shadow-subtle">
+                <div className="flex items-center gap-4 border-b border-stone-100 pb-2 text-xs font-medium">
                   <button
                     type="button"
                     onClick={() => setActiveTab('description')}
-                    className={`pb-1.5 transition-colors relative ${
-                      activeTab === 'description' ? 'text-neutral-900 border-b-2 border-neutral-900' : 'text-stone-400 hover:text-stone-700'
+                    className={`pb-1 transition-colors ${
+                      activeTab === 'description' ? 'text-stone-900 font-semibold border-b-2 border-stone-900' : 'text-stone-500 hover:text-stone-900'
                     }`}
                   >
                     Deskripsi
@@ -497,8 +488,8 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                   <button
                     type="button"
                     onClick={() => setActiveTab('ingredients')}
-                    className={`pb-1.5 transition-colors relative ${
-                      activeTab === 'ingredients' ? 'text-neutral-900 border-b-2 border-neutral-900' : 'text-stone-400 hover:text-stone-700'
+                    className={`pb-1 transition-colors ${
+                      activeTab === 'ingredients' ? 'text-stone-900 font-semibold border-b-2 border-stone-900' : 'text-stone-500 hover:text-stone-900'
                     }`}
                   >
                     Komposisi
@@ -506,8 +497,8 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                   <button
                     type="button"
                     onClick={() => setActiveTab('storage')}
-                    className={`pb-1.5 transition-colors relative ${
-                      activeTab === 'storage' ? 'text-neutral-900 border-b-2 border-neutral-900' : 'text-stone-400 hover:text-stone-700'
+                    className={`pb-1 transition-colors ${
+                      activeTab === 'storage' ? 'text-stone-900 font-semibold border-b-2 border-stone-900' : 'text-stone-500 hover:text-stone-900'
                     }`}
                   >
                     Penyimpanan
@@ -515,115 +506,115 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                   <button
                     type="button"
                     onClick={() => setActiveTab('serving')}
-                    className={`pb-1.5 transition-colors relative ${
-                      activeTab === 'serving' ? 'text-neutral-900 border-b-2 border-neutral-900' : 'text-stone-400 hover:text-stone-700'
+                    className={`pb-1 transition-colors ${
+                      activeTab === 'serving' ? 'text-stone-900 font-semibold border-b-2 border-stone-900' : 'text-stone-500 hover:text-stone-900'
                     }`}
                   >
                     Sajian
                   </button>
                 </div>
 
-                <div className="text-xs text-stone-600 font-light leading-relaxed">
+                <div className="text-xs text-stone-600 leading-relaxed font-normal">
                   {activeTab === 'description' && (
                     <p>
                       {isDrink
-                        ? 'Aneka pilihan jus buah segar alami berkualitas premium: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis.'
-                        : (liveProduct.description || 'Ayam bakar otentik dengan olesan madu murni pilihan, dipanggang perlahan di atas arang batok kelapa.')}
+                        ? 'Aneka pilihan jus buah segar alami berkualitas: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis.'
+                        : (liveProduct.description || 'Ayam bakar otentik dengan olesan bumbu rempah pilihan, dipanggang perlahan di atas arang batok kelapa.')}
                     </p>
                   )}
                   {activeTab === 'ingredients' && (
                     <p>
                       {isDrink
-                        ? 'Buah segar matang pohon alami, air mineral higienis, dan sedikit madu tanpa pengawet.'
-                        : ((liveProduct as any).ingredients || 'Daging ayam pejantan segar, madu murni, kecap kedelai manis alami, lengkuas, ketumbar sangrai, serai, daun jeruk purut, bawang merah, dan bawang putih.')}
+                        ? 'Buah segar matang pohon alami, air mineral higienis, dan sedikit madu tanpa pengawet sintesis.'
+                        : ((liveProduct as any).ingredients || 'Daging ayam pejantan segar, madu murni, kecap manis alami, lengkuas, ketumbar sangrai, serai, daun jeruk, bawang merah, dan bawang putih.')}
                     </p>
                   )}
                   {activeTab === 'storage' && (
                     <p>
                       {isDrink
                         ? 'Simpan dalam chiller kulkas pada suhu 4°C (tahan 4 hari).'
-                        : ((liveProduct as any).storage || (liveProduct as any).usageAdvice || 'Simpan dalam chiller kulkas pada suhu 4°C (tahan 3 hari) atau simpan beku dalam freezer pada suhu -18°C (tahan 1 bulan).')}
+                        : ((liveProduct as any).storage || (liveProduct as any).usageAdvice || 'Simpan dalam chiller kulkas pada suhu 4°C (tahan 3 hari) atau simpan beku dalam freezer (tahan 1 bulan).')}
                     </p>
                   )}
                   {activeTab === 'serving' && (
                     <p>
                       {isDrink
                         ? 'Kocok perlahan sebelum diminum dan nikmati selagi dingin.'
-                        : ((liveProduct as any).serving || 'Hangatkan dalam microwave selama 2 menit atau panggang kembali di atas teflon dengan api kecil selama 3-5 menit sebelum disantap.')}
+                        : ((liveProduct as any).serving || 'Hangatkan dalam microwave selama 2 menit atau panaskan di atas wajan dengan api kecil selama 3-5 menit sebelum disantap.')}
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Dapur Utama Card (Interaktif: Dapat dipencet untuk melihat peta lokasi) */}
+              {/* Dapur Utama Card */}
               <div 
                 onClick={() => setShowLocationModal(true)}
-                className="bg-stone-50/90 hover:bg-stone-100/90 border border-stone-200/90 rounded-2xl p-3 space-y-1.5 transition-all cursor-pointer group shadow-2xs"
-                title="Klik untuk melihat lokasi peta tempat penjualan & pembuatan"
+                className="bg-stone-50 hover:bg-stone-100 border border-stone-200 rounded-xl p-3 space-y-1 transition-colors cursor-pointer group shadow-subtle"
+                title="Klik untuk melihat lokasi pembuatan & dapur pusat"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-stone-200 flex items-center justify-center text-[#934B19] group-hover:scale-105 transition-transform shrink-0 shadow-2xs">
-                      <Store className="w-4 h-4" />
+                    <div className="w-7 h-7 rounded-md bg-white border border-stone-200 flex items-center justify-center text-[#C2410C] shrink-0">
+                      <Store className="w-3.5 h-3.5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-neutral-900 group-hover:text-[#934B19] transition-colors">
+                        <h4 className="text-xs font-semibold text-stone-900 group-hover:text-[#C2410C] transition-colors">
                           Dapur Utama Nefakky
                         </h4>
-                        <span className="bg-amber-100 text-[#934B19] text-[9px] font-semibold px-2 py-0.5 rounded-full">
-                          Lokasi Pembuatan &amp; Admin
+                        <span className="bg-stone-200 text-stone-800 text-[9px] font-medium px-1.5 py-0.2 rounded">
+                          Dapur Pusat
                         </span>
                       </div>
-                      <p className="text-[10px] text-stone-600 font-light mt-0.5 line-clamp-1">
-                        Puri Bojong Lestari 1 Blok AF 41, RT 10 / RW 14, Pabuaran, Bojong Gede, Bogor
+                      <p className="text-[10px] text-stone-500 mt-0.5 line-clamp-1">
+                        Puri Bojong Lestari 1 Blok AF 41, Pabuaran, Bojong Gede, Bogor
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 text-[10px] text-[#934B19] font-medium shrink-0 pt-0.5 group-hover:underline">
-                    <span>Lihat Peta</span>
-                    <MapPin className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1 text-[10px] text-[#C2410C] font-medium shrink-0 pt-0.5">
+                    <span>Peta Lokasi</span>
+                    <MapPin className="w-3 h-3" />
                   </div>
                 </div>
               </div>
 
               {/* Banner Peringatan Jika Stok Habis */}
               {isOutOfStock && (
-                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl space-y-1.5 animate-fade-in">
-                  <div className="flex items-center gap-2 text-rose-800 font-bold text-xs">
-                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                    <span>Produk Habis — Stok {isDrink ? `Varian ${activeDrinkVariant.name}` : liveProduct.name} Sedang Kosong</span>
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1 animate-fade-in">
+                  <div className="flex items-center gap-2 text-rose-800 font-semibold text-xs">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>Produk Habis — {isDrink ? `Varian ${activeDrinkVariant.name}` : liveProduct.name} Kosong</span>
                   </div>
-                  <p className="text-[11px] text-rose-700 font-light leading-relaxed">
-                    Mohon maaf, saat ini menu tidak dapat dibeli langsung. Anda dapat melakukan <strong>Pemesanan / Reservasi Prioritas</strong> ke Customer Service kami agar langsung dikabari begitu stok restock kembali!
+                  <p className="text-[11px] text-rose-700 leading-relaxed">
+                    Menu ini sedang disiapkan kembali di dapur. Anda dapat melakukan <strong>Reservasi Prioritas</strong> ke Customer Service kami agar diprioritaskan saat stok matang.
                   </p>
                 </div>
               )}
 
               {/* Status Sukses Reservasi */}
               {reservationSent && (
-                <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs space-y-2 animate-fade-in">
-                  <div className="flex items-center gap-2 font-bold">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Reservasi Prioritas Berhasil Terkirim!</span>
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs space-y-2 animate-fade-in">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Reservasi Berhasil Terkirim</span>
                   </div>
-                  <p className="text-[11px] text-emerald-700 leading-relaxed font-light">
-                    Permintaan prioritas untuk {quantity}x {isDrink ? `Jus ${selectedVariant}` : liveProduct.name} telah diterima oleh Tim CS. Kami akan segera menghubungi Anda saat stok kembali tersedia.
+                  <p className="text-[11px] text-emerald-700 leading-relaxed">
+                    Permintaan prioritas untuk {quantity}x {isDrink ? `Jus ${selectedVariant}` : liveProduct.name} telah diterima oleh Tim Dapur.
                   </p>
                   <div className="flex items-center gap-2 pt-1">
                     <Link
                       href="/profile"
                       onClick={onClose}
-                      className="px-3 py-1.5 bg-[#25160E] hover:bg-black text-white text-[11px] font-bold rounded-lg transition-colors"
+                      className="px-2.5 py-1 bg-stone-900 hover:bg-stone-800 text-white text-[10px] font-medium rounded transition-colors"
                     >
-                      Buka Live Chat CS
+                      Buka Chat CS
                     </Link>
                     <a
                       href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo CS Nefakky, saya ingin reservasi pesanan ${liveProduct.name}${isDrink ? ` varian ${activeDrinkVariant.name}` : ''} sebanyak ${quantity} porsi yang sedang habis.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition-colors"
+                      className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-medium rounded transition-colors"
                     >
                       WhatsApp CS
                     </a>
@@ -633,58 +624,58 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
               {/* Action Stepper & Buttons */}
               <div className="flex items-center gap-2.5 pt-2">
-                <div className="flex items-center justify-between bg-white border border-stone-200 rounded-xl px-2 py-1.5 w-24 shrink-0">
+                <div className="flex items-center justify-between bg-white border border-stone-200 rounded-lg px-2 py-1 w-24 shrink-0 shadow-subtle">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-6 h-6 rounded hover:bg-stone-100 flex items-center justify-center text-stone-600 cursor-pointer"
+                    className="w-5 h-5 rounded hover:bg-stone-100 flex items-center justify-center text-stone-600 cursor-pointer"
+                    aria-label="Kurangi kuantitas"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
-                  <span className="text-xs font-bold text-neutral-900">{quantity}</span>
+                  <span className="text-xs font-semibold text-stone-900">{quantity}</span>
                   <button
                     onClick={() => setQuantity(quantity + 1)}
-                    className="w-6 h-6 rounded hover:bg-stone-100 flex items-center justify-center text-stone-600 cursor-pointer"
+                    className="w-5 h-5 rounded hover:bg-stone-100 flex items-center justify-center text-stone-600 cursor-pointer"
+                    aria-label="Tambah kuantitas"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
 
                 {isOutOfStock ? (
-                  /* Tombol Reservasi ke Customer Service Jika Produk Habis */
                   <button
                     type="button"
                     onClick={handleReserveToCS}
                     disabled={isReserving}
-                    className="flex-1 py-3 px-4 bg-[#934B19] hover:bg-[#783603] active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="flex-1 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    <MessageSquare className="w-4 h-4" />
-                    <span>{isReserving ? 'Mengirim Reservasi...' : `Pesan / Reservasi ke Customer Service (${quantity} Porsi)`}</span>
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>{isReserving ? 'Mengirim...' : `Reservasi CS (${quantity} Porsi)`}</span>
                   </button>
                 ) : (
-                  /* Tombol Pembelian Normal Jika Stok Tersedia */
                   <>
                     <button
                       onClick={handleAddToCart}
-                      className="flex-1 py-2.5 px-3 bg-white border border-slate-300 hover:bg-slate-50 active:scale-[0.99] text-[#0F172A] font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 py-2.5 px-3 bg-white border border-stone-300 hover:bg-stone-50 text-stone-900 font-medium text-xs rounded-lg shadow-subtle transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <ShoppingBag className="w-3.5 h-3.5" />
-                      <span>Tambah</span>
+                      <span>Tambah Keranjang</span>
                     </button>
 
                     <button
                       onClick={handleBuyNow}
-                      className="py-2.5 px-4 bg-[#FF5400] hover:bg-[#E04800] active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-md shadow-[#FF5400]/25 transition-all whitespace-nowrap cursor-pointer"
+                      className="py-2.5 px-4 bg-[#C2410C] hover:bg-[#9A3412] text-white font-medium text-xs rounded-lg shadow-subtle transition-colors whitespace-nowrap cursor-pointer"
                     >
-                      Beli Langsung (Rp {totalPrice.toLocaleString('id-ID')})
+                      Beli (Rp {totalPrice.toLocaleString('id-ID')})
                     </button>
                   </>
                 )}
               </div>
 
               {addedNotice && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in font-medium">
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs flex items-center gap-2 animate-fade-in font-medium">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{quantity}x {isDrink ? `Jus Segar (${selectedVariant})` : liveProduct.name} berhasil ditambahkan ke keranjang!</span>
+                  <span>{quantity}x {isDrink ? `Jus Segar (${selectedVariant})` : liveProduct.name} ditambahkan ke keranjang</span>
                 </div>
               )}
 
@@ -692,75 +683,71 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
           </div>
 
-          {/* Ulasan Komunitas (Realtime Community Reviews) */}
-          <div className="border-t border-stone-200/80 pt-6 space-y-4">
+          {/* Ulasan Komunitas Realtime */}
+          <div className="border-t border-stone-200 pt-5 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-serif text-lg sm:text-xl font-bold text-neutral-900">
-                  Ulasan Komunitas
+                <h3 className="font-serif text-base font-bold text-stone-900">
+                  Ulasan Rasa Pelanggan
                 </h3>
-                <p className="text-[11px] text-stone-500 font-light mt-0.5">
-                  Dari pelanggan yang telah menikmati hidangan ini.
+                <p className="text-[11px] text-stone-500">
+                  Pengalaman nyata sahabat kuliner Nefakky
                 </p>
               </div>
 
               <Link
                 href="/comments"
                 onClick={onClose}
-                className="text-xs font-bold text-neutral-900 hover:underline"
+                className="text-xs font-medium text-[#C2410C] hover:underline"
               >
                 Lihat Semua ({totalReviewsCount}) &rarr;
               </Link>
             </div>
 
-            {/* Ulasan Cards Grid atau Empty State */}
             {communityReviews.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {communityReviews.slice(0, 3).map((rev) => (
                   <div
                     key={rev.id}
-                    className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex flex-col justify-between space-y-2.5"
+                    className="bg-stone-50 rounded-xl p-3.5 border border-stone-200 flex flex-col justify-between space-y-2"
                   >
-                    <div className="space-y-2">
-                      {/* Author Header */}
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${rev.avatarBg}`}>
+                          <div className="w-6 h-6 rounded-full bg-stone-900 text-white flex items-center justify-center text-[10px] font-semibold">
                             {rev.initials}
                           </div>
                           <div>
-                            <h5 className="text-[11px] font-bold text-neutral-900 leading-none">
+                            <h5 className="text-[11px] font-semibold text-stone-900 leading-none">
                               {rev.author}
                             </h5>
-                            <span className="text-[9px] text-stone-400 font-light">
+                            <span className="text-[9px] text-stone-400">
                               {rev.date}
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center text-amber-400 text-[10px]">
+                        <div className="flex items-center text-[#D97706] text-[10px]">
                           {Array.from({ length: 5 }).map((_, i) => (
                             <Star
                               key={i}
                               className={`w-2.5 h-2.5 ${
                                 i < rev.rating
-                                  ? 'fill-amber-400 text-amber-400'
-                                  : 'text-stone-200 fill-stone-200'
+                                  ? 'fill-[#D97706] text-[#D97706]'
+                                  : 'text-stone-300 fill-stone-300'
                               }`}
                             />
                           ))}
                         </div>
                       </div>
 
-                      {/* Comment */}
-                      <p className="text-[11px] text-stone-600 font-light leading-relaxed">
-                        {rev.comment}
+                      <p className="text-[11px] text-stone-600 leading-relaxed italic">
+                        &quot;{rev.comment}&quot;
                       </p>
                     </div>
 
-                    {/* Optional Photo Thumbnail */}
                     {rev.photo && (
-                      <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-stone-200 mt-2">
+                      <div className="relative w-10 h-10 rounded-md overflow-hidden border border-stone-200 mt-1">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={rev.photo}
@@ -773,13 +760,13 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                 ))}
               </div>
             ) : (
-              <div className="bg-stone-50 rounded-2xl p-6 border border-stone-200/80 text-center space-y-2">
-                <p className="text-xs font-semibold text-neutral-800">Belum ada ulasan untuk hidangan ini</p>
-                <p className="text-[11px] text-stone-500 font-light">Jadilah pelanggan pertama yang memberikan ulasan rasa untuk {product.name}!</p>
+              <div className="bg-stone-50 rounded-xl p-5 border border-stone-200 text-center space-y-1.5">
+                <p className="text-xs font-semibold text-stone-800">Belum ada ulasan untuk hidangan ini</p>
+                <p className="text-[11px] text-stone-500">Jadilah pelanggan pertama yang memberikan ulasan rasa untuk {product.name}!</p>
                 <Link
                   href="/comments"
                   onClick={onClose}
-                  className="inline-block mt-2 px-4 py-2 bg-black text-white text-xs font-medium rounded-xl hover:bg-neutral-800 transition-colors"
+                  className="inline-block mt-2 px-3 py-1.5 bg-stone-900 text-white text-xs font-medium rounded-md hover:bg-stone-800 transition-colors"
                 >
                   Tulis Ulasan Rasa
                 </Link>
@@ -791,62 +778,60 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
       </div>
 
-      {/* MODAL LOKASI DAPUR UTAMA & ALAMAT ADMIN */}
+      {/* MODAL LOKASI DAPUR UTAMA */}
       {showLocationModal && (
-        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-left border border-stone-200 animate-fade-in max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[70] bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-elevated space-y-3.5 text-left border border-stone-200 animate-fade-in max-h-[90vh] overflow-y-auto">
             
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-[#934B19]/10 flex items-center justify-center text-[#934B19]">
-                  <Store className="w-5 h-5" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-[#C2410C]">
+                  <Store className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-lg font-bold text-neutral-900">
-                    Dapur Utama &amp; Lokasi Pembuatan
+                  <h3 className="font-serif text-base font-bold text-stone-900">
+                    Dapur Utama &amp; Titik Produksi
                   </h3>
-                  <p className="text-xs text-stone-500 font-light">
-                    Alamat Resmi Tempat Penjualan &amp; Admin Nefakky
+                  <p className="text-[11px] text-stone-500">
+                    Alamat Pembuatan &amp; Layanan Nefakky
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowLocationModal(false)}
-                className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
+                className="w-7 h-7 rounded-md bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
+                aria-label="Tutup Peta"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Alamat Lengkap Box */}
-            <div className="bg-stone-50 rounded-2xl p-4 border border-stone-200/80 space-y-2.5">
-              <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-[#934B19] shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-neutral-900 uppercase tracking-wider block">
-                    Alamat Lengkap Tempat Penjualan, Pembuatan &amp; Admin:
+            <div className="bg-stone-50 rounded-xl p-3 border border-stone-200 space-y-2">
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-[#C2410C] shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-[10px] font-semibold text-stone-900 uppercase block">
+                    Alamat Lengkap Dapur:
                   </span>
-                  <p className="text-xs text-stone-700 leading-relaxed font-medium">
+                  <p className="text-xs text-stone-700 leading-relaxed">
                     {kitchenAddress}
                   </p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-200/60">
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-white border border-stone-200 px-2.5 py-1 rounded-full text-stone-700">
-                  <Clock className="w-3 h-3 text-[#934B19]" />
-                  <span>08.00 - 21.00 WIB (Buka Setiap Hari)</span>
+              <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-stone-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-white border border-stone-200 px-2 py-0.5 rounded text-stone-700">
+                  <Clock className="w-3 h-3 text-[#C2410C]" />
+                  <span>08.00 - 21.00 WIB (Setiap Hari)</span>
                 </span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full text-emerald-800">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-emerald-800">
                   <Check className="w-3 h-3 text-emerald-600" />
-                  <span>Dapur Produksi &amp; Pickup Point</span>
+                  <span>Dapur Produksi &amp; Titik Jemput</span>
                 </span>
               </div>
             </div>
 
-            {/* Embedded Google Maps View */}
-            <div className="relative w-full h-56 rounded-2xl overflow-hidden border border-stone-200 shadow-inner bg-stone-100">
+            <div className="relative w-full h-52 rounded-xl overflow-hidden border border-stone-200 bg-stone-100">
               <iframe
                 title="Peta Lokasi Dapur Utama Nefakky"
                 src="https://maps.google.com/maps?q=Puri+Bojong+Lestari+1+Blok+AF+41+Pabuaran+Bojong+Gede+Bogor&t=&z=15&ie=UTF8&iwloc=&output=embed"
@@ -856,22 +841,21 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
               />
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center gap-2.5 pt-2">
+            <div className="flex items-center gap-2 pt-1">
               <a
                 href="https://www.google.com/maps/search/?api=1&query=Puri+Bojong+Lestari+1+Blok+AF+41+Pabuaran+Bojong+Gede+Bogor"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 py-3 px-4 bg-[#25160E] hover:bg-black text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md"
+                className="flex-1 py-2 px-3 bg-stone-900 hover:bg-stone-800 text-white text-xs font-medium rounded-md flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Navigation className="w-3.5 h-3.5" />
-                <span>Buka di Google Maps</span>
-                <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-70" />
+                <span>Buka Google Maps</span>
+                <ExternalLink className="w-3 h-3 opacity-70" />
               </a>
 
               <button
                 onClick={handleCopyAddress}
-                className="py-3 px-4 bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors shrink-0 cursor-pointer"
+                className="py-2 px-3 bg-white hover:bg-stone-50 text-stone-800 border border-stone-300 text-xs font-medium rounded-md flex items-center justify-center gap-1.5 transition-colors shrink-0 cursor-pointer"
               >
                 {copiedAddress ? (
                   <>
@@ -891,7 +875,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
         </div>
       )}
 
-      {/* MODAL WAJIB AUTENTIKASI UNTUK PENGGUNA GUEST */}
+      {/* MODAL WAJIB AUTENTIKASI */}
       <AuthRequiredModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}

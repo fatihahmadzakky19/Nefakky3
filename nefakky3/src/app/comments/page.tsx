@@ -137,7 +137,7 @@ export default function CommentsPage() {
 
     // Tentukan nama pengulas dan avatar
     const reviewerName = user?.displayName || (user?.email ? user.email.split('@')[0] : 'Pelanggan Nefakky');
-    const reviewerAvatar = user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(reviewerName)}&background=25160E&color=ffffff`;
+    const reviewerAvatar = user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(reviewerName)}&background=1C1917&color=ffffff`;
 
     // Kirim data ulasan ke DataContext
     addReview({
@@ -180,7 +180,7 @@ export default function CommentsPage() {
     addReviewReply(reviewId, {
       authorName: senderName,
       authorEmail: user?.email || '',
-      authorAvatar: user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=25160E&color=ffffff`,
+      authorAvatar: user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=1C1917&color=ffffff`,
       comment: text.trim()
     });
 
@@ -194,7 +194,7 @@ export default function CommentsPage() {
   const displayedReviews = sortedReviews.slice(0, visibleReviewsCount);
 
   return (
-    <div className="bg-[#F8FAFC] font-sans text-[#0F172A] min-h-screen selection:bg-[#FF5400]/20 selection:text-[#FF5400] flex flex-col justify-between">
+    <div className="bg-[#FBFBFA] font-sans text-stone-900 min-h-screen selection:bg-[#C2410C]/15 selection:text-[#C2410C] flex flex-col justify-between">
       
       {/* 1. NAVBAR UTAMA TERPADU */}
       <Navbar />
@@ -205,14 +205,14 @@ export default function CommentsPage() {
           
           {/* Hero Section Banner Komunitas */}
           <section className="flex flex-col space-y-3 text-left">
-            <div className="inline-flex items-center gap-2 self-start px-3.5 py-1.5 bg-[#FF5400]/10 rounded-full">
-              <Users className="w-4 h-4 text-[#FF5400]" />
-              <span className="font-bold text-xs text-[#FF5400] uppercase tracking-widest font-mono">
+            <div className="inline-flex items-center gap-2 self-start px-3.5 py-1.5 bg-[#C2410C]/10 rounded-full">
+              <Users className="w-4 h-4 text-[#C2410C]" />
+              <span className="font-bold text-xs text-[#C2410C] uppercase tracking-widest font-mono">
                 Komunitas Pecinta Kuliner
               </span>
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-[#0F172A] font-black tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-stone-900 font-black tracking-tight">
               Ulasan &amp; Pengalaman Pelanggan
             </h1>
 
@@ -236,7 +236,7 @@ export default function CommentsPage() {
             <aside className="lg:col-span-4 flex flex-col space-y-6 relative">
               <div className="sticky top-28 bg-white rounded-3xl shadow-sm border border-stone-200 p-6 space-y-5 text-left">
                 <div>
-                  <h2 className="font-serif text-xl font-bold text-[#25160E] mb-1">Tulis Ulasan Rasa</h2>
+                  <h2 className="font-serif text-xl font-bold text-stone-900 mb-1">Tulis Ulasan Rasa</h2>
                   <p className="text-xs text-stone-500 font-light">Bagikan pengalaman kuliner Anda hari ini.</p>
                 </div>
 
@@ -254,7 +254,7 @@ export default function CommentsPage() {
                         setAuthActionName('menulis ulasan rasa dan berdiskusi di komunitas');
                         setShowAuthModal(true);
                       }}
-                      className="w-full py-2.5 bg-[#25160E] hover:bg-black text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2.5 bg-stone-900 hover:bg-black text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <UserCheck className="w-3.5 h-3.5 text-amber-200" />
                       <span>Masuk / Daftar Akun</span>
@@ -266,7 +266,7 @@ export default function CommentsPage() {
                   
                   {/* Dropdown Pemilihan Menu */}
                   <div className="flex flex-col space-y-1.5">
-                    <label className="font-semibold text-xs text-[#25160E]" htmlFor="menu-select">
+                    <label className="font-semibold text-xs text-stone-900" htmlFor="menu-select">
                       Pilih Menu
                     </label>
                     <div className="relative">
@@ -275,7 +275,7 @@ export default function CommentsPage() {
                         value={selectedMenu}
                         onChange={(e) => setSelectedMenu(e.target.value)}
                         required
-                        className="w-full appearance-none bg-stone-50 text-stone-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#25160E] border border-stone-200 cursor-pointer"
+                        className="w-full appearance-none bg-stone-50 text-stone-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900 border border-stone-200 cursor-pointer"
                       >
                         <option value="" disabled>Pilih menu yang dipesan...</option>
                         {products.map((prod) => (
@@ -290,7 +290,7 @@ export default function CommentsPage() {
 
                   {/* Rating Stepper dengan Bintang Dinamis */}
                   <div className="flex flex-col space-y-1.5">
-                    <label className="font-semibold text-xs text-[#25160E]">
+                    <label className="font-semibold text-xs text-stone-900">
                       Rating Rasa (1.0 - 5.0)
                     </label>
                     <div className="flex items-center justify-between bg-stone-50 p-3 rounded-xl border border-stone-200">
@@ -301,7 +301,7 @@ export default function CommentsPage() {
                         max="5.0"
                         value={rating}
                         onChange={(e) => setRating(parseFloat(e.target.value) || 1.0)}
-                        className="w-16 bg-transparent font-mono font-bold text-sm text-[#25160E] focus:outline-none text-center border-b border-stone-300"
+                        className="w-16 bg-transparent font-mono font-bold text-sm text-stone-900 focus:outline-none text-center border-b border-stone-300"
                         aria-label="Input angka rating"
                       />
                       <div className="flex items-center gap-1">
@@ -312,7 +312,7 @@ export default function CommentsPage() {
 
                   {/* Textarea Isi Ulasan */}
                   <div className="flex flex-col space-y-1.5">
-                    <label className="font-semibold text-xs text-[#25160E]" htmlFor="review-text">
+                    <label className="font-semibold text-xs text-stone-900" htmlFor="review-text">
                       Cerita &amp; Pengalaman Rasa
                     </label>
                     <textarea 
@@ -322,13 +322,13 @@ export default function CommentsPage() {
                       onChange={(e) => setCommentText(e.target.value)}
                       required
                       placeholder="Ceritakan detail kelezatan rasa, bumbu rempah, porsi hidangan, dan pelayanan..."
-                      className="w-full bg-stone-50 text-stone-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#25160E] border border-stone-200 resize-none placeholder-stone-400 leading-relaxed"
+                      className="w-full bg-stone-50 text-stone-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900 border border-stone-200 resize-none placeholder-stone-400 leading-relaxed"
                     />
                   </div>
 
                   {/* Tombol Lampiran Foto Masakan */}
                   <div className="flex flex-col space-y-2">
-                    <label className="flex items-center gap-2 text-stone-600 hover:text-[#25160E] transition-colors p-2 rounded-xl hover:bg-stone-100 cursor-pointer w-fit border border-dashed border-stone-300">
+                    <label className="flex items-center gap-2 text-stone-600 hover:text-stone-900 transition-colors p-2 rounded-xl hover:bg-stone-100 cursor-pointer w-fit border border-dashed border-stone-300">
                       <Camera className="w-4 h-4 text-stone-500" />
                       <span className="font-semibold text-xs">Lampirkan Foto Makanan</span>
                       <input 
@@ -359,7 +359,7 @@ export default function CommentsPage() {
                   {/* Tombol Submit Ulasan */}
                   <button 
                     type="submit"
-                    className="w-full bg-[#25160E] text-white font-semibold text-xs py-3 rounded-xl hover:bg-[#934b19] transition-all flex justify-center items-center gap-2 mt-2 shadow-md active:scale-98 cursor-pointer"
+                    className="w-full bg-stone-900 text-white font-semibold text-xs py-3 rounded-xl hover:bg-[#C2410C] transition-all flex justify-center items-center gap-2 mt-2 shadow-md active:scale-98 cursor-pointer"
                   >
                     <span>Kirim Ulasan</span>
                     <Send className="w-3.5 h-3.5" />
@@ -374,7 +374,7 @@ export default function CommentsPage() {
               {displayedReviews.length === 0 ? (
                 <div className="bg-white rounded-3xl border border-stone-200 p-12 text-center space-y-2 shadow-sm">
                   <MessageSquare className="w-10 h-10 text-stone-400 mx-auto stroke-1" />
-                  <h3 className="font-serif text-lg font-bold text-[#25160E]">Belum Ada Ulasan</h3>
+                  <h3 className="font-serif text-lg font-bold text-stone-900">Belum Ada Ulasan</h3>
                   <p className="text-xs text-stone-500 font-light">
                     Jadilah yang pertama membagikan ulasan kelezatan kuliner kami!
                   </p>
@@ -398,18 +398,18 @@ export default function CommentsPage() {
                             <img 
                               alt={rev.authorName || 'Pelanggan'} 
                               className="w-full h-full object-cover" 
-                              src={rev.authorAvatar || rev.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.authorName || 'U')}&background=25160E&color=ffffff`}
+                              src={rev.authorAvatar || rev.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.authorName || 'U')}&background=1C1917&color=ffffff`}
                             />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-sm text-[#25160E]">{rev.authorName || 'Pelanggan Nefakky'}</h3>
+                            <h3 className="font-semibold text-sm text-stone-900">{rev.authorName || 'Pelanggan Nefakky'}</h3>
                             <p className="text-xs text-stone-400 font-light">{rev.date || 'Baru saja'}</p>
                           </div>
                         </div>
 
                         {/* Badge Rating Bintang */}
                         <div className="flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-full border border-amber-200/60">
-                          <span className="font-mono font-bold text-xs text-[#25160E]">{(rev.rating || 5).toFixed(1)}</span>
+                          <span className="font-mono font-bold text-xs text-stone-900">{(rev.rating || 5).toFixed(1)}</span>
                           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                         </div>
                       </div>
@@ -445,7 +445,7 @@ export default function CommentsPage() {
                         <button 
                           type="button"
                           onClick={() => setOpenReplyId(isRepliesOpen ? null : rev.id)}
-                          className="flex items-center gap-1.5 text-stone-600 hover:text-[#25160E] transition-colors text-xs font-semibold self-start"
+                          className="flex items-center gap-1.5 text-stone-600 hover:text-stone-900 transition-colors text-xs font-semibold self-start"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                           <span>{replyCount > 0 ? `Lihat Balasan (${replyCount})` : 'Balas Komentar'}</span>
@@ -460,14 +460,14 @@ export default function CommentsPage() {
 
                               return (
                                 <div key={idx} className="flex items-start gap-3 bg-stone-50 p-3.5 rounded-2xl border border-stone-200">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white ${isCsAdmin ? 'bg-[#25160E]' : 'bg-stone-600'}`}>
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white ${isCsAdmin ? 'bg-stone-900' : 'bg-stone-600'}`}>
                                     {isCsAdmin ? <Headphones className="w-4 h-4 text-amber-300" /> : <User className="w-4 h-4" />}
                                   </div>
                                   <div className="flex-1 text-left">
                                     <div className="flex items-center gap-2 mb-1">
-                                      <h4 className="font-semibold text-xs text-[#25160E]">{reply.authorName || 'Pelanggan'}</h4>
+                                      <h4 className="font-semibold text-xs text-stone-900">{reply.authorName || 'Pelanggan'}</h4>
                                       {isCsAdmin && (
-                                        <span className="bg-[#25160E] text-amber-200 text-[9px] uppercase font-bold px-2 py-0.5 rounded-full">
+                                        <span className="bg-stone-900 text-amber-200 text-[9px] uppercase font-bold px-2 py-0.5 rounded-full">
                                           CS ADMIN
                                         </span>
                                       )}
@@ -486,12 +486,12 @@ export default function CommentsPage() {
                                 onChange={(e) => setReplyInputText({ ...replyInputText, [rev.id]: e.target.value })}
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleSendReply(rev.id); }}
                                 placeholder="Tulis balasan untuk ulasan ini..."
-                                className="flex-1 bg-stone-100 text-stone-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#25160E] border border-stone-200"
+                                className="flex-1 bg-stone-100 text-stone-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-stone-900 border border-stone-200"
                               />
                               <button 
                                 type="button"
                                 onClick={() => handleSendReply(rev.id)}
-                                className="p-3 bg-[#25160E] text-white rounded-xl hover:bg-[#934b19] transition-colors cursor-pointer"
+                                className="p-3 bg-stone-900 text-white rounded-xl hover:bg-[#C2410C] transition-colors cursor-pointer"
                                 title="Kirim Balasan"
                               >
                                 <Send className="w-3.5 h-3.5" />
@@ -511,7 +511,7 @@ export default function CommentsPage() {
                 <div className="flex justify-center pt-4">
                   <button 
                     onClick={() => setVisibleReviewsCount(prev => prev + 6)}
-                    className="px-6 py-2.5 rounded-full border border-stone-300 text-[#25160E] font-semibold text-xs hover:bg-stone-100 transition-colors"
+                    className="px-6 py-2.5 rounded-full border border-stone-300 text-stone-900 font-semibold text-xs hover:bg-stone-100 transition-colors"
                   >
                     Muat Lebih Banyak Ulasan
                   </button>

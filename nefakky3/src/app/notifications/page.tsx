@@ -134,17 +134,17 @@ export default function NotificationsPage() {
   const activeLineHeightPercent = currentStage === 1 ? '0%' : currentStage === 2 ? '33%' : currentStage === 3 ? '58%' : currentStage === 4 ? '80%' : '100%';
   const isOrderCompleted = activeOrder ? (activeOrder.status === 'COMPLETED' || activeOrder.customerConfirmed || currentStage === 5) : false;
 
-  const userAvatar = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=25160E&color=ffffff&bold=true` : (user?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.split('@')[0])}&background=25160E&color=ffffff&bold=true` : null));
+  const userAvatar = user?.photoURL || (user?.displayName ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=1C1917&color=ffffff&bold=true` : (user?.email ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email.split('@')[0])}&background=1C1917&color=ffffff&bold=true` : null));
 
   return (
-    <div className="bg-[#FAF8F5] font-sans text-[#25160E] min-h-screen selection:bg-[#934b19]/20 selection:text-[#934b19] flex flex-col justify-between">
+    <div className="bg-[#FBFBFA] font-sans text-stone-900 min-h-screen selection:bg-[#C2410C]/15 selection:text-[#C2410C] flex flex-col justify-between">
       
       {/* 1. NAVBAR UTAMA TERPADU */}
       <Navbar />
 
       {/* 2. AREA KONTEN UTAMA PELACAKAN PESANAN */}
       <main className="w-full flex-1">
-        <div className="flex flex-col w-full bg-[#FAF8F5] text-[#25160E] pb-28 lg:pb-12">
+        <div className="flex flex-col w-full bg-[#FBFBFA] text-stone-900 pb-28 lg:pb-12">
             
             {!hasOrders || !activeOrder ? (
               /* EMPTY STATE: Muncul jika akun belum melakukan pembelian / uji coba checkout */
@@ -166,7 +166,7 @@ export default function NotificationsPage() {
                   {user ? (
                     <Link
                       href="/menu"
-                      className="bg-[#25160E] hover:bg-black text-white text-xs font-semibold px-6 py-3.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2"
+                      className="bg-stone-900 hover:bg-black text-white text-xs font-semibold px-6 py-3.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2"
                     >
                       <span>Eksplorasi Menu Sekarang</span>
                       <ArrowRight className="w-4 h-4" />
@@ -174,7 +174,7 @@ export default function NotificationsPage() {
                   ) : (
                     <Link
                       href="/login"
-                      className="bg-[#25160E] hover:bg-black text-white text-xs font-semibold px-6 py-3.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2"
+                      className="bg-stone-900 hover:bg-black text-white text-xs font-semibold px-6 py-3.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2"
                     >
                       <span>Masuk ke Akun</span>
                       <ArrowRight className="w-4 h-4" />
@@ -218,7 +218,7 @@ export default function NotificationsPage() {
                             onClick={() => setSelectedOrderId(ord.id)}
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                               activeOrder?.id === ord.id
-                                ? 'bg-[#25160E] text-amber-300 shadow-xs'
+                                ? 'bg-stone-900 text-amber-300 shadow-xs'
                                 : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
                             }`}
                           >
@@ -407,10 +407,10 @@ export default function NotificationsPage() {
                       {/* Header Kartu Rute */}
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <span className="font-mono text-[10px] font-bold text-[#934B19] uppercase tracking-wider block">
+                          <span className="font-mono text-[10px] font-bold text-[#C2410C] uppercase tracking-wider block">
                             RUTE PENGIRIMAN
                           </span>
-                          <h4 className="font-serif text-sm sm:text-base font-bold text-neutral-900 line-clamp-1 mt-0.5 group-hover:text-[#934B19] transition-colors">
+                          <h4 className="font-serif text-sm sm:text-base font-bold text-neutral-900 line-clamp-1 mt-0.5 group-hover:text-[#C2410C] transition-colors">
                             {activeOrder.address || 'Puri Bojong Lestari 1 -> Alamat Anda'}
                           </h4>
                         </div>
@@ -446,7 +446,7 @@ export default function NotificationsPage() {
                             
                             {/* Floating Destination Pin Pill */}
                             <div className="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-stone-200 shadow-xs flex items-center gap-2 text-[10px] sm:text-xs font-semibold text-stone-800">
-                              <MapPin className="w-3.5 h-3.5 text-[#934B19]" />
+                              <MapPin className="w-3.5 h-3.5 text-[#C2410C]" />
                               <span className="truncate max-w-[200px]">Tujuan: <strong>{activeOrder.address || 'Alamat Anda'}</strong></span>
                             </div>
                           </>
@@ -542,7 +542,7 @@ export default function NotificationsPage() {
                           </div>
                         ) : (
                           <div className="absolute bottom-2.5 left-2.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-stone-200/80 flex items-center gap-1.5 text-[10px] font-semibold text-neutral-700 shadow-2xs z-10">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#934B19] animate-pulse" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#C2410C] animate-pulse" />
                             <span>Kurir OTW (~35 km/j)</span>
                           </div>
                         )}
@@ -635,7 +635,7 @@ export default function NotificationsPage() {
 
                       <div className="flex justify-between items-center pt-1">
                         <span className="font-semibold text-xs sm:text-sm text-black">Total Pembayaran</span>
-                        <span className="font-serif text-lg sm:text-xl font-bold text-[#934B19]">
+                        <span className="font-serif text-lg sm:text-xl font-bold text-[#C2410C]">
                           Rp {(activeOrder.total || 0).toLocaleString('id-ID')}
                         </span>
                       </div>
@@ -690,13 +690,13 @@ export default function NotificationsPage() {
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           className={`bg-white rounded-2xl p-6 shadow-sm border transition-all cursor-pointer flex flex-col justify-between gap-4 group hover:shadow-md ${
-                            activeOrder?.id === histOrder.id ? 'border-[#934B19] ring-2 ring-[#934B19]/20 shadow-md' : 'border-stone-200 hover:border-stone-300'
+                            activeOrder?.id === histOrder.id ? 'border-[#C2410C] ring-2 ring-[#934B19]/20 shadow-md' : 'border-stone-200 hover:border-stone-300'
                           }`}
                           title="Klik untuk memantau status pesanan ini di Live Tracker"
                         >
                           <div className="flex flex-col gap-3">
                             <div className="flex justify-between items-start">
-                              <span className="font-mono font-bold text-xs text-black group-hover:text-[#934B19] transition-colors">
+                              <span className="font-mono font-bold text-xs text-black group-hover:text-[#C2410C] transition-colors">
                                 #{histOrder.id}
                               </span>
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
@@ -725,7 +725,7 @@ export default function NotificationsPage() {
 
                           {/* Footer: Price & PDF Invoice Button */}
                           <div className="flex justify-between items-center pt-3 border-t border-stone-100">
-                            <span className="font-mono font-bold text-xs text-black group-hover:text-[#934B19] transition-colors">
+                            <span className="font-mono font-bold text-xs text-black group-hover:text-[#C2410C] transition-colors">
                               Rp {(histOrder.total || histOrder.subtotal || 0).toLocaleString('id-ID')}
                             </span>
                             <button 
@@ -806,7 +806,7 @@ export default function NotificationsPage() {
 
             <div className="border-t border-dashed border-stone-300 pt-3 flex justify-between items-center text-sm font-bold text-black">
               <span>Total Bayar:</span>
-              <span className="font-serif text-base text-[#934B19]">
+              <span className="font-serif text-base text-[#C2410C]">
                 Rp {(selectedReceipt.total || 0).toLocaleString('id-ID')}
               </span>
             </div>
@@ -838,7 +838,7 @@ export default function NotificationsPage() {
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-stone-200 pb-3">
               <div className="flex items-center gap-3 text-left">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100/90 border border-amber-200 flex items-center justify-center text-[#934B19]">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100/90 border border-amber-200 flex items-center justify-center text-[#C2410C]">
                   <Bike className="w-5 h-5" />
                 </div>
                 <div>
@@ -876,7 +876,7 @@ export default function NotificationsPage() {
                   
                   {/* Floating Route Information */}
                   <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-stone-200 shadow-sm flex flex-col gap-0.5 text-xs text-stone-900 z-10">
-                    <span className="text-[10px] font-bold uppercase text-[#934B19] tracking-wider">Titik Awal: Dapur Utama Nefakky</span>
+                    <span className="text-[10px] font-bold uppercase text-[#C2410C] tracking-wider">Titik Awal: Dapur Utama Nefakky</span>
                     <span className="font-semibold truncate max-w-[280px]">Tujuan: {activeOrder.address || 'Alamat Anda'}</span>
                   </div>
                 </>
@@ -976,7 +976,7 @@ export default function NotificationsPage() {
                 </div>
               ) : (
                 <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-stone-200 flex items-center gap-2 shadow-2xs z-10">
-                  <span className="w-2 h-2 rounded-full bg-[#934B19] animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-[#C2410C] animate-pulse" />
                   <span className="text-[11px] font-semibold text-neutral-800">
                     Kurir Meluncur: Kecepatan ~35 km/jam
                   </span>
@@ -987,7 +987,7 @@ export default function NotificationsPage() {
             {/* Courier & Telemetry Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
               <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#934B19]">Titik Keberangkatan:</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#C2410C]">Titik Keberangkatan:</span>
                 <p className="text-xs font-semibold text-neutral-900">Dapur Utama Nefakky</p>
                 <p className="text-[11px] text-stone-500 font-light leading-relaxed">Puri Bojong Lestari 1 Blok AF 41, RT 10 / RW 14, Bojong Gede, Bogor</p>
               </div>
@@ -1002,7 +1002,7 @@ export default function NotificationsPage() {
             {/* Driver Profile & Actions */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-stone-200">
               <div className="flex items-center gap-3 w-full sm:w-auto text-left">
-                <div className="w-10 h-10 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center text-[#934B19] font-bold">
+                <div className="w-10 h-10 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center text-[#C2410C] font-bold">
                   <User className="w-5 h-5" />
                 </div>
                 <div>
@@ -1016,7 +1016,7 @@ export default function NotificationsPage() {
                   href={`https://www.google.com/maps/dir/?api=1&origin=Puri+Bojong+Lestari+1+Blok+AF+41+Bojong+Gede+Bogor&destination=${encodeURIComponent(activeOrder.address || 'Bogor')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 sm:flex-none py-2.5 px-4 bg-[#934B19] hover:bg-[#7a3e14] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-2xs active:scale-95"
+                  className="flex-1 sm:flex-none py-2.5 px-4 bg-[#C2410C] hover:bg-[#7a3e14] text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-2xs active:scale-95"
                 >
                   <Navigation className="w-3.5 h-3.5" />
                   <span>Buka Google Maps</span>

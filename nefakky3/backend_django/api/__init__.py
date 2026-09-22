@@ -1,1 +1,0 @@
-# Nefakky API Django App

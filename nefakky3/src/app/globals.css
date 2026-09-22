@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 @tailwind base;
@@ -7,55 +7,63 @@
 
 :root {
   --font-serif: 'Playfair Display', Georgia, serif;
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   
-  /* Nordic Citrus & Deep Navy Theme System */
-  --navy-deep: #0F172A;
-  --navy-surface: #1E293B;
-  --citrus-orange: #FF5400;
-  --citrus-orange-hover: #E04800;
-  --sun-gold: #FFB703;
-  --mint-fresh: #10B981;
-  --bg-arctic: #F8FAFC;
-  --surface-white: #FFFFFF;
-  --text-dark: #0F172A;
-  --text-muted: #64748B;
+  /* Nefakky Editorial Culinary Palette */
+  --brand-canvas: #FBFBFA;
+  --brand-surface: #FFFFFF;
+  --brand-ink: #1C1917;
+  --brand-muted: #78716C;
+  --brand-border: #E7E5E4;
+  --brand-terracotta: #C2410C;
+  --brand-terracotta-hover: #9A3412;
+  --brand-amber: #D97706;
 }
 
 html {
   scroll-behavior: smooth;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: #D6D3D1 transparent;
 }
 
 body {
-  color: var(--text-dark);
-  background: var(--bg-arctic);
+  color: var(--brand-ink);
+  background: var(--brand-canvas);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-/* Styled Components */
+/* Styled Component Primitives */
 .input-field {
-  @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-[#0F172A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FF5400]/30 focus:border-[#FF5400] transition-all duration-200 text-sm shadow-xs;
+  @apply w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#C2410C]/20 focus:border-[#C2410C] transition-colors duration-150 text-sm shadow-sm;
 }
 
 .btn-primary {
-  @apply w-full py-3.5 bg-[#0F172A] hover:bg-[#1E293B] active:scale-[0.99] text-white font-bold rounded-2xl shadow-lg shadow-slate-900/10 transition-all duration-200 text-sm tracking-wide flex items-center justify-center gap-2;
+  @apply w-full py-3 px-5 bg-stone-900 hover:bg-stone-800 active:scale-[0.99] text-white font-medium rounded-xl shadow-sm transition-all duration-150 text-sm tracking-normal flex items-center justify-center gap-2;
 }
 
-.btn-citrus {
-  @apply w-full py-3.5 bg-[#FF5400] hover:bg-[#E04800] active:scale-[0.99] text-white font-bold rounded-2xl shadow-lg shadow-[#FF5400]/25 transition-all duration-200 text-sm tracking-wide flex items-center justify-center gap-2;
+.btn-terracotta {
+  @apply w-full py-3 px-5 bg-[#C2410C] hover:bg-[#9A3412] active:scale-[0.99] text-white font-medium rounded-xl shadow-sm shadow-[#C2410C]/15 transition-all duration-150 text-sm tracking-normal flex items-center justify-center gap-2;
+}
+
+.btn-secondary {
+  @apply w-full py-3 px-5 bg-white hover:bg-stone-50 active:scale-[0.99] text-stone-800 font-medium rounded-xl border border-stone-200 shadow-sm transition-all duration-150 text-sm flex items-center justify-center gap-2;
 }
 
 .btn-google {
-  @apply w-full py-3.5 bg-white border border-slate-200 hover:bg-slate-50 active:scale-[0.99] text-[#0F172A] font-bold rounded-2xl shadow-xs transition-all duration-200 text-sm flex items-center justify-center gap-3;
+  @apply w-full py-3 px-5 bg-white border border-stone-200 hover:bg-stone-50 active:scale-[0.99] text-stone-900 font-medium rounded-xl shadow-sm transition-all duration-150 text-sm flex items-center justify-center gap-3;
 }
 
-.glass-card {
-  @apply bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-xl shadow-slate-900/5 rounded-3xl;
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Hide Default Scrollbar */

@@ -14,7 +14,6 @@ Sebelum memulai proses instalasi, pastikan lingkungan komputer Anda memenuhi spe
 | :--- | :--- | :--- |
 | **Node.js** | `v18.18.x` atau `v20.x` LTS | Runtime JavaScript untuk menjalankan Next.js 14 |
 | **NPM** | `v10.x` atau lebih baru | Package manager untuk dependensi frontend |
-| **Python** | `v3.10.x` atau lebih baru | Diperlukan untuk mengeksekusi script generator 33 ikon kustom (`scripts/gen_icons.py`) |
 | **PHP** | `v8.2.x` atau `v8.3.x` | Diperlukan jika menjalankan backend API Laravel (ekstensi: `pdo_sqlite`, `pdo_mysql`, `curl`, `mbstring`) |
 | **Composer** | `v2.7.x` | Package manager dependensi PHP |
 | **Git** | `v2.x` | Kontrol versi kode sumber |
@@ -66,7 +65,8 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 ### 2.4 Eksekusi Generator 33 Ikon Kustom (Anti-AI-Slop Engine)
 Pastikan 33 ikon kustom telah ter-generate ke dalam `src/components/icons/CustomIcons.tsx`:
 ```bash
-python scripts/gen_icons.py
+npm run icons
+# Atau: node scripts/gen_icons.mjs
 ```
 *Output yang diharapkan:*
 ```
@@ -76,7 +76,7 @@ Processed basket -> basket.png
 Processed cooking -> cooking.png
 Processed megaphone -> megaphone.png
 Processed gear -> settings.png
-CustomIcons.tsx with 33 user icons generated successfully!
+CustomIcons.tsx with 33 user icons generated successfully via Node.js!
 ```
 
 ### 2.5 Jalankan Pengecekan Tipe TypeScript (Typecheck Validation)

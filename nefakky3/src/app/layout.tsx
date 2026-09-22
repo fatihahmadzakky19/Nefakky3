@@ -26,15 +26,15 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  themeColor: '#25160E',
+  themeColor: '#1C1917',
 };
 
 /**
  * Objek Metadata global untuk SEO dan optimasi mesin pencari aplikasi Nefakky Marketplace
  */
 export const metadata: Metadata = {
-  title: 'Nefakky - Nikmati Masakan Rumahan, Semudah Satu Sentuhan', // Judul tab peramban
-  description: 'Platform pemesanan makanan rumahan berkualitas UMKM dengan kemudahan pembayaran online dan pelacakan pesanan real-time.', // Deskripsi cuplikan pencarian Google
+  title: 'Nefakky - Dapur Otentik Kuliner Nusantara',
+  description: 'Cita rasa otentik masakan Nusantara dengan bahan rempah pilihan, kemudahan pemesanan digital, dan pengantaran terpercaya.',
 };
 
 /**
@@ -49,8 +49,7 @@ export default function RootLayout({
   return (
     // Tag HTML utama dengan atribut bahasa Indonesia ("id")
     <html lang="id">
-      {/* Body dengan background krem hangat (#FAF8F5), font sans antialiased, dan warna seleksi kustom */}
-      <body className="bg-[#FAF8F5] text-stone-800 antialiased font-sans selection:bg-[#8A6337]/20 selection:text-[#8A6337]">
+      <body className="bg-[#FBFBFA] text-stone-900 antialiased font-sans selection:bg-[#C2410C]/15 selection:text-[#C2410C]">
         {/* Skrip Resmi Midtrans Snap Sandbox untuk pop-up pembayaran online */}
         <Script
           src="https://app.sandbox.midtrans.com/snap/snap.js"
