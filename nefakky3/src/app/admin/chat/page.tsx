@@ -10,16 +10,30 @@
  */
 
 // Mengimpor library React
-import React from 'react';
+import React, { Suspense } from 'react';
 // Mengimpor hook useData dari DataContext
 import { useData } from '@/context/DataContext';
 // Mengimpor komponen tampilan utama tab meja percakapan CS live chat
 import AdminLiveChatTab from '@/components/admin/AdminLiveChatTab';
 
 /**
- * Komponen Utama: AdminLiveChatPage
+ * Komponen Pembungkus Suspense untuk AdminLiveChatPage.
+ * AdminLiveChatTab memakai useSearchParams() sehingga wajib dibungkus <Suspense>,
+ * jika tidak, `next build` akan gagal dengan error
+ * "useSearchParams() should be wrapped in a suspense boundary".
  */
 export default function AdminLiveChatPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-stone-500 text-sm">Memuat live chat...</div>}>
+      <AdminLiveChatContent />
+    </Suspense>
+  );
+}
+
+/**
+ * Komponen Isi: AdminLiveChatContent
+ */
+function AdminLiveChatContent() {
   // Mengambil state chatMessages dan fungsi penangan pesan dari DataContext
   const {
     chatMessages, // Array daftar seluruh pesan chat antara admin dan pelanggan

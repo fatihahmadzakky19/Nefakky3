@@ -21,7 +21,7 @@ import {
   getDocs,
   addDoc
 } from 'firebase/firestore';
-import { ref, set as setRtdb, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
+import { ref, onValue, onChildAdded, onChildChanged, onChildRemoved, set as setRtdb, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
 import { db, rtdb } from '@/lib/firebase';
 import { formatCurrentRealtimeOrderDate } from '@/lib/orderTimeUtils';
 import { getEchoInstance } from '@/lib/echo';
@@ -400,43 +400,9 @@ export const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [
   }
 ];
 
-interface DataContextType {
-  products: ProductItem[];
-  vouchers: AdminVoucher[];
-  orders: AdminOrder[];
-  reviews: UserReview[];
-  chatMessages: ChatMessage[];
-  setProducts: React.Dispatch<React.SetStateAction<ProductItem[]>>;
-  setVouchers: React.Dispatch<React.SetStateAction<AdminVoucher[]>>;
-  setOrders: React.Dispatch<React.SetStateAction<AdminOrder[]>>;
-  setReviews: React.Dispatch<React.SetStateAction<UserReview[]>>;
-  setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
-  addProduct: (product: Omit<ProductItem, 'id'>) => ProductItem;
-  updateProduct: (id: string, updated: Partial<ProductItem>) => void;
-  deleteProduct: (id: string) => void;
-  toggleProductVisibility: (id: string) => void;
-  addVoucher: (voucher: Omit<AdminVoucher, 'id'>) => AdminVoucher;
-  updateVoucher: (id: string, updated: Partial<AdminVoucher>) => void;
-  deleteVoucher: (id: string) => void;
-  toggleVoucherStatus: (id: string) => void;
-  addOrder: (orderData: Partial<AdminOrder> & Omit<AdminOrder, 'date'>) => AdminOrder;
-  updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
-  confirmOrderReceived: (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => void;
-  customerConfirmOrder: (id: string) => void;
-  uploadOrderProofPhoto: (id: string, proofPhotoUrl: string) => void;
-  uploadOrderPaymentProofPhoto: (id: string, paymentProofPhotoUrl: string) => void;
-  deleteOrder: (id: string) => void;
-  cancelOrder: (id: string, reason?: string) => void;
-  addReview: (review: Omit<UserReview, 'id' | 'date' | 'likesCount'>) => UserReview;
-  deleteReview: (id: string) => void;
-  addReviewReply: (reviewId: string, replyData: Omit<ReviewReply, 'id' | 'date'>) => void;
-  sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void;
-  replyChatMessage: (userEmail: string, text: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void;
-  markChatAsRead: (userEmail: string, role: 'admin' | 'user') => void;
-  isHighDemand: boolean;
-  highDemandMessage: string;
-  toggleHighDemand: (status?: boolean, customMessage?: string) => void;
-}
+// Catatan: deklarasi interface duplikat sebelumnya (dua interface bernama sama)
+// telah digabungkan menjadi satu interface lengkap di bawah DEFAULT_REVIEWS
+// untuk mencegah kebingungan tipe dan bug perilaku pada pengembangan berikutnya.
 
 export const DEFAULT_PRODUCTS: ProductItem[] = [
   {
@@ -1062,6 +1028,7 @@ interface DataContextType {
   updateOrderStatus: (id: string, status: AdminOrder['status']) => void;
   updatePaymentStatus: (id: string, badge: AdminOrder['paymentBadge']) => void;
   confirmOrderReceived: (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => void;
+  customerConfirmOrder: (id: string) => void;
   uploadOrderProofPhoto: (id: string, proofPhotoUrl: string) => void;
   uploadOrderPaymentProofPhoto: (id: string, paymentProofPhotoUrl: string) => void;
   deleteOrder: (id: string) => void;
@@ -1072,6 +1039,9 @@ interface DataContextType {
   sendChatMessage: (userEmail: string, userName: string, text: string, userAvatar?: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void;
   replyChatMessage: (userEmail: string, text: string, mediaUrl?: string, mediaType?: 'image' | 'video') => void;
   markChatAsRead: (userEmail: string, role: 'admin' | 'user') => void;
+  isHighDemand: boolean;
+  highDemandMessage: string;
+  toggleHighDemand: (status?: boolean, customMessage?: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -1317,6 +1287,92 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         try { bc.close(); } catch (e) {}
       }
       window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // RTDB REALTIME SUBSCRIPTION (Firebase Realtime Database)
+  // Sebelumnya node `orders` & `live_orders` hanya DITULIS tapi tidak pernah
+  // disubscribe, sehingga perubahan dari perangkat lain tidak pernah diterima.
+  // Listener ini menjamin pesanan masuk & update status realtime lintas
+  // perangkat/browser meskipun server Laravel Reverb sedang tidak aktif.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const persistOrders = (updater: (prev: AdminOrder[]) => AdminOrder[]) => {
+      setOrdersState(prev => {
+        const updated = updater(prev);
+        try {
+          localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+    };
+
+    const rtdbOrdersRef = ref(rtdb, 'orders');
+
+    const unsubscribe = onValue(
+      rtdbOrdersRef,
+      (snapshot) => {
+        if (!snapshot.exists()) return;
+        const val = snapshot.val() as Record<string, Partial<AdminOrder>>;
+        const incoming = Object.entries(val)
+          .filter(([id, o]) => id && o && typeof o === 'object')
+          .map(([id, o]) => ({ ...(o as Partial<AdminOrder>), id }) as AdminOrder);
+        if (incoming.length === 0) return;
+
+        persistOrders(prev => {
+          const mergedMap = new Map<string, AdminOrder>();
+          prev.forEach(o => mergedMap.set(o.id, o));
+          incoming.forEach(o => {
+            const existing = mergedMap.get(o.id);
+            // RTDB dianggap sumber update terbaru (patch di atas data lokal)
+            mergedMap.set(o.id, existing ? { ...existing, ...o } : o);
+          });
+          return Array.from(mergedMap.values());
+        });
+      },
+      (err) => {
+        console.warn('RTDB orders listener notice:', err?.message);
+      }
+    );
+
+    // Listener child terpisah agar pesanan BARU langsung muncul tanpa
+    // menunggu snapshoot ulang (latensi lebih rendah / True realtime).
+    const childAdded = onChildAdded(rtdbOrdersRef, (snap) => {
+      const o = snap.val();
+      if (!o) return;
+      const incoming = { ...o, id: snap.key } as AdminOrder;
+      persistOrders(prev =>
+        prev.some(x => x.id === incoming.id)
+          ? prev.map(x => (x.id === incoming.id ? { ...x, ...incoming } : x))
+          : [incoming, ...prev]
+      );
+    });
+
+    const childChanged = onChildChanged(rtdbOrdersRef, (snap) => {
+      const o = snap.val();
+      if (!o) return;
+      const incoming = { ...o, id: snap.key } as AdminOrder;
+      persistOrders(prev => prev.map(x => (x.id === incoming.id ? { ...x, ...incoming } : x)));
+    });
+
+    const childRemoved = onChildRemoved(rtdbOrdersRef, (snap) => {
+      if (!snap.key) return;
+      persistOrders(prev => prev.filter(x => x.id !== snap.key));
+    });
+
+    return () => {
+      try {
+        unsubscribe();
+        // onChild* mengembalikan fungsi unsubscribe di Firebase v9+
+        if (typeof childAdded === 'function') (childAdded as () => void)();
+        if (typeof childChanged === 'function') (childChanged as () => void)();
+        if (typeof childRemoved === 'function') (childRemoved as () => void)();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     };
   }, []);
 

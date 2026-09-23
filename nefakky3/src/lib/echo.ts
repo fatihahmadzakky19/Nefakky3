@@ -9,7 +9,7 @@
 
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
-import { getStoredAuthToken } from './laravelApi';
+import { getStoredAuthToken, LARAVEL_API_URL } from './laravelApi';
 
 // Pastikan Pusher terdefinisi pada window di lingkungan browser
 if (typeof window !== 'undefined') {
@@ -33,6 +33,12 @@ export const getEchoInstance = (): Echo<any> | null => {
     const scheme = process.env.NEXT_PUBLIC_REVERB_SCHEME || 'http';
     const isHttps = scheme === 'https';
 
+    // Endpoint autentikasi channel diambil dari base URL API Laravel
+    // (mis. http://localhost:8000/api -> http://localhost:8000/broadcasting/auth)
+    // agar tidak hardcode localhost dan tetap bekerja di produksi.
+    const apiBase = LARAVEL_API_URL.replace(/\/api\/?$/, '');
+    const authEndpoint = process.env.NEXT_PUBLIC_REVERB_AUTH_ENDPOINT || `${apiBase}/broadcasting/auth`;
+
     try {
       echoInstance = new Echo({
         broadcaster: 'reverb',
@@ -42,7 +48,7 @@ export const getEchoInstance = (): Echo<any> | null => {
         wssPort: port,
         forceTLS: isHttps,
         enabledTransports: ['ws', 'wss'],
-        authEndpoint: 'http://localhost:8000/broadcasting/auth',
+        authEndpoint: authEndpoint,
         auth: {
           headers: {
             get Authorization() {

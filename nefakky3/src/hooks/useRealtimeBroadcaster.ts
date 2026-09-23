@@ -9,7 +9,7 @@
  * ============================================================================
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { getEchoInstance } from '@/lib/echo';
 
 export interface RealtimeOrderPayload {
@@ -77,63 +77,81 @@ export function useRealtimeBroadcaster(options: UseRealtimeBroadcasterOptions = 
     orderId,
   } = options;
 
+  // Simpan referensi callback terbaru di ref agar useEffect tidak perlu
+  // subscribe ulang (pasang/cabut listener) setiap kali render component.
+  // Sebelumnya callback inline menyebabkan listener WebSocket dibongkar-pasang
+  // berulang kali (memory leak & event hilang saat transisi).
+  const callbacksRef = useRef({
+    onOrderPlaced,
+    onOrderStatusUpdated,
+    onChatMessageSent,
+    onProductStockUpdated,
+    onActivityLogged,
+  });
+
+  useEffect(() => {
+    callbacksRef.current = {
+      onOrderPlaced,
+      onOrderStatusUpdated,
+      onChatMessageSent,
+      onProductStockUpdated,
+      onActivityLogged,
+    };
+  }, [
+    onOrderPlaced,
+    onOrderStatusUpdated,
+    onChatMessageSent,
+    onProductStockUpdated,
+    onActivityLogged,
+  ]);
+
   useEffect(() => {
     const echo = getEchoInstance();
     if (!echo) return;
 
     // 1. Channel Pesanan ('orders')
     const ordersChannel = echo.channel('orders');
-    if (onOrderPlaced) {
-      ordersChannel.listen('.order.placed', (data: RealtimeOrderPayload) => {
-        onOrderPlaced(data);
-      });
-    }
-    if (onOrderStatusUpdated) {
-      ordersChannel.listen('.order.status.updated', (data: RealtimeOrderPayload) => {
-        onOrderStatusUpdated(data);
-      });
-    }
+    ordersChannel.listen('.order.placed', (data: RealtimeOrderPayload) => {
+      callbacksRef.current.onOrderPlaced?.(data);
+    });
+    ordersChannel.listen('.order.status.updated', (data: RealtimeOrderPayload) => {
+      callbacksRef.current.onOrderStatusUpdated?.(data);
+    });
 
     // 2. Channel Produk ('products')
     const productsChannel = echo.channel('products');
-    if (onProductStockUpdated) {
-      productsChannel.listen('.product.stock.updated', (data: RealtimeProductPayload) => {
-        onProductStockUpdated(data);
-      });
-    }
+    productsChannel.listen('.product.stock.updated', (data: RealtimeProductPayload) => {
+      callbacksRef.current.onProductStockUpdated?.(data);
+    });
 
     // 3. Channel Live Chat ('chat')
     const chatChannel = echo.channel('chat');
-    if (onChatMessageSent) {
-      chatChannel.listen('.chat.message.sent', (data: RealtimeChatPayload) => {
-        onChatMessageSent(data);
-      });
-    }
+    chatChannel.listen('.chat.message.sent', (data: RealtimeChatPayload) => {
+      callbacksRef.current.onChatMessageSent?.(data);
+    });
 
     // 4. Channel Aktivitas Global & Notifikasi ('activity-feed')
     const activityChannel = echo.channel('activity-feed');
-    if (onActivityLogged) {
-      activityChannel.listen('.activity.logged', (data: RealtimeActivityPayload) => {
-        onActivityLogged(data);
-      });
-    }
+    activityChannel.listen('.activity.logged', (data: RealtimeActivityPayload) => {
+      callbacksRef.current.onActivityLogged?.(data);
+    });
 
     // 5. Channel Khusus Pesanan Spesifik (jika ada orderId)
     let singleOrderChannel: any = null;
-    if (orderId && onOrderStatusUpdated) {
+    if (orderId) {
       singleOrderChannel = echo.channel(`order.${orderId}`);
       singleOrderChannel.listen('.order.status.updated', (data: RealtimeOrderPayload) => {
-        onOrderStatusUpdated(data);
+        callbacksRef.current.onOrderStatusUpdated?.(data);
       });
     }
 
     // 6. Channel Khusus Chat Pengguna (jika ada userEmail)
     let singleChatChannel: any = null;
-    if (userEmail && onChatMessageSent) {
+    if (userEmail) {
       const cleanEmail = userEmail.replace(/[@.]/g, '_');
       singleChatChannel = echo.channel(`chat.${cleanEmail}`);
       singleChatChannel.listen('.chat.message.sent', (data: RealtimeChatPayload) => {
-        onChatMessageSent(data);
+        callbacksRef.current.onChatMessageSent?.(data);
       });
     }
 
@@ -154,13 +172,5 @@ export function useRealtimeBroadcaster(options: UseRealtimeBroadcasterOptions = 
         // Ignore cleanup errors
       }
     };
-  }, [
-    onOrderPlaced,
-    onOrderStatusUpdated,
-    onChatMessageSent,
-    onProductStockUpdated,
-    onActivityLogged,
-    userEmail,
-    orderId,
-  ]);
+  }, [userEmail, orderId]);
 }

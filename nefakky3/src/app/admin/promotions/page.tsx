@@ -11,7 +11,7 @@
  */
 
 // Mengimpor library React untuk komponen antarmuka
-import React from 'react';
+import React, { Suspense } from 'react';
 // Mengimpor useSearchParams dari Next.js untuk membaca parameter query URL
 import { useSearchParams } from 'next/navigation';
 // Mengimpor hook useData dari DataContext untuk operasi basis data voucher
@@ -20,10 +20,24 @@ import { useData } from '@/context/DataContext';
 import AdminPromotionsTab from '@/components/admin/AdminPromotionsTab';
 
 /**
- * Komponen Utama: AdminPromotionsPage
- * Mengelola integrasi data promo voucher dengan komponen AdminPromotionsTab
+ * Komponen Pembungkus Suspense untuk AdminPromotionsPage.
+ * useSearchParams() di Next.js App Router wajib dibungkus <Suspense>,
+ * jika tidak, perintah `next build` akan gagal dengan error
+ * "useSearchParams() should be wrapped in a suspense boundary".
  */
 export default function AdminPromotionsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-stone-500 text-sm">Memuat promosi...</div>}>
+      <AdminPromotionsContent />
+    </Suspense>
+  );
+}
+
+/**
+ * Komponen Isi: AdminPromotionsContent
+ * Mengelola integrasi data promo voucher dengan komponen AdminPromotionsTab
+ */
+function AdminPromotionsContent() {
   // Mengambil objek parameter pencarian URL (query params)
   const searchParams = useSearchParams();
   // Membaca nilai parameter 'code' dari URL jika ada (fallback ke string kosong)

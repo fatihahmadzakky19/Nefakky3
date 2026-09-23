@@ -10,6 +10,9 @@
 
 const LARAVEL_API_URL = process.env.NEXT_PUBLIC_LARAVEL_API_URL || 'http://localhost:8000/api';
 
+// Ekspor base URL API Laravel agar bisa dipakai modul lain (mis. echo.ts)
+export { LARAVEL_API_URL };
+
 // Helper token auth dari localStorage
 export const getStoredAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;

@@ -60,17 +60,26 @@ export default function NotificationsPage() {
     }
   }, []);
 
-  // Timer countdown realtime untuk live tracking
+  // Timer countdown realtime untuk live tracking.
+  // Total detik disimpan dalam SATU state agar tidak ada panggilan setState
+  // bersarang (side-effect di dalam updater) yang menyebabkan menit terpotong
+  // dobel ganda di React StrictMode.
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdownSeconds((prevSec) => {
         if (prevSec > 0) return prevSec - 1;
-        setCountdownMinutes((prevMin) => (prevMin > 0 ? prevMin - 1 : 0));
         return 59;
       });
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Turunkan menit HANYA ketika detik benar-benar wrap dari 0 -> 59
+  useEffect(() => {
+    if (countdownSeconds === 59) {
+      setCountdownMinutes((prevMin) => (prevMin > 0 ? prevMin - 1 : 0));
+    }
+  }, [countdownSeconds]);
 
   const currentUserEmail = (user?.email || '').toLowerCase().trim();
   const currentUserId = user?.uid || '';

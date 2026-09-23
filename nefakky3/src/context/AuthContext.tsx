@@ -99,6 +99,23 @@ export const isAdminEmail = (email?: string | null): boolean => {
   return ADMIN_EMAILS.some(adminEmail => adminEmail.toLowerCase() === clean);
 };
 
+/**
+ * Helper AMAN untuk membaca daftar akun terdaftar dari localStorage.
+ * Sebelumnya JSON.parse dipanggil tanpa try/catch di banyak tempat,
+ * sehingga satu data localStorage yang korup membuat seluruh halaman crash.
+ */
+export const readRegisteredUsers = (): any[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const storedUsersStr = localStorage.getItem('nefakky_registered_users');
+    if (!storedUsersStr) return [];
+    const parsed = JSON.parse(storedUsersStr);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -148,8 +165,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         let addresses: UserAddress[] = [];
 
         if (fbUser.email) {
-          const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-          const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+          const registeredUsers = readRegisteredUsers();
           const matched = registeredUsers.find((u: any) => u.email && u.email.trim().toLowerCase() === fbUser.email?.toLowerCase());
           if (matched) {
             name = matched.displayName || matched.name || name;
@@ -267,8 +283,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       let userAddresses: UserAddress[] = [];
 
       if (typeof window !== 'undefined') {
-        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        const registeredUsers = readRegisteredUsers();
         const matchedUser = registeredUsers.find(
           (u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail
         );
@@ -294,8 +309,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
 
-        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        const registeredUsers = readRegisteredUsers();
         const existingIdx = registeredUsers.findIndex(
           (u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail
         );
@@ -319,8 +333,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err: any) {
       // Fallback check local registered users database in localStorage for offline/demo support
       if (typeof window !== 'undefined') {
-        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        const registeredUsers = readRegisteredUsers();
 
         const matchedUser = registeredUsers.find(
           (u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail
@@ -387,8 +400,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const isOwnerAdmin = isAdminEmail(normalizedEmail);
 
     if (typeof window !== 'undefined') {
-      const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-      const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+      const registeredUsers = readRegisteredUsers();
 
       const existingIndex = registeredUsers.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail);
       const userObj = {
@@ -462,8 +474,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       let matchedAddresses: UserAddress[] = [];
 
       if (typeof window !== 'undefined' && userEmail) {
-        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        const registeredUsers = readRegisteredUsers();
         const existing = registeredUsers.find(
           (u: any) => u.email && u.email.trim().toLowerCase() === userEmail
         );
@@ -485,8 +496,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (typeof window !== 'undefined' && userEmail) {
-        const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-        const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+        const registeredUsers = readRegisteredUsers();
         const existingIdx = registeredUsers.findIndex(
           (u: any) => u.email && u.email.trim().toLowerCase() === userEmail
         );
@@ -554,8 +564,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         if (typeof window !== 'undefined') {
-          const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-          const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+          const registeredUsers = readRegisteredUsers();
           const existingIdx = registeredUsers.findIndex(
             (u: any) => u.email && u.email.trim().toLowerCase() === demoEmail
           );
@@ -747,8 +756,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const emailLower = user.email.toLowerCase();
 
     if (typeof window !== 'undefined') {
-      const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-      const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+      const registeredUsers = readRegisteredUsers();
       const userIdx = registeredUsers.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === emailLower);
 
       if (userIdx >= 0) {
@@ -775,8 +783,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const resetPassword = async (email: string, newPass: string): Promise<{ success: boolean; error?: string }> => {
     const emailLower = email.trim().toLowerCase();
     if (typeof window !== 'undefined') {
-      const storedUsersStr = localStorage.getItem('nefakky_registered_users');
-      const registeredUsers = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+      const registeredUsers = readRegisteredUsers();
       const userIdx = registeredUsers.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === emailLower);
 
       if (userIdx >= 0) {
