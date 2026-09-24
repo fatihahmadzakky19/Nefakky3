@@ -280,7 +280,7 @@ export default function MenuCatalogPage() {
                               )}
                               {product.isComingSoon && (
                                 <span className="px-2.5 py-0.5 bg-[#D97706] text-white text-[10px] font-semibold uppercase rounded">
-                                  Segera Hadir
+                                  Segera Hadir{(product as any).releaseDate ? ` • Rilis ${(product as any).releaseDate}` : ''}
                                 </span>
                               )}
                             </>
@@ -363,7 +363,9 @@ export default function MenuCatalogPage() {
                                 setShowAuthModal(true);
                                 return;
                               }
-                              if (product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus')) {
+                              const hasCustomVariants = Array.isArray((product as any).variants) && ((product as any).variants as any[]).length > 0;
+                              const hasVariantStocks = Object.keys((product as any).variantStocks || {}).length > 0;
+                              if (hasCustomVariants || hasVariantStocks || product.category === 'Minuman' || product.id === 'm6' || product.name.toLowerCase().includes('jus')) {
                                 setDetailProduct(product);
                               } else {
                                 addToCart(product.id);

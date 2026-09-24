@@ -27,7 +27,7 @@ import {
   Users
 } from 'lucide-react';
 import { Search, Clock, Tag, Flame, Calendar, BarChart2, Trash2, Eye, CheckCircle } from '@/components/icons/CustomIcons';
-import { AdminVoucher, useData } from '@/context/DataContext';
+import { AdminVoucher, useData, isVoucherTimeExpired, cleanPromoCode } from '@/context/DataContext';
 import { createPromoCalendarUrl } from '@/lib/googleCalendar';
 
 interface AdminPromotionsTabProps {
@@ -52,7 +52,7 @@ export default function AdminPromotionsTab({
   // --------------------------------------------------------------------------
   // STATE MANAGEMENT
   // --------------------------------------------------------------------------
-  const { vouchers, resetVoucherUsage } = useData();
+  const { vouchers, resetVoucherUsage, orders } = useData();
   const [showVoucherModal, setShowVoucherModal] = useState<boolean>(Boolean(initialVoucherCode));
   const [editingVoucher, setEditingVoucher] = useState<AdminVoucher | null>(null);
   const [showUsageModal, setShowUsageModal] = useState<boolean>(false);
@@ -75,6 +75,8 @@ export default function AdminPromotionsTab({
 
   // Filtered Vouchers
   const displayedVouchers = allVouchers.filter(v => {
+    // Promo yang sudah lewat masa berlaku → sembunyikan otomatis dari daftar (sesuai spesifikasi)
+    if (isVoucherTimeExpired(v)) return false;
     if (!searchPromoQuery.trim()) return true;
     const q = searchPromoQuery.toLowerCase();
     return (
@@ -83,6 +85,23 @@ export default function AdminPromotionsTab({
       ((v as any).eventCategory || '').toLowerCase().includes(q)
     );
   });
+
+  // Daftar nama user yang benar-benar pernah memakai voucher (dari data pesanan riil)
+  const getVoucherUserNames = (code?: string): string => {
+    if (!code) return '';
+    const target = cleanPromoCode(code);
+    const names = (orders || [])
+      .filter(o => {
+        const raw = o.voucherCode || o.appliedPromo;
+        if (!raw) return false;
+        return String(raw).split(/[,+\s]+/).map(c => cleanPromoCode(c)).filter(Boolean).includes(target);
+      })
+      .map(o => o.customerName || o.customerEmail || 'Pelanggan');
+    const unique = Array.from(new Set(names));
+    if (unique.length === 0) return 'Belum ada';
+    if (unique.length <= 3) return unique.join(', ');
+    return `${unique.slice(0, 3).join(', ')} +${unique.length - 3}`;
+  };
 
   // Handlers
   const handleOpenAddModal = () => {
@@ -225,13 +244,23 @@ export default function AdminPromotionsTab({
     }
   };
 
-  // Mock Usage History
-  const voucherUsageHistory = [
-    { userId: 'USR-8821', userName: 'Sarah Jenkins', orderId: 'ORD-9021', time: '10m lalu', discount: 25000, total: 125000 },
-    { userId: 'USR-4412', userName: 'Michael Ray', orderId: 'ORD-9018', time: '1 jam lalu', discount: 17800, total: 89000 },
-    { userId: 'USR-9032', userName: 'Anita Kumala', orderId: 'ORD-9015', time: '3 jam lalu', discount: 29000, total: 145000 },
-    { userId: 'USR-1109', userName: 'Budi Santoso', orderId: 'ORD-9004', time: 'Kemarin', discount: 20000, total: 100000 },
-  ];
+  // Riwayat Penggunaan REALTIME dari data pesanan (nama user, order id, waktu, diskon, total)
+  const usageTargetCode = selectedVoucherForUsage ? cleanPromoCode(selectedVoucherForUsage.code) : '';
+  const voucherUsageHistory = (orders || [])
+    .filter(o => {
+      if (!usageTargetCode) return false;
+      const raw = o.voucherCode || o.appliedPromo;
+      if (!raw) return false;
+      return String(raw).split(/[,+\s]+/).map(c => cleanPromoCode(c)).filter(Boolean).includes(usageTargetCode);
+    })
+    .map(o => ({
+      userId: o.userId || o.customerEmail || '—',
+      userName: o.customerName || 'Pelanggan',
+      orderId: o.id,
+      time: o.date || '—',
+      discount: o.discount || 0,
+      total: o.total || 0
+    }));
 
   return (
     <div className="flex flex-col w-full text-on-surface space-y-6">
@@ -399,6 +428,13 @@ export default function AdminPromotionsTab({
                       <span className="text-stone-500 font-medium">Aturan</span>
                       <span className="font-mono font-bold text-stone-900">
                         {isPelangganBaru ? 'User Baru Selamanya' : voucher.autoResetWeekly ? 'Reset Mingguan' : '1x Per User'}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between gap-2 border-b border-stone-100 py-2">
+                      <span className="text-stone-500 font-medium shrink-0">Dipakai Oleh</span>
+                      <span className="text-stone-800 text-[11px] text-right">
+                        {getVoucherUserNames(voucher.code)}
                       </span>
                     </div>
 

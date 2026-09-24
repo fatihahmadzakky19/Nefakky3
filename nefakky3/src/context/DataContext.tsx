@@ -9,7 +9,7 @@
  * ============================================================================
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { 
   collection, 
   doc, 
@@ -23,9 +23,23 @@ import {
 } from 'firebase/firestore';
 import { ref, onValue, onChildAdded, onChildChanged, onChildRemoved, set as setRtdb, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
 import { db, rtdb } from '@/lib/firebase';
-import { formatCurrentRealtimeOrderDate } from '@/lib/orderTimeUtils';
+import { formatCurrentRealtimeOrderDate, parseIndonesianDateStringToDate } from '@/lib/orderTimeUtils';
 import { getEchoInstance } from '@/lib/echo';
 
+
+/** Interface Varian Produk (mis. rasa jus) — metadata per varian; stok tersimpan di ProductItem.variantStocks */
+export interface ProductVariant {
+  id: string;
+  name: string;
+  tag?: string;
+  image?: string;
+  description?: string;
+  ingredients?: string;
+  calories?: string;
+  fat?: string;
+  sugar?: string;
+  satFat?: string;
+}
 
 /** Interface Data Produk Utama */
 export interface ProductItem {
@@ -56,9 +70,11 @@ export interface ProductItem {
   sugar: string;
   satFat: string;
   variantStocks?: { [variantKey: string]: number };
+  variants?: ProductVariant[];
   maxDeliveryKm?: number;
   isDeleted?: boolean;
   deletedAt?: string;
+  updatedAt?: number;
 }
 
 /** Interface Data Promosi Admin */
@@ -74,6 +90,7 @@ export interface PromotionItem {
   usedCount: number;
   totalLimit: number;
   isActive: boolean;
+  updatedAt?: number;
   isDeleted?: boolean;
   deletedAt?: string;
 }
@@ -99,6 +116,7 @@ export interface AdminVoucher {
   validDays?: string;
   autoResetWeekly?: boolean;
   lastResetWeek?: string;
+  updatedAt?: number;
   imageUrl?: string;
   isDeleted?: boolean;
   deletedAt?: string;
@@ -119,15 +137,80 @@ export const cleanPromoCode = (c?: string | null): string => {
   return (c || '').trim().toUpperCase().replace(/^#+/, '');
 };
 
+/** Baca array dari localStorage dengan fallback (persistensi lintas-refresh) */
+const readLS = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed as T;
+    }
+  } catch (e) {}
+  return fallback;
+};
+
+/** Baca daftar id yang dihapus secara lokal (tombstone) agar tidak "hidup lagi" dari snapshot server */
+const readTombstones = (key: string): Set<string> => {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const arr: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+    return new Set(arr);
+  } catch (e) {
+    return new Set();
+  }
+};
+
+/**
+ * Merge data server (Firestore) dengan data lokal:
+ * - Item yang lebih baru secara lokal (updatedAt lebih besar) dipertahankan (edit tidak hilang walau tulis Firestore gagal).
+ * - Item lokal yang belum ada di server (penambahan yang belum tersinkron) TETAP dipertahankan.
+ * - Item di server menang bila tidak ada konflik waktu.
+ */
+const mergeServerWithLocal = <T extends { id: string; updatedAt?: number }>(server: T[], local: T[], tombstones?: Set<string>): T[] => {
+  const localMap = new Map(local.map(x => [x.id, x]));
+  const serverIds = new Set(server.map(x => x.id));
+  const merged: T[] = server.filter(s => !tombstones || !tombstones.has(s.id)).map(s => {
+    const l = localMap.get(s.id);
+    if (l && typeof l.updatedAt === 'number' && (typeof s.updatedAt !== 'number' || l.updatedAt > s.updatedAt)) {
+      return l;
+    }
+    return l ? { ...l, ...s } : s;
+  });
+  local.forEach(l => {
+    if (!serverIds.has(l.id) && (!tombstones || !tombstones.has(l.id))) merged.push(l);
+  });
+  return merged;
+};
+
+/** Cek apakah voucher sudah kedaluwarsa secara waktu (validUntil / expiry string "31 Des 2026") — dipakai admin & user untuk menyembunyikan promo expired */
+export const isVoucherTimeExpired = (voucher?: AdminVoucher | any): boolean => {
+  if (!voucher) return false;
+  const isSelam =
+    voucher.expiry === 'Selamanya' ||
+    String(voucher.expiry || '').toLowerCase().includes('selamanya') ||
+    voucher.event === 'Pelanggan Baru';
+  if (isSelam) return false;
+  if (voucher.validUntil) {
+    const d = new Date(voucher.validUntil);
+    if (!isNaN(d.getTime())) {
+      d.setHours(23, 59, 59, 999);
+      if (new Date() > d) return true;
+    }
+  }
+  if (voucher.expiry) {
+    const d = parseIndonesianDateStringToDate(String(voucher.expiry));
+    if (d) {
+      d.setHours(23, 59, 59, 999);
+      if (new Date() > d) return true;
+    }
+  }
+  return false;
+};
+
 /** Helper function untuk mengecek apakah voucher valid & aktif saat ini (termasuk validasi kuota, auto-reset mingguan & hari/tanggal) */
 export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boolean; reason?: string } => {
   if (!voucher) return { active: false, reason: 'Voucher tidak ditemukan' };
-
-  // 1. Basic status & Admin toggle check
-  const isBasicActive = voucher.status === 'Active' && voucher.isActive !== false;
-  if (!isBasicActive) {
-    return { active: false, reason: `Promo ${voucher.code || ''} sedang non-aktif atau dimatikan oleh Admin.` };
-  }
 
   const codeUpper = (voucher.code || '').toUpperCase();
   const nameLower = (voucher.name || '').toLowerCase();
@@ -142,14 +225,32 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
     eventLower.includes('akhir pekan') || 
     codeUpper.includes('WEEKEND');
 
-  if (isAutoResetWeekly && voucher.id) {
+  const quotaParts = (() => {
+    let usedC = voucher.usedCount;
+    let limitC = voucher.totalLimit;
+    if ((usedC === undefined || limitC === undefined) && voucher.redemptions) {
+      const qp = String(voucher.redemptions).split('/');
+      if (qp.length === 2) {
+        usedC = parseInt(qp[0].trim(), 10);
+        limitC = parseInt(qp[1].trim(), 10);
+      }
+    }
+    return { usedC, limitC };
+  })();
+  const quotaFullCheck =
+    quotaParts.usedC !== undefined && quotaParts.limitC !== undefined &&
+    !isNaN(quotaParts.usedC) && !isNaN(quotaParts.limitC) &&
+    quotaParts.limitC > 0 && quotaParts.usedC >= quotaParts.limitC;
+
+  if (voucher.id) {
     const currentWeek = getISOWeekString();
-    if (voucher.lastResetWeek && voucher.lastResetWeek !== currentWeek && voucher.usedCount && voucher.usedCount > 0) {
+    if ((isAutoResetWeekly || quotaFullCheck) && (quotaParts.usedC || 0) > 0 && voucher.lastResetWeek !== currentWeek) {
       // Automatic reset kuota jika minggu telah berganti!
-      const limit = voucher.totalLimit || 500;
+      const limit = voucher.totalLimit || quotaParts.limitC || 500;
       voucher.usedCount = 0;
       voucher.redemptions = `0/${limit}`;
       voucher.status = 'Active';
+      voucher.isActive = true;
       voucher.lastResetWeek = currentWeek;
       
       updateDoc(doc(db, 'vouchers', voucher.id), {
@@ -157,9 +258,34 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
         redemptions: `0/${limit}`,
         status: 'Active',
         lastResetWeek: currentWeek,
-        isActive: true
+        isActive: true,
+        updatedAt: Date.now()
       }).catch(err => console.error('Error auto-resetting weekly voucher:', err));
+
+      // Bersihkan record pemakaian per-user di browser ini → tampilan promo muncul kembali utk minggu baru
+      try {
+        if (typeof window !== 'undefined') {
+          Object.keys(localStorage)
+            .filter(k => k.startsWith('nefakky_used_vouchers_'))
+            .forEach(k => {
+              try {
+                const arr: string[] = JSON.parse(localStorage.getItem(k) || '[]');
+                localStorage.setItem(k, JSON.stringify(arr.filter(c => cleanPromoCode(c) !== cleanPromoCode(voucher.code || ''))));
+              } catch (e) {}
+            });
+        }
+      } catch (e) {}
+    } else if (!voucher.lastResetWeek) {
+      // Belum pernah distempel → catat minggu ini agar reset berikutnya terjadwal (tanpa reset paksa)
+      voucher.lastResetWeek = currentWeek;
+      updateDoc(doc(db, 'vouchers', voucher.id), { lastResetWeek: currentWeek }).catch(() => {});
     }
+  }
+
+  // Basic status & Admin toggle check (setelah potensi auto-reset mingguan di atas)
+  const isBasicActive = voucher.status === 'Active' && voucher.isActive !== false;
+  if (!isBasicActive) {
+    return { active: false, reason: `Promo ${voucher.code || ''} sedang non-aktif atau dimatikan oleh Admin.` };
   }
 
   // ATURAN PROMO KHUSUS PELANGGAN BARU / AKTIF SELAMANYA (1x Per Pengguna Baru)
@@ -197,11 +323,19 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
   }
 
   // 3. Expiry Date Check (Aturan Batas Waktu / Tanggal Kedaluwarsa)
-  if (!isSelamanya && voucher.validUntil) {
-    const untilDate = new Date(voucher.validUntil);
-    if (!isNaN(untilDate.getTime())) {
-      untilDate.setHours(23, 59, 59, 999);
-      if (new Date() > untilDate) {
+  if (!isSelamanya) {
+    let expiredDate: Date | null = null;
+    if (voucher.validUntil) {
+      const untilDate = new Date(voucher.validUntil);
+      if (!isNaN(untilDate.getTime())) expiredDate = untilDate;
+    }
+    // Fallback: field expiry string (mis. "31 Des 2026") dari form admin → otomatis hilang saat kedaluwarsa
+    if (!expiredDate && voucher.expiry && !expiryLower.includes('selamanya')) {
+      expiredDate = parseIndonesianDateStringToDate(String(voucher.expiry));
+    }
+    if (expiredDate) {
+      expiredDate.setHours(23, 59, 59, 999);
+      if (new Date() > expiredDate) {
         return {
           active: false,
           reason: `Maaf, masa berlaku promo ${voucher.code || ''} telah kedaluwarsa.`
@@ -282,6 +416,8 @@ export interface AdminOrder {
   paymentProofPhoto?: string;
   voucherCode?: string;
   appliedPromo?: string;
+  lateBonusGranted?: boolean;
+  updatedAt?: number;
   isDeleted?: boolean;
   deletedAt?: string;
 }
@@ -315,6 +451,7 @@ export interface UserReview {
   rating: number;
   date: string;
   createdAt?: number;
+  updatedAt?: number;
   productId?: string;
   productName?: string;
   productImage?: string;
@@ -1047,9 +1184,11 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
-  const [products, setProductsState] = useState<ProductItem[]>(DEFAULT_PRODUCTS);
-  const [promotions, setPromotionsState] = useState<PromotionItem[]>(DEFAULT_PROMOTIONS);
-  const [vouchers, setVouchersState] = useState<AdminVoucher[]>(DEFAULT_VOUCHERS);
+  // Hydrate dari localStorage agar SEMUA perubahan (produk, promo, voucher, ulasan, chat)
+  // tetap tersimpan meski halaman di-refresh atau Firestore sedang tidak tersedia.
+  const [products, setProductsState] = useState<ProductItem[]>(() => readLS<ProductItem[]>('nefakky_products_live', DEFAULT_PRODUCTS));
+  const [promotions, setPromotionsState] = useState<PromotionItem[]>(() => readLS<PromotionItem[]>('nefakky_promotions_live', DEFAULT_PROMOTIONS));
+  const [vouchers, setVouchersState] = useState<AdminVoucher[]>(() => readLS<AdminVoucher[]>('nefakky_vouchers_live', DEFAULT_VOUCHERS));
   const [orders, setOrdersState] = useState<AdminOrder[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -1064,8 +1203,120 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
     return DEFAULT_ORDERS;
   });
-  const [reviews, setReviewsState] = useState<UserReview[]>(DEFAULT_REVIEWS);
-  const [chatMessages, setChatMessagesState] = useState<ChatMessage[]>(DEFAULT_CHAT_MESSAGES);
+  const [reviews, setReviewsState] = useState<UserReview[]>(() => sortReviewsNewestFirst(readLS<UserReview[]>('nefakky_reviews_live', DEFAULT_REVIEWS)));
+  const [chatMessages, setChatMessagesState] = useState<ChatMessage[]>(() => readLS<ChatMessage[]>('nefakky_chat_live', DEFAULT_CHAT_MESSAGES));
+
+  // ==========================================================================
+  // PERSISTENSI LOCALSTORAGE: setiap perubahan state langsung disimpan, sehingga
+  // refresh halaman TIDAK menghilangkan aktivitas yang sudah dilakukan user/admin.
+  // ==========================================================================
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('nefakky_products_live', JSON.stringify(products));
+      localStorage.setItem('nefakky_promotions_live', JSON.stringify(promotions));
+      localStorage.setItem('nefakky_vouchers_live', JSON.stringify(vouchers));
+      localStorage.setItem('nefakky_reviews_live', JSON.stringify(reviews));
+      localStorage.setItem('nefakky_chat_live', JSON.stringify(chatMessages));
+    } catch (e) {}
+  }, [products, promotions, vouchers, reviews, chatMessages]);
+
+  // ==========================================================================
+  // SINKRONISASI LINTAS TAB (user ↔ admin pada browser yang sama) via storage
+  // event + auto-reset record voucher "sudah dipakai" setiap minggu ISO baru.
+  // ==========================================================================
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Auto-reset record pemakaian voucher per-user tiap minggu baru agar promo muncul kembali
+    try {
+      const currentWeek = getISOWeekString();
+      const storedWeek = localStorage.getItem('nefakky_used_vouchers_week');
+      if (storedWeek !== currentWeek) {
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('nefakky_used_vouchers_') && k !== 'nefakky_used_vouchers_week')
+          .forEach(k => localStorage.setItem(k, '[]'));
+        localStorage.setItem('nefakky_used_vouchers_week', currentWeek);
+      }
+    } catch (e) {}
+
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || !e.newValue) return;
+      try {
+        if (e.key === 'nefakky_products_live') {
+          const d = JSON.parse(e.newValue);
+          if (Array.isArray(d)) setProductsState(d);
+        } else if (e.key === 'nefakky_promotions_live') {
+          const d = JSON.parse(e.newValue);
+          if (Array.isArray(d)) setPromotionsState(d);
+        } else if (e.key === 'nefakky_vouchers_live') {
+          const d = JSON.parse(e.newValue);
+          if (Array.isArray(d)) setVouchersState(d);
+        } else if (e.key === 'nefakky_reviews_live') {
+          const d = JSON.parse(e.newValue);
+          if (Array.isArray(d)) setReviewsState(sortReviewsNewestFirst(d));
+        } else if (e.key === 'nefakky_chat_live') {
+          const d = JSON.parse(e.newValue);
+          if (Array.isArray(d)) setChatMessagesState(d);
+        } else if (e.key === 'nefakky_high_demand') {
+          const d = JSON.parse(e.newValue);
+          setIsHighDemand(!!d.isHighDemand);
+          if (d.message) setHighDemandMessage(d.message);
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  // BONUS KETERLAMBATAN: pesanan aktif melewati estimasi 60 menit (maks 24 jam) →
+  // otomatis tambahkan menu bonus ke item pesanan & tandai lateBonusGranted.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const grantLateBonuses = () => {
+      setOrdersState(prev => {
+        const now = Date.now();
+        let changed = false;
+        const updated = prev.map(o => {
+          const age = o.createdAt ? now - o.createdAt : 0;
+          if (!o.createdAt || o.lateBonusGranted || ['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(o.status) || age <= 60 * 60 * 1000 || age > 24 * 60 * 60 * 1000) {
+            return o;
+          }
+          changed = true;
+          const bonusItem = {
+            id: 'bonus-keterlambatan',
+            name: 'Bonus Keterlambatan — Nasi Bakar',
+            price: 0,
+            quantity: 1,
+            image: '/images/nasi_bakar.jpg'
+          };
+          const updates: Partial<AdminOrder> = {
+            items: [...(o.items || []), bonusItem as any],
+            itemCount: (o.itemCount || 0) + 1,
+            lateBonusGranted: true,
+            updatedAt: now
+          };
+          try {
+            const bc = new BroadcastChannel('nefakky_orders_channel');
+            bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: o.id, updates });
+            bc.close();
+          } catch (e) {}
+          updateDoc(doc(db, 'orders', o.id), updates).catch(() => {});
+          updateRtdb(ref(rtdb, `orders/${o.id}`), updates).catch(() => {});
+          updateRtdb(ref(rtdb, `live_orders/${o.id}`), updates).catch(() => {});
+          return { ...o, ...updates } as AdminOrder;
+        });
+        if (!changed) return prev;
+        try {
+          localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+    };
+    grantLateBonuses();
+    const timer = setInterval(grantLateBonuses, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Firestore Realtime Listeners & Auto-Seeding
   useEffect(() => {
@@ -1075,19 +1326,24 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     // 1. Products Listener
     const unsubProd = onSnapshot(collection(db, 'products'), (snapshot) => {
+      const prodTombs = readTombstones('nefakky_deleted_products');
       if (snapshot.empty) {
+        // Firestore kosong → dorong data lokal (hasil hydrate localStorage) ke server; JANGAN timpa state lokal
+        const localProducts = readLS<ProductItem[]>('nefakky_products_live', []);
+        const source = (localProducts.length > 0 ? localProducts : DEFAULT_PRODUCTS).filter(p => !prodTombs.has(p.id));
         const batch = writeBatch(db);
-        DEFAULT_PRODUCTS.forEach(p => {
+        source.forEach(p => {
           batch.set(doc(db, 'products', p.id), p);
         });
         batch.commit().catch(err => console.error('Error seeding products:', err));
-        setProductsState(DEFAULT_PRODUCTS);
       } else {
         const prods = snapshot.docs
           .map(d => ({ ...d.data(), id: d.id }) as ProductItem)
           .filter(p => p.id !== 'm7' && p.id !== 'm8')
           .map(p => {
-            if (p.id === 'm6' || p.category === 'Minuman' || (p.name || '').toLowerCase().includes('jus')) {
+            // Normalisasi legacy HANYA untuk jus lama yang belum punya metadata `variants`
+            const hasCustomVariants = Array.isArray(p.variants) && (p.variants as any[]).length > 0;
+            if (!hasCustomVariants && (p.id === 'm6' || p.category === 'Minuman' || (p.name || '').toLowerCase().includes('jus'))) {
               const vStocks = p.variantStocks ? { ...p.variantStocks } : null;
               let finalVarStocks = vStocks ? {
                 Mangga: Number(vStocks.Mangga ?? vStocks.mangga ?? 13),
@@ -1115,7 +1371,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         
         // Auto-seed missing default products (e.g. Garang Asam m5 & Jus m6) without altering user-edited items
         const existingIds = new Set(prods.map(p => p.id));
-        const missingProducts = DEFAULT_PRODUCTS.filter(p => !existingIds.has(p.id));
+        const missingProducts = DEFAULT_PRODUCTS.filter(p => !existingIds.has(p.id) && !prodTombs.has(p.id));
         if (missingProducts.length > 0) {
           const batch = writeBatch(db);
           missingProducts.forEach(p => {
@@ -1124,37 +1380,42 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           batch.commit().catch(err => console.error('Error seeding missing products:', err));
         }
 
-        setProductsState(prods);
+        // Merge LWW: perubahan lokal yang belum tersinkron tidak tertimpa snapshot server
+        setProductsState(prev => mergeServerWithLocal(prods, prev, prodTombs));
       }
     }, (err) => console.error('Products Firestore error:', err));
 
     // 2. Promotions Listener
     const unsubPromo = onSnapshot(collection(db, 'promotions'), (snapshot) => {
+      const promoTombs = readTombstones('nefakky_deleted_promotions');
       if (snapshot.empty) {
+        const localPromos = readLS<PromotionItem[]>('nefakky_promotions_live', []);
+        const source = (localPromos.length > 0 ? localPromos : DEFAULT_PROMOTIONS).filter(p => !promoTombs.has(p.id));
         const batch = writeBatch(db);
-        DEFAULT_PROMOTIONS.forEach(p => {
+        source.forEach(p => {
           batch.set(doc(db, 'promotions', p.id), p);
         });
         batch.commit().catch(err => console.error('Error seeding promotions:', err));
-        setPromotionsState(DEFAULT_PROMOTIONS);
       } else {
         const promos = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as PromotionItem);
-        setPromotionsState(promos);
+        setPromotionsState(prev => mergeServerWithLocal(promos, prev, promoTombs));
       }
     }, (err) => console.error('Promotions Firestore error:', err));
 
     // 3. Vouchers Listener
     const unsubVouch = onSnapshot(collection(db, 'vouchers'), (snapshot) => {
+      const vouchTombs = readTombstones('nefakky_deleted_vouchers');
       if (snapshot.empty) {
+        const localVouchers = readLS<AdminVoucher[]>('nefakky_vouchers_live', []);
+        const source = (localVouchers.length > 0 ? localVouchers : DEFAULT_VOUCHERS).filter(v => !vouchTombs.has(v.id));
         const batch = writeBatch(db);
-        DEFAULT_VOUCHERS.forEach(v => {
+        source.forEach(v => {
           batch.set(doc(db, 'vouchers', v.id), v);
         });
         batch.commit().catch(err => console.error('Error seeding vouchers:', err));
-        setVouchersState(DEFAULT_VOUCHERS);
       } else {
         const vouches = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminVoucher);
-        setVouchersState(vouches);
+        setVouchersState(prev => mergeServerWithLocal(vouches, prev, vouchTombs));
       }
     }, (err) => console.error('Vouchers Firestore error:', err));
 
@@ -1163,12 +1424,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
         if (!snapshot.empty) {
-          const ords = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminOrder);
+          const orderTombs = readTombstones('nefakky_deleted_orders');
+          const ords = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminOrder).filter(o => !orderTombs.has(o.id));
           setOrdersState(prev => {
             const mergedMap = new Map<string, AdminOrder>();
             prev.forEach(o => mergedMap.set(o.id, o));
-            ords.forEach(o => mergedMap.set(o.id, { ...(mergedMap.get(o.id) || {}), ...o }));
-            const merged = Array.from(mergedMap.values());
+            ords.forEach(o => {
+              const existing = mergedMap.get(o.id);
+              // LWW: local menang bila updatedAt lebih baru (perubahan status belum tersinkron ke server)
+              mergedMap.set(o.id, existing && (existing.updatedAt || 0) > (o.updatedAt || 0) ? existing : { ...(existing || {}), ...o });
+            });
+            const merged = Array.from(mergedMap.values()).filter(o => !orderTombs.has(o.id));
             if (typeof window !== 'undefined') {
               try {
                 localStorage.setItem('nefakky_live_orders', JSON.stringify(merged));
@@ -1186,31 +1452,35 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     // 5. Reviews Listener
     const unsubRev = onSnapshot(collection(db, 'reviews'), (snapshot) => {
+      const revTombs = readTombstones('nefakky_deleted_reviews');
       if (snapshot.empty) {
+        const localReviews = readLS<UserReview[]>('nefakky_reviews_live', []);
+        const source = (localReviews.length > 0 ? localReviews : DEFAULT_REVIEWS).filter(r => !revTombs.has(r.id));
         const batch = writeBatch(db);
-        DEFAULT_REVIEWS.forEach(r => {
+        source.forEach(r => {
           batch.set(doc(db, 'reviews', r.id), r);
         });
         batch.commit().catch(err => console.error('Error seeding reviews:', err));
-        setReviewsState(sortReviewsNewestFirst(DEFAULT_REVIEWS));
       } else {
         const revs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as UserReview);
-        setReviewsState(sortReviewsNewestFirst(revs));
+        setReviewsState(prev => sortReviewsNewestFirst(mergeServerWithLocal(revs, prev, revTombs)));
       }
     }, (err) => console.error('Reviews Firestore error:', err));
 
     // 6. Chat Messages Listener
     const unsubChat = onSnapshot(collection(db, 'chat_messages'), (snapshot) => {
+      const chatTombs = readTombstones('nefakky_deleted_chat');
       if (snapshot.empty) {
+        const localChat = readLS<ChatMessage[]>('nefakky_chat_live', []);
+        const source = (localChat.length > 0 ? localChat : DEFAULT_CHAT_MESSAGES).filter(c => !chatTombs.has(c.id));
         const batch = writeBatch(db);
-        DEFAULT_CHAT_MESSAGES.forEach(c => {
+        source.forEach(c => {
           batch.set(doc(db, 'chat_messages', c.id), c);
         });
         batch.commit().catch(err => console.error('Error seeding chat_messages:', err));
-        setChatMessagesState(DEFAULT_CHAT_MESSAGES);
       } else {
         const msgs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as ChatMessage);
-        setChatMessagesState(msgs);
+        setChatMessagesState(prev => mergeServerWithLocal(msgs, prev, chatTombs));
       }
     }, (err) => console.error('Chat Messages Firestore error:', err));
 
@@ -1317,8 +1587,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       (snapshot) => {
         if (!snapshot.exists()) return;
         const val = snapshot.val() as Record<string, Partial<AdminOrder>>;
+        const rtdbTombs = readTombstones('nefakky_deleted_orders');
         const incoming = Object.entries(val)
-          .filter(([id, o]) => id && o && typeof o === 'object')
+          .filter(([id, o]) => id && o && typeof o === 'object' && !rtdbTombs.has(id))
           .map(([id, o]) => ({ ...(o as Partial<AdminOrder>), id }) as AdminOrder);
         if (incoming.length === 0) return;
 
@@ -1327,10 +1598,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           prev.forEach(o => mergedMap.set(o.id, o));
           incoming.forEach(o => {
             const existing = mergedMap.get(o.id);
-            // RTDB dianggap sumber update terbaru (patch di atas data lokal)
-            mergedMap.set(o.id, existing ? { ...existing, ...o } : o);
+            // LWW: local menang bila updatedAt lebih baru (perubahan belum tersinkron)
+            mergedMap.set(o.id, existing && (existing.updatedAt || 0) > (o.updatedAt || 0) ? existing : (existing ? { ...existing, ...o } : o));
           });
-          return Array.from(mergedMap.values());
+          return Array.from(mergedMap.values()).filter(o => !rtdbTombs.has(o.id));
         });
       },
       (err) => {
@@ -1343,10 +1614,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const childAdded = onChildAdded(rtdbOrdersRef, (snap) => {
       const o = snap.val();
       if (!o) return;
+      if (readTombstones('nefakky_deleted_orders').has(snap.key || '')) return;
       const incoming = { ...o, id: snap.key } as AdminOrder;
       persistOrders(prev =>
         prev.some(x => x.id === incoming.id)
-          ? prev.map(x => (x.id === incoming.id ? { ...x, ...incoming } : x))
+          ? prev.map(x => (x.id === incoming.id ? ((x.updatedAt || 0) > (incoming.updatedAt || 0) ? x : { ...x, ...incoming }) : x))
           : [incoming, ...prev]
       );
     });
@@ -1355,7 +1627,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       const o = snap.val();
       if (!o) return;
       const incoming = { ...o, id: snap.key } as AdminOrder;
-      persistOrders(prev => prev.map(x => (x.id === incoming.id ? { ...x, ...incoming } : x)));
+      persistOrders(prev => prev.map(x => (x.id === incoming.id ? ((x.updatedAt || 0) > (incoming.updatedAt || 0) ? x : { ...x, ...incoming }) : x)));
     });
 
     const childRemoved = onChildRemoved(rtdbOrdersRef, (snap) => {
@@ -1540,7 +1812,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       ...productData,
       id: newId,
       visibility: productData.visibility ?? true,
-      status: productData.status ?? 'Active'
+      status: productData.status ?? 'Active',
+      updatedAt: Date.now()
     };
     const cleanProd = cleanForFirestore(newProduct) as ProductItem;
     setProductsState(prev => [cleanProd, ...prev]);
@@ -1553,17 +1826,41 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateProduct = (id: string, updated: Partial<ProductItem>) => {
-    const cleanUpdated = cleanForFirestore(updated);
+    const cleanUpdated = { ...cleanForFirestore(updated), updatedAt: Date.now() };
+    const prevProduct = products.find(p => p.id === id);
     setProductsState(prev => prev.map(p => p.id === id ? { ...p, ...cleanUpdated } : p));
     try {
       updateDoc(doc(db, 'products', id), cleanUpdated).catch(err => console.warn('updateProduct error:', err));
     } catch (e) {
       console.warn('Catch updateProduct updateDoc error:', e);
     }
+
+    // Restock dari habis (0) → notifikasi otomatis ke user yang pernah reservasi lewat chat CS
+    const newStockValue = (updated as ProductItem).stock;
+    if (prevProduct && (Number(prevProduct.stock) || 0) <= 0 && typeof newStockValue === 'number' && newStockValue > 0) {
+      try {
+        const notified = new Set<string>();
+        chatMessages
+          .filter(m => m.sender === 'user' && String(m.text || '').includes('[RESERVASI PRODUK HABIS]') && String(m.text || '').includes(prevProduct.name))
+          .forEach(m => {
+            const email = String(m.userEmail || '').trim().toLowerCase();
+            if (!email || notified.has(email)) return;
+            notified.add(email);
+            replyChatMessage(email, `Kabar baik! Stok "${prevProduct.name}" sudah kembali tersedia (restock). Pesanan reservasi Anda akan diprioritaskan lebih dahulu. Silakan segera lakukan pemesanan kembali atau balas chat ini untuk konfirmasi.`);
+          });
+      } catch (e) {}
+    }
   };
 
   const deleteProduct = (id: string) => {
     setProductsState(prev => prev.filter(p => p.id !== id));
+    try {
+      if (typeof window !== 'undefined') {
+        const tombs = readTombstones('nefakky_deleted_products');
+        tombs.add(id);
+        localStorage.setItem('nefakky_deleted_products', JSON.stringify(Array.from(tombs)));
+      }
+    } catch (e) {}
     try {
       deleteDoc(doc(db, 'products', id)).catch(console.error);
     } catch (e) {
@@ -1576,11 +1873,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (target) {
       const nextVis = !target.visibility;
       const nextStatus = nextVis ? 'Active' : 'Inactive';
-      setProductsState(prev => prev.map(p => p.id === id ? { ...p, visibility: nextVis, status: nextStatus } : p));
+      setProductsState(prev => prev.map(p => p.id === id ? { ...p, visibility: nextVis, status: nextStatus, updatedAt: Date.now() } : p));
       try {
         updateDoc(doc(db, 'products', id), {
           visibility: nextVis,
-          status: nextStatus
+          status: nextStatus,
+          updatedAt: Date.now()
         }).catch(console.error);
       } catch (e) {
         console.warn('Catch toggleProductVisibility error:', e);
@@ -1594,7 +1892,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       ...promoData,
       id: newId,
       badge: promoData.badge || 'Active',
-      isActive: promoData.isActive ?? true
+      isActive: promoData.isActive ?? true,
+      updatedAt: Date.now()
     };
     setDoc(doc(db, 'promotions', newId), newPromo).catch(console.error);
     return newPromo;
@@ -1609,17 +1908,23 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const target = promotions.find(p => p.id === id);
     if (target) {
       const nextActive = !target.isActive;
-      updateDoc(doc(db, 'promotions', id), {
+      const promoUpdates = {
         isActive: nextActive,
-        badge: nextActive ? 'Active' : 'Ended'
-      }).catch(console.error);
+        badge: (nextActive ? 'Active' : 'Ended') as PromotionItem['badge'],
+        updatedAt: Date.now()
+      };
+      setPromotionsState(prev => prev.map(p => p.id === id ? { ...p, ...promoUpdates } : p));
+      updateDoc(doc(db, 'promotions', id), promoUpdates).catch(console.error);
 
       const matchingVoucher = vouchers.find(v => v.id === id || (v.code && target.title.toLowerCase().includes(v.code.toLowerCase())));
       if (matchingVoucher) {
-        updateDoc(doc(db, 'vouchers', matchingVoucher.id), {
-          status: nextActive ? 'Active' : 'Expired',
-          isActive: nextActive
-        }).catch(console.error);
+        const vUpdates = {
+          status: (nextActive ? 'Active' : 'Expired') as AdminVoucher['status'],
+          isActive: nextActive,
+          updatedAt: Date.now()
+        };
+        setVouchersState(prev => prev.map(v => v.id === matchingVoucher.id ? { ...v, ...vUpdates } : v));
+        updateDoc(doc(db, 'vouchers', matchingVoucher.id), vUpdates).catch(console.error);
       }
     }
   };
@@ -1636,7 +1941,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       minSpend: Number(voucherData.minSpend) || 0,
       status: (voucherData.status as any) || 'Active',
       isActive: voucherData.isActive !== false,
-      lastResetWeek: getISOWeekString()
+      lastResetWeek: getISOWeekString(),
+      updatedAt: Date.now()
     };
 
     // Update state lokal secara instan agar langsung muncul di admin & homepage
@@ -1671,7 +1977,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const cleanCode = updated.code ? cleanPromoCode(updated.code) : undefined;
     const finalUpdates = {
       ...updated,
-      ...(cleanCode ? { code: cleanCode } : {})
+      ...(cleanCode ? { code: cleanCode } : {}),
+      updatedAt: Date.now()
     };
     setVouchersState(prev => prev.map(v => (v.id === id || (cleanCode && cleanPromoCode(v.code) === cleanCode)) ? { ...v, ...finalUpdates } : v));
     updateDoc(doc(db, 'vouchers', id), finalUpdates).catch(console.error);
@@ -1681,6 +1988,20 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const target = vouchers.find(v => v.id === id || cleanPromoCode(v.code) === cleanPromoCode(id));
     const targetId = target ? target.id : id;
     setVouchersState(prev => prev.filter(v => v.id !== targetId && cleanPromoCode(v.code) !== cleanPromoCode(id)));
+    const promoIds = promotions
+      .filter(p => p.id === targetId || (target && target.code && p.title && p.title.toLowerCase().includes(target.code.toLowerCase())))
+      .map(p => p.id);
+    setPromotionsState(prev => prev.filter(p => p.id !== targetId && !promoIds.includes(p.id)));
+    try {
+      if (typeof window !== 'undefined') {
+        const vTombs = readTombstones('nefakky_deleted_vouchers');
+        vTombs.add(targetId);
+        localStorage.setItem('nefakky_deleted_vouchers', JSON.stringify(Array.from(vTombs)));
+        const pTombs = readTombstones('nefakky_deleted_promotions');
+        promoIds.concat([targetId]).forEach(pid => pTombs.add(pid));
+        localStorage.setItem('nefakky_deleted_promotions', JSON.stringify(Array.from(pTombs)));
+      }
+    } catch (e) {}
     try {
       deleteDoc(doc(db, 'vouchers', targetId)).catch(console.error);
       deleteDoc(doc(db, 'promotions', targetId)).catch(console.error);
@@ -1695,7 +2016,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       const nextActive = !(target.status === 'Active' && target.isActive !== false);
       const updates = {
         status: (nextActive ? 'Active' : 'Expired') as AdminVoucher['status'],
-        isActive: nextActive
+        isActive: nextActive,
+        updatedAt: Date.now()
       };
 
       setVouchersState(prev => prev.map(v => (v.id === target.id || cleanPromoCode(v.code) === cleanPromoCode(target.code)) ? { ...v, ...updates } : v));
@@ -1703,10 +2025,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
       const matchingPromo = promotions.find(p => p.id === target.id || (p.title && p.title.toLowerCase().includes(target.code.toLowerCase())));
       if (matchingPromo) {
-        updateDoc(doc(db, 'promotions', matchingPromo.id), {
+        const promoUpdates = {
           isActive: nextActive,
-          badge: nextActive ? 'Active' : 'Ended'
-        }).catch(console.error);
+          badge: (nextActive ? 'Active' : 'Ended') as PromotionItem['badge'],
+          updatedAt: Date.now()
+        };
+        setPromotionsState(prev => prev.map(p => p.id === matchingPromo.id ? { ...p, ...promoUpdates } : p));
+        updateDoc(doc(db, 'promotions', matchingPromo.id), promoUpdates).catch(console.error);
       }
     }
   };
@@ -1739,8 +2064,18 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       appliedPromo: orderData.appliedPromo || '',
       date: orderData.date || nowStr,
       createdAt: typeof orderData.createdAt === 'number' && orderData.createdAt > 0 ? orderData.createdAt : now.getTime(),
-      customerConfirmed: false
+      customerConfirmed: false,
+      updatedAt: now.getTime()
     };
+
+    // Auto-Info "MEMBLUDAK": >10 pesanan dalam 1 jam terakhir → banner estimasi ~1,5 jam untuk user
+    try {
+      const oneHourAgo = now.getTime() - 60 * 60 * 1000;
+      const recentActive = orders.filter(o => o.createdAt && o.createdAt >= oneHourAgo && !['CANCELLED', 'COMPLETED', 'EXPIRED'].includes(o.status)).length + 1;
+      if (recentActive > 10 && !isHighDemand) {
+        toggleHighDemand(true, 'Pemesanan sedang MEMBLUDAK! Dapur melayani banyak pesanan sekaligus, mohon menunggu kurang lebih 1 JAM 30 MENIT. Terima kasih atas kesabaran Anda!');
+      }
+    } catch (e) {}
 
     // 1. Immediate local React state update & LocalStorage persistence
     setOrdersState(prev => {
@@ -1826,9 +2161,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
                 pCopy.stock = Math.max(0, (Number(pCopy.stock) || 0) - qty);
               }
 
-              if (pCopy.stock <= 0) {
+              if (pCopy.stock < 5) {
                 pCopy.status = 'Low Stock';
               }
+              pCopy.updatedAt = Date.now();
             }
           }
 
@@ -1941,6 +2277,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
       return updated;
     });
+
+    try {
+      if (typeof window !== 'undefined') {
+        const tombs = readTombstones('nefakky_deleted_orders');
+        tombs.add(id);
+        localStorage.setItem('nefakky_deleted_orders', JSON.stringify(Array.from(tombs)));
+      }
+    } catch (e) {}
 
     if (typeof window !== 'undefined') {
       try {
@@ -2135,7 +2479,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       const keysToCheck = [
         userUid ? `nefakky_used_vouchers_${userUid}` : null,
         userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase().trim()}` : null,
-        'nefakky_used_vouchers_admin'
+        'nefakky_used_vouchers_admin',
+        'nefakky_used_vouchers_session'
       ].filter(Boolean) as string[];
 
       for (const storageKey of keysToCheck) {
@@ -2150,7 +2495,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    // 2. Cek riwayat pesanan (orders) untuk akun user ini
+    // 2. Riwayat pesanan (orders): HANYA untuk promo PELANGGAN BARU (blokir permanen 1x per akun).
+    //    Promo reguler cukup diblokir via localStorage di atas & tampil kembali setelah riset mingguan.
     const userOrders = (orders || []).filter(o => {
       const isUidMatch = Boolean(userUid && o.userId && o.userId === userUid);
       const isEmailMatch = Boolean(userEmail && o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail.toLowerCase().trim());
@@ -2161,19 +2507,19 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       return isUidMatch || isEmailMatch || isAdminMatch;
     });
 
-    const hasUsedInOrders = userOrders.some(o => {
-      const raw = o.voucherCode || o.appliedPromo;
-      if (!raw) return false;
-      const codes = String(raw).split(/[,+\s]+/).map(c => cleanPromoCode(c)).filter(Boolean);
-      return codes.includes(cleanTargetCode);
-    });
-
-    if (hasUsedInOrders) return true;
-
-    // ATURAN KHUSUS PELANGGAN BARU (#NEFAKKY10):
-    // Jika akun sudah memiliki riwayat pesanan (orders >= 1) atau akun admin testing,
-    // Akun tersebut BUKAN lagi pengguna baru, sehingga promo pelanggan baru tidak muncul
     if (isNewCustomerVoucher) {
+      const hasUsedInOrders = userOrders.some(o => {
+        const raw = o.voucherCode || o.appliedPromo;
+        if (!raw) return false;
+        const codes = String(raw).split(/[,+\s]+/).map(c => cleanPromoCode(c)).filter(Boolean);
+        return codes.includes(cleanTargetCode);
+      });
+
+      if (hasUsedInOrders) return true;
+
+      // ATURAN KHUSUS PELANGGAN BARU (#NEFAKKY10):
+      // Jika akun sudah memiliki riwayat pesanan (orders >= 1) atau akun admin testing,
+      // Akun tersebut BUKAN lagi pengguna baru, sehingga promo pelanggan baru tidak muncul
       if (userOrders.length > 0) {
         return true;
       }
@@ -2223,7 +2569,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         redemptions,
         status: 'Active' as AdminVoucher['status'],
         isActive: true,
-        lastResetWeek: getISOWeekString()
+        lastResetWeek: getISOWeekString(),
+        updatedAt: Date.now()
       };
 
       setVouchersState(prev => prev.map(v => (v.id === target.id || cleanPromoCode(v.code) === cleanCode) ? { ...v, ...updates } : v));
@@ -2300,7 +2647,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
                 redemptions: '1x Per Pengguna Baru',
                 expiry: 'Selamanya',
                 status: 'Active',
-                isActive: true
+                isActive: true,
+                updatedAt: Date.now()
               });
             } else if (isTanpaBatas) {
               const newUsed = (v.usedCount || 0) + 1;
@@ -2309,7 +2657,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
                 redemptions: 'Tanpa Batas',
                 expiry: 'Selamanya',
                 status: 'Active',
-                isActive: true
+                isActive: true,
+                updatedAt: Date.now()
               });
             } else {
               let usedCount = v.usedCount || 0;
@@ -2332,7 +2681,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
                 totalLimit,
                 redemptions: newRedemptions,
                 status: isNowExpired ? 'Expired' : 'Active',
-                isActive: !isNowExpired
+                isActive: !isNowExpired,
+                updatedAt: Date.now()
               });
             }
           }
@@ -2341,7 +2691,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         // 4. Perbarui state lokal vouchers agar langsung re-render
         setVouchersState(prev => prev.map(v => {
           if (cleanPromoCode(v.code) === cleanCode) {
-            return { ...v, usedCount: (v.usedCount || 0) + 1 };
+            return { ...v, usedCount: (v.usedCount || 0) + 1, updatedAt: Date.now() };
           }
           return v;
         }));
@@ -2364,6 +2714,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       authorAvatar: avatar,
       date: 'Baru saja',
       createdAt: Date.now(),
+      updatedAt: Date.now(),
       likesCount: 0,
       status: 'PUBLISHED'
     };

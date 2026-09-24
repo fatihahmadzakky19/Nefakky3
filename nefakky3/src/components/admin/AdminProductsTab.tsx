@@ -30,6 +30,19 @@ import { Search, MapPin, Clock, Flame, Hourglass, Pencil, Trash2, Eye } from '@/
 import { ProductItem } from '@/context/DataContext';
 import { getMapSettings, DEFAULT_CENTRAL_KITCHEN } from '@/lib/mapService';
 
+/** Baris form varian produk (mis. rasa Jus) — stok, deskripsi, komposisi & nutrisi per varian */
+interface VariantFormRow {
+  id?: string;
+  name: string;
+  stock: string;
+  description: string;
+  ingredients: string;
+  calories: string;
+  fat: string;
+  sugar: string;
+  satFat: string;
+}
+
 interface AdminProductsTabProps {
   productList: ProductItem[];
   addProduct: (product: any) => void;
@@ -175,12 +188,10 @@ export default function AdminProductsTab({
     price: '35000',
     discount: '0',
     stock: '25',
-    stokMangga: '20',
-    stokSirsak: '15',
-    stokJambu: '15',
+    variants: [] as VariantFormRow[],
     visibility: true,
     status: 'Active' as 'Active' | 'Low Stock' | 'Inactive',
-    badge: '' as 'TERPOPULER' | 'BARU' | 'BEST SELLER' | 'NEW' | '',
+    badge: '' as string,
     isComingSoon: false,
     releaseDate: '',
     image: '/images/ayam_bakar.jpg',
@@ -212,9 +223,7 @@ export default function AdminProductsTab({
       price: '35000',
       discount: '0',
       stock: '25',
-      stokMangga: '20',
-      stokSirsak: '15',
-      stokJambu: '15',
+      variants: [],
       visibility: true,
       status: 'Active',
       badge: '',
@@ -248,9 +257,38 @@ export default function AdminProductsTab({
       price: String(prod.price || 35000),
       discount: String(prod.discount || 0),
       stock: String(prod.stock || 25),
-      stokMangga: String(prod.variantStocks?.Mangga ?? 20),
-      stokSirsak: String(prod.variantStocks?.Sirsak ?? 15),
-      stokJambu: String(prod.variantStocks?.Jambu ?? 15),
+      variants: (() => {
+        const custom = Array.isArray((prod as any).variants) ? ((prod as any).variants as any[]) : [];
+        const fromLegacyStocks = (keys: string[]): VariantFormRow[] =>
+          keys.filter(k => k).map(k => ({
+            id: k,
+            name: k,
+            stock: String((prod.variantStocks as any)?.[k] ?? 0),
+            description: '',
+            ingredients: '',
+            calories: '',
+            fat: '',
+            sugar: '',
+            satFat: ''
+          }));
+        if (custom.length > 0) {
+          return custom.map(v => ({
+            id: v.id || v.name,
+            name: v.name || '',
+            stock: String((prod.variantStocks as any)?.[v.id || v.name] ?? v.stock ?? 0),
+            description: v.description || '',
+            ingredients: v.ingredients || '',
+            calories: v.calories || '',
+            fat: v.fat || '',
+            sugar: v.sugar || '',
+            satFat: v.satFat || ''
+          })) as VariantFormRow[];
+        }
+        // Legacy: jus lama hanya punya variantStocks (Mangga/Sirsak/Jambu)
+        const legacyKeys = Object.keys(prod.variantStocks || {});
+        if (legacyKeys.length > 0) return fromLegacyStocks(legacyKeys);
+        return [] as VariantFormRow[];
+      })(),
       visibility: prod.visibility ?? true,
       status: prod.status || 'Active',
       badge: (prod.badge as any) || '',
@@ -279,17 +317,31 @@ export default function AdminProductsTab({
       return;
     }
 
-    const isDrink = prodForm.category === 'Minuman' || prodForm.name.toLowerCase().includes('jus');
     let finalStock = parseInt(prodForm.stock) || 0;
     let variantStocksObj: { [key: string]: number } | undefined = undefined;
+    let variantsPayload: any[] | undefined = undefined;
 
-    if (isDrink) {
-      variantStocksObj = {
-        'Mangga': Math.max(0, parseInt(prodForm.stokMangga) || 0),
-        'Sirsak': Math.max(0, parseInt(prodForm.stokSirsak) || 0),
-        'Jambu': Math.max(0, parseInt(prodForm.stokJambu) || 0)
-      };
-      finalStock = variantStocksObj.Mangga + variantStocksObj.Sirsak + variantStocksObj.Jambu;
+    // Multi-varian: daftar varian dinamis dari form (bisa ditambah/dihapus per varian)
+    const variantRows = (prodForm.variants || [])
+      .map(v => ({ ...v, name: String(v.name || '').trim() }))
+      .filter(v => v.name);
+    if (variantRows.length > 0) {
+      variantStocksObj = {};
+      variantsPayload = variantRows.map(v => {
+        const vid = (v.id || v.name).trim();
+        variantStocksObj![vid] = Math.max(0, parseInt(String(v.stock)) || 0);
+        return {
+          id: vid,
+          name: v.name,
+          description: v.description || '',
+          ingredients: v.ingredients || '',
+          calories: v.calories || '',
+          fat: v.fat || '',
+          sugar: v.sugar || '',
+          satFat: v.satFat || ''
+        };
+      });
+      finalStock = Object.values(variantStocksObj).reduce((sum, n) => sum + (Number(n) || 0), 0);
     }
 
     const payload: any = {
@@ -300,8 +352,9 @@ export default function AdminProductsTab({
       discount: parseInt(prodForm.discount) || 0,
       stock: finalStock,
       variantStocks: variantStocksObj,
+      variants: variantsPayload,
       visibility: prodForm.visibility,
-      status: finalStock === 0 ? 'Low Stock' : prodForm.status,
+      status: finalStock < 5 ? 'Low Stock' : prodForm.status,
       badge: prodForm.badge || undefined,
       isComingSoon: prodForm.isComingSoon,
       releaseDate: prodForm.isComingSoon ? prodForm.releaseDate : undefined,
@@ -356,6 +409,27 @@ export default function AdminProductsTab({
           </button>
         </div>
       </div>
+
+      {/* SINYAL STOK MENIPIS (<5 porsi / habis) — peringatan otomatis realtime untuk admin */}
+      {(() => {
+        const lowStockProducts = allProducts.filter(p => !p.isDeleted && (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) < 5);
+        const outStockProducts = allProducts.filter(p => !p.isDeleted && (Number(p.stock) || 0) <= 0);
+        const alertCount = lowStockProducts.length + outStockProducts.length;
+        if (alertCount === 0) return null;
+        return (
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 flex items-start gap-3">
+            <span className="material-symbols-outlined text-amber-600 text-2xl leading-none">warning</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-amber-900">
+                Sinyal Stok: {alertCount} menu perlu perhatian (stok &lt;5 porsi / habis)
+              </p>
+              <p className="text-[11px] text-amber-800 mt-1 leading-relaxed">
+                {[...lowStockProducts, ...outStockProducts].map(p => `${p.name} (sisa ${Number(p.stock) || 0})`).join(' • ')}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 2. STATS OVERVIEW & FILTER BAR */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-surface-container-low p-4 rounded-2xl border border-outline-variant/20">
@@ -785,7 +859,7 @@ export default function AdminProductsTab({
                           />
                         </div>
 
-                        {prodForm.category !== 'Minuman' && !prodForm.name.toLowerCase().includes('jus') && (
+                        {prodForm.category !== 'Minuman' && !prodForm.name.toLowerCase().includes('jus') && prodForm.variants.length === 0 && (
                           <div className="flex flex-col gap-1">
                             <label className="font-label-caps text-stone-700 uppercase text-[11px] font-bold">
                               Stok Porsi
@@ -801,67 +875,53 @@ export default function AdminProductsTab({
                         )}
                       </div>
 
-                      {/* Khusus Minuman / Jus: Input Stok 3 Varian Tersendiri */}
-                      {(prodForm.category === 'Minuman' || prodForm.name.toLowerCase().includes('jus')) && (
-                        <div className="space-y-2 p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl">
-                          <div className="flex items-center justify-between">
-                            <label className="font-label-caps text-amber-950 uppercase text-[11px] font-bold flex items-center gap-1.5">
-                              <GlassWater className="w-3.5 h-3.5 text-amber-800" />
-                              <span>Stok Per Varian Rasa Jus:</span>
-                            </label>
-                            <span className="font-mono font-bold text-xs bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded-md">
-                              Total: {(parseInt(prodForm.stokMangga) || 0) + (parseInt(prodForm.stokSirsak) || 0) + (parseInt(prodForm.stokJambu) || 0)} Porsi
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2 pt-1">
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-stone-700 truncate flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
-                                <span>Jus Mangga</span>
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={prodForm.stokMangga}
-                                onChange={(e) => setProdForm({ ...prodForm, stokMangga: e.target.value })}
-                                placeholder="20"
-                                className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none"
-                              />
-                            </div>
-
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-stone-700 truncate flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                                <span>Jus Sirsak</span>
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={prodForm.stokSirsak}
-                                onChange={(e) => setProdForm({ ...prodForm, stokSirsak: e.target.value })}
-                                placeholder="15"
-                                className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none"
-                              />
-                            </div>
-
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-stone-700 truncate flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
-                                <span>Jus Jambu</span>
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={prodForm.stokJambu}
-                                onChange={(e) => setProdForm({ ...prodForm, stokJambu: e.target.value })}
-                                placeholder="15"
-                                className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none"
-                              />
-                            </div>
-                          </div>
+                      {/* Multi-Varian: daftar varian dinamis (bisa ditambah / dihapus per varian) */}
+                      <div className="space-y-2 p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl">
+                        <div className="flex items-center justify-between">
+                          <label className="font-label-caps text-amber-950 uppercase text-[11px] font-bold flex items-center gap-1.5">
+                            <GlassWater className="w-3.5 h-3.5 text-amber-800" />
+                            <span>Varian Produk (Opsional):</span>
+                          </label>
+                          <span className="font-mono font-bold text-xs bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded-md">
+                            Total: {prodForm.variants.reduce((sum, v) => sum + (Math.max(0, parseInt(String(v.stock)) || 0)), 0)} Porsi
+                          </span>
                         </div>
-                      )}
+
+                        {prodForm.variants.length === 0 && (
+                          <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                            Belum ada varian. Tambahkan varian (mis. rasa Jus: Mangga / Sirsak / Jambu) agar produk tampil sebagai satu menu dengan pilihan varian — tiap varian punya stok, deskripsi, komposisi &amp; nutrisi sendiri.
+                          </p>
+                        )}
+
+                        {prodForm.variants.map((v, vIdx) => {
+                          const setField = (patch: Partial<VariantFormRow>) =>
+                            setProdForm({ ...prodForm, variants: prodForm.variants.map((x, i) => i === vIdx ? { ...x, ...patch } : x) });
+                          return (
+                            <div key={vIdx} className="p-2.5 bg-white border border-amber-200 rounded-xl space-y-2">
+                              <div className="flex items-center gap-2">
+                                <input type="text" value={v.name} onChange={(e) => setField({ name: e.target.value })} placeholder="Nama varian (mis. Mangga)" className="flex-1 min-w-0 px-2.5 py-1.5 bg-stone-50 border border-stone-300 rounded-lg text-xs font-bold text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none" />
+                                <input type="number" min="0" value={v.stock} onChange={(e) => setField({ stock: e.target.value })} placeholder="Stok" className="w-20 px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-mono font-bold text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none" />
+                                <button type="button" onClick={() => setProdForm({ ...prodForm, variants: prodForm.variants.filter((_, i) => i !== vIdx) })} className="w-7 h-7 flex items-center justify-center rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 cursor-pointer shrink-0" title="Hapus Varian">
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <input type="text" value={v.description} onChange={(e) => setField({ description: e.target.value })} placeholder="Deskripsi varian (tampil di tab Deskripsi user)" className="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-300 rounded-lg text-xs text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none" />
+                              <input type="text" value={v.ingredients} onChange={(e) => setField({ ingredients: e.target.value })} placeholder="Komposisi varian (tampil di tab Komposisi user)" className="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-300 rounded-lg text-xs text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none" />
+                              <div className="grid grid-cols-4 gap-1.5">
+                                <input type="text" value={v.calories} onChange={(e) => setField({ calories: e.target.value })} placeholder="Kalori" className="px-2 py-1.5 bg-white border border-stone-300 rounded-lg text-[11px] font-mono text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none" />
+                                <input type="text" value={v.fat} onChange={(e) => setField({ fat: e.target.value })} placeholder="Lemak" className="px-2 py-1.5 bg-white border border-stone-300 rounded-lg text-[11px] font-mono text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none" />
+                                <input type="text" value={v.sugar} onChange={(e) => setField({ sugar: e.target.value })} placeholder="Gula" className="px-2 py-1.5 bg-white border border-stone-300 rounded-lg text-[11px] font-mono text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none" />
+                                <input type="text" value={v.satFat} onChange={(e) => setField({ satFat: e.target.value })} placeholder="Jenuh" className="px-2 py-1.5 bg-white border border-stone-300 rounded-lg text-[11px] font-mono text-stone-900 focus:ring-1 focus:ring-[#934B19] outline-none" />
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        <button type="button" onClick={() => setProdForm({ ...prodForm, variants: [...prodForm.variants, { name: '', stock: '10', description: '', ingredients: '', calories: '', fat: '', sugar: '', satFat: '' }] })} className="w-full py-2 rounded-xl border border-dashed border-amber-400 text-amber-900 text-xs font-bold hover:bg-amber-100 transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Tambah Varian</span>
+                        </button>
+                      </div>
 
                       {/* Badge Spesial Chips */}
                       <div className="flex flex-col gap-1 mt-1">
@@ -895,6 +955,13 @@ export default function AdminProductsTab({
                             <span>Terpopuler</span>
                           </button>
                         </div>
+                        <input
+                          type="text"
+                          value={prodForm.badge}
+                          onChange={(e) => setProdForm({ ...prodForm, badge: e.target.value })}
+                          placeholder="Atau tulis badge kustom (mis. Favorit, Pedas, Limited, Paket Hemat...)"
+                          className="mt-1.5 w-full px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] outline-none text-xs text-stone-900"
+                        />
                       </div>
 
                       {/* Deskripsi Singkat */}

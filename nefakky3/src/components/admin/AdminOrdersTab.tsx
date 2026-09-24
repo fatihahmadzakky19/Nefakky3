@@ -156,9 +156,11 @@ export default function AdminOrdersTab({
   const totalOrdersCount = sortedOrders.length;
   const pendingOrdersCount = sortedOrders.filter(o => o.status === 'PENDING' || o.status === 'RECEIVED').length;
   const preparingOrdersCount = sortedOrders.filter(o => o.status === 'PREPARING' || o.status === 'COOKING').length;
-  const inDeliveryCount = sortedOrders.filter(o => o.status === 'SHIPPING' || o.status === 'DELIVERING' || o.status === 'ON_DELIVERY' || o.status === 'READY' || o.status === 'DELIVERED').length;
+  // Catatan: jumlah pill "Pengiriman" memakai shippingOrdersCount (sinkron dgn filter list, tanpa READY)
   const completedTodayCount = sortedOrders.filter(o => o.status === 'COMPLETED').length;
   const confirmedOrdersCount = sortedOrders.filter(o => o.customerConfirmed === true).length;
+  // Jumlah pill "Pengiriman" — harus sama persis dengan filter statusnya (tanpa READY) agar count & list konsisten
+  const shippingOrdersCount = sortedOrders.filter(o => ['SHIPPING', 'DELIVERING', 'ON_DELIVERY', 'DELIVERED'].includes(o.status)).length;
 
   // Helper filter rentang waktu menggunakan standardisasi Asia/Jakarta (WIB)
   const isWithinTimeRange = (order: AdminOrder, filter: 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'THIS_YEAR'): boolean => {
@@ -361,7 +363,7 @@ export default function AdminOrdersTab({
               { key: 'PENDING' as const, label: 'Pesanan Masuk', count: pendingOrdersCount },
               { key: 'PREPARING' as const, label: 'Disiapkan / Dimasak', count: preparingOrdersCount },
               { key: 'READY' as const, label: 'Pesanan Siap', count: sortedOrders.filter(o => o.status === 'READY').length },
-              { key: 'SHIPPING' as const, label: 'Pengiriman', count: inDeliveryCount },
+              { key: 'SHIPPING' as const, label: 'Pengiriman', count: shippingOrdersCount },
               { key: 'COMPLETED' as const, label: 'Selesai', count: completedTodayCount },
               { key: 'CANCELLED' as const, label: 'Dibatalkan', count: sortedOrders.filter(o => o.status === 'CANCELLED').length },
             ].map((st) => (
@@ -499,6 +501,15 @@ export default function AdminOrdersTab({
                           </div>
                         );
                       })()}
+                      {order.createdAt && !isCompleted && !isCancelled && Math.floor((Date.now() - order.createdAt) / 60000) > 60 && (
+                        <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 border border-amber-300 text-amber-800 rounded-md text-[10px] font-bold">
+                          <span className="material-symbols-outlined text-[13px]">timer</span>
+                          <span>
+                            Lewat estimasi 60 m ({Math.floor((Date.now() - order.createdAt) / 60000)} m)
+                            {order.lateBonusGranted ? ' — Bonus otomatis diberikan' : ''}
+                          </span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-col items-end gap-1.5">
@@ -551,6 +562,14 @@ export default function AdminOrdersTab({
                   <div className="space-y-1 text-xs mb-3">
                     <div className="font-bold text-on-surface text-xs sm:text-sm">
                       {order.customerName || 'Pelanggan'}
+                    </div>
+                    <div className="text-[11px] text-on-surface-variant flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[13px] text-stone-400">mail</span>
+                      <span className="truncate">{order.customerEmail || '—'}</span>
+                    </div>
+                    <div className="text-[11px] text-on-surface-variant flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[13px] text-stone-400">call</span>
+                      <span>{order.phone || '—'}</span>
                     </div>
                     <div className="text-[11px] text-on-surface-variant line-clamp-2 leading-relaxed">
                       {order.address || 'Alamat Pengiriman'}
