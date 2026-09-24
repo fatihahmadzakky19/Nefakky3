@@ -326,14 +326,9 @@ export default function AdminDashboardTab({
 
     const detailed = getDetailedOrderDateTime(order);
     if (detailed && detailed.dateObj && !isNaN(detailed.dateObj.getTime())) {
-      return MONTH_MAP[detailed.dateObj.getMonth()] || 'Sep';
-    }
-
-    if (order.createdAt) {
-      const d = new Date(order.createdAt);
-      if (!isNaN(d.getTime())) {
-        return MONTH_MAP[d.getMonth()] || 'Sep';
-      }
+      // monthIndex dihitung dari jam WIB — konsisten dengan label bulan liveCalendarInfo
+      // dan agregasi order lain (bug lama: memakai bulan timezone lokal mesin).
+      return MONTH_MAP[detailed.monthIndex] || 'Sep';
     }
     return 'Sep';
   };

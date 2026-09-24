@@ -7,6 +7,8 @@
  * ============================================================================
  */
 
+import { getJakartaDate } from './orderTimeUtils';
+
 export interface RealtimeCalendarInfo {
   timestamp: number;
   dayName: string;         // "Senin", "Selasa", dll.
@@ -84,19 +86,20 @@ export const parseCalendarInfoFromDate = (dateInput?: Date | number | string, so
     d = isNaN(parsed.getTime()) ? new Date() : parsed;
   }
 
-  const dayIndex = d.getDay();
+  const wib = getJakartaDate(d);
+  const dayIndex = wib.getDay();
   const dayName = DAYS[dayIndex];
-  const dateNum = d.getDate();
-  const monthIndex = d.getMonth();
+  const dateNum = wib.getDate();
+  const monthIndex = wib.getMonth();
   const monthNum = monthIndex + 1;
   const monthName = MONTHS[monthIndex];
   const shortMonth = SHORT_MONTHS[monthIndex];
-  const year = d.getFullYear();
+  const year = wib.getFullYear();
 
   const pad = (n: number) => String(n).padStart(2, '0');
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
-  const seconds = pad(d.getSeconds());
+  const hours = pad(wib.getHours());
+  const minutes = pad(wib.getMinutes());
+  const seconds = pad(wib.getSeconds());
 
   const timeStr = `${hours}:${minutes}:${seconds} WIB`;
   const shortTimeStr = `${hours}:${minutes} WIB`;

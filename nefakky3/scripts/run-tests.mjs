@@ -177,6 +177,17 @@ runTest('8. Distance Shipping Engine', 'Distance shipping calculation logic (<=1
   }
 });
 
+// 9. SUITE: Order Timezone & Filter "Hari Ini" Integrity (regresi bug Pemesanan)
+runTest('9. Order Timezone Integrity', 'Tanggal pesanan konsisten WIB & tab "Hari Ini" benar (orderTimeUtils)', () => {
+  try {
+    execSync('node scripts/test-order-time.mjs', { cwd: rootDir, stdio: 'pipe' });
+  } catch (err) {
+    throw new Error(
+      `Order timezone regression failed:\n${err.stdout?.toString() || ''}${err.stderr?.toString() || err.message}`
+    );
+  }
+});
+
 // Calculate statistics
 const totalMs = Date.now() - startTime;
 const totalTests = results.length;

@@ -1,6 +1,13 @@
 /**
  * Utility helper untuk mendeteksi dan memformat Waktu, Jam, Hari, Tanggal, Bulan, dan Tahun
  * secara presisi & realtime untuk setiap transaksi toko & pesanan online.
+ *
+ * STANDAR WAKTU TUNGgal: seluruh field tanggal/jam yang dihasilkan util ini diturunkan
+ * dari jam Asia/Jakarta (WIB) agar KONSISTEN dengan label "WIB" di UI, string `order.date`,
+ * dan seluruh filter rentang waktu (Hari Ini / Minggu / Bulan / Tahun) — terlepas dari
+ * timezone mesin/browser. (Bug lama: tanggal kartu admin dihitung dengan timezone lokal
+ * mesin sementara filter memakai WIB, sehingga tanggal bisa beda hingga 1 hari dan
+ * pesanan baru tidak muncul di tab "Hari Ini".)
  */
 
 export interface DetailedOrderDateTime {
@@ -12,9 +19,15 @@ export interface DetailedOrderDateTime {
   monthName: string;     // Contoh: "Agustus"
   year: number;          // Contoh: 2026
   dateNum: number;       // Contoh: 24
+  monthIndex: number;    // 0-11 (indeks bulan WIB, untuk agregasi bulanan dashboard)
   combinedLabel: string; // Contoh: "Senin, 24 Agu 2026 • 14:30 WIB"
   fullReceiptLabel: string; // Contoh: "Senin, 24 Agustus 2026 14:30:25 WIB"
   isToday: boolean;
+  /**
+   * Instant epoch SEJATI (bukan wall-clock hasil konversi timezone).
+   * Aman untuk di-sort (getTime()) dan aman dilewatkan ke getJakartaDate()
+   * pada filter rentang waktu tanpa konversi ganda.
+   */
   dateObj: Date;
 }
 
@@ -25,8 +38,29 @@ const MONTH_NAMES = [
 ];
 const SHORT_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
+/** Offset WIB (Asia/Jakarta) dari UTC dalam ms — WIB tidak memakai DST (UTC+7 tetap). */
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+/**
+ * Mengubah komponen kalender (yang diasumsikan jam dinding WIB) menjadi instant epoch
+ * sejati: Date.UTC(komponen) - 7 jam.
+ * Bug lama: komponen WIB dibangun dengan `new Date(y,m,d,...)` (timezone lokal mesin),
+ * lalu isOrderToday() mengonversinya SEKALI LAGI ke WIB → bergeser +offset timezone
+ * (di mesin GMT-7 = +14 jam) sehingga pesanan jatuh ke hari berikutnya dan hilang
+ * dari tab "Hari Ini".
+ */
+const wibWallClockToInstant = (
+  year: number, monthIndex: number, day: number,
+  hour: number, minute: number, second: number
+): Date => {
+  const ms = Date.UTC(year, monthIndex, day, hour, minute, second) - WIB_OFFSET_MS;
+  const d = new Date(ms);
+  return isNaN(d.getTime()) ? new Date() : d;
+};
+
 /**
  * Parser string tanggal bahasa Indonesia (misal: "Senin, 24 Agu 2026 • 12:45:00 WIB" atau "11 September 2026")
+ * Komponen hasil parse DIARTIKAN sebagai jam dinding WIB dan dikembalikan sebagai instant epoch sejati.
  */
 export const parseIndonesianDateStringToDate = (str?: string): Date | null => {
   if (!str || typeof str !== 'string') return null;
@@ -46,7 +80,14 @@ export const parseIndonesianDateStringToDate = (str?: string): Date | null => {
     des: 11, desember: 11, dec: 11, december: 11
   };
 
-  // 1. Check format ISO YYYY-MM-DD
+  // 0. ISO dengan offset zona eksplisit (contoh: "2026-09-23T18:00:00Z" / "+07:00")
+  //    Serahkan ke parser native agar offset aslinya dihormati (bukan diartikan sebagai WIB).
+  if (/T\d{1,2}:\d{2}/.test(str) && /(Z|[+-]\d{2}:?\d{2})\s*$/.test(str)) {
+    const native = new Date(str);
+    if (!isNaN(native.getTime())) return native;
+  }
+
+  // 1. Check format ISO YYYY-MM-DD (tanpa offset → dianggap jam dinding WIB)
   const isoMatch = str.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (isoMatch) {
     const y = parseInt(isoMatch[1], 10);
@@ -56,7 +97,7 @@ export const parseIndonesianDateStringToDate = (str?: string): Date | null => {
     const hr = timeMatch ? parseInt(timeMatch[1], 10) : 12;
     const min = timeMatch ? parseInt(timeMatch[2], 10) : 0;
     const sec = timeMatch && timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
-    return new Date(y, m, d, hr, min, sec);
+    return wibWallClockToInstant(y, m, d, hr % 24, min, sec);
   }
 
   // 2. Check format Indonesia: misal "24 Agu 2026" atau "11 September 2026"
@@ -71,7 +112,7 @@ export const parseIndonesianDateStringToDate = (str?: string): Date | null => {
       const hr = timeMatch ? parseInt(timeMatch[1], 10) : 12;
       const min = timeMatch ? parseInt(timeMatch[2], 10) : 0;
       const sec = timeMatch && timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
-      return new Date(y, m, d, hr, min, sec);
+      return wibWallClockToInstant(y, m, d, hr % 24, min, sec);
     }
   }
 
@@ -79,66 +120,88 @@ export const parseIndonesianDateStringToDate = (str?: string): Date | null => {
 };
 
 /**
- * Mengonversi order apa pun (berdasarkan createdAt timestamp atau string tanggal)
- * menjadi objek tanggal terperinci yang memuat Hari, Tanggal, Bulan, Tahun, Jam & Detik.
+ * Mengambil instant epoch sejati dari berbagai bentuk data waktu pesanan:
+ * - `createdAt` milidetik (number) atau detik (number kecil)
+ * - `createdAt` Firestore Timestamp-like ({seconds, nanoseconds} atau {toDate()})
+ * - `createdAt` string ISO
+ * - string `order.date` berformat Indonesia/WIB (wall-clock WIB → instant)
+ * - fallback: `updatedAt`, lalu waktu SEKARANG.
+ * Bug lama: jika kedua sumber hilang, tanggal order DIPALSUKAN acak 1-24 hari ke
+ * belakang, sehingga pesanan baru salah tanggal dan tidak pernah masuk "Hari Ini".
  */
-export const getDetailedOrderDateTime = (order: any, fallbackIdx: number = 0): DetailedOrderDateTime => {
-  let d: Date | null = null;
+const resolveOrderInstant = (order: any): Date => {
+  const ca = order?.createdAt;
 
-  // 1. Cek dari order.createdAt (Timestamp epoch number)
-  if (order?.createdAt && typeof order.createdAt === 'number' && order.createdAt > 0) {
-    const parsed = new Date(order.createdAt);
-    if (!isNaN(parsed.getTime())) {
-      d = parsed;
-    }
+  // 1. number: milidetik (epoch > 1e12) atau detik (epoch < 1e12)
+  if (typeof ca === 'number' && ca > 0) {
+    const ms = ca < 1e12 ? ca * 1000 : ca;
+    const parsed = new Date(ms);
+    if (!isNaN(parsed.getTime())) return parsed;
   }
 
-  // 2. Cek jika order.date adalah format string tanggal
-  if (!d && order?.date && typeof order.date === 'string') {
-    const parsed = parseIndonesianDateStringToDate(order.date);
-    if (parsed && !isNaN(parsed.getTime())) {
-      d = parsed;
+  // 2. Firestore Timestamp-like: {seconds, nanoseconds} atau {toDate()}
+  if (ca && typeof ca === 'object') {
+    if (typeof (ca as any).seconds === 'number') {
+      const ms = (ca as any).seconds * 1000 + Math.floor(((ca as any).nanoseconds || 0) / 1e6);
+      const parsed = new Date(ms);
+      if (!isNaN(parsed.getTime())) return parsed;
     }
-  }
-
-  // 3. Fallback cerdas: Distribusikan transaksi terdahulu ke tanggal-tanggal yang berbeda & realistis
-  if (!d) {
-    const baseNow = new Date();
-    let hour = 12;
-    let minute = 30;
-    let second = (fallbackIdx * 19) % 60;
-
-    if (order?.date && typeof order.date === 'string') {
-      const timeMatch = order.date.match(/(\d{1,2})[:.](\d{2})/);
-      if (timeMatch) {
-        hour = parseInt(timeMatch[1], 10) % 24;
-        minute = parseInt(timeMatch[2], 10) % 60;
+    if (typeof (ca as any).toDate === 'function') {
+      try {
+        const td = (ca as any).toDate();
+        const t = td instanceof Date ? td.getTime() : NaN;
+        if (!isNaN(t) && t > 0) return new Date(t);
+      } catch (e) {
+        // Abaikan, lanjut ke sumber berikutnya
       }
     }
-
-    // Variasi hari lampau berdasarkan ID atau fallbackIdx agar tidak di hari yang sama
-    let offsetDays = 0;
-    if (order?.id) {
-      const numPart = parseInt(String(order.id).replace(/\D/g, ''), 10) || fallbackIdx;
-      offsetDays = (numPart % 24) + 1; // 1 s/d 24 hari lalu di bulan Agustus
-    } else {
-      offsetDays = fallbackIdx * 2 + 1;
-    }
-
-    d = new Date(baseNow.getTime() - offsetDays * 24 * 60 * 60 * 1000);
-    d.setHours(hour, minute, second);
   }
 
-  const now = new Date();
-  const isToday = 
-    d.getDate() === now.getDate() && 
-    d.getMonth() === now.getMonth() && 
-    d.getFullYear() === now.getFullYear();
+  // 3. string ISO
+  if (typeof ca === 'string' && ca) {
+    const parsed = new Date(ca);
+    if (!isNaN(parsed.getTime()) && parsed.getTime() > 0) return parsed;
+  }
+
+  // 4. Parse string `order.date` (wall-clock WIB → instant)
+  if (order?.date && typeof order.date === 'string') {
+    const parsed = parseIndonesianDateStringToDate(order.date);
+    if (parsed && !isNaN(parsed.getTime())) return parsed;
+  }
+
+  // 5. `updatedAt` sebagai perkiraan terbaik berikutnya
+  if (typeof order?.updatedAt === 'number' && order.updatedAt > 0) {
+    return new Date(order.updatedAt);
+  }
+
+  // 6. Waktu sekarang — pesanan tanpa stempel waktu dianggap baru (bukan tanggal lampau).
+  return new Date();
+};
+
+/**
+ * Mengonversi order apa pun (berdasarkan createdAt timestamp atau string tanggal)
+ * menjadi objek tanggal terperinci yang memuat Hari, Tanggal, Bulan, Tahun, Jam & Detik.
+ * SELURUH field diturunkan dari jam Asia/Jakarta (WIB).
+ */
+export const getDetailedOrderDateTime = (order: any, fallbackIdx: number = 0): DetailedOrderDateTime => {
+  // Instant epoch sejati untuk order ini (lihat resolveOrderInstant)
+  const instant = resolveOrderInstant(order);
+
+  // Representasi dinding WIB: field lokal Date ini SELALU berisi komponen WIB,
+  // sehingga label "WIB" pada UI akurat di timezone mesin mana pun.
+  const d = getJakartaDate(instant);
+  const nowWib = getJakartaDate(new Date());
+
+  const isToday =
+    d.getDate() === nowWib.getDate() &&
+    d.getMonth() === nowWib.getMonth() &&
+    d.getFullYear() === nowWib.getFullYear();
 
   const dayName = DAYS_OF_WEEK[d.getDay()];
   const dateNum = d.getDate();
-  const monthName = MONTH_NAMES[d.getMonth()];
-  const shortMonth = SHORT_MONTH_NAMES[d.getMonth()];
+  const monthIndex = d.getMonth();
+  const monthName = MONTH_NAMES[monthIndex];
+  const shortMonth = SHORT_MONTH_NAMES[monthIndex];
   const year = d.getFullYear();
   const hours = String(d.getHours()).padStart(2, '0');
   const minutes = String(d.getMinutes()).padStart(2, '0');
@@ -160,10 +223,11 @@ export const getDetailedOrderDateTime = (order: any, fallbackIdx: number = 0): D
     monthName,
     year,
     dateNum,
+    monthIndex,
     combinedLabel,
     fullReceiptLabel,
     isToday,
-    dateObj: d
+    dateObj: instant
   };
 };
 
