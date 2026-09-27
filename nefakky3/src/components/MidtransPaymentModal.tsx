@@ -37,6 +37,7 @@ interface MidtransPaymentModalProps {
   midtransTx: MidtransTxData | null;
   midtransStatus: 'idle' | 'loading' | 'pending' | 'checking' | 'paid' | 'failed';
   onCheckStatus: () => void;
+  onSimulateSuccess?: () => void;
   finalPayableTotal: number;
 }
 
@@ -46,6 +47,7 @@ export default function MidtransPaymentModal({
   midtransTx,
   midtransStatus,
   onCheckStatus,
+  onSimulateSuccess,
   finalPayableTotal
 }: MidtransPaymentModalProps) {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
@@ -566,6 +568,20 @@ export default function MidtransPaymentModal({
               <span>{midtransStatus === 'checking' ? 'Mengecek...' : 'Cek Status'}</span>
             </button>
           </div>
+
+          {/* SIMULASI INSTAN UNTUK PENGUJIAN UKK */}
+          {onSimulateSuccess && (
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={onSimulateSuccess}
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                <span>Konfirmasi Pembayaran Selesai (Simulasi Uji UKK)</span>
+              </button>
+            </div>
+          )}
 
           {/* ----------------------------------------------------------------------- */}
           {/* 5. FOOTER CANCEL / SWITCH PAYMENT BUTTON */}

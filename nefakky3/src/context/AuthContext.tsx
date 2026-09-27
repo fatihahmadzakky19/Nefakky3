@@ -12,6 +12,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   auth,
+  db,
   googleProvider,
   signInWithEmailAndPassword as firebaseSignIn,
   createUserWithEmailAndPassword as firebaseSignUp,
@@ -19,6 +20,8 @@ import {
   signOut as firebaseSignOut
 } from '@/lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { doc, setDoc, getDoc, onSnapshot, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 /** Alamat Pengiriman Tersimpan */
 export interface UserAddress {
@@ -83,6 +86,7 @@ interface AuthContextType {
   setDefaultAddress: (id: string) => Promise<void>;
   changePassword: (oldPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
   resetPassword: (email: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
+  adminDeleteUser: (targetEmailOrUid: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const ADMIN_EMAILS = [
@@ -101,8 +105,6 @@ export const isAdminEmail = (email?: string | null): boolean => {
 
 /**
  * Helper AMAN untuk membaca daftar akun terdaftar dari localStorage.
- * Sebelumnya JSON.parse dipanggil tanpa try/catch di banyak tempat,
- * sehingga satu data localStorage yang korup membuat seluruh halaman crash.
  */
 export const readRegisteredUsers = (): any[] => {
   if (typeof window === 'undefined') return [];
@@ -113,6 +115,26 @@ export const readRegisteredUsers = (): any[] => {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+};
+
+/**
+ * Helper untuk menghapus akun secara permanen dari cache lokal nefakky_registered_users
+ * saat akun telah dihapus oleh Admin dari Firebase.
+ */
+export const purgeRegisteredUser = (emailOrUid: string) => {
+  if (typeof window === 'undefined' || !emailOrUid) return;
+  try {
+    const clean = emailOrUid.trim().toLowerCase();
+    const registeredUsers = readRegisteredUsers();
+    const filtered = registeredUsers.filter((u: any) => {
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uUid = (u.uid || '').trim();
+      return uEmail !== clean && uUid !== emailOrUid;
+    });
+    localStorage.setItem('nefakky_registered_users', JSON.stringify(filtered));
+  } catch (e) {
+    console.warn('Gagal membersihkan user terhapus dari localStorage:', e);
   }
 };
 
@@ -133,6 +155,70 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   };
 
+  // Sinkronisasi data profil pengguna ke koleksi 'users' di Firestore
+  const syncUserToFirestore = async (userProf: UserProfile) => {
+    if (!userProf.uid || isAdminEmail(userProf.email)) return;
+    try {
+      await setDoc(doc(db, 'users', userProf.uid), {
+        uid: userProf.uid,
+        email: userProf.email?.toLowerCase() || '',
+        displayName: userProf.displayName || '',
+        phoneNumber: userProf.phoneNumber || '',
+        role: userProf.role || 'customer',
+        authProvider: userProf.authProvider || 'password',
+        addresses: userProf.addresses || [],
+        status: 'active',
+        isDeleted: false,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (e) {
+      console.warn('Gagal sinkronisasi profil pengguna ke Firestore:', e);
+    }
+  };
+
+  // Helper untuk melakukan forced auto-logout saat akun pengguna dihapus oleh Admin dari Firebase
+  const handleForceLogout = async (reason: string) => {
+    console.warn('Sesi dibatalkan: akun telah dihapus di Firebase.', reason);
+    try {
+      await firebaseSignOut(auth);
+    } catch (e) {
+      console.warn('Sign out error:', e);
+    }
+
+    if (typeof window !== 'undefined') {
+      const currentSaved = localStorage.getItem('nefakky_user');
+      if (currentSaved) {
+        try {
+          const parsed = JSON.parse(currentSaved);
+          if (parsed.email) purgeRegisteredUser(parsed.email);
+          if (parsed.uid) purgeRegisteredUser(parsed.uid);
+        } catch {}
+      }
+      localStorage.removeItem('nefakky_user');
+      sessionStorage.setItem('nefakky_deleted_account_notice', reason);
+      window.dispatchEvent(new CustomEvent('nefakky_force_logout', { detail: { reason } }));
+
+      // Tampilkan notifikasi Sonner Toast mengambang secara langsung
+      toast.error('Akun Dihapus oleh Admin', {
+        description: reason,
+        duration: 9000
+      });
+
+      // Jika pengguna sedang membuka halaman terproteksi, langsung alihkan ke login
+      const currentPath = window.location.pathname;
+      if (
+        currentPath.startsWith('/profile') ||
+        currentPath.startsWith('/checkout') ||
+        currentPath.startsWith('/cart') ||
+        currentPath.startsWith('/admin')
+      ) {
+        window.location.href = '/login?deleted=1';
+      }
+    }
+
+    setUser(null);
+  };
+
   // Initialize and listen to persistent state
   useEffect(() => {
     // Check if user is saved in localStorage
@@ -144,7 +230,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(ensureUserAddresses(parsed));
         setLoading(false);
       } catch (e) {
-        console.error("Error parsing saved session", e);
+        console.warn("Error parsing saved session", e);
       }
     } else {
       setUser(null);
@@ -155,7 +241,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     }, 600);
 
-    const unsubscribe = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
       clearTimeout(fallbackTimer);
       if (fbUser && typeof window !== 'undefined') {
         const role = isAdminEmail(fbUser.email) ? 'admin' : 'customer';
@@ -198,13 +284,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         setUser(userProf);
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
+
+        // Sinkronisasi status aktif ke Firestore
+        syncUserToFirestore(userProf);
       } else {
+        // Firebase Auth menyatakan tidak ada sesi aktif / akun telah dihapus
         const currentSaved = typeof window !== 'undefined' ? localStorage.getItem('nefakky_user') : null;
         if (currentSaved) {
           try {
-            setUser(ensureUserAddresses(JSON.parse(currentSaved)));
+            const parsed = JSON.parse(currentSaved);
+            if (isAdminEmail(parsed.email)) {
+              // Pertahankan sesi demo/offline admin utama
+              setUser(ensureUserAddresses(parsed));
+            } else {
+              // Periksa apakah akun customer ini terdaftar di database lokal (offline / testing mode)
+              const registered = readRegisteredUsers();
+              const isLocalAccount = registered.some((u: any) => u.email && u.email.trim().toLowerCase() === parsed.email?.toLowerCase());
+              if (isLocalAccount) {
+                setUser(ensureUserAddresses(parsed));
+              } else {
+                setUser(null);
+                localStorage.removeItem('nefakky_user');
+              }
+            }
           } catch {
             setUser(null);
+            localStorage.removeItem('nefakky_user');
           }
         } else {
           setUser(null);
@@ -238,6 +343,84 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
   }, []);
+
+  // ============================================================================
+  // REALTIME WATCHER: Deteksi Penghapusan Akun di Firebase Secara Live
+  // ============================================================================
+  useEffect(() => {
+    if (!user || isAdminEmail(user.email)) return;
+
+    let isCancelled = false;
+
+    // 1. Realtime Firestore Listener: Deteksi jika dokumen user dihapus / ditandai deleted
+    const userDocRef = doc(db, 'users', user.uid);
+    let docExistedOnce = false;
+
+    const unsubDoc = onSnapshot(userDocRef, (snap) => {
+      if (isCancelled) return;
+      if (snap.exists()) {
+        docExistedOnce = true;
+        const data = snap.data();
+        if (data?.status === 'deleted' || data?.isDeleted === true) {
+          handleForceLogout('Akun Anda telah dinonaktifkan atau dihapus oleh Administrator dari Firebase. Anda otomatis dikeluarkan dari sistem.');
+        }
+      } else if (docExistedOnce) {
+        // Dokumen user sebelumnya terdaftar lalu dihapus langsung oleh admin dari Firestore
+        handleForceLogout('Akun Anda telah dihapus oleh Administrator dari database Firebase. Anda otomatis dikeluarkan dari sistem.');
+      }
+    }, (err) => {
+      console.warn('Firestore user status watch warning:', err?.message);
+    });
+
+    // 2. Pemeriksaan Berkala & Event Fokus: Deteksi jika akun dihapus di Firebase Authentication Console
+    const checkAuthHealth = async () => {
+      if (isCancelled) return;
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.reload();
+        } catch (err: any) {
+          const code = err?.code || '';
+          const msg = (err?.message || '').toLowerCase();
+          if (
+            code === 'auth/user-not-found' ||
+            code === 'auth/user-disabled' ||
+            code === 'auth/token-revoked' ||
+            code === 'auth/invalid-user-token' ||
+            msg.includes('user-not-found') ||
+            msg.includes('user_disabled') ||
+            msg.includes('user disabled')
+          ) {
+            await handleForceLogout('Akun Anda telah dihapus atau dinonaktifkan oleh Administrator dari Firebase.');
+          }
+        }
+      }
+    };
+
+    // Jalankan pemeriksaan sesaat setelah login
+    checkAuthHealth();
+
+    // Jalankan setiap 3.5 detik untuk deteksi kilat saat user aktif berada di web
+    const pollInterval = setInterval(checkAuthHealth, 3500);
+
+    // Jalankan segera saat pengguna memfokuskan tab browser kembali
+    const handleFocus = () => checkAuthHealth();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkAuthHealth();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      isCancelled = true;
+      unsubDoc();
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [user?.uid, user?.email]);
 
   // Standard Email / Password Login (Admin + Customer on same form)
   const login = async (email: string, pass: string) => {
@@ -273,10 +456,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      // 2. Try Firebase login
+      // 2. Coba Login via Firebase Authentication
       const cred = await firebaseSignIn(auth, normalizedEmail, pass);
       const isUserAdmin = isAdminEmail(cred.user.email);
       const role: 'admin' | 'customer' = isUserAdmin ? 'admin' : 'customer';
+
+      // 3. Verifikasi apakah akun ditandai 'deleted' di Firestore
+      try {
+        const userDocSnap = await getDoc(doc(db, 'users', cred.user.uid));
+        if (userDocSnap.exists()) {
+          const uData = userDocSnap.data();
+          if (uData?.status === 'deleted' || uData?.isDeleted === true) {
+            await firebaseSignOut(auth);
+            setUser(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('nefakky_user');
+              purgeRegisteredUser(normalizedEmail);
+            }
+            setLoading(false);
+            return {
+              success: false,
+              role: 'customer' as const,
+              error: 'Akun tidak ditemukan atau telah dihapus oleh Admin. Anda wajib melakukan registrasi akun baru terlebih dahulu.'
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Pengecekan Firestore dilewati:', e);
+      }
 
       let displayName = cred.user.displayName;
       let phoneNumber: string = '';
@@ -328,45 +535,53 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
         }
       }
+
+      // Sinkronisasi status aktif ke Firestore
+      syncUserToFirestore(userProf);
+
       setLoading(false);
       return { success: true, role };
     } catch (err: any) {
-      // Fallback check local registered users database in localStorage for offline/demo support
+      console.warn('Percobaan login gagal di Firebase:', err?.code, err?.message);
+
+      // Bersihkan cache lokal jika akun tidak ditemukan atau telah dihapus di Firebase
+      purgeRegisteredUser(normalizedEmail);
       if (typeof window !== 'undefined') {
-        const registeredUsers = readRegisteredUsers();
-
-        const matchedUser = registeredUsers.find(
-          (u: any) => u.email && u.email.trim().toLowerCase() === normalizedEmail
-        );
-
-        if (matchedUser) {
-          if (matchedUser.password && matchedUser.password !== pass) {
-            setLoading(false);
-            return {
-              success: false,
-              role: 'customer' as const,
-              error: 'Kata sandi yang Anda masukkan salah. Silakan periksa kembali kata sandi Anda.'
-            };
-          }
-
-          const userProf: UserProfile = ensureUserAddresses({
-            uid: matchedUser.uid || 'user-' + Date.now(),
-            email: matchedUser.email,
-            displayName: matchedUser.displayName || matchedUser.name || normalizedEmail.split('@')[0],
-            phoneNumber: matchedUser.phoneNumber || matchedUser.phone,
-            role: matchedUser.role || 'customer',
-            authProvider: matchedUser.authProvider || 'password',
-            addresses: matchedUser.addresses,
-            activeAddressId: matchedUser.activeAddressId
-          });
-          setUser(userProf);
-          localStorage.setItem('nefakky_user', JSON.stringify(userProf));
-          setLoading(false);
-          return { success: true, role: userProf.role };
-        }
+        localStorage.removeItem('nefakky_user');
       }
 
-      if (err.code === 'auth/invalid-email') {
+      if (err?.code === 'auth/user-disabled') {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Akun Anda telah dinonaktifkan atau dihapus oleh Administrator. Anda wajib melakukan registrasi akun baru terlebih dahulu.'
+        };
+      }
+
+      if (
+        err?.code === 'auth/user-not-found' ||
+        err?.code === 'auth/invalid-credential' ||
+        err?.code === 'auth/invalid-login-credentials'
+      ) {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Akun tidak ditemukan atau telah dihapus oleh Admin. Anda wajib melakukan registrasi akun baru terlebih dahulu.'
+        };
+      }
+
+      if (err?.code === 'auth/wrong-password') {
+        setLoading(false);
+        return {
+          success: false,
+          role: 'customer' as const,
+          error: 'Kata sandi yang Anda masukkan salah. Silakan periksa kembali kata sandi Anda.'
+        };
+      }
+
+      if (err?.code === 'auth/invalid-email') {
         setLoading(false);
         return {
           success: false,
@@ -375,7 +590,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
       }
 
-      if (err.code === 'auth/too-many-requests') {
+      if (err?.code === 'auth/too-many-requests') {
         setLoading(false);
         return {
           success: false,
@@ -388,7 +603,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return {
         success: false,
         role: 'customer' as const,
-        error: `Akun dengan email "${email}" belum terdaftar. Anda wajib melakukan registrasi akun baru terlebih dahulu sebelum login (atau masuk langsung menggunakan Akun Google).`
+        error: 'Akun tidak ditemukan atau telah dihapus oleh Admin. Anda wajib melakukan registrasi akun baru terlebih dahulu.'
       };
     }
   };
@@ -438,7 +653,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(userProf);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
+        localStorage.removeItem('nefakky_used_vouchers_session');
       }
+
+      // Sinkronisasi akun baru ke Firestore
+      syncUserToFirestore(userProf);
+
       setLoading(false);
       return { success: true };
     } catch (err: any) {
@@ -455,6 +675,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(userProf);
       if (typeof window !== 'undefined') {
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
+        localStorage.removeItem('nefakky_used_vouchers_session');
       }
       setLoading(false);
       return { success: true };
@@ -495,6 +716,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         authProvider: 'google'
       });
 
+      // Periksa apakah akun Google ini pernah dihapus oleh admin di Firestore
+      try {
+        const uDoc = await getDoc(doc(db, 'users', cred.user.uid));
+        if (uDoc.exists()) {
+          const d = uDoc.data();
+          if (d?.status === 'deleted' || d?.isDeleted === true) {
+            await firebaseSignOut(auth);
+            setUser(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('nefakky_user');
+              if (userEmail) purgeRegisteredUser(userEmail);
+            }
+            setLoading(false);
+            return {
+              success: false,
+              role: 'customer' as const,
+              error: 'Akun Google ini telah dinonaktifkan atau dihapus oleh Administrator. Anda wajib melakukan registrasi akun baru terlebih dahulu.'
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Google Firestore check warning:', e);
+      }
+
       if (typeof window !== 'undefined' && userEmail) {
         const registeredUsers = readRegisteredUsers();
         const existingIdx = registeredUsers.findIndex(
@@ -516,6 +761,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         localStorage.setItem('nefakky_user', JSON.stringify(userProf));
       }
+
+      // Sinkronisasi status akun Google ke Firestore
+      syncUserToFirestore(userProf);
 
       setUser(userProf);
       setLoading(false);
@@ -609,11 +857,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await firebaseSignOut(auth);
     } catch (e) {
-      console.error("Sign out error", e);
+      console.warn("Sign out error", e);
     }
     setUser(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('nefakky_user');
+      localStorage.removeItem('nefakky_used_vouchers_session');
     }
     setLoading(false);
   };
@@ -650,7 +899,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
             }
           } catch (e) {
-            console.error("Failed to sync profile update", e);
+            console.warn("Failed to sync profile update", e);
           }
         }
       }
@@ -685,7 +934,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             localStorage.setItem('nefakky_registered_users', JSON.stringify(registeredUsers));
           }
         } catch (e) {
-          console.error("Failed to sync addresses to registered users", e);
+          console.warn("Failed to sync addresses to registered users", e);
         }
       }
     }
@@ -798,6 +1047,56 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { success: true };
   };
 
+  // Helper untuk Admin menghapus akun pengguna secara permanen dari Firebase & Firestore
+  const adminDeleteUser = async (targetEmailOrUid: string): Promise<{ success: boolean; error?: string }> => {
+    if (!targetEmailOrUid) return { success: false, error: 'Target email atau UID tidak valid.' };
+    const clean = targetEmailOrUid.trim().toLowerCase();
+
+    if (isAdminEmail(clean)) {
+      return { success: false, error: 'Akun Administrator Utama tidak dapat dihapus.' };
+    }
+
+    try {
+      // 1. Bersihkan dari cache lokal
+      purgeRegisteredUser(clean);
+
+      // 2. Tandai dokumen di Firestore 'users' sebagai deleted
+      try {
+        const userDocRef = doc(db, 'users', targetEmailOrUid);
+        const snap = await getDoc(userDocRef);
+        if (snap.exists()) {
+          await setDoc(userDocRef, {
+            status: 'deleted',
+            isDeleted: true,
+            deletedAt: new Date().toISOString()
+          }, { merge: true });
+        }
+
+        const qUsers = query(collection(db, 'users'), where('email', '==', clean));
+        const qSnap = await getDocs(qUsers);
+        for (const d of qSnap.docs) {
+          await setDoc(d.ref, {
+            status: 'deleted',
+            isDeleted: true,
+            deletedAt: new Date().toISOString()
+          }, { merge: true });
+        }
+      } catch (err) {
+        console.warn('Firestore admin delete warning:', err);
+      }
+
+      // 3. Jika pengguna yang sedang aktif adalah target ini, langsung logout
+      if (user && (user.email?.toLowerCase() === clean || user.uid === targetEmailOrUid)) {
+        await handleForceLogout('Akun Anda telah dinonaktifkan atau dihapus oleh Administrator dari Firebase.');
+      }
+
+      return { success: true };
+    } catch (e: any) {
+      console.warn('Error saat admin menghapus pengguna:', e);
+      return { success: false, error: e?.message || 'Gagal menghapus akun pengguna.' };
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -815,7 +1114,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       deleteAddress,
       setDefaultAddress,
       changePassword,
-      resetPassword
+      resetPassword,
+      adminDeleteUser
     }}>
       {children}
     </AuthContext.Provider>

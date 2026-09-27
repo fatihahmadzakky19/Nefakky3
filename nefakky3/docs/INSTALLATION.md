@@ -1,7 +1,7 @@
 # Panduan Instalasi & Setup Lingkungan (INSTALLATION.md) — Nefakky Marketplace
 
 **Target Platform**: Windows 10/11, macOS, Linux (Ubuntu/Debian)  
-**Versi Sistem**: Nefakky v4.5.0 (Next.js 14 Frontend + Laravel 12 Backend + Reverb WebSocket)  
+**Versi Sistem**: Nefakky v4.8.0 (Next.js 14 Frontend + Server Stores + Laravel 12 Backend + Reverb WebSocket)  
 **Penulis**: Tim Pengembang Nefakky (Fatih Ahmad Zakky)  
 
 ---
@@ -62,6 +62,10 @@ NEXT_PUBLIC_MAP_PROVIDER=openstreetmap
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 ```
 
+> [!NOTE]
+> **Zero-Configuration Persistence (Penyimpanan Berkas Otomatis)**:  
+> Platform dilengkapi sistem Server Store otomatis berbasis JSON (`.orders_store.json` untuk pesanan dan `.chat_store.json` untuk chat obrolan). Berkas ini akan diinisialisasi secara otomatis saat aplikasi pertama kali dijalankan, sehingga Anda tidak perlu mengonfigurasi database eksternal untuk mulai menggunakan fitur Kitchen Desk dan CS Chat secara penuh.
+
 ### 2.4 Eksekusi Generator 33 Ikon Kustom (Anti-AI-Slop Engine)
 Pastikan 33 ikon kustom telah ter-generate ke dalam `src/components/icons/CustomIcons.tsx`:
 ```bash
@@ -86,7 +90,14 @@ npx tsc --noEmit
 ```
 *Hasil harus bersih (Exit code 0).*
 
-### 2.6 Jalankan Server Frontend Mode Pengembangan
+### 2.6 Eksekusi Rangkaian Uji Otomatis (Automated Test Suite)
+Jalankan pengujian menyeluruh terhadap seluruh 11 subsistem inti:
+```bash
+npm test
+```
+*Output yang diharapkan: `Status Pengujian: PASSED (11/11 tests passed)`.*
+
+### 2.7 Jalankan Server Frontend Mode Pengembangan
 ```bash
 npm run dev
 ```

@@ -144,3 +144,99 @@ Platform Nefakky terhubung ke WebSocket server untuk menyebarkan pembaruan data 
 
 ### 3.3 Kanal Publik `products`
 * **Event `ProductStockChanged`**: Memberitahu seluruh katalog secara langsung ketika menu hidangan berubah menjadi *Sold-Out*.
+
+---
+
+## 4. Next.js Integrated Server API Routes (Zero-Latency Realtime Bridge)
+
+Selain backend eksternal, aplikasi web Nefakky dilengkapi dengan Next.js Server Route Handlers terintegrasi yang menjamin persistensi server lokal dan sinkronisasi lintas-jendela (termasuk mode Penyamaran / Incognito, multi-device, dan browser berbeda) secara realtime tanpa ketergantungan aturan keamanan klien Firebase atau server Laravel Reverb yang sedang offline.
+
+### 4.1 Endpoint Pesanan Terpusat: `/api/orders`
+* **File Rute**: `src/app/api/orders/route.ts`
+* **Penyimpanan Berkas**: `.orders_store.json` (root proyek) dengan In-Memory Caching berkinerja tinggi.
+* **Header Respons**: `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate`
+
+#### A. Mengambil Daftar Seluruh Pesanan (GET)
+* **Method**: `GET /api/orders`
+* **Akses**: Publik / Admin
+* **Format Respons**:
+```json
+{
+  "success": true,
+  "orders": [
+    {
+      "id": "NFK-890783",
+      "customerName": "anonim1",
+      "customerEmail": "anonim1@gmail.com",
+      "userId": "KlOg1Aep9TbKmHy9YatgW3C5thm1",
+      "avatar": "https://ui-avatars.com/api/?name=anonim1",
+      "address": "Susukan, Bojong Gede, Bogor, Jawa Barat, 16929",
+      "phone": "0856838642",
+      "items": [
+        { "id": "m1", "name": "Ayam Bakar", "price": 35000, "quantity": 1, "image": "/images/ayam_bakar.jpg" },
+        { "id": "m2", "name": "Nasi Bakar", "price": 10000, "quantity": 1, "image": "/images/nasi_bakar.jpg" },
+        { "id": "m6_Mangga", "name": "Jus Mangga Segar", "price": 5000, "quantity": 1, "image": "/images/jus_mangga.jpg" }
+      ],
+      "itemCount": 3,
+      "paymentMethod": "Virtual Account BCA (Midtrans)",
+      "paymentBadge": "PAID",
+      "deliveryType": "KURIR NEFAKKY",
+      "distance": "3.1 Km",
+      "status": "RECEIVED",
+      "subtotal": 50000,
+      "shippingCost": 10000,
+      "discount": 5000,
+      "total": 55000,
+      "voucherCode": "NEFAKKY10",
+      "appliedPromo": "NEFAKKY10",
+      "date": "Minggu, 27 Sep 2026 • 19:41:18 WIB",
+      "createdAt": 1790512878381,
+      "customerConfirmed": false,
+      "updatedAt": 1790512878381
+    }
+  ]
+}
+```
+
+#### B. Operasi Manipulasi Pesanan (POST)
+Endpoint menerima parameter `action` pada request body JSON:
+
+| Aksi (`action`) | Parameter Wajib | Deskripsi |
+| :--- | :--- | :--- |
+| `create` / `add` | `order: AdminOrder` | Menambahkan pesanan baru hasil checkout (Midtrans atau COD) ke posisi paling atas daftar. |
+| `update_status` | `orderId: string`, `status?: string`, `updates?: object` | Memperbarui tahapan status pemrosesan dapur 5-tahap (`COOKING`, `READY`, `DELIVERING`, `COMPLETED`), catatan waktu konfirmasi, atau lunas (`paymentBadge: 'PAID'`). |
+| `proof_photo` | `orderId: string`, `proofPhotoUrl` / `proofPhoto`, `paymentProofPhotoUrl` / `paymentProofPhoto` | Menyimpan URL / data gambar bukti foto pengantaran kurir atau bukti bayar tunai COD. |
+| `delete` | `orderId: string` | Menghapus tiket pesanan dari store permanen. |
+| `cancel` | `orderId: string`, `reason?: string` | Membatalkan pesanan, mengatur status `CANCELLED`, dan menandai pengembalian dana jika sudah dibayar. |
+| `sync` | `orders: AdminOrder[]` | Melakukan merge sinkronisasi bulk antara data lokal klien dengan data server menggunakan algoritma LWW (*Last-Write-Wins*). |
+
+---
+
+### 4.2 Endpoint Live Chat CS Terpusat: `/api/chat`
+* **File Rute**: `src/app/api/chat/route.ts`
+* **Penyimpanan Berkas**: `.chat_store.json` (root proyek) dengan In-Memory Caching.
+* **Kebijakan Percakapan**: **100% Manual Human Agent Response** (seluruh pesan otomatis/bot ditiadakan sehingga admin menjawab setiap pertanyaan secara manual dan personal).
+
+#### A. Mengambil Riwayat Percakapan (GET)
+* **Method**: `GET /api/chat`
+* **Respons**: `{ "success": true, "messages": ChatMessage[] }`
+
+#### B. Mengirim & Mengelola Pesan Chat (POST)
+* **`action: "send"`**:
+  - Request Body: `{ "action": "send", "message": { "id", "sender": "user"|"admin", "text", "timestamp", "userName", "userEmail", "readByAdmin", "readByUser" } }`
+  - Menyimpan pesan ke `.chat_store.json` dan memicu alert realtime.
+* **`action: "mark_read_admin"`**:
+  - Menandai seluruh pesan dari `userEmail` tertentu sebagai telah dibaca oleh staf admin (`readByAdmin: true`).
+* **`action: "mark_read_user"`**:
+  - Menandai balasan staf admin sebagai telah dibaca oleh pengguna (`readByUser: true`).
+* **`action: "sync"`**:
+  - Sinkronisasi riwayat pesan lokal klien ke server store.
+
+---
+
+### 4.3 Spesifikasi Sinkronisasi Realtime di Klien (DataContext Engine)
+Untuk mengatasi partisi peramban pada Mode Penyamaran (Incognito) di mana `localStorage` dan `BroadcastChannel` diisolasi oleh Chromium:
+1. **Background Polling 1500ms**: `DataContext.tsx` menjalankan interval polling setiap 1.5 detik ke `/api/orders` dan `/api/chat`.
+2. **Listener `visibilitychange`**: Saat pengguna atau admin kembali membuka tab aktif (`document.visibilityState === 'visible'`), sinkronisasi instan segera dipicu.
+3. **Optimistic Local Update + Server Dispatch**: Setiap mutasi langsung tercermin di UI seketika (0ms), lalu didorong ke server store untuk konsumsi tab/sesi lainnya.
+4. **Web Audio API Synth Alert**: Saat pesanan baru masuk ke antrean Kitchen Desk, AdminLayout membunyikan audio chime segitiga harmonik (C5-E5-G5-C6) dan memunculkan floating alert toast interaktif.

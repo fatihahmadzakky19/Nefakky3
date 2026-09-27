@@ -1,0 +1,106 @@
+[
+  {
+    "id": "chat-1",
+    "sender": "user",
+    "userEmail": "nizarazzuhra@gmail.com",
+    "userName": "Nizar Azzuhra",
+    "userAvatar": "https://ui-avatars.com/api/?name=Nizar+Azzuhra&background=5C3D28&color=ffffff",
+    "text": "Halo Min, saya mau tanya apakah pesanan Ayam Bakar saya bisa request tanpa sambal pedas?",
+    "timestamp": "10:15 AM",
+    "readByAdmin": true,
+    "readByUser": true
+  },
+  {
+    "id": "chat-2",
+    "sender": "admin",
+    "userEmail": "nizarazzuhra@gmail.com",
+    "userName": "Admin CS Nefakky",
+    "text": "Halo Kak Nizar! Tentu saja bisa. Catatan tim dapur kami sudah diperbarui untuk pesanan Anda.",
+    "timestamp": "10:18 AM",
+    "readByAdmin": true,
+    "readByUser": true
+  },
+  {
+    "id": "msg-test-anonim",
+    "sender": "user",
+    "userEmail": "anonim1@gmail.com",
+    "userName": "anonim1",
+    "text": "hai min dari test",
+    "timestamp": "02:35",
+    "readByAdmin": true,
+    "readByUser": true
+  },
+  {
+    "id": "msg-1790508541842",
+    "sender": "admin",
+    "userEmail": "anonim1@gmail.com",
+    "userName": "Admin CS Nefakky",
+    "text": "apa yak kak",
+    "timestamp": "04.29",
+    "readByAdmin": true,
+    "readByUser": true
+  },
+  {
+    "id": "msg-1790508566432",
+    "sender": "user",
+    "userEmail": "anonim1@gmail.com",
+    "userName": "anonim1",
+    "userAvatar": "https://ui-avatars.com/api/?name=anonim1&background=1C1917&color=ffffff&bold=true",
+    "text": "min",
+    "timestamp": "04.29",
+    "readByAdmin": true,
+    "readByUser": true
+  },
+  {
+    "id": "msg-1790508598786",
+    "sender": "user",
+    "userEmail": "anonim1@gmail.com",
+    "userName": "anonim1",
+    "userAvatar": "https://ui-avatars.com/api/?name=anonim1&background=1C1917&color=ffffff&bold=true",
+    "text": "iya",
+    "timestamp": "04.29",
+    "readByAdmin": true,
+    "readByUser": true
+  },
+  {
+    "id": "msg-1790508568302",
+    "sender": "admin",
+    "userEmail": "anonim1@gmail.com",
+    "userName": "Admin CS Nefakky",
+    "text": "Halo Kak anonim1! Terima kasih telah menghubungi CS Support Nefakky. Ada yang bisa kami bantu lebih lanjut mengenai pesanan Anda?",
+    "timestamp": "04.29",
+    "readByAdmin": true,
+    "readByUser": true
+  },
+  {
+    "id": "msg-1790508600304",
+    "sender": "admin",
+    "userEmail": "anonim1@gmail.com",
+    "userName": "Admin CS Nefakky",
+    "text": "Halo Kak anonim1! Terima kasih telah menghubungi CS Support Nefakky. Ada yang bisa kami bantu lebih lanjut mengenai pesanan Anda?",
+    "timestamp": "04.30",
+    "readByAdmin": true,
+    "readByUser": true
+  },
+  {
+    "id": "msg-1790512727049",
+    "sender": "user",
+    "userEmail": "anonim1@gmail.com",
+    "userName": "anonim1",
+    "userAvatar": "https://ui-avatars.com/api/?name=anonim1&background=1C1917&color=ffffff&bold=true",
+    "text": "halo",
+    "timestamp": "05.38",
+    "readByAdmin": true,
+    "readByUser": true
+  },
+  {
+    "id": "msg-1790512744635",
+    "sender": "admin",
+    "userEmail": "anonim1@gmail.com",
+    "userName": "Admin CS Nefakky",
+    "text": "iya kak",
+    "timestamp": "05.39",
+    "readByAdmin": true,
+    "readByUser": false
+  }
+]

@@ -122,7 +122,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   const liveProduct = products.find(p => p.id === product.id) || product;
 
   const isDrink = liveProduct.category === 'Minuman' || liveProduct.id === 'm6' || liveProduct.name.toLowerCase().includes('jus');
-  // Daftar varian generik: gunakan metadata `variants` dari database; fallback DRINK_VARIANTS utk jus legacy
+  // Daftar varian generik: gunakan metadata `variants` dari database; fallback DRINK_VARIANTS hanya utk kategori minuman / jus
   const customVariants = Array.isArray((liveProduct as any).variants) ? ((liveProduct as any).variants as any[]) : [];
   const variantList: Array<{ id: string; name: string; tag?: string; image?: string; description?: string; ingredients?: string; calories?: string; fat?: string; sugar?: string; satFat?: string }> =
     customVariants.length > 0
@@ -138,10 +138,10 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
           sugar: cv.sugar,
           satFat: cv.satFat
         }))
-      : DRINK_VARIANTS;
+      : (isDrink ? DRINK_VARIANTS : []);
   const hasVariants = variantList.length > 0;
-  const activeVariantId = variantList.some(v => v.id === selectedVariant) ? selectedVariant : (variantList[0]?.id ?? selectedVariant);
-  const activeDrinkVariant = variantList.find(v => v.id === activeVariantId) || variantList[0] || DRINK_VARIANTS[0];
+  const activeVariantId = hasVariants ? (variantList.some(v => v.id === selectedVariant) ? selectedVariant : (variantList[0]?.id ?? '')) : '';
+  const activeDrinkVariant = hasVariants ? (variantList.find(v => v.id === activeVariantId) || variantList[0] || null) : null;
 
   // Helper cek stok per varian
   const getVariantStock = (variantId: string): number => {
@@ -171,7 +171,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
   const totalVariantsInCartCount = variantsInCart.reduce((sum, v) => sum + v.qty, 0);
   const totalVariantsInCartPrice = variantsInCart.reduce((sum, v) => sum + v.subtotal, 0);
 
-  const currentMainImage = hasVariants 
+  const currentMainImage = (hasVariants && activeDrinkVariant)
     ? (activeDrinkVariant.image || liveProduct.image || '/images/ayam_bakar.jpg') 
     : (liveProduct.image || '/images/ayam_bakar.jpg');
 
@@ -271,7 +271,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
       return;
     }
     setIsReserving(true);
-    const varName = hasVariants ? activeDrinkVariant.name : liveProduct.name;
+    const varName = (hasVariants && activeDrinkVariant) ? activeDrinkVariant.name : liveProduct.name;
     const userEmail = user?.email || 'customer@nefakky.com';
     const userName = user?.displayName || 'Pelanggan Nefakky';
 
@@ -369,7 +369,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
               {/* Title & Price */}
               <div className="space-y-1">
                 <h2 className="font-serif text-2xl font-bold text-stone-900 leading-tight">
-                  {hasVariants ? (isDrink ? `Jus Segar (${activeDrinkVariant.name})` : `${product.name} (${activeDrinkVariant.name})`) : product.name}
+                  {hasVariants && activeDrinkVariant ? (isDrink ? `Jus Segar (${activeDrinkVariant.name})` : `${liveProduct.name} (${activeDrinkVariant.name})`) : liveProduct.name}
                 </h2>
                 <div className="text-xl font-bold text-stone-900">
                   Rp {product.price.toLocaleString('id-ID')}
@@ -384,7 +384,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                       PILIH VARIAN
                     </span>
                     <span className="text-stone-500 text-[11px]">
-                      {activeDrinkVariant.name}
+                      {activeDrinkVariant?.name}
                     </span>
                   </div>
 
@@ -436,7 +436,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
               )}
 
               {/* Detail Nutrisi Per Varian (jika varian punya data nutrisi) */}
-              {hasVariants && ((activeDrinkVariant as any).calories || (activeDrinkVariant as any).fat) && (
+              {hasVariants && activeDrinkVariant && ((activeDrinkVariant as any).calories || (activeDrinkVariant as any).fat) && (
                 <div className="p-2.5 bg-stone-50 border border-stone-200 rounded-xl space-y-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
                     Detail Nutrisi — {activeDrinkVariant.name}
@@ -554,7 +554,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                 <div className="text-xs text-stone-600 leading-relaxed font-normal">
                   {activeTab === 'description' && (
                     <p>
-                      {(activeDrinkVariant as any).description
+                      {(hasVariants && activeDrinkVariant && (activeDrinkVariant as any).description)
                         ? (activeDrinkVariant as any).description
                         : isDrink
                         ? 'Aneka pilihan jus buah segar alami berkualitas: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis.'
@@ -563,7 +563,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                   )}
                   {activeTab === 'ingredients' && (
                     <p>
-                      {(activeDrinkVariant as any).ingredients
+                      {(hasVariants && activeDrinkVariant && (activeDrinkVariant as any).ingredients)
                         ? (activeDrinkVariant as any).ingredients
                         : isDrink
                         ? 'Buah segar matang pohon alami, air mineral higienis, dan sedikit madu tanpa pengawet sintesis.'
@@ -625,7 +625,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1 animate-fade-in">
                   <div className="flex items-center gap-2 text-rose-800 font-semibold text-xs">
                     <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                    <span>Produk Habis — {hasVariants ? `Varian ${activeDrinkVariant.name}` : liveProduct.name} Kosong</span>
+                    <span>Produk Habis — {hasVariants && activeDrinkVariant ? `Varian ${activeDrinkVariant.name}` : liveProduct.name} Kosong</span>
                   </div>
                   <p className="text-[11px] text-rose-700 leading-relaxed">
                     Menu ini sedang disiapkan kembali di dapur. Anda dapat melakukan <strong>Reservasi Prioritas</strong> ke Customer Service kami agar diprioritaskan saat stok matang.
@@ -652,7 +652,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
                       Buka Chat CS
                     </Link>
                     <a
-                      href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo CS Nefakky, saya ingin reservasi pesanan ${liveProduct.name}${hasVariants ? ` varian ${activeDrinkVariant.name}` : ''} sebanyak ${quantity} porsi yang sedang habis.`)}`}
+                      href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo CS Nefakky, saya ingin reservasi pesanan ${liveProduct.name}${hasVariants && activeDrinkVariant ? ` varian ${activeDrinkVariant.name}` : ''} sebanyak ${quantity} porsi yang sedang habis.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-medium rounded transition-colors"

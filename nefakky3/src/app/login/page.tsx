@@ -28,7 +28,21 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [deletedNotice, setDeletedNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Effect: Deteksi pemberitahuan akun dihapus dari query params atau sessionStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const isDeleted = params.get('deleted') === '1';
+      const storedNotice = sessionStorage.getItem('nefakky_deleted_account_notice');
+      if (isDeleted || storedNotice) {
+        setDeletedNotice(storedNotice || 'Akun Anda telah dinonaktifkan atau dihapus oleh Administrator dari Firebase. Anda otomatis dikeluarkan dari sistem. Silakan lakukan registrasi akun baru terlebih dahulu.');
+        sessionStorage.removeItem('nefakky_deleted_account_notice');
+      }
+    }
+  }, []);
 
   // Effect: Pengalihan otomatis bila sesi aktif
   useEffect(() => {
@@ -142,6 +156,22 @@ export default function LoginPage() {
             {/* Form Card */}
             <div className="bg-white border border-stone-200/90 rounded-2xl p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-4">
               
+              {/* Pemberitahuan Akun Dihapus oleh Admin */}
+              {deletedNotice && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl space-y-2 animate-fade-in font-medium">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{deletedNotice}</span>
+                  </div>
+                  <Link
+                    href="/register"
+                    className="block text-center py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold text-xs transition-colors shadow-xs"
+                  >
+                    Daftar Akun Baru Sekarang
+                  </Link>
+                </div>
+              )}
+
               {/* Error Alert Box */}
               {errorMessage && (
                 <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs rounded-xl space-y-2 animate-fade-in font-medium">
@@ -149,7 +179,10 @@ export default function LoginPage() {
                     <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                     <span className="leading-relaxed">{errorMessage}</span>
                   </div>
-                  {errorMessage.toLowerCase().includes('belum terdaftar') && (
+                  {(errorMessage.toLowerCase().includes('belum terdaftar') ||
+                    errorMessage.toLowerCase().includes('dihapus') ||
+                    errorMessage.toLowerCase().includes('tidak ditemukan') ||
+                    errorMessage.toLowerCase().includes('registrasi')) && (
                     <Link
                       href={`/register${email ? `?email=${encodeURIComponent(email)}` : ''}`}
                       className="block text-center py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-xs transition-colors shadow-xs"

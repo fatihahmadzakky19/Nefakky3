@@ -1,7 +1,7 @@
 # Alur Kerja Bisnis & Operasional (WORKFLOW.md) — Nefakky Marketplace
 
-**Versi Dokumen**: 4.5.0 (Updated September 2026 — 5-Stage Kitchen POS, Proof-of-Delivery Telemetry, & Annual Archiving)  
-**Target Modul**: Alur Hidup Pesanan (Order Lifecycle), State Machine 5-Tahap Dapur, Webhook Gateway Pembayaran Midtrans, Live Camera Snapshot Capture, dan Tutup Buku Tahunan.  
+**Versi Dokumen**: 4.8.0 (Updated September 2026 — 5-Stage Kitchen POS, Centralized Orders API Realtime Sync, Manual CS Live Desk, & Hardware Audio Telemetry)  
+**Target Modul**: Alur Hidup Pesanan (Order Lifecycle), State Machine 5-Tahap Dapur, Webhook Gateway Pembayaran Midtrans, Server API Realtime Bridge, Live Camera Snapshot Capture, dan Tutup Buku Tahunan.  
 **Penulis**: Tim Pengembang Nefakky (Fatih Ahmad Zakky)  
 
 ---
@@ -35,13 +35,16 @@ stateDiagram-v2
 ## 2. Rincian 5 Tahapan Alur Kerja Dapur
 
 ### Tahap 1: `RECEIVED` (Pesanan Masuk & Diterima Dapur)
-* **Pemicu**: Pelanggan menekan tombol "Konfirmasi Pesanan" di halaman `/cart`.
+* **Pemicu**: Pelanggan menekan tombol "Bayar Sekarang" (Midtrans) atau "Konfirmasi Pesanan" (COD) di halaman `/cart`.
 * **Proses Sistem**:
   1. Validasi ketersediaan stok setiap item menu (`stock >= quantity`).
-  2. Mengurangi kuantitas stok produk secara atomik.
-  3. Menerbitkan nomor order unik (format: `NFK-YYYYMMDD-XXXX`).
-  4. Memicu siaran WebSocket `OrderPlaced` ke kanal `orders`.
-  5. Pop-up alert dan notifikasi banner berbunyi pada layar Admin Kitchen Desk.
+  2. Mengurangi kuantitas stok produk secara atomik di state global dan database.
+  3. Menerbitkan nomor order unik (format: `#NFK-XXXXXX` atau `ORD-XXXXXX`).
+  4. **Direct Server Store Push**: Tiket pesanan langsung dikirimkan melalui HTTP POST ke `/api/orders` dan dicatat ke dalam berkas `.orders_store.json`.
+  5. **Cross-Incognito Background Synchronizer**: Interval sinkronisasi 1500ms dan listener `visibilitychange` di `DataContext.tsx` memastikan panel admin di browser/jendela lain langsung menerima pesanan tanpa perlu refresh halaman.
+  6. **Hardware Audio Synthesizer**: Web Audio API membunyikan audio chime lonceng dapur 4-akord (C5-E5-G5-C6) di browser admin.
+  7. **Floating Alert Toast**: Muncul banner notifikasi hijau mengambang di pojok kanan bawah admin (`⚡ Pesanan Baru Diterima: [Nama Pelanggan] ([ID Pesanan])`) dengan tombol aksi 1-klik *"Buka Kitchen Desk"*.
+  8. **Inkrementasi Counter Otomatis**: Badge indikator "Hari Ini" dan kartu metrik "Pesanan Masuk" bertambah secara instan.
 
 ### Tahap 2: `PREPARING` (Sedang Dimasak Koki)
 * **Pemicu**: Staf dapur menekan tombol aksi **"Mulai Masak"** di [AdminOrdersTab.tsx](file:///f:/UKK/nefakky3/src/components/admin/AdminOrdersTab.tsx).
@@ -119,3 +122,32 @@ Ketika dapur mengalami lonjakan pesanan ekstrem (misal: jam makan siang kantor a
    - Sistem secara otomatis mengunci seluruh rekapitulasi data pesanan tahun 2026.
    - Membuat rekaman arsip permanen `AnnualArchiveRecord` yang berisi ringkasan omset bulanan (Jan–Des).
    - Menyediakan tombol 1-klik untuk mengunduh laporan pembukuan resmi dalam format **Excel Spreadsheet** dan **PDF Akuntansi Resmi**.
+
+---
+
+## 6. Alur Layanan Pelanggan (CS Live Desk 100% Manual Response)
+
+Nefakky menjunjung tinggi sentuhan keramahan kuliner otentik Indonesia dengan meniadakan jawaban otomatis bot (*No Automated Bots*):
+
+1. **Pengiriman Pesan Pelanggan**:
+   - Pelanggan mengetikkan pertanyaan melalui widget floating chat di sudut bawah layar.
+   - Pesan dikirim ke `/api/chat` (`action: "send"`) dan disimpan ke `.chat_store.json`.
+2. **Alert Staf Admin Realtime**:
+   - Web Audio API di browser admin membunyikan audio chime sinus lembut (D5 -> A5).
+   - Muncul floating notification toast di panel admin dengan cuplikan teks pesan dan tombol *"Balas Chat Sekarang"*.
+   - Badge merah di sidebar navigasi admin pada menu **CS Live Desk** menampilkan jumlah pesan belum dibaca.
+3. **Respon Manual Personal oleh Admin**:
+   - Staf admin membuka utas percakapan dan mengetikkan balasan secara manual dan penuh perhatian.
+   - Balasan diposting ke `/api/chat` dan otomatis diterima di jendela browser pelanggan dalam waktu $\le 1.5$ detik tanpa perlu refresh.
+
+---
+
+## 7. Alur Sanitasi & Klaim Voucher Diskon
+
+1. **Normalisasi Kode Input**:
+   - Kode kupon yang dimasukkan pelanggan (misal: `#nefakky10` atau ` NEFAKKY10 `) disanitasi secara otomatis oleh `cleanPromoCode` menjadi `NEFAKKY10`.
+2. **Validasi Kuota & Minimal Belanja**:
+   - Sistem memverifikasi syarat minimal belanja (`minSpend`) dan memastikan pengguna belum pernah mengklaim voucher khusus pengguna baru jika sudah pernah berbelanja.
+3. **Klaim Permanen & Auto-Reset Mingguan**:
+   - Saat checkout berhasil, ID pengguna dan email dicatat ke dalam daftar pemakai voucher (`claimVoucherRedemption`).
+   - Setiap awal pekan ISO baru (Senin dini hari), rekaman voucher mingguan direset otomatis (`nefakky_used_vouchers_week`) sehingga voucher promosi berkala dapat kembali digunakan.

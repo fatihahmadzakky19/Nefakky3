@@ -188,6 +188,40 @@ runTest('9. Order Timezone Integrity', 'Tanggal pesanan konsisten WIB & tab "Har
   }
 });
 
+// 10. SUITE: Product Variant & Drink Isolation Integrity
+runTest('10. Product Variant Isolation', 'Non-drink menus must not inherit DRINK_VARIANTS and activeDrinkVariant must be guarded', () => {
+  const modalPath = path.join(rootDir, 'src/components/MenuDetailModal.tsx');
+  const pagePath = path.join(rootDir, 'src/app/menu/[id]/page.tsx');
+
+  const modalContent = fs.readFileSync(modalPath, 'utf-8');
+  const pageContent = fs.readFileSync(pagePath, 'utf-8');
+
+  // Verify that fallback checks isDrink
+  if (modalContent.includes(': DRINK_VARIANTS;')) {
+    throw new Error('MenuDetailModal.tsx has unguarded fallback : DRINK_VARIANTS; (must be isDrink ? DRINK_VARIANTS : [])');
+  }
+  if (pageContent.includes(': DRINK_VARIANTS;')) {
+    throw new Error('src/app/menu/[id]/page.tsx has unguarded fallback : DRINK_VARIANTS; (must be isDrink ? DRINK_VARIANTS : [])');
+  }
+
+  // Verify safe guarding of activeDrinkVariant
+  if (!modalContent.includes('hasVariants && activeDrinkVariant')) {
+    throw new Error('MenuDetailModal.tsx must safely guard activeDrinkVariant with hasVariants && activeDrinkVariant');
+  }
+  if (!pageContent.includes('hasVariants && activeDrinkVariant')) {
+    throw new Error('src/app/menu/[id]/page.tsx must safely guard activeDrinkVariant with hasVariants && activeDrinkVariant');
+  }
+});
+
+// 11. SUITE: Voucher & Promo Deduplication Integrity
+runTest('11. Voucher Deduplication', 'Strict deduplication of promo codes and IDs', () => {
+  try {
+    execSync('node scripts/test-voucher-dedup.mjs', { cwd: rootDir, stdio: 'pipe' });
+  } catch (err) {
+    throw new Error(`Voucher deduplication tests failed:\n${err.stdout?.toString() || err.stderr?.toString() || err.message}`);
+  }
+});
+
 // Calculate statistics
 const totalMs = Date.now() - startTime;
 const totalTests = results.length;
@@ -229,12 +263,17 @@ ${r.message ? `- **Pesan Eror**: \`\`\`\n${r.message}\n\`\`\`` : '- **Keterangan
 ---
 
 ## 🛠️ Modul Yang Diuji
-1. **TypeScript Type Compiler**: Memastikan tidak ada error tipe data (\`TS2345\`, \`TS2322\`, atau sintaks yang rusak).
-2. **Integritas Rute & Komponen**: Verifikasi ketersediaan rute halaman utama, katalog, detail menu, keranjang, admin console, auth modal, komentar, dan profile.
-3. **Katalog Produk & Data Master**: Memastikan 6 produk lengkap (*Ayam Bakar, Nasi Bakar, Krecek, Gudeg, Garang Asam, Jus*) dan sinkron dengan DataContext.
-4. **Sistem Ulasan & Komentar**: Memastikan helper ulasan (*reviews.ts*) menghasilkan komentar Bahasa Indonesia yang relevan dengan cita rasa hidangan.
-5. **Logika Keranjang & Promo Diskon**: Memastikan kalkulasi keranjang belanja, diskon voucher \`WEEKENDSERU\` (30%), dan minSpend bekerja akurat.
-6. **Integrasi Firebase Cloud**: Verifikasi inisialisasi Firebase Auth & Realtime Firestore Database.
+1. **TypeScript Type Compiler**: Memastikan 0 error tipe data (\`TS2345\`, \`TS2322\`, tipe data tidak valid, atau sintaks yang rusak) di seluruh codebase.
+2. **Integritas Rute & Komponen**: Verifikasi ketersediaan rute halaman utama, katalog, detail menu dinamis, keranjang belanja, admin console, auth modal, komentar, notifikasi, dan profile.
+3. **Katalog Produk & Data Master**: Memastikan 6 produk master lengkap (*Ayam Bakar, Nasi Bakar, Krecek, Gudeg, Garang Asam, Jus*) dan sinkron dengan DataContext.
+4. **Sistem Ulasan & Komentar**: Memastikan helper ulasan (*reviews.ts*) menghasilkan komentar Bahasa Indonesia yang kaya dan relevan dengan cita rasa hidangan.
+5. **Logika Keranjang & Promo Diskon**: Memastikan kalkulasi keranjang belanja, diskon voucher \`WEEKENDSERU\` (30%), dan batasan minimum transaksi bekerja akurat.
+6. **Integrasi Firebase Cloud**: Verifikasi kesiapan inisialisasi Firebase Auth & Realtime Firestore Database.
+7. **Integritas Midtrans Sandbox API**: Memastikan route handler charge (\`/api/midtrans/charge\`) dan cek status (\`/api/midtrans/status\`) terpasang dengan validasi orderId & transaction_status.
+8. **Mesin Kalkulasi Ongkir GPS Haversine**: Menguji formula jarak tarif flat Rp10.000 (≤10 km) dan penambahan Rp2.500 per 2 km berikutnya.
+9. **Integritas Timezone Pesanan WIB**: Memastikan format tanggal pesanan standar ISO & WIB dan tab "Hari Ini" pada Admin Panel memfilter rentang hari yang tepat.
+10. **Isolasi Varian Minuman**: Memastikan hidangan non-minuman tidak mewarisi varian es/panas/gula serta mencegah crash rendering \`activeDrinkVariant\`.
+11. **Deduplikasi & Integritas Voucher**: Memastikan normalisasi string voucher, sanitasi uppercase/trim, pencegahan duplikasi kode promo, dan auto-reset siklus ISO-Week.
 
 ---
 

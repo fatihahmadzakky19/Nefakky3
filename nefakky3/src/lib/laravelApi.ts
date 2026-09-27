@@ -345,8 +345,8 @@ export async function checkLaravelHealth() {
   try {
     const res = await fetch(`${LARAVEL_API_URL}/health`);
     return await res.json();
-  } catch (error) {
-    console.error('Laravel Health Check Failed:', error);
+  } catch (error: any) {
+    console.warn('Laravel Health Check Failed (offline fallback active):', error?.message || error);
     return { status: 'offline', error };
   }
 }
@@ -365,8 +365,8 @@ export async function fetchLaravelProducts(params?: { category?: string; search?
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const data = await res.json();
     return data.status === 'success' ? data.data : [];
-  } catch (error) {
-    console.error('Failed to fetch products from Laravel:', error);
+  } catch (error: any) {
+    console.warn('Failed to fetch products from Laravel (local fallback active):', error?.message || error);
     return [];
   }
 }
@@ -432,8 +432,8 @@ export async function fetchLaravelOrders(customerEmail?: string): Promise<Larave
     const res = await fetch(url, { headers: getAuthHeaders() });
     const data = await res.json();
     return data.status === 'success' ? data.data : [];
-  } catch (error) {
-    console.error('Failed to fetch orders from Laravel:', error);
+  } catch (error: any) {
+    console.warn('Failed to fetch orders from Laravel (local fallback active):', error?.message || error);
     return [];
   }
 }
@@ -505,8 +505,8 @@ export async function fetchLaravelVouchers(): Promise<LaravelVoucher[]> {
     const res = await fetch(`${LARAVEL_API_URL}/vouchers`, { headers: { 'Accept': 'application/json' } });
     const data = await res.json();
     return data.status === 'success' ? data.data : [];
-  } catch (error) {
-    console.error('Failed to fetch vouchers from Laravel:', error);
+  } catch (error: any) {
+    console.warn('Failed to fetch vouchers from Laravel (local fallback active):', error?.message || error);
     return [];
   }
 }
@@ -516,8 +516,8 @@ export async function fetchAllLaravelVouchers(): Promise<LaravelVoucher[]> {
     const res = await fetch(`${LARAVEL_API_URL}/vouchers/all`, { headers: getAuthHeaders() });
     const data = await res.json();
     return data.status === 'success' ? data.data : [];
-  } catch (error) {
-    console.error('Failed to fetch all vouchers from Laravel:', error);
+  } catch (error: any) {
+    console.warn('Failed to fetch all vouchers from Laravel (local fallback active):', error?.message || error);
     return [];
   }
 }
@@ -557,8 +557,8 @@ export async function fetchLaravelReviews(productId?: string) {
       : `${LARAVEL_API_URL}/reviews`;
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     return await res.json();
-  } catch (error) {
-    console.error('Failed to fetch reviews from Laravel:', error);
+  } catch (error: any) {
+    console.warn('Failed to fetch reviews from Laravel (local fallback active):', error?.message || error);
     return { status: 'error', data: [], average_rating: 5.0, total_reviews: 0 };
   }
 }
@@ -618,8 +618,8 @@ export async function fetchLaravelSalesYears(): Promise<string[]> {
     const res = await fetch(`${LARAVEL_API_URL}/reports/sales/years`);
     const data = await res.json();
     return data.status === 'success' ? data.years : [new Date().getFullYear().toString()];
-  } catch (error) {
-    console.error('Failed to fetch sales years from Laravel:', error);
+  } catch (error: any) {
+    console.warn('Failed to fetch sales years from Laravel (local fallback active):', error?.message || error);
     return [new Date().getFullYear().toString()];
   }
 }
@@ -628,8 +628,8 @@ export async function fetchLaravelSalesReportsByYear(year: string) {
   try {
     const res = await fetch(`${LARAVEL_API_URL}/reports/sales?year=${year}`);
     return await res.json();
-  } catch (error) {
-    console.error(`Failed to fetch sales reports for year ${year}:`, error);
+  } catch (error: any) {
+    console.warn(`Failed to fetch sales reports for year ${year}:`, error?.message || error);
     return { status: 'error', year, summary: {}, data: [] };
   }
 }

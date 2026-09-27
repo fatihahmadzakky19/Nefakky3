@@ -27,7 +27,7 @@ import {
   Users
 } from 'lucide-react';
 import { Search, Clock, Tag, Flame, Calendar, BarChart2, Trash2, Eye, CheckCircle } from '@/components/icons/CustomIcons';
-import { AdminVoucher, useData, isVoucherTimeExpired, cleanPromoCode } from '@/context/DataContext';
+import { AdminVoucher, useData, isVoucherTimeExpired, cleanPromoCode, deduplicateVouchers } from '@/context/DataContext';
 import { createPromoCalendarUrl } from '@/lib/googleCalendar';
 
 interface AdminPromotionsTabProps {
@@ -71,20 +71,22 @@ export default function AdminPromotionsTab({
   const [voucherUserLimit, setVoucherUserLimit] = useState<string>('100');
   const [voucherExpiry, setVoucherExpiry] = useState<string>('31 Des 2026');
 
-  const allVouchers = voucherList || vouchers || [];
+  const allVouchers = deduplicateVouchers(voucherList || vouchers || []);
 
-  // Filtered Vouchers
-  const displayedVouchers = allVouchers.filter(v => {
-    // Promo yang sudah lewat masa berlaku → sembunyikan otomatis dari daftar (sesuai spesifikasi)
-    if (isVoucherTimeExpired(v)) return false;
-    if (!searchPromoQuery.trim()) return true;
-    const q = searchPromoQuery.toLowerCase();
-    return (
-      (v.code || '').toLowerCase().includes(q) ||
-      (v.name || '').toLowerCase().includes(q) ||
-      ((v as any).eventCategory || '').toLowerCase().includes(q)
-    );
-  });
+  // Filtered Vouchers (100% Bersih & Bebas Duplikat Kode Promo)
+  const displayedVouchers = deduplicateVouchers(
+    allVouchers.filter(v => {
+      // Promo yang sudah lewat masa berlaku → sembunyikan otomatis dari daftar (sesuai spesifikasi)
+      if (isVoucherTimeExpired(v)) return false;
+      if (!searchPromoQuery.trim()) return true;
+      const q = searchPromoQuery.toLowerCase();
+      return (
+        (v.code || '').toLowerCase().includes(q) ||
+        (v.name || '').toLowerCase().includes(q) ||
+        ((v as any).eventCategory || '').toLowerCase().includes(q)
+      );
+    })
+  );
 
   // Daftar nama user yang benar-benar pernah memakai voucher (dari data pesanan riil)
   const getVoucherUserNames = (code?: string): string => {

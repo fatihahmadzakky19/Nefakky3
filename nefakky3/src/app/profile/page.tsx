@@ -11,7 +11,7 @@
  * ============================================================================
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -98,7 +98,7 @@ export default function UserProfilePage() {
     deleteAddress, 
     setDefaultAddress 
   } = useAuth();
-  const { orders, chatMessages, sendChatMessage, isHighDemand, highDemandMessage } = useData();
+  const { orders, chatMessages, sendChatMessage, markChatAsRead, isHighDemand, highDemandMessage } = useData();
   const { addToCart, totalCartCount } = useCart();
 
   // File & Camera Input References
@@ -379,20 +379,60 @@ export default function UserProfilePage() {
 
   // State CS Live Chat
   const [chatInput, setChatInput] = useState<string>('');
+  const [chatAttachment, setChatAttachment] = useState<string | null>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const userEmail = user?.email || 'pelanggan@nefakky.com';
-  const userName = user?.displayName || 'Pelanggan Nefakky';
+  const userName = user?.displayName || editName || 'Pelanggan Nefakky';
 
   // Filter messages for current user
   const userChats = (chatMessages || []).filter(
     (msg: any) => (msg.userEmail || '').toLowerCase() === userEmail.toLowerCase()
   );
 
+  // Auto mark user messages as read when user opens or sees new chat
+  useEffect(() => {
+    if (!userEmail || !markChatAsRead) return;
+    const hasUnread = (chatMessages || []).some(
+      (msg: any) => (msg.userEmail || '').toLowerCase() === userEmail.toLowerCase() && msg.sender === 'admin' && !msg.readByUser
+    );
+    if (hasUnread) {
+      markChatAsRead(userEmail, 'user');
+    }
+  }, [userEmail, markChatAsRead, chatMessages]);
+
+  // Auto scroll chat to bottom on new message
+  useEffect(() => {
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [userChats.length]);
+
+  const handleChatAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file, 800, 800, 0.85);
+      setChatAttachment(compressed);
+    } catch (err) {
+      console.warn('Gagal membaca gambar attachment:', err);
+    } finally {
+      if (chatFileInputRef.current) chatFileInputRef.current.value = '';
+    }
+  };
+
   const handleSendChat = (textToSend?: string) => {
     const text = textToSend || chatInput;
-    if (!text || !text.trim()) return;
+    if ((!text || !text.trim()) && !chatAttachment) return;
 
-    sendChatMessage(userEmail, userName, text.trim(), editAvatarUrl);
+    sendChatMessage(
+      userEmail,
+      userName,
+      (text || (chatAttachment ? 'Mengirim lampiran foto' : '')).trim(),
+      editAvatarUrl,
+      chatAttachment || undefined,
+      chatAttachment ? 'image' : undefined
+    );
     setChatInput('');
+    setChatAttachment(null);
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -643,46 +683,83 @@ export default function UserProfilePage() {
                                 ? 'bg-stone-900 text-white rounded-tr-none font-normal' 
                                 : 'bg-stone-100 text-stone-900 rounded-tl-none font-normal'
                             }`}>
+                              {/* Media Attachment if present */}
+                              {msg.mediaUrl && (
+                                <div className="mb-2 rounded-xl overflow-hidden border border-black/10">
+                                  {msg.mediaType === 'video' ? (
+                                    <video src={msg.mediaUrl} controls className="max-w-[200px] rounded-lg" />
+                                  ) : (
+                                    <img src={msg.mediaUrl} alt="Lampiran" className="max-w-[200px] rounded-lg object-cover" />
+                                  )}
+                                </div>
+                              )}
                               <p className="break-words">{msg.text}</p>
                               <span className="text-[9px] opacity-60 block text-right mt-1">{msg.timestamp || 'Baru saja'}</span>
                             </div>
                           </div>
                         );
                       })}
+                      <div ref={chatMessagesEndRef} />
                     </div>
 
                     {/* Chat Input Bar */}
-                    <form 
-                      onSubmit={(e) => { e.preventDefault(); handleSendChat(); }}
-                      className="pt-2.5 border-t border-stone-100 flex items-center gap-2"
-                    >
-                      <button 
-                        type="button" 
-                        onClick={() => alert('Fitur upload berkas ke CS aktif.')}
-                        className="w-11 h-11 rounded-xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors shrink-0 cursor-pointer"
-                        aria-label="Unggah Berkas ke CS"
-                      >
-                        <Paperclip className="w-4 h-4" />
-                      </button>
-                      
-                      <div className="flex-1 bg-stone-100 rounded-xl flex items-center px-3 h-11 border border-stone-200">
-                        <input 
-                          type="text"
-                          value={chatInput}
-                          onChange={(e) => setChatInput(e.target.value)}
-                          placeholder="Ketik pesan ke CS..."
-                          className="w-full bg-transparent text-xs text-stone-900 placeholder-stone-400 focus:outline-none"
-                        />
-                      </div>
+                    <div className="pt-2.5 border-t border-stone-100 flex flex-col gap-2">
+                      {/* Attachment Preview if selected */}
+                      {chatAttachment && (
+                        <div className="relative inline-flex items-center gap-2 p-1.5 bg-stone-100 rounded-xl max-w-max border border-stone-200">
+                          <img src={chatAttachment} alt="Preview" className="w-12 h-12 object-cover rounded-lg" />
+                          <div className="text-[11px] pr-6 text-stone-600 font-medium">Lampiran siap dikirim</div>
+                          <button
+                            type="button"
+                            onClick={() => setChatAttachment(null)}
+                            className="absolute top-1 right-1 w-5 h-5 bg-stone-800 text-white rounded-full flex items-center justify-center text-[10px] hover:bg-red-600 transition-colors"
+                            aria-label="Hapus Lampiran"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
 
-                      <button 
-                        type="submit"
-                        className="w-11 h-11 rounded-xl bg-stone-900 hover:bg-[#C2410C] flex items-center justify-center text-white transition-colors shrink-0 shadow-subtle cursor-pointer active:scale-95"
-                        aria-label="Kirim Pesan CS"
+                      <form 
+                        onSubmit={(e) => { e.preventDefault(); handleSendChat(); }}
+                        className="flex items-center gap-2"
                       >
-                        <Send className="w-4 h-4" />
-                      </button>
-                    </form>
+                        <input 
+                          type="file" 
+                          ref={chatFileInputRef} 
+                          onChange={handleChatAttachmentUpload} 
+                          accept="image/*" 
+                          className="hidden" 
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => chatFileInputRef.current?.click()}
+                          className="w-11 h-11 rounded-xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors shrink-0 cursor-pointer"
+                          aria-label="Unggah Berkas ke CS"
+                          title="Lampirkan foto"
+                        >
+                          <Paperclip className="w-4 h-4" />
+                        </button>
+                        
+                        <div className="flex-1 bg-stone-100 rounded-xl flex items-center px-3 h-11 border border-stone-200">
+                          <input 
+                            type="text"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            placeholder="Ketik pesan ke CS..."
+                            className="w-full bg-transparent text-xs text-stone-900 placeholder-stone-400 focus:outline-none"
+                          />
+                        </div>
+
+                        <button 
+                          type="submit"
+                          className="w-11 h-11 rounded-xl bg-stone-900 hover:bg-[#C2410C] flex items-center justify-center text-white transition-colors shrink-0 shadow-subtle cursor-pointer active:scale-95"
+                          aria-label="Kirim Pesan CS"
+                        >
+                          <Send className="w-4 h-4" />
+                        </button>
+                      </form>
+                    </div>
 
                   </div>
                 </aside>

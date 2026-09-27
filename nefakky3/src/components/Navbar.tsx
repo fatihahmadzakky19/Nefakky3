@@ -8,7 +8,7 @@
  * ============================================================================
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -32,6 +32,11 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
   const { totalCartCount } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const userAvatar = user?.photoURL || (user?.displayName 
     ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=1C1917&color=ffffff&bold=true` 
@@ -136,7 +141,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
           <div className="flex items-center gap-2 sm:gap-3">
 
             {/* Admin Guard Link */}
-            {isAdmin && (
+            {hasMounted && isAdmin && (
               <Link
                 href="/admin"
                 className="inline-flex items-center justify-center w-10 h-10 sm:w-auto sm:h-auto sm:px-3 sm:py-2 bg-stone-900 hover:bg-stone-800 text-stone-100 text-xs font-medium rounded-lg transition-colors border border-stone-800 shrink-0"
@@ -160,7 +165,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
               aria-label="Keranjang Belanja"
             >
               <ShoppingBag className="w-4 h-4 group-hover:scale-105 transition-transform" />
-              {totalCartCount > 0 && (
+              {hasMounted && totalCartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-[#C2410C] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#FBFBFA]">
                   {totalCartCount}
                 </span>
@@ -168,7 +173,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
             </Link>
 
             {/* Profile Avatar / Login */}
-            {user ? (
+            {hasMounted && user ? (
               <div className="relative">
                 <button
                   type="button"
@@ -335,7 +340,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                 </p>
               </div>
 
-              {isAdmin && (
+              {hasMounted && isAdmin && (
                 <div className="pt-2">
                   <Link
                     href="/admin"
@@ -383,7 +388,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
           >
             <div className="relative">
               <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
-              {totalCartCount > 0 && (
+              {hasMounted && totalCartCount > 0 && (
                 <span className="absolute -top-1.5 -right-2 bg-[#C2410C] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
                   {totalCartCount}
                 </span>

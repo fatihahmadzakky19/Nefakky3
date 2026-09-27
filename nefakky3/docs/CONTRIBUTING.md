@@ -22,10 +22,15 @@ Kami berkomitmen untuk menyediakan lingkungan kolaborasi yang profesional, ramah
 ### 2.2 Frontend Next.js & React (TypeScript)
 * **TypeScript Strict Mode**: Kode harus 100% type-safe. Dilarang meninggalkan linting error atau tipe data implisit `any`.
 * **Kompilasi Valid**: Sebelum commit, wajib menjalankan `npx tsc --noEmit` dan memastikan **0 errors**.
+* **Eksekusi Pengujian Otomatis**: Wajib menjalankan `npm test` (`scripts/run-tests.mjs`) dan memastikan seluruh 11 subsistem lolos pengujian (**11/11 Passed**).
+* **Integritas Sinkronisasi Server Store**:
+  * Setiap mutasi transaksi baru (`orders`) atau percakapan (`chat`) wajib menyertakan panggilan sinkronisasi ke Next.js Server Route (`/api/orders` atau `/api/chat`) untuk mempertahankan kompatibilitas lintas-jendela penyamaran (Incognito).
+* **Audio Feedback**:
+  * Gunakan Web Audio API synthesizer murni untuk alert suara (seperti lonceng dapur dan notifikasi chat) tanpa mengandalkan file `.mp3`/`.wav` eksternal.
 * **Penamaan Komponen & File**:
   * Komponen UI: **PascalCase** (misal: `LiveCameraModal.tsx`, `AdminOrdersTab.tsx`).
   * Hooks Kustom: **camelCase** dengan awalan `use` (misal: `useAuth.ts`, `useRealtimeBroadcaster.ts`).
-  * Utilitas: **camelCase** (misal: `mapService.ts`, `annualArchive.ts`).
+  * Utilitas: **camelCase** (misal: `mapService.ts`, `annualArchive.ts`, `orderTimeUtils.ts`).
 * **Styling Tailwind CSS**:
   * Gunakan token desain yang seragam (*Nordic Citrus Orange* `#FF5400`, *Gold Amber* `#FFB703`, *Deep Navy* `#0B0F19`, *Slate Canvas* `#F8FAFC`).
 * **Aksesibilitas (WCAG 2.1 AA)**: Seluruh tombol ikon interaktif wajib menyertakan atribut `aria-label` deskriptif.

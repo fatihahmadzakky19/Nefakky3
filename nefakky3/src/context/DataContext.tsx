@@ -9,7 +9,7 @@
  * ============================================================================
  */
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { 
   collection, 
   doc, 
@@ -25,6 +25,7 @@ import { ref, onValue, onChildAdded, onChildChanged, onChildRemoved, set as setR
 import { db, rtdb } from '@/lib/firebase';
 import { formatCurrentRealtimeOrderDate, parseIndonesianDateStringToDate } from '@/lib/orderTimeUtils';
 import { getEchoInstance } from '@/lib/echo';
+import { isAdminEmail } from '@/context/AuthContext';
 
 
 /** Interface Varian Produk (mis. rasa jus) — metadata per varian; stok tersimpan di ProductItem.variantStocks */
@@ -135,6 +136,51 @@ export const getISOWeekString = (d: Date = new Date()): string => {
 /** Helper pembersih kode voucher (menghapus tanda #, spasi, dan kapitalisasi) */
 export const cleanPromoCode = (c?: string | null): string => {
   return (c || '').trim().toUpperCase().replace(/^#+/, '');
+};
+
+/** Helper untuk membersihkan dan menghapus duplikasi voucher promo secara ketat berdasarkan kode promo & ID */
+export const deduplicateVouchers = (list?: AdminVoucher[] | null): AdminVoucher[] => {
+  if (!list || !Array.isArray(list)) return [];
+  const codeMap = new Map<string, AdminVoucher>();
+  
+  for (const v of list) {
+    if (!v) continue;
+    const cleanCode = cleanPromoCode(v.code);
+    // Kunci unik: jika ada kode promo bersihkan, jika tidak gunakan ID voucher
+    const key = cleanCode ? `CODE:${cleanCode}` : `ID:${v.id}`;
+    if (!key) continue;
+
+    const existing = codeMap.get(key);
+    if (!existing) {
+      codeMap.set(key, v);
+    } else {
+      // Jika duplikat ditemukan, pertahankan data terbaru berdasarkan updatedAt
+      const existingUpdated = existing.updatedAt || 0;
+      const vUpdated = v.updatedAt || 0;
+      if (vUpdated > existingUpdated) {
+        codeMap.set(key, { ...existing, ...v });
+      } else {
+        codeMap.set(key, { ...v, ...existing });
+      }
+    }
+  }
+
+  // Proteksi lapis kedua: pastikan tidak ada ID voucher yang sama persis
+  const finalIdMap = new Map<string, AdminVoucher>();
+  codeMap.forEach((v) => {
+    const existing = finalIdMap.get(v.id);
+    if (!existing) {
+      finalIdMap.set(v.id, v);
+    } else {
+      if ((v.updatedAt || 0) > (existing.updatedAt || 0)) {
+        finalIdMap.set(v.id, v);
+      }
+    }
+  });
+
+  const result: AdminVoucher[] = [];
+  finalIdMap.forEach((v) => result.push(v));
+  return result;
 };
 
 /** Baca array dari localStorage dengan fallback (persistensi lintas-refresh) */
@@ -260,7 +306,7 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
         lastResetWeek: currentWeek,
         isActive: true,
         updatedAt: Date.now()
-      }).catch(err => console.error('Error auto-resetting weekly voucher:', err));
+      }).catch(err => console.warn('Error auto-resetting weekly voucher:', err?.message || err));
 
       // Bersihkan record pemakaian per-user di browser ini → tampilan promo muncul kembali utk minggu baru
       try {
@@ -351,7 +397,9 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
   const isWeekendDay = day === 0 || day === 5 || day === 6;
   const isWeekday = day >= 1 && day <= 5;
 
-  const isWeekendPromo = 
+  const isAllDays = daysLower.includes('semua hari') || daysLower.includes('setiap hari') || daysLower.includes('all');
+
+  const isWeekendPromo = !isAllDays && (
     daysLower.includes('weekend') ||
     daysLower.includes('akhir pekan') ||
     daysLower.includes('sabtu') ||
@@ -360,7 +408,8 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
     nameLower.includes('weekend') ||
     expiryLower.includes('akhir pekan') ||
     expiryLower.includes('weekend') ||
-    eventLower.includes('akhir pekan');
+    eventLower.includes('akhir pekan')
+  );
 
   const isWeekdayPromo = daysLower.includes('weekday') || daysLower.includes('kerja');
 
@@ -466,6 +515,7 @@ export interface UserReview {
   photo?: string;
   image?: string;
   replies?: ReviewReply[];
+  isVerifiedBuyer?: boolean;
 }
 
 /** Helper untuk mengurutkan ulasan agar ULASAN TERBARU selalu berada di paling atas */
@@ -727,7 +777,7 @@ export const DEFAULT_PROMOTIONS: PromotionItem[] = [
   },
   {
     id: 'promo-86',
-    title: 'hahaha',
+    title: 'Flash Sale Promo 20%',
     subtitle: 'Promo spesial diskon 20% menu kuliner.',
     tag: '20% OFF',
     badge: 'Active',
@@ -737,10 +787,42 @@ export const DEFAULT_PROMOTIONS: PromotionItem[] = [
     usedCount: 0,
     totalLimit: 100,
     isActive: true
+  },
+  {
+    id: 'promo-flashsale12',
+    title: 'flashsale',
+    subtitle: 'Diskon 20% (Min. Rp 50.000)',
+    tag: '20% OFF',
+    badge: 'Active',
+    image: '/images/ayam_bakar.jpg',
+    duration: '31 Des 2026',
+    type: 'Voucher',
+    usedCount: 0,
+    totalLimit: 100,
+    isActive: true
   }
 ];
 
 export const DEFAULT_VOUCHERS: AdminVoucher[] = [
+  {
+    id: 'promo-flashsale12',
+    code: 'FLASHSALE12',
+    name: 'flashsale',
+    type: 'Percentage',
+    discountPercent: 20,
+    minSpend: 50000,
+    redemptions: '0/100',
+    totalLimit: 100,
+    usedCount: 0,
+    expiry: '31 Des 2026',
+    event: 'Flash Sale',
+    eventCategory: 'Flash Sale',
+    status: 'Active',
+    isActive: true,
+    validDays: 'Semua Hari',
+    autoResetWeekly: true,
+    updatedAt: 1789125300000
+  },
   {
     id: 'v4',
     code: 'NEFAKKY10',
@@ -754,7 +836,8 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     eventCategory: 'Pelanggan Baru',
     status: 'Active',
     isActive: true,
-    validDays: 'Semua Hari'
+    validDays: 'Semua Hari',
+    updatedAt: 1789125300000
   },
   {
     id: 'promo-1',
@@ -769,13 +852,14 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     eventCategory: 'Flash Sale',
     status: 'Active',
     isActive: true,
-    validDays: 'Weekend (Jumat - Minggu)',
-    autoResetWeekly: true
+    validDays: 'Semua Hari',
+    autoResetWeekly: true,
+    updatedAt: 1789125300000
   },
   {
     id: 'promo-86',
     code: 'PROMO86',
-    name: 'hahaha',
+    name: 'Flash Sale Promo 20%',
     type: 'Percentage',
     discountPercent: 20,
     minSpend: 50000,
@@ -785,7 +869,8 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     eventCategory: 'Flash Sale',
     status: 'Active',
     isActive: true,
-    validDays: 'Semua Hari'
+    validDays: 'Semua Hari',
+    updatedAt: 1789125300000
   }
 ];
 
@@ -1179,47 +1264,100 @@ interface DataContextType {
   isHighDemand: boolean;
   highDemandMessage: string;
   toggleHighDemand: (status?: boolean, customMessage?: string) => void;
+  isHydrated: boolean;
+  hasUserPurchasedProduct: (productIdOrName: string, userUid?: string | null, userEmail?: string | null) => boolean;
+  getUserPurchasedProducts: (userUid?: string | null, userEmail?: string | null) => ProductItem[];
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-export const DataProvider = ({ children }: { children: React.ReactNode }) => {
-  // Hydrate dari localStorage agar SEMUA perubahan (produk, promo, voucher, ulasan, chat)
-  // tetap tersimpan meski halaman di-refresh atau Firestore sedang tidak tersedia.
-  const [products, setProductsState] = useState<ProductItem[]>(() => readLS<ProductItem[]>('nefakky_products_live', DEFAULT_PRODUCTS));
-  const [promotions, setPromotionsState] = useState<PromotionItem[]>(() => readLS<PromotionItem[]>('nefakky_promotions_live', DEFAULT_PROMOTIONS));
-  const [vouchers, setVouchersState] = useState<AdminVoucher[]>(() => readLS<AdminVoucher[]>('nefakky_vouchers_live', DEFAULT_VOUCHERS));
-  const [orders, setOrdersState] = useState<AdminOrder[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('nefakky_live_orders');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        }
-      } catch (e) {}
+let sharedOrdersBC: BroadcastChannel | null = null;
+export const getOrdersBroadcastChannel = (): BroadcastChannel | null => {
+  if (typeof window === 'undefined') return null;
+  if (!('BroadcastChannel' in window)) return null;
+  if (!sharedOrdersBC) {
+    try {
+      sharedOrdersBC = new BroadcastChannel('nefakky_orders_channel');
+    } catch (e) {
+      return null;
     }
-    return DEFAULT_ORDERS;
-  });
-  const [reviews, setReviewsState] = useState<UserReview[]>(() => sortReviewsNewestFirst(readLS<UserReview[]>('nefakky_reviews_live', DEFAULT_REVIEWS)));
-  const [chatMessages, setChatMessagesState] = useState<ChatMessage[]>(() => readLS<ChatMessage[]>('nefakky_chat_live', DEFAULT_CHAT_MESSAGES));
+  }
+  return sharedOrdersBC;
+};
 
-  // ==========================================================================
-  // PERSISTENSI LOCALSTORAGE: setiap perubahan state langsung disimpan, sehingga
-  // refresh halaman TIDAK menghilangkan aktivitas yang sudah dilakukan user/admin.
-  // ==========================================================================
+export const DataProvider = ({ children }: { children: React.ReactNode }) => {
+  // Hydrate dari localStorage secara aman via useEffect agar render awal SSR dan Client identik (100% Bebas Hydration Mismatch)
+  const [products, setProductsState] = useState<ProductItem[]>(DEFAULT_PRODUCTS);
+  const [promotions, setPromotionsState] = useState<PromotionItem[]>(DEFAULT_PROMOTIONS);
+  const [vouchers, setVouchersState] = useState<AdminVoucher[]>(DEFAULT_VOUCHERS);
+  const [orders, setOrdersState] = useState<AdminOrder[]>(DEFAULT_ORDERS);
+  const [reviews, setReviewsState] = useState<UserReview[]>(DEFAULT_REVIEWS);
+  const [chatMessages, setChatMessagesState] = useState<ChatMessage[]>(DEFAULT_CHAT_MESSAGES);
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
+  const isHydratedRef = useRef<boolean>(false);
+
+  // Hydrate data tersimpan dari localStorage di client setelah mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    try {
+      const savedProds = readLS<ProductItem[]>('nefakky_products_live', []);
+      if (savedProds && savedProds.length > 0) setProductsState(savedProds);
+
+      const savedPromos = readLS<PromotionItem[]>('nefakky_promotions_live', []);
+      if (savedPromos && savedPromos.length > 0) setPromotionsState(savedPromos);
+
+      const savedVouchers = readLS<AdminVoucher[]>('nefakky_vouchers_live', []);
+      if (savedVouchers && savedVouchers.length > 0) {
+        const vTombs = readTombstones('nefakky_deleted_vouchers');
+        const existingIds = new Set(savedVouchers.map(v => v.id));
+        const existingCodes = new Set(savedVouchers.map(v => cleanPromoCode(v.code)).filter(Boolean));
+        const missing = DEFAULT_VOUCHERS.filter(v => 
+          !existingIds.has(v.id) && 
+          !existingCodes.has(cleanPromoCode(v.code)) && 
+          !vTombs.has(v.id) && 
+          !vTombs.has(cleanPromoCode(v.code))
+        );
+        const deduped = deduplicateVouchers([...savedVouchers, ...missing]);
+        setVouchersState(deduped);
+        try {
+          localStorage.setItem('nefakky_vouchers_live', JSON.stringify(deduped));
+        } catch (e) {}
+      } else {
+        setVouchersState(deduplicateVouchers(DEFAULT_VOUCHERS));
+      }
+
+      const savedOrders = readLS<AdminOrder[]>('nefakky_live_orders', []);
+      if (savedOrders && savedOrders.length > 0) setOrdersState(savedOrders);
+
+      const savedReviews = readLS<UserReview[]>('nefakky_reviews_live', []);
+      if (savedReviews && savedReviews.length > 0) setReviewsState(sortReviewsNewestFirst(savedReviews));
+
+      const savedChat = readLS<ChatMessage[]>('nefakky_chat_live', []);
+      if (savedChat && savedChat.length > 0) setChatMessagesState(savedChat);
+    } catch (e) {
+      console.warn('Hydrate localStorage notice:', e);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  // ==========================================================================
+  // PERSISTENSI LOCALSTORAGE: setiap perubahan state disimpan setelah hydrasi selesai
+  // HANYA simpan saat isHydrated === true (tidak menimpa dengan state default sebelum re-render!)
+  // ==========================================================================
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isHydrated) return;
+    isHydratedRef.current = true;
     try {
       localStorage.setItem('nefakky_products_live', JSON.stringify(products));
       localStorage.setItem('nefakky_promotions_live', JSON.stringify(promotions));
       localStorage.setItem('nefakky_vouchers_live', JSON.stringify(vouchers));
+      localStorage.setItem('nefakky_live_orders', JSON.stringify(orders));
       localStorage.setItem('nefakky_reviews_live', JSON.stringify(reviews));
       localStorage.setItem('nefakky_chat_live', JSON.stringify(chatMessages));
     } catch (e) {}
-  }, [products, promotions, vouchers, reviews, chatMessages]);
+  }, [isHydrated, products, promotions, vouchers, orders, reviews, chatMessages]);
 
   // ==========================================================================
   // SINKRONISASI LINTAS TAB (user ↔ admin pada browser yang sama) via storage
@@ -1252,6 +1390,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         } else if (e.key === 'nefakky_vouchers_live') {
           const d = JSON.parse(e.newValue);
           if (Array.isArray(d)) setVouchersState(d);
+        } else if (e.key === 'nefakky_live_orders') {
+          const d = JSON.parse(e.newValue);
+          if (Array.isArray(d)) setOrdersState(d);
         } else if (e.key === 'nefakky_reviews_live') {
           const d = JSON.parse(e.newValue);
           if (Array.isArray(d)) setReviewsState(sortReviewsNewestFirst(d));
@@ -1297,9 +1438,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             updatedAt: now
           };
           try {
-            const bc = new BroadcastChannel('nefakky_orders_channel');
-            bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: o.id, updates });
-            bc.close();
+            const bc = getOrdersBroadcastChannel();
+            bc?.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: o.id, updates });
+            if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('nefakky_orders_updated'));
           } catch (e) {}
           updateDoc(doc(db, 'orders', o.id), updates).catch(() => {});
           updateRtdb(ref(rtdb, `orders/${o.id}`), updates).catch(() => {});
@@ -1335,7 +1476,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         source.forEach(p => {
           batch.set(doc(db, 'products', p.id), p);
         });
-        batch.commit().catch(err => console.error('Error seeding products:', err));
+        batch.commit().catch(err => console.warn('Error seeding products:', err?.message || err));
       } else {
         const prods = snapshot.docs
           .map(d => ({ ...d.data(), id: d.id }) as ProductItem)
@@ -1377,13 +1518,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           missingProducts.forEach(p => {
             batch.set(doc(db, 'products', p.id), p);
           });
-          batch.commit().catch(err => console.error('Error seeding missing products:', err));
+          batch.commit().catch(err => console.warn('Seeding missing products notice:', err?.message || err));
         }
 
         // Merge LWW: perubahan lokal yang belum tersinkron tidak tertimpa snapshot server
         setProductsState(prev => mergeServerWithLocal(prods, prev, prodTombs));
       }
-    }, (err) => console.error('Products Firestore error:', err));
+    }, (err) => console.warn('Products Firestore notice:', err?.message || err));
 
     // 2. Promotions Listener
     const unsubPromo = onSnapshot(collection(db, 'promotions'), (snapshot) => {
@@ -1395,29 +1536,75 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         source.forEach(p => {
           batch.set(doc(db, 'promotions', p.id), p);
         });
-        batch.commit().catch(err => console.error('Error seeding promotions:', err));
+        batch.commit().catch(err => console.warn('Seeding promotions notice:', err?.message || err));
       } else {
         const promos = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as PromotionItem);
         setPromotionsState(prev => mergeServerWithLocal(promos, prev, promoTombs));
       }
-    }, (err) => console.error('Promotions Firestore error:', err));
+    }, (err) => console.warn('Promotions Firestore notice:', err?.message || err));
 
     // 3. Vouchers Listener
     const unsubVouch = onSnapshot(collection(db, 'vouchers'), (snapshot) => {
       const vouchTombs = readTombstones('nefakky_deleted_vouchers');
       if (snapshot.empty) {
         const localVouchers = readLS<AdminVoucher[]>('nefakky_vouchers_live', []);
-        const source = (localVouchers.length > 0 ? localVouchers : DEFAULT_VOUCHERS).filter(v => !vouchTombs.has(v.id));
+        const source = deduplicateVouchers((localVouchers.length > 0 ? localVouchers : DEFAULT_VOUCHERS).filter(v => !vouchTombs.has(v.id)));
         const batch = writeBatch(db);
         source.forEach(v => {
           batch.set(doc(db, 'vouchers', v.id), v);
         });
-        batch.commit().catch(err => console.error('Error seeding vouchers:', err));
+        batch.commit().catch(err => console.warn('Seeding vouchers notice:', err?.message || err));
       } else {
-        const vouches = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminVoucher);
-        setVouchersState(prev => mergeServerWithLocal(vouches, prev, vouchTombs));
+        const rawVouches = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminVoucher);
+
+        // Bersihkan dokumen duplikat dari server Firestore jika memiliki kode promo yang sama
+        const codeToDocs = new Map<string, AdminVoucher[]>();
+        rawVouches.forEach(v => {
+          const code = cleanPromoCode(v.code);
+          if (code) {
+            if (!codeToDocs.has(code)) codeToDocs.set(code, []);
+            codeToDocs.get(code)!.push(v);
+          }
+        });
+
+        codeToDocs.forEach((docList) => {
+          if (docList.length > 1) {
+            docList.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            const duplicates = docList.slice(1);
+            duplicates.forEach(dup => {
+              deleteDoc(doc(db, 'vouchers', dup.id)).catch(() => {});
+            });
+          }
+        });
+
+        const vouches = deduplicateVouchers(rawVouches);
+        const existingIds = new Set(vouches.map(v => v.id));
+        const existingCodes = new Set(vouches.map(v => cleanPromoCode(v.code)).filter(Boolean));
+        const missingVouchers = DEFAULT_VOUCHERS.filter(v => 
+          !existingIds.has(v.id) && 
+          !existingCodes.has(cleanPromoCode(v.code)) && 
+          !vouchTombs.has(v.id) && 
+          !vouchTombs.has(cleanPromoCode(v.code))
+        );
+        if (missingVouchers.length > 0) {
+          const batch = writeBatch(db);
+          missingVouchers.forEach(v => {
+            batch.set(doc(db, 'vouchers', v.id), v);
+          });
+          batch.commit().catch(err => console.warn('Seeding missing vouchers notice:', err?.message || err));
+        }
+        setVouchersState(prev => {
+          const merged = mergeServerWithLocal([...vouches, ...missingVouchers], prev, vouchTombs);
+          const deduped = deduplicateVouchers(merged);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('nefakky_vouchers_live', JSON.stringify(deduped));
+            } catch (e) {}
+          }
+          return deduped;
+        });
       }
-    }, (err) => console.error('Vouchers Firestore error:', err));
+    }, (err) => console.warn('Vouchers Firestore notice:', err?.message || err));
 
     // 4. Orders Listener & Persistent Synchronization
     let unsubOrders = () => {};
@@ -1428,6 +1615,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           const ords = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminOrder).filter(o => !orderTombs.has(o.id));
           setOrdersState(prev => {
             const mergedMap = new Map<string, AdminOrder>();
+            const localSaved = readLS<AdminOrder[]>('nefakky_live_orders', []);
+            localSaved.forEach(o => mergedMap.set(o.id, o));
             prev.forEach(o => mergedMap.set(o.id, o));
             ords.forEach(o => {
               const existing = mergedMap.get(o.id);
@@ -1460,12 +1649,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         source.forEach(r => {
           batch.set(doc(db, 'reviews', r.id), r);
         });
-        batch.commit().catch(err => console.error('Error seeding reviews:', err));
+        batch.commit().catch(err => console.warn('Seeding reviews notice:', err?.message || err));
       } else {
         const revs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as UserReview);
         setReviewsState(prev => sortReviewsNewestFirst(mergeServerWithLocal(revs, prev, revTombs)));
       }
-    }, (err) => console.error('Reviews Firestore error:', err));
+    }, (err) => console.warn('Reviews Firestore notice:', err?.message || err));
 
     // 6. Chat Messages Listener
     const unsubChat = onSnapshot(collection(db, 'chat_messages'), (snapshot) => {
@@ -1477,12 +1666,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         source.forEach(c => {
           batch.set(doc(db, 'chat_messages', c.id), c);
         });
-        batch.commit().catch(err => console.error('Error seeding chat_messages:', err));
+        batch.commit().catch(err => console.warn('Seeding chat_messages notice:', err?.message || err));
       } else {
         const msgs = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as ChatMessage);
         setChatMessagesState(prev => mergeServerWithLocal(msgs, prev, chatTombs));
       }
-    }, (err) => console.error('Chat Messages Firestore error:', err));
+    }, (err) => console.warn('Chat Messages Firestore notice:', err?.message || err));
 
     return () => {
       unsubProd();
@@ -1495,50 +1684,206 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   // --------------------------------------------------------------------------
-  // CROSS-TAB REALTIME SYNCHRONIZATION BUS (BroadcastChannel + Storage Event)
+  // CROSS-TAB REALTIME SYNCHRONIZATION BUS (BroadcastChannel + Storage Event + CustomEvent)
   // Menjamin tab Admin (Kitchen Desk / Overview) & tab User (Status Pesanan)
   // menerima pesanan baru & update status instan 0ms tanpa perlu refresh.
   // --------------------------------------------------------------------------
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    const handleOrderEvent = (data: any) => {
+      if (!data || !data.type) return;
+
+      if (data.type === 'ORDER_CREATED' && data.order) {
+        setOrdersState(prev => {
+          if (prev.some(o => o.id === data.order.id)) return prev;
+          const updated = [data.order, ...prev];
+          try {
+            localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'ORDER_STATUS_UPDATED' && data.orderId) {
+        setOrdersState(prev => {
+          const updated = prev.map(o => o.id === data.orderId ? { ...o, ...(data.updates || {}), status: data.status || o.status } : o);
+          try {
+            localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'ORDER_DELETED' && data.orderId) {
+        setOrdersState(prev => {
+          const updated = prev.filter(o => o.id !== data.orderId);
+          try {
+            localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'VOUCHER_CREATED' && data.voucher) {
+        setVouchersState(prev => {
+          const filtered = prev.filter(v => v.id !== data.voucher.id && cleanPromoCode(v.code) !== cleanPromoCode(data.voucher.code));
+          const updated = deduplicateVouchers([data.voucher, ...filtered]);
+          try {
+            localStorage.setItem('nefakky_vouchers_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'VOUCHER_UPDATED' && data.voucherId) {
+        setVouchersState(prev => {
+          const updated = deduplicateVouchers(prev.map(v => (v.id === data.voucherId || (data.code && cleanPromoCode(v.code) === cleanPromoCode(data.code))) ? { ...v, ...(data.updates || {}) } : v));
+          try {
+            localStorage.setItem('nefakky_vouchers_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'VOUCHER_DELETED' && data.voucherId) {
+        setVouchersState(prev => {
+          const updated = deduplicateVouchers(prev.filter(v => v.id !== data.voucherId && cleanPromoCode(v.code) !== cleanPromoCode(data.voucherCode || '')));
+          try {
+            localStorage.setItem('nefakky_vouchers_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'PROMOTION_CREATED' && data.promo) {
+        setPromotionsState(prev => {
+          if (prev.some(p => p.id === data.promo.id)) return prev;
+          const updated = [data.promo, ...prev];
+          try {
+            localStorage.setItem('nefakky_promotions_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'PROMOTION_UPDATED' && data.promoId) {
+        setPromotionsState(prev => {
+          const updated = prev.map(p => p.id === data.promoId ? { ...p, ...(data.updates || {}) } : p);
+          try {
+            localStorage.setItem('nefakky_promotions_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'PROMOTION_DELETED' && data.promoId) {
+        setPromotionsState(prev => {
+          const updated = prev.filter(p => p.id !== data.promoId);
+          try {
+            localStorage.setItem('nefakky_promotions_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'CHAT_MESSAGE_SENT' && data.message) {
+        setChatMessagesState(prev => {
+          if (prev.some(m => m.id === data.message.id)) return prev;
+          const updated = [...prev, data.message];
+          try {
+            localStorage.setItem('nefakky_chat_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'CHAT_MESSAGE_REPLIED' && data.message) {
+        setChatMessagesState(prev => {
+          const emailNorm = (data.userEmail || '').toLowerCase();
+          const marked = prev.map(m => {
+            if (m.userEmail.toLowerCase() === emailNorm && m.sender === 'user' && !m.readByAdmin) {
+              return { ...m, readByAdmin: true };
+            }
+            return m;
+          });
+          if (marked.some(m => m.id === data.message.id)) return marked;
+          const updated = [...marked, data.message];
+          try {
+            localStorage.setItem('nefakky_chat_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'CHAT_MESSAGES_READ') {
+        setChatMessagesState(prev => {
+          const emailNorm = (data.userEmail || '').toLowerCase();
+          const hasUnread = prev.some(m => {
+            if (m.userEmail.toLowerCase() === emailNorm) {
+              if (data.role === 'admin') return !m.readByAdmin;
+              if (data.role === 'user') return !m.readByUser;
+            }
+            return false;
+          });
+          if (!hasUnread) return prev;
+
+          const updated = prev.map(m => {
+            if (m.userEmail.toLowerCase() === emailNorm) {
+              if (data.role === 'admin') return { ...m, readByAdmin: true };
+              if (data.role === 'user') return { ...m, readByUser: true };
+            }
+            return m;
+          });
+          try {
+            localStorage.setItem('nefakky_chat_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      }
+    };
+
     let bc: BroadcastChannel | null = null;
     try {
-      bc = new BroadcastChannel('nefakky_orders_channel');
-      bc.onmessage = (event) => {
-        const data = event?.data;
-        if (!data || !data.type) return;
-
-        if (data.type === 'ORDER_CREATED' && data.order) {
-          setOrdersState(prev => {
-            if (prev.some(o => o.id === data.order.id)) return prev;
-            const updated = [data.order, ...prev];
-            try {
-              localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
-            } catch (e) {}
-            return updated;
-          });
-        } else if (data.type === 'ORDER_STATUS_UPDATED' && data.orderId) {
-          setOrdersState(prev => {
-            const updated = prev.map(o => o.id === data.orderId ? { ...o, ...(data.updates || {}), status: data.status || o.status } : o);
-            try {
-              localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
-            } catch (e) {}
-            return updated;
-          });
-        } else if (data.type === 'ORDER_DELETED' && data.orderId) {
-          setOrdersState(prev => {
-            const updated = prev.filter(o => o.id !== data.orderId);
-            try {
-              localStorage.setItem('nefakky_live_orders', JSON.stringify(updated));
-            } catch (e) {}
-            return updated;
-          });
-        }
-      };
+      bc = getOrdersBroadcastChannel();
+      if (bc) {
+        bc.onmessage = (event) => handleOrderEvent(event?.data);
+      }
     } catch (e) {
       console.warn('BroadcastChannel notice (active with storage event fallback)');
     }
+
+    const handleCustomOrderEvent = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      if (customEvt?.detail?.type) {
+        handleOrderEvent(customEvt.detail);
+      } else {
+        try {
+          const stored = localStorage.getItem('nefakky_live_orders');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              setOrdersState(parsed);
+            }
+          }
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('nefakky_orders_updated', handleCustomOrderEvent);
+
+    const handleCustomVoucherEvent = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      if (customEvt?.detail?.type) {
+        handleOrderEvent(customEvt.detail);
+      } else {
+        try {
+          const stored = localStorage.getItem('nefakky_vouchers_live');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              setVouchersState(deduplicateVouchers(parsed));
+            }
+          }
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('nefakky_vouchers_updated', handleCustomVoucherEvent);
+
+    const handleCustomChatEvent = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      if (customEvt?.detail?.type) {
+        handleOrderEvent(customEvt.detail);
+      } else {
+        try {
+          const stored = localStorage.getItem('nefakky_chat_live');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              setChatMessagesState(parsed);
+            }
+          }
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('nefakky_chat_updated', handleCustomChatEvent);
 
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'nefakky_live_orders' && e.newValue) {
@@ -1548,15 +1893,200 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             setOrdersState(parsed);
           }
         } catch (err) {}
+      } else if (e.key === 'nefakky_vouchers_live' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setVouchersState(deduplicateVouchers(parsed));
+          }
+        } catch (err) {}
+      } else if (e.key === 'nefakky_promotions_live' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setPromotionsState(parsed);
+          }
+        } catch (err) {}
+      } else if (e.key === 'nefakky_chat_live' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setChatMessagesState(parsed);
+          }
+        } catch (err) {}
       }
     };
     window.addEventListener('storage', handleStorage);
 
     return () => {
-      if (bc) {
-        try { bc.close(); } catch (e) {}
-      }
+      window.removeEventListener('nefakky_orders_updated', handleCustomOrderEvent);
+      window.removeEventListener('nefakky_vouchers_updated', handleCustomVoucherEvent);
+      window.removeEventListener('nefakky_chat_updated', handleCustomChatEvent);
       window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // SINKRONISASI SERVER CHAT API (/api/chat)
+  // Menjembatani percakapan realtime antara window Biasa (Admin) & Incognito/Private (User)
+  // serta lintas-peramban tanpa tergantung izin Firestore/RTDB.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let isSubscribed = true;
+
+    // 1. Unggah riwayat chat lokal yang sudah ada ke server agar sesi lain langsung menerima
+    try {
+      const localExisting = readLS<ChatMessage[]>('nefakky_chat_live', []);
+      if (localExisting && localExisting.length > 0) {
+        fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sync', messages: localExisting })
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
+    const syncWithServer = async () => {
+      try {
+        const res = await fetch('/api/chat', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isSubscribed || !data.success || !Array.isArray(data.messages)) return;
+
+        setChatMessagesState(prev => {
+          const serverMsgs: ChatMessage[] = data.messages;
+          const prevMap = new Map(prev.map(m => [m.id, m]));
+          let changed = false;
+
+          serverMsgs.forEach(sm => {
+            const pm = prevMap.get(sm.id);
+            if (!pm) {
+              prevMap.set(sm.id, sm);
+              changed = true;
+            } else if (pm.readByAdmin !== sm.readByAdmin || pm.readByUser !== sm.readByUser || pm.text !== sm.text) {
+              prevMap.set(sm.id, { ...pm, ...sm });
+              changed = true;
+            }
+          });
+
+          if (!changed && prev.length === serverMsgs.length) return prev;
+
+          const merged = Array.from(prevMap.values());
+          try {
+            localStorage.setItem('nefakky_chat_live', JSON.stringify(merged));
+          } catch (e) {}
+          return merged;
+        });
+      } catch (e) {}
+    };
+
+    // Jalankan segera saat mount
+    syncWithServer();
+
+    // Polling interval 1.5 detik agar pesan antar window masuk secara instan
+    const timer = setInterval(syncWithServer, 1500);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') syncWithServer();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // SINKRONISASI SERVER ORDERS API (/api/orders)
+  // Menjembatani pesanan baru & update status realtime antara window Biasa (Admin) & Incognito/Private (User)
+  // serta lintas-peramban tanpa tergantung izin Firebase Firestore/RTDB.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let isSubscribed = true;
+
+    // 1. Unggah pesanan lokal yang ada ke server store saat mount
+    try {
+      const localExisting = readLS<AdminOrder[]>('nefakky_live_orders', []);
+      if (localExisting && localExisting.length > 0) {
+        fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sync', orders: localExisting })
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
+    const syncOrdersWithServer = async () => {
+      try {
+        const res = await fetch('/api/orders', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isSubscribed || !data.success || !Array.isArray(data.orders)) return;
+
+        const tombs = readTombstones('nefakky_deleted_orders');
+        const serverOrders: AdminOrder[] = data.orders.filter((o: any) => o && o.id && !tombs.has(o.id));
+
+        setOrdersState(prev => {
+          const prevMap = new Map<string, AdminOrder>();
+          prev.forEach(o => prevMap.set(o.id, o));
+
+          let changed = false;
+          serverOrders.forEach(so => {
+            if (tombs.has(so.id)) return;
+            const po = prevMap.get(so.id);
+            if (!po) {
+              prevMap.set(so.id, so);
+              changed = true;
+            } else {
+              const serverUpdated = so.updatedAt || so.createdAt || 0;
+              const localUpdated = po.updatedAt || po.createdAt || 0;
+              if (
+                serverUpdated > localUpdated ||
+                po.status !== so.status ||
+                po.paymentBadge !== so.paymentBadge ||
+                (so.proofPhoto && po.proofPhoto !== so.proofPhoto) ||
+                (so.paymentProofPhoto && po.paymentProofPhoto !== so.paymentProofPhoto)
+              ) {
+                prevMap.set(so.id, { ...po, ...so });
+                changed = true;
+              }
+            }
+          });
+
+          if (!changed && prev.length === prevMap.size) return prev;
+
+          const merged = Array.from(prevMap.values()).filter(o => !tombs.has(o.id));
+          merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+          try {
+            localStorage.setItem('nefakky_live_orders', JSON.stringify(merged));
+          } catch (e) {}
+          return merged;
+        });
+      } catch (e) {}
+    };
+
+    // Jalankan segera saat mount
+    syncOrdersWithServer();
+
+    // Polling interval 1.5 detik agar pesanan masuk instan ke Kitchen Desk admin
+    const timer = setInterval(syncOrdersWithServer, 1500);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') syncOrdersWithServer();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
 
@@ -1595,6 +2125,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
         persistOrders(prev => {
           const mergedMap = new Map<string, AdminOrder>();
+          const localSaved = readLS<AdminOrder[]>('nefakky_live_orders', []);
+          localSaved.forEach(o => mergedMap.set(o.id, o));
           prev.forEach(o => mergedMap.set(o.id, o));
           incoming.forEach(o => {
             const existing = mergedMap.get(o.id);
@@ -1750,7 +2282,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       // Sync each item to Firestore doc with sanitation
       next.forEach(p => {
         const cleanP = cleanForFirestore(p);
-        setDoc(doc(db, 'products', p.id), cleanP, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'products', p.id), cleanP, { merge: true }).catch(() => {});
       });
       return next;
     });
@@ -1760,7 +2292,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setPromotionsState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       next.forEach(p => {
-        setDoc(doc(db, 'promotions', p.id), cleanForFirestore(p), { merge: true }).catch(console.error);
+        setDoc(doc(db, 'promotions', p.id), cleanForFirestore(p), { merge: true }).catch(() => {});
       });
       return next;
     });
@@ -1769,10 +2301,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const setVouchers: React.Dispatch<React.SetStateAction<AdminVoucher[]>> = (action) => {
     setVouchersState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
-      next.forEach(v => {
-        setDoc(doc(db, 'vouchers', v.id), cleanForFirestore(v), { merge: true }).catch(console.error);
+      const deduped = deduplicateVouchers(next);
+      deduped.forEach(v => {
+        setDoc(doc(db, 'vouchers', v.id), cleanForFirestore(v), { merge: true }).catch(() => {});
       });
-      return next;
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_vouchers_live', JSON.stringify(deduped));
+        } catch (e) {}
+      }
+      return deduped;
     });
   };
 
@@ -1780,7 +2318,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setOrdersState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       next.forEach(o => {
-        setDoc(doc(db, 'orders', o.id), cleanForFirestore(o), { merge: true }).catch(console.error);
+        setDoc(doc(db, 'orders', o.id), cleanForFirestore(o), { merge: true }).catch(() => {});
       });
       return next;
     });
@@ -1790,7 +2328,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setReviewsState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       next.forEach(r => {
-        setDoc(doc(db, 'reviews', r.id), cleanForFirestore(r), { merge: true }).catch(console.error);
+        setDoc(doc(db, 'reviews', r.id), cleanForFirestore(r), { merge: true }).catch(() => {});
       });
       return next;
     });
@@ -1800,7 +2338,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setChatMessagesState(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
       next.forEach(c => {
-        setDoc(doc(db, 'chat_messages', c.id), cleanForFirestore(c), { merge: true }).catch(console.error);
+        setDoc(doc(db, 'chat_messages', c.id), cleanForFirestore(c), { merge: true }).catch(() => {});
       });
       return next;
     });
@@ -1818,7 +2356,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const cleanProd = cleanForFirestore(newProduct) as ProductItem;
     setProductsState(prev => [cleanProd, ...prev]);
     try {
-      setDoc(doc(db, 'products', newId), cleanProd).catch(console.error);
+      setDoc(doc(db, 'products', newId), cleanProd).catch(() => {});
     } catch (e) {
       console.warn('Catch addProduct setDoc error:', e);
     }
@@ -1862,7 +2400,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (e) {}
     try {
-      deleteDoc(doc(db, 'products', id)).catch(console.error);
+      deleteDoc(doc(db, 'products', id)).catch(() => {});
     } catch (e) {
       console.warn('Catch deleteProduct error:', e);
     }
@@ -1879,7 +2417,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           visibility: nextVis,
           status: nextStatus,
           updatedAt: Date.now()
-        }).catch(console.error);
+        }).catch(() => {});
       } catch (e) {
         console.warn('Catch toggleProductVisibility error:', e);
       }
@@ -1895,13 +2433,54 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       isActive: promoData.isActive ?? true,
       updatedAt: Date.now()
     };
-    setDoc(doc(db, 'promotions', newId), newPromo).catch(console.error);
+    setPromotionsState(prev => {
+      const filtered = prev.filter(p => p.id !== newId);
+      const updated = [newPromo, ...filtered];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_promotions_live', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'PROMOTION_CREATED', promo: newPromo });
+        window.dispatchEvent(new CustomEvent('nefakky_vouchers_updated', { detail: { type: 'PROMOTION_CREATED', promo: newPromo } }));
+      } catch (e) {}
+    }
+
+    try {
+      setDoc(doc(db, 'promotions', newId), cleanForFirestore(newPromo)).catch(() => {});
+    } catch (e) {}
     return newPromo;
   };
 
   const deletePromotion = (id: string) => {
-    deleteDoc(doc(db, 'promotions', id)).catch(console.error);
-    deleteDoc(doc(db, 'vouchers', id)).catch(console.error);
+    setPromotionsState(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_promotions_live', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'PROMOTION_DELETED', promoId: id });
+        window.dispatchEvent(new CustomEvent('nefakky_vouchers_updated', { detail: { type: 'PROMOTION_DELETED', promoId: id } }));
+      } catch (e) {}
+    }
+
+    try {
+      deleteDoc(doc(db, 'promotions', id)).catch(() => {});
+      deleteDoc(doc(db, 'vouchers', id)).catch(() => {});
+    } catch (e) {}
   };
 
   const togglePromotionActive = (id: string) => {
@@ -1913,8 +2492,27 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         badge: (nextActive ? 'Active' : 'Ended') as PromotionItem['badge'],
         updatedAt: Date.now()
       };
-      setPromotionsState(prev => prev.map(p => p.id === id ? { ...p, ...promoUpdates } : p));
-      updateDoc(doc(db, 'promotions', id), promoUpdates).catch(console.error);
+      setPromotionsState(prev => {
+        const updated = prev.map(p => p.id === id ? { ...p, ...promoUpdates } : p);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('nefakky_promotions_live', JSON.stringify(updated));
+          } catch (e) {}
+        }
+        return updated;
+      });
+
+      if (typeof window !== 'undefined') {
+        try {
+          const bc = getOrdersBroadcastChannel();
+          if (bc) bc.postMessage({ type: 'PROMOTION_UPDATED', promoId: id, updates: promoUpdates });
+          window.dispatchEvent(new CustomEvent('nefakky_vouchers_updated', { detail: { type: 'PROMOTION_UPDATED', promoId: id, updates: promoUpdates } }));
+        } catch (e) {}
+      }
+
+      try {
+        updateDoc(doc(db, 'promotions', id), cleanForFirestore(promoUpdates)).catch(() => {});
+      } catch (e) {}
 
       const matchingVoucher = vouchers.find(v => v.id === id || (v.code && target.title.toLowerCase().includes(v.code.toLowerCase())));
       if (matchingVoucher) {
@@ -1923,15 +2521,43 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           isActive: nextActive,
           updatedAt: Date.now()
         };
-        setVouchersState(prev => prev.map(v => v.id === matchingVoucher.id ? { ...v, ...vUpdates } : v));
-        updateDoc(doc(db, 'vouchers', matchingVoucher.id), vUpdates).catch(console.error);
+        setVouchersState(prev => {
+          const updated = prev.map(v => v.id === matchingVoucher.id ? { ...v, ...vUpdates } : v);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('nefakky_vouchers_live', JSON.stringify(updated));
+            } catch (e) {}
+          }
+          return updated;
+        });
+
+        if (typeof window !== 'undefined') {
+          try {
+            const bc = getOrdersBroadcastChannel();
+            if (bc) bc.postMessage({ type: 'VOUCHER_UPDATED', voucherId: matchingVoucher.id, updates: vUpdates });
+            window.dispatchEvent(new CustomEvent('nefakky_vouchers_updated', { detail: { type: 'VOUCHER_UPDATED', voucherId: matchingVoucher.id, updates: vUpdates } }));
+          } catch (e) {}
+        }
+
+        try {
+          updateDoc(doc(db, 'vouchers', matchingVoucher.id), cleanForFirestore(vUpdates)).catch(() => {});
+        } catch (e) {}
       }
     }
   };
 
-  const addVoucher = (voucherData: Omit<AdminVoucher, 'id'>): AdminVoucher => {
-    const newId = `v_${Date.now()}`;
+  const addVoucher = (voucherData: Omit<AdminVoucher, 'id'> & { id?: string }): AdminVoucher => {
     const cleanCode = cleanPromoCode(voucherData.code);
+    
+    // Cari apakah voucher dengan kode atau ID ini sudah ada sebelumnya
+    const existing = vouchers.find(v => 
+      (cleanCode && cleanPromoCode(v.code) === cleanCode) || 
+      (voucherData.id && v.id === voucherData.id)
+    );
+
+    // Prioritaskan ID yang sudah ada agar tidak membuat dokumen Firestore ganda
+    const newId = voucherData.id || (existing ? existing.id : `v_${Date.now()}`);
+
     const newVoucher: AdminVoucher = {
       ...voucherData,
       id: newId,
@@ -1941,20 +2567,43 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       minSpend: Number(voucherData.minSpend) || 0,
       status: (voucherData.status as any) || 'Active',
       isActive: voucherData.isActive !== false,
+      validDays: voucherData.validDays || 'Semua Hari',
       lastResetWeek: getISOWeekString(),
       updatedAt: Date.now()
     };
 
-    // Update state lokal secara instan agar langsung muncul di admin & homepage
+    // Update state lokal & localStorage secara instan sinkron
     setVouchersState(prev => {
       const filtered = prev.filter(v => cleanPromoCode(v.code) !== cleanCode && v.id !== newId);
-      return [newVoucher, ...filtered];
+      const updated = deduplicateVouchers([newVoucher, ...filtered]);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_vouchers_live', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
     });
 
-    // Simpan ke Firestore
-    setDoc(doc(db, 'vouchers', newId), newVoucher).catch(console.error);
+    // Jika voucher sebelumnya memiliki ID berbeda, bersihkan dokumen lama dari Firestore
+    if (existing && existing.id !== newId) {
+      deleteDoc(doc(db, 'vouchers', existing.id)).catch(() => {});
+    }
 
-    // Sinkronkan juga ke promotions collection
+    // Cross-tab & same-window instant broadcast
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'VOUCHER_CREATED', voucher: newVoucher });
+        window.dispatchEvent(new CustomEvent('nefakky_vouchers_updated', { detail: { type: 'VOUCHER_CREATED', voucher: newVoucher } }));
+      } catch (e) {}
+    }
+
+    // Simpan ke Firestore secara aman (tanpa undefined)
+    try {
+      setDoc(doc(db, 'vouchers', newId), cleanForFirestore(newVoucher)).catch(() => {});
+    } catch (e) {}
+
+    // Sinkronkan juga ke promotions collection & state
     const newPromo: PromotionItem = {
       id: newId,
       title: newVoucher.name,
@@ -1966,9 +2615,24 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       type: 'Voucher',
       usedCount: 0,
       totalLimit: newVoucher.totalLimit || 100,
-      isActive: true
+      isActive: true,
+      updatedAt: Date.now()
     };
-    setDoc(doc(db, 'promotions', newId), newPromo).catch(console.error);
+
+    setPromotionsState(prev => {
+      const filtered = prev.filter(p => p.id !== newId);
+      const updated = [newPromo, ...filtered];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_promotions_live', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    try {
+      setDoc(doc(db, 'promotions', newId), cleanForFirestore(newPromo)).catch(() => {});
+    } catch (e) {}
 
     return newVoucher;
   };
@@ -1980,22 +2644,78 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       ...(cleanCode ? { code: cleanCode } : {}),
       updatedAt: Date.now()
     };
-    setVouchersState(prev => prev.map(v => (v.id === id || (cleanCode && cleanPromoCode(v.code) === cleanCode)) ? { ...v, ...finalUpdates } : v));
-    updateDoc(doc(db, 'vouchers', id), finalUpdates).catch(console.error);
+    setVouchersState(prev => {
+      const updatedList = prev.map(v => (v.id === id || (cleanCode && cleanPromoCode(v.code) === cleanCode)) ? { ...v, ...finalUpdates } : v);
+      const deduped = deduplicateVouchers(updatedList);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_vouchers_live', JSON.stringify(deduped));
+        } catch (e) {}
+      }
+      return deduped;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'VOUCHER_UPDATED', voucherId: id, code: cleanCode, updates: finalUpdates });
+        window.dispatchEvent(new CustomEvent('nefakky_vouchers_updated', { detail: { type: 'VOUCHER_UPDATED', voucherId: id, code: cleanCode, updates: finalUpdates } }));
+      } catch (e) {}
+    }
+
+    try {
+      updateDoc(doc(db, 'vouchers', id), cleanForFirestore(finalUpdates)).catch(() => {});
+      if (cleanCode) {
+        vouchers
+          .filter(v => v.id !== id && cleanPromoCode(v.code) === cleanCode)
+          .forEach(v => deleteDoc(doc(db, 'vouchers', v.id)).catch(() => {}));
+      }
+    } catch (e) {}
   };
 
   const deleteVoucher = (id: string) => {
     const target = vouchers.find(v => v.id === id || cleanPromoCode(v.code) === cleanPromoCode(id));
     const targetId = target ? target.id : id;
-    setVouchersState(prev => prev.filter(v => v.id !== targetId && cleanPromoCode(v.code) !== cleanPromoCode(id)));
+    const targetCode = target ? target.code : id;
+    const cleanTarget = cleanPromoCode(targetCode);
+
+    setVouchersState(prev => {
+      const updatedList = prev.filter(v => v.id !== targetId && cleanPromoCode(v.code) !== cleanTarget);
+      const deduped = deduplicateVouchers(updatedList);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_vouchers_live', JSON.stringify(deduped));
+        } catch (e) {}
+      }
+      return deduped;
+    });
+
     const promoIds = promotions
       .filter(p => p.id === targetId || (target && target.code && p.title && p.title.toLowerCase().includes(target.code.toLowerCase())))
       .map(p => p.id);
-    setPromotionsState(prev => prev.filter(p => p.id !== targetId && !promoIds.includes(p.id)));
+    setPromotionsState(prev => {
+      const updatedPromos = prev.filter(p => p.id !== targetId && !promoIds.includes(p.id));
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_promotions_live', JSON.stringify(updatedPromos));
+        } catch (e) {}
+      }
+      return updatedPromos;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'VOUCHER_DELETED', voucherId: targetId, voucherCode: targetCode });
+        window.dispatchEvent(new CustomEvent('nefakky_vouchers_updated', { detail: { type: 'VOUCHER_DELETED', voucherId: targetId, voucherCode: targetCode } }));
+      } catch (e) {}
+    }
+
     try {
       if (typeof window !== 'undefined') {
         const vTombs = readTombstones('nefakky_deleted_vouchers');
         vTombs.add(targetId);
+        if (cleanTarget) vTombs.add(cleanTarget);
         localStorage.setItem('nefakky_deleted_vouchers', JSON.stringify(Array.from(vTombs)));
         const pTombs = readTombstones('nefakky_deleted_promotions');
         promoIds.concat([targetId]).forEach(pid => pTombs.add(pid));
@@ -2003,8 +2723,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (e) {}
     try {
-      deleteDoc(doc(db, 'vouchers', targetId)).catch(console.error);
-      deleteDoc(doc(db, 'promotions', targetId)).catch(console.error);
+      deleteDoc(doc(db, 'vouchers', targetId)).catch(() => {});
+      if (cleanTarget) {
+        vouchers
+          .filter(v => v.id !== targetId && cleanPromoCode(v.code) === cleanTarget)
+          .forEach(v => deleteDoc(doc(db, 'vouchers', v.id)).catch(() => {}));
+      }
+      deleteDoc(doc(db, 'promotions', targetId)).catch(() => {});
     } catch (e) {
       console.warn('Catch deleteVoucher error:', e);
     }
@@ -2020,8 +2745,27 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         updatedAt: Date.now()
       };
 
-      setVouchersState(prev => prev.map(v => (v.id === target.id || cleanPromoCode(v.code) === cleanPromoCode(target.code)) ? { ...v, ...updates } : v));
-      updateDoc(doc(db, 'vouchers', target.id), updates).catch(console.error);
+      setVouchersState(prev => {
+        const updatedList = prev.map(v => (v.id === target.id || cleanPromoCode(v.code) === cleanPromoCode(target.code)) ? { ...v, ...updates } : v);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('nefakky_vouchers_live', JSON.stringify(updatedList));
+          } catch (e) {}
+        }
+        return updatedList;
+      });
+
+      if (typeof window !== 'undefined') {
+        try {
+          const bc = getOrdersBroadcastChannel();
+          if (bc) bc.postMessage({ type: 'VOUCHER_UPDATED', voucherId: target.id, updates });
+          window.dispatchEvent(new CustomEvent('nefakky_vouchers_updated', { detail: { type: 'VOUCHER_UPDATED', voucherId: target.id, updates } }));
+        } catch (e) {}
+      }
+
+      try {
+        updateDoc(doc(db, 'vouchers', target.id), cleanForFirestore(updates)).catch(() => {});
+      } catch (e) {}
 
       const matchingPromo = promotions.find(p => p.id === target.id || (p.title && p.title.toLowerCase().includes(target.code.toLowerCase())));
       if (matchingPromo) {
@@ -2030,8 +2774,18 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           badge: (nextActive ? 'Active' : 'Ended') as PromotionItem['badge'],
           updatedAt: Date.now()
         };
-        setPromotionsState(prev => prev.map(p => p.id === matchingPromo.id ? { ...p, ...promoUpdates } : p));
-        updateDoc(doc(db, 'promotions', matchingPromo.id), promoUpdates).catch(console.error);
+        setPromotionsState(prev => {
+          const updatedPromos = prev.map(p => p.id === matchingPromo.id ? { ...p, ...promoUpdates } : p);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('nefakky_promotions_live', JSON.stringify(updatedPromos));
+            } catch (e) {}
+          }
+          return updatedPromos;
+        });
+        try {
+          updateDoc(doc(db, 'promotions', matchingPromo.id), cleanForFirestore(promoUpdates)).catch(() => {});
+        } catch (e) {}
       }
     }
   };
@@ -2089,12 +2843,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       return updated;
     });
 
-    // 2. Broadcast cross-tab event
+    // 2. Broadcast cross-tab & same-window event
     if (typeof window !== 'undefined') {
       try {
-        const bc = new BroadcastChannel('nefakky_orders_channel');
-        bc.postMessage({ type: 'ORDER_CREATED', order: newOrder });
-        bc.close();
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'ORDER_CREATED', order: newOrder });
+        window.dispatchEvent(new CustomEvent('nefakky_orders_updated', { detail: { type: 'ORDER_CREATED', order: newOrder } }));
       } catch (e) {}
     }
 
@@ -2182,7 +2936,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           try {
             localStorage.setItem('nefakky_products_live', JSON.stringify(updatedProducts));
           } catch (e) {
-            console.error(e);
+            console.warn(e);
           }
         }
 
@@ -2200,6 +2954,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       total: newOrder.total,
       updatedAt: Date.now()
     }).catch(() => {});
+
+    // Sinkronisasi pesanan ke server API agar langsung diterima admin di window/browser lain
+    try {
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', order: newOrder })
+      }).catch(() => {});
+    } catch (e) {}
+
     return newOrder;
   };
 
@@ -2233,15 +2997,23 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (typeof window !== 'undefined') {
       try {
-        const bc = new BroadcastChannel('nefakky_orders_channel');
-        bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status, updates });
-        bc.close();
+        const bc = getOrdersBroadcastChannel();
+        bc?.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status, updates });
+        window.dispatchEvent(new CustomEvent('nefakky_orders_updated'));
       } catch (e) {}
     }
 
     updateDoc(doc(db, 'orders', id), cleanForFirestore(updates)).catch(() => {});
     updateRtdb(ref(rtdb, `orders/${id}`), cleanForFirestore(updates)).catch(() => {});
     updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(() => {});
+
+    try {
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_status', orderId: id, status, updates })
+      }).catch(() => {});
+    } catch (e) {}
   };
 
   const updatePaymentStatus = (id: string, badge: AdminOrder['paymentBadge']) => {
@@ -2257,14 +3029,22 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (typeof window !== 'undefined') {
       try {
-        const bc = new BroadcastChannel('nefakky_orders_channel');
-        bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, updates: { paymentBadge: badge } });
-        bc.close();
+        const bc = getOrdersBroadcastChannel();
+        bc?.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, updates: { paymentBadge: badge } });
+        window.dispatchEvent(new CustomEvent('nefakky_orders_updated'));
       } catch (e) {}
     }
 
     updateDoc(doc(db, 'orders', id), { paymentBadge: badge }).catch(() => {});
     updateRtdb(ref(rtdb, `orders/${id}`), { paymentBadge: badge, updatedAt: Date.now() }).catch(() => {});
+
+    try {
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_status', orderId: id, updates: { paymentBadge: badge } })
+      }).catch(() => {});
+    } catch (e) {}
   };
 
   const deleteOrder = (id: string) => {
@@ -2288,9 +3068,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (typeof window !== 'undefined') {
       try {
-        const bc = new BroadcastChannel('nefakky_orders_channel');
-        bc.postMessage({ type: 'ORDER_DELETED', orderId: id });
-        bc.close();
+        const bc = getOrdersBroadcastChannel();
+        bc?.postMessage({ type: 'ORDER_DELETED', orderId: id });
+        window.dispatchEvent(new CustomEvent('nefakky_orders_updated'));
       } catch (e) {}
     }
 
@@ -2301,6 +3081,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (e) {
       console.warn('Catch deleteOrder error:', e);
     }
+
+    try {
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', orderId: id })
+      }).catch(() => {});
+    } catch (e) {}
   };
 
   const cancelOrder = (id: string, reason?: string) => {
@@ -2325,15 +3113,23 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (typeof window !== 'undefined') {
         try {
-          const bc = new BroadcastChannel('nefakky_orders_channel');
-          bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status: 'CANCELLED', updates });
-          bc.close();
+          const bc = getOrdersBroadcastChannel();
+          bc?.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status: 'CANCELLED', updates });
+          window.dispatchEvent(new CustomEvent('nefakky_orders_updated'));
         } catch (e) {}
       }
 
       updateDoc(doc(db, 'orders', id), cleanForFirestore(updates)).catch(() => {});
       updateRtdb(ref(rtdb, `orders/${id}`), cleanForFirestore(updates)).catch(() => {});
       updateRtdb(ref(rtdb, `live_orders/${id}`), { status: 'CANCELLED', updatedAt: Date.now() }).catch(() => {});
+
+      try {
+        fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'cancel', orderId: id, reason: reason || 'Dibatalkan oleh sistem/admin' })
+        }).catch(() => {});
+      } catch (e) {}
     }
   };
 
@@ -2367,15 +3163,23 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (typeof window !== 'undefined') {
       try {
-        const bc = new BroadcastChannel('nefakky_orders_channel');
-        bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status: 'COMPLETED', updates });
-        bc.close();
+        const bc = getOrdersBroadcastChannel();
+        bc?.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status: 'COMPLETED', updates });
+        window.dispatchEvent(new CustomEvent('nefakky_orders_updated'));
       } catch (e) {}
     }
 
     updateDoc(doc(db, 'orders', id), cleanForFirestore(updates)).catch(() => {});
     updateRtdb(ref(rtdb, `orders/${id}`), cleanForFirestore(updates)).catch(() => {});
     updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(() => {});
+
+    try {
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_status', orderId: id, status: 'COMPLETED', updates })
+      }).catch(() => {});
+    } catch (e) {}
   };
 
   const confirmOrderReceived = (id: string, proofPhotoUrl?: string, paymentProofPhotoUrl?: string) => {
@@ -2412,9 +3216,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (typeof window !== 'undefined') {
       try {
-        const bc = new BroadcastChannel('nefakky_orders_channel');
-        bc.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status: 'COMPLETED', updates });
-        bc.close();
+        const bc = getOrdersBroadcastChannel();
+        bc?.postMessage({ type: 'ORDER_STATUS_UPDATED', orderId: id, status: 'COMPLETED', updates });
+        window.dispatchEvent(new CustomEvent('nefakky_orders_updated'));
       } catch (e) {}
     }
 
@@ -2431,6 +3235,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       paymentProofPhoto: activePaymentProofPhoto || null,
       updatedAt: Date.now()
     }).catch(() => {});
+
+    try {
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_status', orderId: id, status: 'COMPLETED', updates: cleanUpdates })
+      }).catch(() => {});
+    } catch (e) {}
   };
 
   const uploadOrderProofPhoto = (id: string, proofPhotoUrl: string) => {
@@ -2442,9 +3254,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     // Local state sync using correct setter setOrdersState
     setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
 
-    updateDoc(doc(db, 'orders', id), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(console.error);
+    updateDoc(doc(db, 'orders', id), updates).catch(() => {});
+    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(() => {});
+    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(() => {});
+
+    try {
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'proof_photo', orderId: id, proofPhoto: proofPhotoUrl })
+      }).catch(() => {});
+    } catch (e) {}
   };
 
   const uploadOrderPaymentProofPhoto = (id: string, paymentProofPhotoUrl: string) => {
@@ -2456,9 +3276,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     // Local state sync using correct setter setOrdersState
     setOrdersState(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
 
-    updateDoc(doc(db, 'orders', id), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(console.error);
-    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(console.error);
+    updateDoc(doc(db, 'orders', id), updates).catch(() => {});
+    updateRtdb(ref(rtdb, `orders/${id}`), updates).catch(() => {});
+    updateRtdb(ref(rtdb, `live_orders/${id}`), updates).catch(() => {});
+
+    try {
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'proof_photo', orderId: id, paymentProofPhoto: paymentProofPhotoUrl })
+      }).catch(() => {});
+    } catch (e) {}
   };
 
   /** Helper pembersih kode voucher (menghapus tanda #, spasi, dan kapitalisasi) */
@@ -2474,40 +3302,39 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     const isNewCustomerVoucher = cleanTargetCode === 'NEFAKKY10' || cleanTargetCode.includes('NEWUSER') || cleanTargetCode.includes('PELANGGANBARU');
 
-    // 1. Cek dari localStorage khusus akun user ini
-    if (typeof window !== 'undefined') {
-      const keysToCheck = [
-        userUid ? `nefakky_used_vouchers_${userUid}` : null,
-        userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase().trim()}` : null,
-        'nefakky_used_vouchers_admin',
-        'nefakky_used_vouchers_session'
-      ].filter(Boolean) as string[];
+    // 1. SSR & Initial Hydration Guard: jangan baca localStorage sebelum hidrasi selesai (mencegah React Hydration Mismatch)
+    if (typeof window === 'undefined' || !isHydratedRef.current) {
+      return false;
+    }
 
-      for (const storageKey of keysToCheck) {
-        try {
-          const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-          if (existing.some(c => cleanPromoCode(c) === cleanTargetCode)) {
-            return true;
-          }
-        } catch (e) {
-          console.error(e);
+    // Jika pengguna sudah login, periksa HANYA penyimpanan akun miliknya (bukan sesi anonim browser lama)
+    const keysToCheck = (userUid || userEmail)
+      ? [
+          userUid ? `nefakky_used_vouchers_${userUid}` : null,
+          userEmail ? `nefakky_used_vouchers_${userEmail.toLowerCase().trim()}` : null
+        ].filter(Boolean) as string[]
+      : ['nefakky_used_vouchers_session'];
+
+    for (const storageKey of keysToCheck) {
+      try {
+        const existing: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        if (existing.some(c => cleanPromoCode(c) === cleanTargetCode)) {
+          return true;
         }
+      } catch (e) {
+        console.warn(e);
       }
     }
 
     // 2. Riwayat pesanan (orders): HANYA untuk promo PELANGGAN BARU (blokir permanen 1x per akun).
-    //    Promo reguler cukup diblokir via localStorage di atas & tampil kembali setelah riset mingguan.
-    const userOrders = (orders || []).filter(o => {
-      const isUidMatch = Boolean(userUid && o.userId && o.userId === userUid);
-      const isEmailMatch = Boolean(userEmail && o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail.toLowerCase().trim());
-      const isAdminMatch = Boolean(
-        userEmail && (userEmail.toLowerCase().includes('fatih') || userEmail.toLowerCase().includes('admin')) &&
-        (o.customerEmail?.toLowerCase().includes('fatih') || o.userId?.includes('admin') || o.customerName?.toLowerCase().includes('fatih'))
-      );
-      return isUidMatch || isEmailMatch || isAdminMatch;
-    });
-
+    // Akun baru (orders === 0 untuk userId/email ini) selalu berhak mendapatkan promo pelanggan baru.
     if (isNewCustomerVoucher) {
+      const userOrders = (orders || []).filter(o => {
+        const isUidMatch = Boolean(userUid && o.userId && o.userId === userUid);
+        const isEmailMatch = Boolean(userEmail && o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail.toLowerCase().trim());
+        return isUidMatch || isEmailMatch;
+      });
+
       const hasUsedInOrders = userOrders.some(o => {
         const raw = o.voucherCode || o.appliedPromo;
         if (!raw) return false;
@@ -2517,25 +3344,76 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (hasUsedInOrders) return true;
 
-      // ATURAN KHUSUS PELANGGAN BARU (#NEFAKKY10):
-      // Jika akun sudah memiliki riwayat pesanan (orders >= 1) atau akun admin testing,
-      // Akun tersebut BUKAN lagi pengguna baru, sehingga promo pelanggan baru tidak muncul
+      // Jika akun sudah memiliki riwayat pesanan (orders >= 1), berarti bukan pelanggan baru lagi
       if (userOrders.length > 0) {
         return true;
-      }
-      if (userEmail && (userEmail.toLowerCase().includes('admin') || userEmail.toLowerCase().includes('fatih'))) {
-        const allAdminTestingOrders = (orders || []).filter(o => 
-          o.customerEmail?.toLowerCase().includes('fatih') || 
-          o.userId?.includes('admin') || 
-          o.customerName?.toLowerCase().includes('fatih')
-        );
-        if (allAdminTestingOrders.length > 0) {
-          return true;
-        }
       }
     }
 
     return false;
+  };
+
+  /**
+   * Helper function untuk memverifikasi apakah akun pengguna telah membeli produk tertentu
+   * Digunakan untuk memastikan ulasan hanya ditulis oleh pembeli asli (anti-fake review).
+   */
+  const hasUserPurchasedProduct = (productIdOrName: string, userUid?: string | null, userEmail?: string | null): boolean => {
+    if (!productIdOrName) return false;
+    if (!userUid && !userEmail) return false;
+
+    // Admin selalu memiliki akses terverifikasi untuk kemudahan demo/testing
+    if (isAdminEmail(userEmail)) return true;
+
+    const cleanTarget = productIdOrName.trim().toLowerCase();
+
+    // Saring pesanan milik pengguna yang valid (bukan dibatalkan/dihapus)
+    const userOrders = (orders || []).filter(o => {
+      if (o.isDeleted || o.status === 'CANCELLED') return false;
+      const isUidMatch = Boolean(userUid && o.userId && o.userId === userUid);
+      const isEmailMatch = Boolean(userEmail && o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail.toLowerCase().trim());
+      return isUidMatch || isEmailMatch;
+    });
+
+    return userOrders.some(o => {
+      return (o.items || []).some(item => {
+        const itemId = (item.id || '').toLowerCase();
+        const itemName = (item.name || '').toLowerCase();
+        return itemId === cleanTarget || itemName === cleanTarget || itemName.includes(cleanTarget) || cleanTarget.includes(itemName);
+      });
+    });
+  };
+
+  /**
+   * Helper function untuk mendapatkan daftar semua hidangan yang pernah dibeli pengguna
+   */
+  const getUserPurchasedProducts = (userUid?: string | null, userEmail?: string | null): ProductItem[] => {
+    if (!userUid && !userEmail) return [];
+
+    // Jika admin, kembalikan seluruh menu yang aktif
+    if (isAdminEmail(userEmail)) {
+      return (products || []).filter(p => p.visibility !== false && !p.isDeleted);
+    }
+
+    const userOrders = (orders || []).filter(o => {
+      if (o.isDeleted || o.status === 'CANCELLED') return false;
+      const isUidMatch = Boolean(userUid && o.userId && o.userId === userUid);
+      const isEmailMatch = Boolean(userEmail && o.customerEmail && o.customerEmail.toLowerCase().trim() === userEmail.toLowerCase().trim());
+      return isUidMatch || isEmailMatch;
+    });
+
+    const purchasedIds = new Set<string>();
+    const purchasedNames = new Set<string>();
+
+    userOrders.forEach(o => {
+      (o.items || []).forEach(item => {
+        if (item.id) purchasedIds.add(item.id.toLowerCase());
+        if (item.name) purchasedNames.add(item.name.toLowerCase());
+      });
+    });
+
+    return (products || []).filter(p => {
+      return purchasedIds.has(p.id.toLowerCase()) || purchasedNames.has(p.name.toLowerCase());
+    });
   };
 
   /** Helper function untuk mereset data penggunaan voucher (oleh Admin di Dashboard Promosi) */
@@ -2553,7 +3431,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           localStorage.setItem(k, JSON.stringify(filtered));
         }
       } catch (e) {
-        console.error(e);
+        console.warn(e);
       }
     }
 
@@ -2574,7 +3452,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       };
 
       setVouchersState(prev => prev.map(v => (v.id === target.id || cleanPromoCode(v.code) === cleanCode) ? { ...v, ...updates } : v));
-      await updateDoc(doc(db, 'vouchers', target.id), updates).catch(console.error);
+      await updateDoc(doc(db, 'vouchers', target.id), updates).catch(() => {});
       return true;
     }
 
@@ -2605,7 +3483,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
                 localStorage.setItem(storageKey, JSON.stringify(existing));
               }
             } catch (e) {
-              console.error(e);
+              console.warn(e);
             }
           }
         }
@@ -2707,6 +3585,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const newId = `rev_${Date.now()}`;
     const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(reviewData.authorName)}&background=5C3D28&color=ffffff&bold=true`;
     const avatar = reviewData.avatar || defaultAvatar;
+
+    // Verifikasi otomatis status pembeli terverifikasi (mencegah ulasan palsu)
+    const isBuyer = reviewData.isVerifiedBuyer ?? hasUserPurchasedProduct(
+      reviewData.productName || reviewData.productId || '',
+      null,
+      reviewData.authorEmail
+    );
+
     const newReview: UserReview = {
       ...reviewData,
       id: newId,
@@ -2716,11 +3602,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       likesCount: 0,
-      status: 'PUBLISHED'
+      status: 'PUBLISHED',
+      isVerifiedBuyer: isBuyer
     };
 
     setReviewsState(prev => sortReviewsNewestFirst([newReview, ...prev]));
-    setDoc(doc(db, 'reviews', newId), newReview).catch(console.error);
+    setDoc(doc(db, 'reviews', newId), newReview).catch(() => {});
 
     // Recalculate Product Average Rating automatically
     if (reviewData.productName) {
@@ -2736,7 +3623,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         updateDoc(doc(db, 'products', prod.id), {
           rating: newAvgRating,
           reviewsCount: newCount
-        }).catch(console.error);
+        }).catch(() => {});
       }
     }
 
@@ -2745,7 +3632,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   const deleteReview = (id: string) => {
     const reviewToDelete = reviews.find(r => r.id === id);
-    deleteDoc(doc(db, 'reviews', id)).catch(console.error);
+    deleteDoc(doc(db, 'reviews', id)).catch(() => {});
 
     if (reviewToDelete && reviewToDelete.productName) {
       const targetName = reviewToDelete.productName.toLowerCase();
@@ -2761,7 +3648,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           updateDoc(doc(db, 'products', prod.id), {
             rating: newAvgRating,
             reviewsCount: newCount
-          }).catch(console.error);
+          }).catch(() => {});
         }
       }
     }
@@ -2785,8 +3672,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
       const target = updated.find(r => r.id === reviewId);
       if (target) {
-        updateDoc(doc(db, 'reviews', reviewId), { replies: target.replies }).catch(console.error);
-        setRtdb(ref(rtdb, `reviews/${reviewId}`), target).catch(console.error);
+        updateDoc(doc(db, 'reviews', reviewId), { replies: target.replies }).catch(() => {});
+        setRtdb(ref(rtdb, `reviews/${reviewId}`), target).catch(() => {});
       }
 
       return updated;
@@ -2795,20 +3682,57 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   const sendChatMessage = (userEmail: string, userName: string, text: string, userAvatar?: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const emailNorm = userEmail.trim().toLowerCase();
     const newMsg: ChatMessage = {
       id: 'msg-' + Date.now(),
       sender: 'user',
-      userEmail: userEmail.trim().toLowerCase(),
-      userName,
+      userEmail: emailNorm,
+      userName: userName || 'Pelanggan',
       userAvatar,
-      text,
+      text: text.trim(),
       timestamp: timeStr,
       readByAdmin: false,
       readByUser: true,
       ...(mediaUrl ? { mediaUrl, mediaType: mediaType || 'image' } : {})
     };
-    setDoc(doc(db, 'chat_messages', newMsg.id), newMsg).catch(console.error);
-    setRtdb(ref(rtdb, `chat_messages/${newMsg.id}`), newMsg).catch(console.error);
+
+    // 1. Update state lokal & localStorage seketika (0ms)
+    setChatMessagesState(prev => {
+      const updated = [...prev, newMsg];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_chat_live', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    // 2. Broadcast ke tab lain & window events
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'CHAT_MESSAGE_SENT', message: newMsg });
+        window.dispatchEvent(new CustomEvent('nefakky_chat_updated', { detail: { type: 'CHAT_MESSAGE_SENT', message: newMsg } }));
+      } catch (e) {}
+    }
+
+    // 3. Simpan ke Firestore & RTDB secara aman
+    try {
+      const cleanMsg = cleanForFirestore(newMsg);
+      setDoc(doc(db, 'chat_messages', newMsg.id), cleanMsg).catch(() => {});
+      setRtdb(ref(rtdb, `chat_messages/${newMsg.id}`), cleanMsg).catch(() => {});
+    } catch (e) {}
+
+    // 4. Sinkronkan ke Server Chat API (/api/chat) agar langsung diterima Admin di browser/incognito lain
+    if (typeof window !== 'undefined') {
+      try {
+        fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'send', message: newMsg })
+        }).catch(() => {});
+      } catch (e) {}
+    }
   };
 
   const replyChatMessage = (userEmail: string, text: string, mediaUrl?: string, mediaType?: 'image' | 'video') => {
@@ -2819,7 +3743,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       sender: 'admin',
       userEmail: emailNorm,
       userName: 'Admin CS Nefakky',
-      text,
+      text: text.trim(),
       timestamp: timeStr,
       readByAdmin: true,
       readByUser: false,
@@ -2834,46 +3758,117 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         }
         return m;
       });
-      return [...updated, newMsg];
+      const finalList = [...updated, newMsg];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_chat_live', JSON.stringify(finalList));
+        } catch (e) {}
+      }
+      return finalList;
     });
 
-    setDoc(doc(db, 'chat_messages', newMsg.id), newMsg).catch(console.error);
-    setRtdb(ref(rtdb, `chat_messages/${newMsg.id}`), newMsg).catch(console.error);
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'CHAT_MESSAGE_REPLIED', message: newMsg, userEmail: emailNorm });
+        window.dispatchEvent(new CustomEvent('nefakky_chat_updated', { detail: { type: 'CHAT_MESSAGE_REPLIED', message: newMsg, userEmail: emailNorm } }));
+      } catch (e) {}
+    }
+
+    try {
+      const cleanMsg = cleanForFirestore(newMsg);
+      setDoc(doc(db, 'chat_messages', newMsg.id), cleanMsg).catch(() => {});
+      setRtdb(ref(rtdb, `chat_messages/${newMsg.id}`), cleanMsg).catch(() => {});
+    } catch (e) {}
+
+    // Sinkronkan ke server chat API
+    if (typeof window !== 'undefined') {
+      try {
+        fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'reply', message: newMsg, userEmail: emailNorm })
+        }).catch(() => {});
+      } catch (e) {}
+    }
 
     // Update Firestore documents
     chatMessages.forEach(m => {
       if (m.userEmail.toLowerCase() === emailNorm && m.sender === 'user' && !m.readByAdmin) {
-        updateDoc(doc(db, 'chat_messages', m.id), { readByAdmin: true }).catch(console.error);
+        updateDoc(doc(db, 'chat_messages', m.id), { readByAdmin: true }).catch(() => {});
       }
     });
   };
 
-  const markChatAsRead = (userEmail: string, role: 'admin' | 'user') => {
+  const markChatAsRead = useCallback((userEmail: string, role: 'admin' | 'user') => {
+    if (!userEmail) return;
     const emailNorm = userEmail.trim().toLowerCase();
 
-    // Immediately update local state
-    setChatMessagesState(prev => prev.map(m => {
-      if (m.userEmail.toLowerCase() === emailNorm) {
-        if (role === 'admin' && !m.readByAdmin) {
-          return { ...m, readByAdmin: true };
-        } else if (role === 'user' && !m.readByUser) {
-          return { ...m, readByUser: true };
-        }
-      }
-      return m;
-    }));
+    let hasChanges = false;
+    const firestoreUpdates: string[] = [];
 
-    // Update Firestore documents
-    chatMessages.forEach(m => {
-      if (m.userEmail.toLowerCase() === emailNorm) {
-        if (role === 'admin' && !m.readByAdmin) {
-          updateDoc(doc(db, 'chat_messages', m.id), { readByAdmin: true }).catch(console.error);
-        } else if (role === 'user' && !m.readByUser) {
-          updateDoc(doc(db, 'chat_messages', m.id), { readByUser: true }).catch(console.error);
+    setChatMessagesState(prev => {
+      const needsUpdate = prev.some(m => {
+        if (m.userEmail.toLowerCase() === emailNorm) {
+          if (role === 'admin') return !m.readByAdmin;
+          if (role === 'user') return !m.readByUser;
         }
+        return false;
+      });
+
+      // PENTING: Jika tidak ada pesan yang perlu ditandai, hentikan agar tidak re-render
+      if (!needsUpdate) return prev;
+      hasChanges = true;
+
+      const updated = prev.map(m => {
+        if (m.userEmail.toLowerCase() === emailNorm) {
+          if (role === 'admin' && !m.readByAdmin) {
+            firestoreUpdates.push(m.id);
+            return { ...m, readByAdmin: true };
+          } else if (role === 'user' && !m.readByUser) {
+            firestoreUpdates.push(m.id);
+            return { ...m, readByUser: true };
+          }
+        }
+        return m;
+      });
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_chat_live', JSON.stringify(updated));
+        } catch (e) {}
       }
+      return updated;
     });
-  };
+
+    // Jika tidak ada pesan yang ditandai, jangan jalankan broadcast/API/Firestore
+    if (!hasChanges) return;
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'CHAT_MESSAGES_READ', userEmail: emailNorm, role });
+      } catch (e) {}
+    }
+
+    // Sinkronkan status baca ke server chat API
+    if (typeof window !== 'undefined') {
+      try {
+        fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'markRead', userEmail: emailNorm, role })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    // Update Firestore documents secara spesifik untuk item yang berubah
+    try {
+      firestoreUpdates.forEach(id => {
+        updateDoc(doc(db, 'chat_messages', id), role === 'admin' ? { readByAdmin: true } : { readByUser: true }).catch(() => {});
+      });
+    } catch (e) {}
+  }, []);
 
   // High Demand / Resto Membludak Settings (Admin Configurable)
   const [isHighDemand, setIsHighDemand] = useState<boolean>(false);
@@ -2890,7 +3885,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           setIsHighDemand(!!parsed.isHighDemand);
           if (parsed.message) setHighDemandMessage(parsed.message);
         } catch (e) {
-          console.error("Failed to parse saved high demand setting", e);
+          console.warn("Failed to parse saved high demand setting", e);
         }
       }
     }
@@ -2956,7 +3951,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       addReviewReply,
       sendChatMessage,
       replyChatMessage,
-      markChatAsRead
+      markChatAsRead,
+      isHydrated,
+      hasUserPurchasedProduct,
+      getUserPurchasedProducts
     }}>
       {children}
     </DataContext.Provider>

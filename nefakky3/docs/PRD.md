@@ -1,10 +1,10 @@
 # Product Requirement Document (PRD) — Nefakky Marketplace
 
 **Nama Produk**: Nefakky - Artisanal Food & Culinary Marketplace  
-**Versi Dokumen**: 4.5.0 (Updated September 2026 — Anti-AI-Slop & POS Telemetry Architecture)  
+**Versi Dokumen**: 4.8.0 (Updated September 2026 — Multi-Tier Server Store, Cross-Incognito Realtime Bridge, Anti-AI-Slop & Hardware Audio Telemetry)  
 **Status**: Production Ready & Fully Validated (`npx tsc --noEmit` 0 Errors)  
 **Target Platform**: Web Responsive (Mobile-First, Tablet, Desktop)  
-**Tech Stack**: Next.js 14 (App Router, React 18, TypeScript Strict), Tailwind CSS, Custom 33 Bespoke Vector Icon System, Firebase Auth & Firestore, Laravel Reverb WebSocket Broadcaster, Midtrans Snap & Core API, Leaflet / OpenStreetMap / Google Maps Services, Canvas Confetti, HTML2Canvas & jsPDF.
+**Tech Stack**: Next.js 14 (App Router, React 18, TypeScript Strict), Next.js Integrated Server API Stores (`/api/orders`, `/api/chat`), Web Audio API Synthesizers, Tailwind CSS, Custom 33 Bespoke Vector Icon System, Firebase Auth & Firestore, Laravel Reverb WebSocket Broadcaster, Midtrans Snap & Core API, Leaflet / OpenStreetMap / Google Maps Services, Canvas Confetti, HTML2Canvas & jsPDF.
 
 ---
 
@@ -97,25 +97,30 @@ graph TD
 6. **Ulasan Komunitas & Rating Bintang Emas**:
    - Input ulasan masakan 1–5 bintang emas dengan upload bukti foto hidangan.
    - Verifikasi badge pembeli (*Verified Diner*).
-7. **CS Live Chat Interaktif**:
-   - Komunikasi dua arah langsung antara pelanggan dan tim admin/dapur.
-   - Dukungan lampiran foto hidangan dan respons cepat auto-canned.
+7. **CS Live Chat Interaktif (100% Manual Human Response)**:
+   - Komunikasi dua arah langsung antara pelanggan dan tim admin/dapur tanpa pesan otomatis bot (*zero bot replies*).
+   - Sinkronisasi realtime lintas jendela peramban (termasuk mode Penyamaran / Incognito) didukung oleh endpoint server `/api/chat` dan berkas `.chat_store.json`.
+   - Notifikasi chime audio Web Audio API instan saat pesan baru masuk.
 
 ### 3.2 Modul Admin Command Studio
 1. **Business Overview & Visualisasi Keuangan**:
    - Kartu metrik: Total Omset Kotor, Estimasi Margin Laba, Total Pesanan, Pelanggan Aktif.
    - Bar Chart interaktif penjualan harian & mingguan dengan tooltip nilai rupiah.
    - Mode simulasi transaksi offline/bazar untuk kalkulasi laporan riil.
-2. **Dapur & Pesanan (Kitchen POS Desk)**:
-   - Panel antrean pesanan masuk dengan badge peringatan waktu tunggu.
-   - Tombol transisi status 1-klik (`Mulai Masak`, `Siap Diantar`, `Serahkan ke Kurir`).
+2. **Dapur & Pesanan (Kitchen POS Desk Dispatcher)**:
+   - Panel antrean pesanan masuk dengan badge peringatan waktu tunggu dan filter rentang waktu: Hari Ini (Realtime), Minggu Ini, Bulan Ini, Tahun Ini, dan Semua Riwayat.
+   - **Cross-Incognito Realtime Ingestion**: Tiket pesanan baru dari checkout online Midtrans maupun COD otomatis muncul seketika di Kitchen Desk melalui sinkronisasi `/api/orders` (1.5 detik & visibility listener) tanpa perlu refresh halaman.
+   - **Audio Synth Bell & Floating Order Toast**: Web Audio API membunyikan akord lonceng dapur C5-E5-G5-C6 dan menampilkan floating toast alert dengan tombol aksi 1-klik *"Buka Kitchen Desk"*.
+   - Tombol transisi status 1-klik sekuensial (`Mulai Masak`, `Siap Diantar`, `Serahkan ke Kurir`).
    - Fitur unggah foto bukti kurir via file upload atau kamera langsung (*LiveCameraModal*).
    - Cetak struk kasir thermal 58mm / 80mm standar POS.
 3. **Katalog Produk & Kontrol Stok**:
    - Tambah, edit, dan arsipkan hidangan dengan informasi nutrisi, kalori, dan rempah utama.
    - Saklar *In-Stock* / *Sold-Out* instan untuk mencegah pemesanan menu yang kehabisan bahan baku.
-4. **Kupon & Promosi**:
+4. **Kupon & Promosi (Voucher Integrity Engine)**:
    - Pembuat kupon diskon (tipe persentase atau nominal rupiah tetap).
+   - Mesin sanitasi kode kupon (`cleanPromoCode`) untuk menghapus awalan `#` dan spasi, serta deduplikasi otomatis.
+   - Siklus reset mingguan ISO otomatis (`nefakky_used_vouchers_week`) untuk pembaharuan promosi berkala.
    - Pengaturan kuota klaim, minimal belanja, dan masa berlaku kupon.
 5. **Moderasi Ulasan & Komentar**:
    - Tinjauan ulasan pelanggan dengan filter bintang dan visibilitas publik.

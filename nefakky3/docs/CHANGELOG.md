@@ -6,6 +6,54 @@ Format pencatatan mengacu pada standar [Keep a Changelog](https://keepachangelog
 
 ---
 
+## [4.8.0] — 2026-09-27 (Centralized Orders API, Cross-Incognito Kitchen Desk Realtime Sync, Hardware Audio Chime & Floating Order Toast)
+
+### 🚀 Ditambahkan (Added)
+* **Server API Pesanan Terpusat (`/api/orders`)**:
+  - Dibuat rute backend Next.js `src/app/api/orders/route.ts` dengan persistensi permanen ke `.orders_store.json` dan in-memory caching berlatensi rendah.
+  - Mendukung seluruh siklus hidup pesanan: `create` (pesanan baru), `update_status` (tahap dapur 5-tahap), `proof_photo` (foto bukti POD kurir & COD), `cancel`, `delete`, dan `sync` (bulk merge LWW).
+* **Jembatan Realtime Lintas-Jendela Penyamaran (Cross-Incognito Synchronization)**:
+  - Mengatasi isolasi Chromium pada mode Incognito/Private yang memblokir `localStorage` dan `BroadcastChannel`.
+  - Integrasi background synchronizer di `DataContext.tsx` dengan interval polling 1.5 detik serta pemicu instan saat tab dibuka kembali (`document.addEventListener('visibilitychange')`).
+  - Sinkronisasi dua arah otomatis antara window browser pembeli dan panel admin Kitchen Desk tanpa memerlukan refresh halaman manual.
+* **Backup Push Langsung pada Proses Checkout (`src/app/cart/page.tsx`)**:
+  - Pengiriman tiket pesanan langsung ke `/api/orders` sesaat setelah pembayaran Midtrans (Virtual Account / QRIS / Kartu) atau COD terverifikasi, menjamin pesanan tersimpan di server sebelum pengalihan halaman selesai.
+* **Audio Synth Chime Bel Dapur & Floating Alert Toast (`AdminLayout.tsx`)**:
+  - Sintesis audio Web Audio API berbasis perangkat keras tanpa aset audio eksternal: memainkan akord lonceng segitiga harmonik (C5 -> E5 -> G5 -> C6) saat pesanan baru masuk.
+  - Floating toast alert interaktif berdesain mewah dengan tombol aksi 1-klik *"Buka Kitchen Desk"* untuk langsung memproses hidangan pelanggan.
+
+### 🛠️ Diperbaiki (Fixed)
+* **Tiket Pesanan Online Midtrans Hilang di Panel Dapur Admin**:
+  - Memperbaiki masalah di mana transaksi pengujian online Midtrans (seperti pesanan `#NFK-890783` atas nama `anonim1`) hanya tersimpan di browser pembeli dan tidak muncul di Kitchen Desk Admin.
+  - Memastikan stempel waktu `createdAt` dan `isOrderToday` sinkron secara presisi dengan zona waktu Indonesia Barat (WIB Asia/Jakarta), menginkrementasi counter "Hari Ini" dan "Pesanan Masuk" secara realtime.
+
+---
+
+## [4.7.0] — 2026-09-25 (Voucher Integrity, Normalization & ISO-Week Auto-Reset Engine)
+
+### 🚀 Ditambahkan (Added)
+* **Mesin Sanitasi & Normalisasi Voucher (`cleanPromoCode`)**:
+  - Menghapus karakter awalan tanda pagar (`#`), spasi acak, dan menormalisasi kode ke format huruf kapital (*uppercase*) seragam.
+* **Deduplikasi Kupon Promo Ketat**:
+  - Menghilangkan kemunculan voucher ganda di halaman promo dan keranjang belanja dengan penyaringan unik berbasis kode dan ID.
+* **Auto-Reset Mingguan ISO (`nefakky_used_vouchers_week`)**:
+  - Mengatur siklus klaim voucher pengguna agar ter-reset secara otomatis setiap awal pekan ISO baru, memungkinkan pelanggan setia memanfaatkan promo mingguan secara berkelanjutan.
+
+---
+
+## [4.6.0] — 2026-09-24 (Manual CS Live Chat Desk & Realtime Multi-Window Synchronization)
+
+### 🚀 Ditambahkan (Added)
+* **Layanan Pelanggan CS 100% Manual (Human-Only Agent Response)**:
+  - Menghapus seluruh logika bot auto-reply otomatis; seluruh jawaban atas pertanyaan pelanggan kini dikirimkan secara manual oleh staf admin dari meja CS Live Desk.
+* **Server API Obrolan Terpusat (`/api/chat`)**:
+  - Menyimpan percakapan pelanggan dan admin secara persisten di `.chat_store.json`.
+  - Sinkronisasi realtime pesan obrolan antara pelanggan di jendela penyamaran (Incognito) dan admin di jendela normal.
+* **Audio Chime Notifikasi Pesan Masuk**:
+  - Sintesis Web Audio API (nada D5 -> A5) dan floating toast pesan masuk di bilah navigasi admin.
+
+---
+
 ## [4.5.0] — 2026-09-14 (Anti-AI-Slop 33 Bespoke Vector Icons, Live Camera Hardware Capture & Telemetry)
 
 ### 🚀 Ditambahkan (Added)

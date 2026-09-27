@@ -17,6 +17,13 @@ const nextConfig = {
       }
     ],
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.output = config.output || {};
+      config.output.chunkLoadTimeout = 300000; // 5 menit toleransi agar tidak timeout saat cold-compilation di Windows
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;

@@ -27,10 +27,12 @@ import {
   Info,
   CreditCard,
   BadgePercent,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 import { Phone, MapPin, Search, ShoppingBag, User, Mail, Clock, Tag, MessageCircle, MessageSquare, Receipt, CheckCircle2, UtensilsCrossed } from '@/components/icons/CustomIcons';
 import { ChatMessage, useData } from '@/context/DataContext';
+import { useAuth } from '@/context/AuthContext';
 
 interface AdminLiveChatTabProps {
   chatMessages: ChatMessage[];
@@ -55,6 +57,9 @@ export default function AdminLiveChatTab({
   const [adminMediaType, setAdminMediaType] = useState<'image' | 'video'>('image');
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
   const [showCustomerSidebar, setShowCustomerSidebar] = useState<boolean>(true);
+  const { adminDeleteUser } = useAuth();
+  const [isDeletingUser, setIsDeletingUser] = useState<boolean>(false);
+  const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
 
   const adminFileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -880,6 +885,39 @@ export default function AdminLiveChatTab({
                     Rp {totalLifetimeSpent.toLocaleString('id-ID')}
                   </p>
                 </div>
+              </div>
+
+              {/* Tombol Hapus Akun dari Firebase untuk Admin */}
+              <div className="pt-2 border-t border-outline-variant/10">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!activeUserObj.email) return;
+                    if (confirm(`Apakah Anda yakin ingin menghapus akun "${activeUserObj.name}" (${activeUserObj.email}) dari Firebase?\n\nPengguna akan langsung otomatis logout/keluar dari website secara realtime dan tidak akan bisa login kembali sebelum melakukan registrasi ulang.`)) {
+                      setIsDeletingUser(true);
+                      if (adminDeleteUser) {
+                        const res = await adminDeleteUser(activeUserObj.email);
+                        if (res.success) {
+                          setDeleteNotice('Akun berhasil dihapus dari Firebase. Pengguna otomatis dikeluarkan dari sistem.');
+                          setTimeout(() => setDeleteNotice(null), 5000);
+                        } else {
+                          alert(res.error || 'Gagal menghapus akun pengguna.');
+                        }
+                      }
+                      setIsDeletingUser(false);
+                    }
+                  }}
+                  disabled={isDeletingUser}
+                  className="w-full py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 text-[11px] font-bold rounded-xl border border-rose-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>{isDeletingUser ? 'Menghapus Akun...' : 'Hapus Akun Pengguna dari Firebase'}</span>
+                </button>
+                {deleteNotice && (
+                  <p className="text-[10px] text-emerald-700 font-medium text-center pt-1.5 animate-fade-in">
+                    {deleteNotice}
+                  </p>
+                )}
               </div>
             </div>
 

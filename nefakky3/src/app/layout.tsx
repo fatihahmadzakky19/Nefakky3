@@ -1,7 +1,5 @@
 // Mengimpor tipe Metadata dan Viewport dari Next.js untuk konfigurasi SEO dan responsivitas mobile
 import type { Metadata, Viewport } from 'next';
-// Mengimpor Script dari Next.js untuk memuat skrip eksternal seperti SDK Midtrans Snap
-import Script from 'next/script';
 // Mengimpor file stylesheet global TailwindCSS & Custom Glassmorphism
 import './globals.css';
 // Mengimpor AuthProvider untuk manajemen sesi autentikasi pengguna (login, register, token)
@@ -47,15 +45,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // Tag HTML utama dengan atribut bahasa Indonesia ("id")
-    <html lang="id">
-      <body className="bg-[#FBFBFA] text-stone-900 antialiased font-sans selection:bg-[#C2410C]/15 selection:text-[#C2410C]">
-        {/* Skrip Resmi Midtrans Snap Sandbox untuk pop-up pembayaran online */}
-        <Script
-          src="https://app.sandbox.midtrans.com/snap/snap.js"
-          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'Mid-client-8T4q9uw1fIGB-pla'}
-          strategy="lazyOnload"
-        />
+    // Tag HTML utama dengan atribut bahasa Indonesia ("id") dan penanganan hydrasi aman
+    <html lang="id" suppressHydrationWarning>
+      <body suppressHydrationWarning className="bg-[#FBFBFA] text-stone-900 antialiased font-sans selection:bg-[#C2410C]/15 selection:text-[#C2410C]">
         {/* Provider Autentikasi Pengguna (Auth Context) */}
         <AuthProvider>
           {/* Provider Data Master & Sinkronisasi API / Firebase (Data Context) */}

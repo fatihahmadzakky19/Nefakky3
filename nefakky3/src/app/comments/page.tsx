@@ -17,12 +17,12 @@
  * ============================================================================
  */
 
-// Mengimpor React dan useState untuk state formulir, review, dan upload
-import React, { useState } from 'react';
+// Mengimpor React dan useState/useEffect untuk state formulir, review, upload, dan hydration guard
+import React, { useState, useEffect, useMemo } from 'react';
 // Mengimpor Image dari Next.js untuk foto ulasan
 import Image from 'next/image';
-// Mengimpor AuthContext untuk identitas pengguna yang sedang mengulas
-import { useAuth } from '@/context/AuthContext';
+// Mengimpor AuthContext untuk identitas pengguna yang sedang mengulas + helper isAdminEmail
+import { useAuth, isAdminEmail } from '@/context/AuthContext';
 // Mengimpor DataContext untuk membaca dan menambah ulasan ke Firestore / Laravel API
 import { useData, sortReviewsNewestFirst } from '@/context/DataContext';
 // Mengimpor Navbar & Footer terpadu
@@ -37,9 +37,13 @@ import {
   X, 
   Users, 
   ChevronDown,
-  UserCheck
+  UserCheck,
+  ShieldCheck,
+  ShoppingBag,
+  AlertTriangle
 } from 'lucide-react';
 import { User, Lock, Star, MessageSquare, Camera, CheckCircle2, Utensils } from '@/components/icons/CustomIcons';
+import Link from 'next/link';
 
 /**
  * Komponen Utama CommentsPage
@@ -49,7 +53,19 @@ export default function CommentsPage() {
   // Destruktur data sesi user aktif dari AuthContext
   const { user } = useAuth();
   // Destruktur data produk, ulasan, serta handler tambah ulasan/balasan dari DataContext
-  const { products, reviews, addReview, addReviewReply } = useData();
+  const { products, reviews, addReview, addReviewReply, orders, getUserPurchasedProducts, hasUserPurchasedProduct } = useData();
+
+  // Hydration guard: mencegah mismatch SSR/client pada konten dinamis
+  const [hasMounted, setHasMounted] = useState<boolean>(false);
+  useEffect(() => { setHasMounted(true); }, []);
+
+  // Kalkulasi produk yang telah dibeli user (hanya dihitung setelah mount untuk menghindari hydration error)
+  const isAdmin = hasMounted && user ? isAdminEmail(user.email) : false;
+  const purchasedProducts = useMemo(() => {
+    if (!hasMounted || !user) return [];
+    return getUserPurchasedProducts(user.uid, user.email);
+  }, [hasMounted, user, orders, products, getUserPurchasedProducts]);
+  const hasPurchasedAny = isAdmin || purchasedProducts.length > 0;
 
   // State menu yang dipilih pada dropdown ulasan
   const [selectedMenu, setSelectedMenu] = useState<string>('');
@@ -134,6 +150,16 @@ export default function CommentsPage() {
 
     // Temukan produk yang diulas berdasarkan ID atau nama
     const dish = products.find(p => p.id === selectedMenu || p.name === selectedMenu) || products[0];
+
+    // VALIDASI KETAT: Cegah ulasan dari akun yang belum membeli produk (anti-fake review)
+    if (!isAdmin && dish) {
+      const isBuyer = hasUserPurchasedProduct(dish.name || dish.id, user.uid, user.email);
+      if (!isBuyer) {
+        setToastMessage('⚠️ Anda belum pernah memesan hidangan ini. Ulasan hanya dapat diberikan oleh Pembeli Terverifikasi.');
+        setTimeout(() => setToastMessage(null), 4500);
+        return;
+      }
+    }
 
     // Tentukan nama pengulas dan avatar
     const reviewerName = user?.displayName || (user?.email ? user.email.split('@')[0] : 'Pelanggan Nefakky');
@@ -240,12 +266,13 @@ export default function CommentsPage() {
                   <p className="text-xs text-stone-500 font-light">Bagikan pengalaman kuliner Anda hari ini.</p>
                 </div>
 
+                {/* STATUS 1: Pengguna belum login (Tamu / Guest) */}
                 {!user && (
                   <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-3">
                     <div className="flex items-start gap-2 text-amber-900 text-xs">
                       <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                       <p className="leading-relaxed font-medium">
-                        Anda sedang menjelajah sebagai <strong>Tamu (Guest)</strong>. Silakan masuk atau daftar akun untuk menulis ulasan dan berdiskusi dengan komunitas.
+                        Ulasan hanya dapat diberikan oleh pelanggan terdaftar yang telah memesan hidangan (<strong>Pembeli Terverifikasi</strong>). Silakan masuk atau daftar akun terlebih dahulu.
                       </p>
                     </div>
                     <button
@@ -262,6 +289,36 @@ export default function CommentsPage() {
                   </div>
                 )}
 
+                {/* STATUS 2: Pengguna login TAPI belum pernah membeli produk apapun (potensi fake account) */}
+                {hasMounted && user && !hasPurchasedAny && (
+                  <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-3">
+                    <div className="flex items-start gap-2.5 text-amber-900 text-xs">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="space-y-1.5">
+                        <p className="font-bold text-amber-900 text-[13px] leading-tight">Ulasan Khusus Pembeli Terverifikasi</p>
+                        <p className="leading-relaxed font-medium text-amber-800">
+                          Sistem Nefakky menerapkan verifikasi ketat untuk <strong>mencegah ulasan palsu (fake account)</strong>. Anda harus memesan hidangan terlebih dahulu sebelum dapat memberikan penilaian ulasan.
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/menu"
+                      className="w-full py-2.5 bg-[#C2410C] hover:bg-[#9a3412] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                      <span>Pesan Hidangan Sekarang</span>
+                    </Link>
+                  </div>
+                )}
+
+                {/* STATUS 3: Pengguna login DAN sudah pernah membeli produk — badge terverifikasi */}
+                {hasMounted && user && hasPurchasedAny && (
+                  <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-xs font-semibold text-emerald-800">Anda adalah Pembeli Terverifikasi — ulasan Anda akan ditampilkan dengan badge verifikasi.</span>
+                  </div>
+                )}
+
                 <form className="flex flex-col space-y-4" onSubmit={handleSubmitReview}>
                   
                   {/* Dropdown Pemilihan Menu */}
@@ -275,12 +332,21 @@ export default function CommentsPage() {
                         value={selectedMenu}
                         onChange={(e) => setSelectedMenu(e.target.value)}
                         required
-                        className="w-full appearance-none bg-stone-50 text-stone-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900 border border-stone-200 cursor-pointer"
+                        disabled={hasMounted && user ? !hasPurchasedAny : false}
+                        className={`w-full appearance-none text-stone-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900 border border-stone-200 ${hasMounted && user && !hasPurchasedAny ? 'bg-stone-100 cursor-not-allowed opacity-60' : 'bg-stone-50 cursor-pointer'}`}
                       >
-                        <option value="" disabled>Pilih menu yang dipesan...</option>
-                        {products.map((prod) => (
+                        <option value="" disabled>
+                          {hasMounted && user && !hasPurchasedAny
+                            ? 'Anda belum memiliki pesanan...'
+                            : 'Pilih menu yang pernah dipesan...'}
+                        </option>
+                        {/* Hanya tampilkan menu yang pernah dibeli user (admin bisa pilih semua) */}
+                        {(hasMounted && user && hasPurchasedAny
+                          ? (isAdmin ? products : purchasedProducts)
+                          : products
+                        ).map((prod) => (
                           <option key={prod.id} value={prod.id}>
-                            {prod.name}
+                            {isAdmin ? prod.name : `✓ ${prod.name} (Terverifikasi)`}
                           </option>
                         ))}
                       </select>
@@ -359,10 +425,11 @@ export default function CommentsPage() {
                   {/* Tombol Submit Ulasan */}
                   <button 
                     type="submit"
-                    className="w-full bg-stone-900 text-white font-semibold text-xs py-3 rounded-xl hover:bg-[#C2410C] transition-all flex justify-center items-center gap-2 mt-2 shadow-md active:scale-98 cursor-pointer"
+                    disabled={hasMounted && user ? !hasPurchasedAny : false}
+                    className={`w-full font-semibold text-xs py-3 rounded-xl transition-all flex justify-center items-center gap-2 mt-2 shadow-md ${hasMounted && user && !hasPurchasedAny ? 'bg-stone-300 text-stone-500 cursor-not-allowed' : 'bg-stone-900 text-white hover:bg-[#C2410C] active:scale-98 cursor-pointer'}`}
                   >
-                    <span>Kirim Ulasan</span>
-                    <Send className="w-3.5 h-3.5" />
+                    <span>{hasMounted && user && !hasPurchasedAny ? 'Beli Produk Dulu untuk Mengulas' : 'Kirim Ulasan'}</span>
+                    {!(hasMounted && user && !hasPurchasedAny) && <Send className="w-3.5 h-3.5" />}
                   </button>
 
                 </form>
@@ -402,7 +469,16 @@ export default function CommentsPage() {
                             />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-sm text-stone-900">{rev.authorName || 'Pelanggan Nefakky'}</h3>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-sm text-stone-900">{rev.authorName || 'Pelanggan Nefakky'}</h3>
+                              {/* Badge Pembeli Terverifikasi */}
+                              {rev.isVerifiedBuyer && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  Pembeli Terverifikasi
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-stone-400 font-light">{rev.date || 'Baru saja'}</p>
                           </div>
                         </div>

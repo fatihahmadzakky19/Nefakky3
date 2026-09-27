@@ -68,7 +68,7 @@ export default function AdminOrdersTab({
   const adminFileInputRef = useRef<HTMLInputElement>(null);
   const [productSearch, setProductSearch] = useState<string>('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'ALL' | 'PENDING' | 'PREPARING' | 'READY' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED'>('ALL');
-  const [timeFilter, setTimeFilter] = useState<'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'THIS_YEAR'>('ALL');
+  const [timeFilter, setTimeFilter] = useState<'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'THIS_YEAR'>('TODAY');
 
   // Live Realtime Calendar & Clock Ticker
   const [liveCalendarInfo, setLiveCalendarInfo] = useState<RealtimeCalendarInfo>(() => getRealtimeCalendarNow());
@@ -152,16 +152,6 @@ export default function AdminOrdersTab({
     return sortedOrders.find(o => o.customerConfirmed === true);
   }, [sortedOrders]);
 
-  // KPI Metrics Calculation (100% Realtime dari Database)
-  const totalOrdersCount = sortedOrders.length;
-  const pendingOrdersCount = sortedOrders.filter(o => o.status === 'PENDING' || o.status === 'RECEIVED').length;
-  const preparingOrdersCount = sortedOrders.filter(o => o.status === 'PREPARING' || o.status === 'COOKING').length;
-  // Catatan: jumlah pill "Pengiriman" memakai shippingOrdersCount (sinkron dgn filter list, tanpa READY)
-  const completedTodayCount = sortedOrders.filter(o => o.status === 'COMPLETED').length;
-  const confirmedOrdersCount = sortedOrders.filter(o => o.customerConfirmed === true).length;
-  // Jumlah pill "Pengiriman" — harus sama persis dengan filter statusnya (tanpa READY) agar count & list konsisten
-  const shippingOrdersCount = sortedOrders.filter(o => ['SHIPPING', 'DELIVERING', 'ON_DELIVERY', 'DELIVERED'].includes(o.status)).length;
-
   // Helper filter rentang waktu menggunakan standardisasi Asia/Jakarta (WIB)
   const isWithinTimeRange = (order: AdminOrder, filter: 'ALL' | 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'THIS_YEAR'): boolean => {
     if (filter === 'ALL') return true;
@@ -172,9 +162,30 @@ export default function AdminOrdersTab({
     return true;
   };
 
-  // Filtered Orders (Hanya dari pesanan riil database)
+  // 1. Pesanan terfilter berdasarkan rentang waktu yang aktif (Hari Ini / Minggu Ini / Bulan Ini / Tahun Ini / Semua Riwayat)
+  const timeFilteredOrders = useMemo(() => {
+    return sortedOrders.filter((order) => isWithinTimeRange(order, timeFilter));
+  }, [sortedOrders, timeFilter]);
+
+  // 2. Metrik & Hitungan Status Pill dinamis sesuai rentang waktu yang dipilih (Sinkron 100% Realtime)
+  const totalOrdersCount = timeFilteredOrders.length;
+  const pendingOrdersCount = timeFilteredOrders.filter(o => o.status === 'PENDING' || o.status === 'RECEIVED').length;
+  const preparingOrdersCount = timeFilteredOrders.filter(o => o.status === 'PREPARING' || o.status === 'COOKING').length;
+  const readyOrdersCount = timeFilteredOrders.filter(o => o.status === 'READY').length;
+  const shippingOrdersCount = timeFilteredOrders.filter(o => ['SHIPPING', 'DELIVERING', 'ON_DELIVERY', 'DELIVERED'].includes(o.status)).length;
+  const completedTodayCount = timeFilteredOrders.filter(o => o.status === 'COMPLETED').length;
+  const confirmedOrdersCount = timeFilteredOrders.filter(o => o.customerConfirmed === true).length;
+
+  // 3. Hitungan pesanan per kategori waktu untuk badge indikator tombol filter waktu
+  const todayOrdersCount = useMemo(() => sortedOrders.filter(o => isOrderToday(o)).length, [sortedOrders]);
+  const thisWeekOrdersCount = useMemo(() => sortedOrders.filter(o => isOrderThisWeek(o)).length, [sortedOrders]);
+  const thisMonthOrdersCount = useMemo(() => sortedOrders.filter(o => isOrderThisMonth(o)).length, [sortedOrders]);
+  const thisYearOrdersCount = useMemo(() => sortedOrders.filter(o => isOrderThisYear(o)).length, [sortedOrders]);
+  const allOrdersCount = sortedOrders.length;
+
+  // 4. Filtered Orders (Hanya dari pesanan riil database yang lolos filter waktu, status, & pencarian)
   const filteredOrders = useMemo(() => {
-    return sortedOrders.filter((order) => {
+    return timeFilteredOrders.filter((order) => {
       // 1. Filter Status
       if (orderStatusFilter === 'PENDING' && order.status !== 'PENDING' && order.status !== 'RECEIVED') return false;
       if (orderStatusFilter === 'PREPARING' && order.status !== 'PREPARING' && order.status !== 'COOKING') return false;
@@ -183,10 +194,7 @@ export default function AdminOrdersTab({
       if (orderStatusFilter === 'COMPLETED' && order.status !== 'COMPLETED') return false;
       if (orderStatusFilter === 'CANCELLED' && order.status !== 'CANCELLED') return false;
 
-      // 2. Filter Rentang Waktu (Terbaru, Hari Ini, Minggu Ini, Bulan Ini)
-      if (!isWithinTimeRange(order, timeFilter)) return false;
-
-      // 3. Filter Search Query
+      // 2. Filter Search Query
       if (productSearch.trim()) {
         const q = productSearch.toLowerCase();
         const matchId = (order.id || '').toLowerCase().includes(q);
@@ -198,7 +206,7 @@ export default function AdminOrdersTab({
 
       return true;
     });
-  }, [sortedOrders, orderStatusFilter, timeFilter, productSearch]);
+  }, [timeFilteredOrders, orderStatusFilter, productSearch]);
 
   const displayOrders = filteredOrders;
 
@@ -235,15 +243,6 @@ export default function AdminOrdersTab({
             <span>{liveCalendarInfo.formattedFull}</span>
           </div>
 
-          {/* Live Customer Confirmation Alert */}
-          <div className="flex items-center gap-2 bg-primary text-on-primary px-4 py-2.5 rounded-xl shadow-sm animate-pulse border border-white/10">
-            <span className="material-symbols-outlined text-[20px] text-amber-300">
-              notifications_active
-            </span>
-            <span className="font-body-base text-xs sm:text-sm font-semibold">
-              {confirmedOrdersCount} Pesanan Siap / Diterima
-            </span>
-          </div>
         </div>
       </div>
 
@@ -312,7 +311,17 @@ export default function AdminOrdersTab({
           <div className="font-display-lg text-2xl sm:text-3xl font-bold text-on-surface">
             {totalOrdersCount}
           </div>
-          <span className="text-[11px] text-on-surface-variant">Semua pesanan masuk</span>
+          <span className="text-[11px] text-on-surface-variant">
+            {timeFilter === 'TODAY' 
+              ? 'Pesanan masuk hari ini' 
+              : timeFilter === 'THIS_WEEK' 
+              ? 'Pesanan minggu ini' 
+              : timeFilter === 'THIS_MONTH' 
+              ? 'Pesanan bulan ini' 
+              : timeFilter === 'THIS_YEAR'
+              ? 'Pesanan tahun ini'
+              : 'Semua riwayat pesanan'}
+          </span>
         </div>
 
         {/* Pending & Masuk */}
@@ -348,7 +357,9 @@ export default function AdminOrdersTab({
           <div className="font-display-lg text-2xl sm:text-3xl font-bold text-on-surface">
             {completedTodayCount}
           </div>
-          <span className="text-[11px] text-emerald-800 font-semibold">Pesanan sukses &amp; lunas</span>
+          <span className="text-[11px] text-emerald-800 font-semibold">
+            {timeFilter === 'TODAY' ? 'Pesanan sukses hari ini' : 'Pesanan sukses & lunas'}
+          </span>
         </div>
       </div>
 
@@ -362,10 +373,9 @@ export default function AdminOrdersTab({
               { key: 'ALL' as const, label: 'Semua Pesanan', count: totalOrdersCount },
               { key: 'PENDING' as const, label: 'Pesanan Masuk', count: pendingOrdersCount },
               { key: 'PREPARING' as const, label: 'Disiapkan / Dimasak', count: preparingOrdersCount },
-              { key: 'READY' as const, label: 'Pesanan Siap', count: sortedOrders.filter(o => o.status === 'READY').length },
+              { key: 'READY' as const, label: 'Pesanan Siap', count: readyOrdersCount },
               { key: 'SHIPPING' as const, label: 'Pengiriman', count: shippingOrdersCount },
               { key: 'COMPLETED' as const, label: 'Selesai', count: completedTodayCount },
-              { key: 'CANCELLED' as const, label: 'Dibatalkan', count: sortedOrders.filter(o => o.status === 'CANCELLED').length },
             ].map((st) => (
               <button
                 key={st.key}
@@ -404,34 +414,44 @@ export default function AdminOrdersTab({
           </div>
         </div>
 
-        {/* Baris Urutan Waktu: Terbaru, Hari Ini, Minggu Ini, Bulan Ini */}
+        {/* Baris Filter Rentang Waktu Operasional: Hari Ini (Default), Minggu Ini, Bulan Ini, Tahun Ini, Semua Riwayat */}
         <div className="flex items-center gap-2 pt-2 border-t border-outline-variant/15 flex-wrap">
           <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500 mr-1 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[15px] text-[#934B19]">schedule</span>
-            <span>Urutan Waktu:</span>
+            <span className="material-symbols-outlined text-[15px] text-[#934B19]">date_range</span>
+            <span>Rentang Waktu:</span>
           </span>
 
           {[
-            { key: 'ALL' as const, label: 'Terbaru', icon: 'history' },
-            { key: 'TODAY' as const, label: 'Hari Ini', icon: 'today' },
-            { key: 'THIS_WEEK' as const, label: 'Minggu Ini', icon: 'date_range' },
-            { key: 'THIS_MONTH' as const, label: 'Bulan Ini', icon: 'calendar_month' },
-            { key: 'THIS_YEAR' as const, label: 'Tahun Ini', icon: 'event' },
+            { key: 'TODAY' as const, label: 'Hari Ini', count: todayOrdersCount, icon: 'today', isRealtime: true },
+            { key: 'THIS_WEEK' as const, label: 'Minggu Ini', count: thisWeekOrdersCount, icon: 'date_range' },
+            { key: 'THIS_MONTH' as const, label: 'Bulan Ini', count: thisMonthOrdersCount, icon: 'calendar_month' },
+            { key: 'THIS_YEAR' as const, label: 'Tahun Ini', count: thisYearOrdersCount, icon: 'event' },
+            { key: 'ALL' as const, label: 'Semua Riwayat', count: allOrdersCount, icon: 'history' },
           ].map((tf) => (
             <button
               key={tf.key}
               type="button"
               onClick={() => setTimeFilter(tf.key)}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
                 timeFilter === tf.key
-                  ? 'bg-[#25160E] text-white shadow-xs'
+                  ? 'bg-[#25160E] text-white shadow-xs ring-1 ring-amber-500/30'
                   : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
               }`}
             >
+              {tf.isRealtime && timeFilter === 'TODAY' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              )}
               <span className="material-symbols-outlined text-[14px]">
                 {tf.icon}
               </span>
               <span>{tf.label}</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                timeFilter === tf.key
+                  ? 'bg-amber-400 text-black'
+                  : tf.count > 0 ? 'bg-stone-200 text-stone-700' : 'bg-stone-200/60 text-stone-500'
+              }`}>
+                {tf.count}
+              </span>
             </button>
           ))}
         </div>
@@ -441,18 +461,38 @@ export default function AdminOrdersTab({
       {/* 5. ORDER CARDS GRID (3 Columns Responsive) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {displayOrders.length === 0 ? (
-          <div className="col-span-full p-16 text-center bg-white rounded-3xl border border-dashed border-stone-300 flex flex-col items-center justify-center gap-3.5 shadow-xs">
+          <div className="col-span-full p-12 text-center bg-white rounded-3xl border border-dashed border-stone-300 flex flex-col items-center justify-center gap-3.5 shadow-xs">
             <div className="w-16 h-16 rounded-full bg-amber-50 text-[#934B19] flex items-center justify-center border border-amber-200">
-              <span className="material-symbols-outlined text-3xl">receipt_long</span>
+              <span className="material-symbols-outlined text-3xl">
+                {timeFilter === 'TODAY' ? 'pending_actions' : 'receipt_long'}
+              </span>
             </div>
             <div className="space-y-1">
               <h3 className="font-headline-md text-base font-bold text-stone-900">
-                Belum Ada Pesanan Masuk (Realtime)
+                {timeFilter === 'TODAY' 
+                  ? 'Belum Ada Pesanan Masuk Hari Ini (Realtime)' 
+                  : timeFilter === 'THIS_WEEK'
+                  ? 'Tidak Ada Pesanan Masuk Minggu Ini'
+                  : timeFilter === 'THIS_MONTH'
+                  ? 'Tidak Ada Pesanan Masuk Bulan Ini'
+                  : 'Belum Ada Pesanan yang Sesuai Filter'}
               </h3>
               <p className="text-xs text-stone-500 max-w-md mx-auto leading-relaxed">
-                Data terhubung 100% secara realtime dengan database toko. Saat pelanggan membuat pesanan baru di web, tiket pesanan dapur akan langsung muncul di sini tanpa perlu refresh.
+                {timeFilter === 'TODAY'
+                  ? 'Dapur siap menerima pesanan masuk. Saat pembeli melakukan checkout pesanan baru hari ini, tiket pesanan dapur akan otomatis muncul di sini secara realtime tanpa refresh.'
+                  : 'Tidak ditemukan pesanan pada filter rentang waktu atau status yang dipilih.'}
               </p>
             </div>
+            {timeFilter === 'TODAY' && allOrdersCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setTimeFilter('ALL')}
+                className="mt-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-xl border border-stone-300 transition-all flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[16px] text-[#934B19]">history</span>
+                <span>Lihat {allOrdersCount} Riwayat Pesanan Terdahulu (Semua Riwayat)</span>
+              </button>
+            )}
           </div>
         ) : (
           displayOrders.map((order: any) => {
@@ -489,27 +529,41 @@ export default function AdminOrdersTab({
                       {(() => {
                         const timeInfo = getDetailedOrderDateTime(order);
                         return (
-                          <div className="font-body-sm text-[11px] text-on-surface-variant flex flex-col gap-0.5 mt-0.5">
-                            <span className="font-bold text-stone-900 flex items-center gap-1">
-                              <span className="text-[#934B19]">{timeInfo.dayName},</span>
-                              <span>{timeInfo.fullDateStr}</span>
-                            </span>
-                            <span className="font-mono text-stone-500 text-[10px] flex items-center gap-1">
-                              <Clock className="w-2.5 h-2.5 text-stone-400" />
-                              <span>{timeInfo.timeStr}</span>
-                            </span>
-                          </div>
+                          <>
+                            <div className="font-body-sm text-[11px] text-on-surface-variant flex flex-col gap-0.5 mt-0.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-stone-900 flex items-center gap-1">
+                                  <span className="text-[#934B19]">{timeInfo.dayName},</span>
+                                  <span>{timeInfo.fullDateStr}</span>
+                                </span>
+                                {timeInfo.isToday ? (
+                                  <span className="px-1.5 py-0.2 bg-emerald-50 text-emerald-800 text-[9px] font-bold rounded-full border border-emerald-200 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span>Hari Ini</span>
+                                  </span>
+                                ) : (
+                                  <span className="px-1.5 py-0.2 bg-stone-100 text-stone-600 text-[9px] font-semibold rounded-full border border-stone-200">
+                                    Riwayat
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-mono text-stone-500 text-[10px] flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5 text-stone-400" />
+                                <span>{timeInfo.timeStr}</span>
+                              </span>
+                            </div>
+                            {timeInfo.isToday && order.createdAt && !isCompleted && !isCancelled && Math.floor((Date.now() - order.createdAt) / 60000) > 60 && (
+                              <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 border border-amber-300 text-amber-800 rounded-md text-[10px] font-bold">
+                                <span className="material-symbols-outlined text-[13px]">timer</span>
+                                <span>
+                                  Lewat estimasi 60 m ({Math.floor((Date.now() - order.createdAt) / 60000)} m)
+                                  {order.lateBonusGranted ? ' — Bonus otomatis diberikan' : ''}
+                                </span>
+                              </span>
+                            )}
+                          </>
                         );
                       })()}
-                      {order.createdAt && !isCompleted && !isCancelled && Math.floor((Date.now() - order.createdAt) / 60000) > 60 && (
-                        <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 border border-amber-300 text-amber-800 rounded-md text-[10px] font-bold">
-                          <span className="material-symbols-outlined text-[13px]">timer</span>
-                          <span>
-                            Lewat estimasi 60 m ({Math.floor((Date.now() - order.createdAt) / 60000)} m)
-                            {order.lateBonusGranted ? ' — Bonus otomatis diberikan' : ''}
-                          </span>
-                        </span>
-                      )}
                     </div>
 
                     <div className="flex flex-col items-end gap-1.5">

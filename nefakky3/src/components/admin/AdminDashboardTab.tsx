@@ -18,6 +18,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import {
   TrendingUp,
   Plus,
@@ -32,7 +33,9 @@ import {
   Info,
   DollarSign,
   PartyPopper,
-  Store
+  Store,
+  ArrowRight,
+  ArrowUpRight
 } from 'lucide-react';
 import { ShoppingBag, Flame, Search, BarChart3, Star, Calendar, CalendarClock, Receipt, Printer, FileSpreadsheet, Download, FileText, Eye, Edit3, Sliders } from '@/components/icons/CustomIcons';
 import { ProductItem, AdminOrder, useData } from '@/context/DataContext';
@@ -1003,16 +1006,23 @@ export default function AdminDashboardTab({
       const matchStatus = 
         statusFilter === 'ALL' ||
         order.status === statusFilter ||
-        (statusFilter === 'COOKING' && order.status === 'COOKING') ||
-        (statusFilter === 'SHIPPING' && (order.status === 'SHIPPING' || order.status === 'DELIVERING')) ||
+        ((statusFilter === 'RECEIVED' || statusFilter === 'PENDING') && (order.status === 'RECEIVED' || order.status === 'PENDING')) ||
+        ((statusFilter === 'COOKING' || statusFilter === 'PREPARING') && (order.status === 'COOKING' || order.status === 'PREPARING')) ||
+        (statusFilter === 'SHIPPING' && (order.status === 'SHIPPING' || order.status === 'DELIVERING' || order.status === 'ON_DELIVERY' || order.status === 'DELIVERED')) ||
         (statusFilter === 'COMPLETED' && order.status === 'COMPLETED');
 
       return matchQuery && matchStatus;
     });
   }, [realOrders, searchOrderQuery, statusFilter]);
 
-  // Fallback Mock Orders jika list kosong
-  const displayOrders = filteredOrders.length > 0 ? filteredOrders : [
+  // Jika database memiliki pesanan (termasuk hasil transaksi realtime pengguna), tampilkan data aktual.
+  // Fallback mock hanya aktif jika sama sekali belum ada pesanan di database dan tidak sedang difilter.
+  const isFiltering = Boolean(searchOrderQuery.trim() || statusFilter !== 'ALL');
+  const displayOrders = realOrders.length > 0 
+    ? filteredOrders 
+    : isFiltering 
+      ? [] 
+      : [
     {
       id: 'ORD-88219',
       customerName: 'Nizar Azzuhra',
@@ -2265,17 +2275,38 @@ export default function AdminDashboardTab({
       <div className="bg-white shadow-2xs rounded-2xl p-6 sm:p-7 border border-stone-200/80 space-y-4">
         
         {/* Table Toolbar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-200/80 pb-4">
-          <div>
-            <h2 className="text-stone-900 font-bold text-base sm:text-lg">
-              Rekap Pembelian &amp; Transaksi
-            </h2>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-stone-200/80 pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-stone-900 font-bold text-base sm:text-lg">
+                Rekap Pembelian &amp; Transaksi
+              </h2>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[10px] text-emerald-800 font-bold font-mono">Live Sync</span>
+            </div>
             <p className="text-xs text-stone-500 font-normal">
               Live ledger transaksi masuk realtime dan status pengiriman pesanan.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Direct Links to Orders Desk & Reports */}
+            <Link
+              href="/admin/orders"
+              className="px-3 py-1.5 bg-[#25160E] hover:bg-black text-amber-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
+            >
+              <span>Buka Kitchen Desk</span>
+              <ArrowRight className="w-3.5 h-3.5 text-amber-300" />
+            </Link>
+
+            <Link
+              href="/admin/reports"
+              className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 border border-stone-300 cursor-pointer active:scale-95"
+            >
+              <span>Laporan Keuangan</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-stone-600" />
+            </Link>
+
             {/* Search order input */}
             <div className="relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-[18px]">
@@ -2286,7 +2317,7 @@ export default function AdminDashboardTab({
                 value={searchOrderQuery}
                 onChange={(e) => setSearchOrderQuery(e.target.value)}
                 placeholder="Cari ID / Pembeli..."
-                className="pl-9 pr-3 py-1.5 bg-stone-50 rounded-xl text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#C2410C] border border-stone-300 w-48 sm:w-60 font-sans"
+                className="pl-9 pr-3 py-1.5 bg-stone-50 rounded-xl text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#C2410C] border border-stone-300 w-44 sm:w-52 font-sans"
               />
             </div>
 
@@ -2297,6 +2328,7 @@ export default function AdminDashboardTab({
               className="bg-stone-50 text-stone-900 text-xs font-semibold px-3 py-1.5 rounded-xl border border-stone-300 focus:outline-none cursor-pointer font-sans"
             >
               <option value="ALL">Semua Status</option>
+              <option value="RECEIVED">Pesanan Masuk (Baru)</option>
               <option value="COOKING">Sedang Dimasak</option>
               <option value="SHIPPING">Dalam Pengiriman</option>
               <option value="COMPLETED">Selesai</option>
@@ -2319,7 +2351,18 @@ export default function AdminDashboardTab({
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 font-sans">
-              {displayOrders.map((order: any) => {
+              {displayOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-stone-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-3xl text-stone-300">inbox</span>
+                      <p className="font-semibold text-stone-600 text-xs">Tidak ada transaksi ditemukan</p>
+                      <p className="text-[11px] text-stone-400">Belum ada transaksi yang sesuai dengan status atau filter pencarian saat ini.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                displayOrders.map((order: any) => {
                 const isCompleted = order.status === 'COMPLETED';
                 const isShipping = order.status === 'SHIPPING' || order.status === 'DELIVERING';
 
@@ -2390,7 +2433,7 @@ export default function AdminDashboardTab({
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

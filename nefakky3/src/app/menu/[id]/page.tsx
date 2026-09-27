@@ -87,7 +87,7 @@ export default function MenuDetailPage() {
   const [isReserving, setIsReserving] = useState<boolean>(false);
   const [reservationSent, setReservationSent] = useState<boolean>(false);
 
-  // Daftar varian generik: gunakan metadata `variants` dari database; fallback DRINK_VARIANTS utk jus legacy
+  // Daftar varian generik: gunakan metadata `variants` dari database; fallback DRINK_VARIANTS hanya utk kategori minuman / jus
   const customVariants = Array.isArray((product as any).variants) ? ((product as any).variants as any[]) : [];
   const variantList: Array<{ id: string; name: string; tag?: string; image?: string; description?: string; ingredients?: string; calories?: string; fat?: string; sugar?: string; satFat?: string }> =
     customVariants.length > 0
@@ -103,10 +103,10 @@ export default function MenuDetailPage() {
           sugar: cv.sugar,
           satFat: cv.satFat
         }))
-      : DRINK_VARIANTS;
+      : (isDrink ? DRINK_VARIANTS : []);
   const hasVariants = variantList.length > 0;
-  const activeVariantId = variantList.some(v => v.id === selectedVariant) ? selectedVariant : (variantList[0]?.id ?? selectedVariant);
-  const activeDrinkVariant = variantList.find(v => v.id === activeVariantId) || variantList[0] || DRINK_VARIANTS[0];
+  const activeVariantId = hasVariants ? (variantList.some(v => v.id === selectedVariant) ? selectedVariant : (variantList[0]?.id ?? '')) : '';
+  const activeDrinkVariant = hasVariants ? (variantList.find(v => v.id === activeVariantId) || variantList[0] || null) : null;
 
   // Helper cek stok per varian
   const getVariantStock = (variantId: string): number => {
@@ -144,7 +144,7 @@ export default function MenuDetailPage() {
       return;
     }
     setIsReserving(true);
-    const varName = hasVariants ? activeDrinkVariant.name : product.name;
+    const varName = (hasVariants && activeDrinkVariant) ? activeDrinkVariant.name : product.name;
     const userEmail = user?.email || 'customer@nefakky.com';
     const userName = user?.displayName || 'Pelanggan Nefakky';
 
@@ -161,7 +161,7 @@ export default function MenuDetailPage() {
   };
 
   // Foto Utama: Jika menu jus, ikuti varian aktif. Jika makanan, gunakan foto dari database
-  const currentMainImage = hasVariants 
+  const currentMainImage = (hasVariants && activeDrinkVariant)
     ? (activeDrinkVariant.image || product.image || '/images/ayam_bakar.jpg') 
     : (product.image || '/images/ayam_bakar.jpg');
 
@@ -407,7 +407,7 @@ export default function MenuDetailPage() {
             {/* Title & Price */}
             <div className="space-y-1">
               <h1 className="font-serif text-3xl sm:text-4xl font-bold text-neutral-900 tracking-tight">
-                {hasVariants ? (isDrink ? `Jus Segar (${activeDrinkVariant.name})` : `${product.name} (${activeDrinkVariant.name})`) : product.name}
+                {hasVariants && activeDrinkVariant ? (isDrink ? `Jus Segar (${activeDrinkVariant.name})` : `${product.name} (${activeDrinkVariant.name})`) : product.name}
               </h1>
               <div className="font-serif text-2xl sm:text-3xl font-bold text-neutral-900 pt-1">
                 Rp {product.price.toLocaleString('id-ID')}
@@ -422,7 +422,7 @@ export default function MenuDetailPage() {
                     PILIH VARIAN
                   </span>
                   <span className="text-stone-500 font-medium">
-                    Varian: {activeDrinkVariant.name}
+                    Varian: {activeDrinkVariant?.name}
                   </span>
                 </div>
 
@@ -473,7 +473,7 @@ export default function MenuDetailPage() {
             )}
 
             {/* Detail Nutrisi Per Varian (jika varian punya data nutrisi) */}
-            {hasVariants && ((activeDrinkVariant as any).calories || (activeDrinkVariant as any).fat) && (
+            {hasVariants && activeDrinkVariant && ((activeDrinkVariant as any).calories || (activeDrinkVariant as any).fat) && (
               <div className="p-3 bg-stone-50 border border-stone-200 rounded-2xl space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
                   Detail Nutrisi — {activeDrinkVariant.name}
@@ -599,7 +599,7 @@ export default function MenuDetailPage() {
               <div className="text-xs sm:text-sm text-stone-600 font-light leading-relaxed">
                 {activeTab === 'description' && (
                   <p>
-                    {(activeDrinkVariant as any).description
+                    {(hasVariants && activeDrinkVariant && (activeDrinkVariant as any).description)
                       ? (activeDrinkVariant as any).description
                       : isDrink
                       ? 'Aneka pilihan jus buah segar alami berkualitas premium: Jambu Biji Merah, Sirsak Manis, atau Mangga Harum Manis. Dibuat murni tanpa pemanis buatan untuk menjaga kesegaran dan vitamin alaminya.'
@@ -608,7 +608,7 @@ export default function MenuDetailPage() {
                 )}
                 {activeTab === 'ingredients' && (
                   <p>
-                    {(activeDrinkVariant as any).ingredients
+                    {(hasVariants && activeDrinkVariant && (activeDrinkVariant as any).ingredients)
                       ? (activeDrinkVariant as any).ingredients
                       : isDrink
                       ? 'Buah segar matang pohon (Mangga/Sirsak/Jambu), air mineral higienis, dan sedikit madu alami tanpa pengawet sintesis.'
@@ -688,7 +688,7 @@ export default function MenuDetailPage() {
               <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-1.5 animate-fade-in">
                 <div className="flex items-center gap-2 text-rose-800 font-bold text-xs sm:text-sm">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>Produk Habis — Stok {hasVariants ? `Varian ${activeDrinkVariant.name}` : product.name} Sedang Kosong</span>
+                  <span>Produk Habis — Stok {hasVariants && activeDrinkVariant ? `Varian ${activeDrinkVariant.name}` : product.name} Sedang Kosong</span>
                 </div>
                 <p className="text-xs text-rose-700 font-light leading-relaxed">
                   Mohon maaf, saat ini menu tidak dapat dibeli langsung. Anda dapat melakukan <strong>Pemesanan / Reservasi Prioritas</strong> ke Customer Service kami agar langsung dikabari begitu stok restock kembali!
@@ -714,7 +714,7 @@ export default function MenuDetailPage() {
                     Buka Live Chat CS
                   </Link>
                   <a
-                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo CS Nefakky, saya ingin reservasi pesanan ${product.name}${hasVariants ? ` varian ${activeDrinkVariant.name}` : ''} sebanyak ${quantity} porsi yang sedang habis.`)}`}
+                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo CS Nefakky, saya ingin reservasi pesanan ${product.name}${hasVariants && activeDrinkVariant ? ` varian ${activeDrinkVariant.name}` : ''} sebanyak ${quantity} porsi yang sedang habis.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors"

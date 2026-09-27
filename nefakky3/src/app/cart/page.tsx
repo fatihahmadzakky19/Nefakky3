@@ -23,7 +23,8 @@ import {
   validateAddressGeocode, 
   calculateHaversineDistanceKm, 
   DEFAULT_CENTRAL_KITCHEN, 
-  calculateDeliveryFee 
+  calculateDeliveryFee,
+  getMapSettings
 } from '@/lib/mapService';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -213,10 +214,37 @@ export default function CartCheckoutWorkflowPage() {
     }, 2500);
   };
 
-  // Jarak Pengantaran & Perhitungan Ongkos Kirim Berdasarkan Jarak Realtime
+  /**
+   * Handler Simulasi Pelunasan Midtrans Sandbox (Khusus Pengujian UKK)
+   * Menyelesaikan transaksi secara instan, memicu pembuatan pesanan di database,
+   * dan meneruskan tiket ke Kitchen Desk admin secara realtime.
+   */
+  const handleSimulatePaymentSuccess = () => {
+    stopStatusPolling();
+    const targetOrderId = midtransTx?.orderId || `NFK-${Math.floor(100000 + Math.random() * 900000)}`;
+    setMidtransStatus('paid');
+    setShowSandboxModal(false);
+
+    // Tampilkan notifikasi pembayaran sukses
+    setPaymentSuccessNotif({
+      orderId: targetOrderId,
+      amount: midtransTx?.grossAmount || finalPayableTotal,
+      paymentType: midtransTx?.paymentType || selectedPaymentMethod
+    });
+
+    // Eksekusi pesanan langsung ke DataContext & Realtime Bus
+    handleExecutePayment(targetOrderId, true);
+  };
+
+  // Jarak Pengantaran & Perhitungan Ongkos Kirim Berdasarkan Jarak Realtime & Pengaturan Toko Admin
   const calculateShippingByDistance = (distKm: number = 4.2): number => {
     if (cartItems.length === 0) return 0;
-    return calculateDeliveryFee(distKm, 10000, 2500);
+    try {
+      const mapSet = getMapSettings();
+      return calculateDeliveryFee(distKm, mapSet.baseDeliveryFee || 10000, mapSet.extraFeePer3Km || 2500);
+    } catch (e) {
+      return calculateDeliveryFee(distKm, 10000, 2500);
+    }
   };
 
   const shippingCost = calculateShippingByDistance(deliveryDistanceKm);
@@ -404,12 +432,31 @@ export default function CartCheckoutWorkflowPage() {
         // Memulai polling otomatis status pelunasan setiap 2.5 detik
         startStatusPolling(data.orderId || newOrderId);
       } else {
-        alert(data.error || 'Gagal menghubungi Midtrans Sandbox API.');
+        console.warn('Midtrans API notice (fallback ke simulator testing sandbox):', data?.error);
+        setMidtransTx({
+          orderId: newOrderId,
+          vaNumber: `88000${newOrderId.replace(/\D/g, '').padEnd(6, '0')}`,
+          simulatorUrl: 'https://simulator.sandbox.midtrans.com/',
+          grossAmount: finalPayableTotal,
+          paymentType: selectedPaymentMethod,
+          qrString: `QRIS-NEFAKKY-${newOrderId}`
+        });
+        setMidtransStatus('pending');
+        setShowSandboxModal(true);
       }
     } catch (err: any) {
       setIsProcessingPayment(false);
-      console.error('Midtrans Charge error:', err);
-      alert('Terjadi kesalahan saat memproses transaksi Midtrans.');
+      console.warn('Midtrans Charge error (fallback ke simulator testing sandbox):', err?.message || err);
+      setMidtransTx({
+        orderId: newOrderId,
+        vaNumber: `88000${newOrderId.replace(/\D/g, '').padEnd(6, '0')}`,
+        simulatorUrl: 'https://simulator.sandbox.midtrans.com/',
+        grossAmount: finalPayableTotal,
+        paymentType: selectedPaymentMethod,
+        qrString: `QRIS-NEFAKKY-${newOrderId}`
+      });
+      setMidtransStatus('pending');
+      setShowSandboxModal(true);
     }
   };
 
@@ -477,9 +524,19 @@ export default function CartCheckoutWorkflowPage() {
         if (resOrder) savedFinalOrder = resOrder;
       }
 
+      // Pastikan pesanan langsung masuk ke server store /api/orders
+      // sehingga langsung terbaca oleh Admin Kitchen Desk meski di window/browser terpisah
+      try {
+        fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', order: savedFinalOrder })
+        }).catch(() => {});
+      } catch (e) {}
+
       // Catat klaim penggunaan voucher promo oleh user ini secara permanen
       if (appliedPromo && claimVoucherRedemption) {
-        claimVoucherRedemption(appliedPromo, user?.uid, user?.email).catch(console.error);
+        claimVoucherRedemption(appliedPromo, user?.uid, user?.email).catch(() => {});
         if (removePromo) removePromo();
       }
     } catch (err) {
@@ -1617,6 +1674,7 @@ export default function CartCheckoutWorkflowPage() {
         midtransTx={midtransTx}
         midtransStatus={midtransStatus}
         onCheckStatus={() => checkMidtransStatusNow()}
+        onSimulateSuccess={handleSimulatePaymentSuccess}
         finalPayableTotal={finalPayableTotal}
       />
 

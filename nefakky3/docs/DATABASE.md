@@ -1,8 +1,8 @@
 # Skema Basis Data & Desain Relasi — Nefakky Marketplace
 
-**Sistem Manajemen Basis Data**: Dual-Storage Architecture (MySQL 8.0+ / SQLite untuk Laravel Backend, Google Firebase Firestore untuk Sinkronisasi Realtime Cloud, serta LocalStorage Resilient Enkapsulasi Klien)  
-**Versi Skema**: 4.5.0 (Updated September 2026 — 5-Stage Kitchen POS, High Demand Telemetry & Annual Archive)  
-**ORM / Data Driver**: Laravel Eloquent ORM & Firebase Web SDK v10+  
+**Sistem Manajemen Basis Data**: Multi-Tier Storage Architecture (Next.js Server JSON Stores `.orders_store.json` & `.chat_store.json`, Google Firebase Firestore / RTDB, MySQL 8.0+ / SQLite Laravel, serta LocalStorage Resilient Enkapsulasi Klien)  
+**Versi Skema**: 4.8.0 (Updated September 2026 — Multi-Tier Server Store, Cross-Incognito Realtime Bridge & Voucher Deduplication)  
+**ORM / Data Driver**: Next.js Server Store File I/O, Laravel Eloquent ORM & Firebase Web SDK v10+  
 
 ---
 
@@ -165,3 +165,75 @@ Untuk menjamin kueri cepat tanpa hambatan:
   - `reviews`: `product_id` ASC + `is_visible` ASC + `created_at` DESC (untuk render tab review menu).
 * **Tabular Numbers Format**:
   - Seluruh kolom moneter disimpan dalam format integer atau float tanpa desimal pembulatan untuk menjaga akurasi perhitungan laporan keuangan.
+
+---
+
+## 4. Skema Penyimpanan Berkas Server JSON (`.orders_store.json` & `.chat_store.json`)
+
+Untuk mendukung ketahanan terhadap partisi peramban (Incognito) dan lingkungan tanpa database server eksternal, platform mengimplementasikan *High-Performance File Stores* berbasis JSON di sisi server Next.js.
+
+### 4.1 Skema Data Pesanan Server (`.orders_store.json`)
+Setiap elemen dalam berkas `.orders_store.json` merepresentasikan satu entitas `AdminOrder`:
+```typescript
+interface OrderItem {
+  id: string;               // ID hidangan (misal: "m1", "m6_Mangga")
+  name: string;             // Nama sajian
+  price: number;            // Harga satuan saat dibeli
+  quantity: number;         // Jumlah porsi
+  image?: string;           // Path URL gambar sajian
+}
+
+interface AdminOrder {
+  id: string;               // ID unik pesanan ("NFK-890783" atau "ORD-88219")
+  customerName: string;     // Nama pembeli
+  customerEmail: string;    // Alamat email pelanggan
+  userId?: string;          // UID Firebase pelanggan (jika login)
+  avatar: string;           // URL Avatar pengguna
+  address: string;          // Alamat pengantaran lengkap
+  phone: string;            // Nomor kontak WhatsApp / telepon
+  items: OrderItem[];       // Array rincian hidangan
+  itemCount: number;        // Total jumlah item dipesan
+  paymentMethod: string;    // "Virtual Account BCA (Midtrans)", "Tunai (COD)", dll.
+  paymentBadge: 'PAID' | 'AWAITING' | 'REFUNDED' | 'FAILED' | 'CANCELLED';
+  deliveryType: string;     // "KURIR NEFAKKY", "EXPRESS", "STANDARD"
+  distance?: string;        // Jarak kalkulasi Haversine ("3.1 Km")
+  status: 'RECEIVED' | 'PREPARING' | 'COOKING' | 'READY' | 'DELIVERING' | 'COMPLETED' | 'CANCELLED';
+  subtotal: number;         // Nilai belanja sebelum ongkir & promo
+  shippingCost: number;     // Biaya pengantaran bertingkat
+  discount: number;         // Nilai potongan promo
+  total: number;            // Total bayar akhir
+  date: string;             // Representasi teks waktu lokal Indonesia (WIB)
+  createdAt?: number;       // Stempel waktu Unix epoch milidetik (misal: 1790512878381)
+  updatedAt?: number;       // Stempel waktu Unix epoch mutasi terakhir
+  voucherCode?: string;     // Kode kupon promo terpakai
+  appliedPromo?: string;    // Alias kode voucher
+  customerConfirmed?: boolean; // Konfirmasi serah terima oleh pelanggan
+  confirmedAt?: string;     // Waktu pelanggan melakukan konfirmasi
+  proofPhoto?: string;      // URL/Base64 foto bukti serah terima kurir (POD)
+  proofPhotoUrl?: string;   // Alias URL foto bukti serah terima
+  paymentProofPhoto?: string; // URL/Base64 foto bukti bayar tunai COD
+  paymentProofPhotoUrl?: string; // Alias URL foto bukti bayar
+  cancellationReason?: string; // Alasan pembatalan (jika status CANCELLED)
+  isDeleted?: boolean;      // Penanda soft-delete
+}
+```
+
+### 4.2 Skema Data Percakapan Server (`.chat_store.json`)
+Setiap elemen merepresentasikan satu pesan instan `ChatMessage`:
+```typescript
+interface ChatMessage {
+  id: string;               // UUID pesan unik
+  sender: 'user' | 'admin'; // Aktor pengirim pesan
+  text: string;             // Isi pesan obrolan teks
+  timestamp: string;        // Waktu kirim (format: "HH:mm WIB" atau ISO string)
+  userName?: string;        // Nama tampilan pengguna
+  userEmail: string;        // Email pengidentifikasi utas obrolan
+  avatar?: string;          // Foto avatar pengirim
+  readByAdmin: boolean;     // Status telah dibaca oleh staf CS admin
+  readByUser: boolean;      // Status telah dibaca oleh pelanggan
+}
+```
+
+### 4.3 Strategi Penggabungan LWW (Last-Write-Wins) & Tombstones
+- **Resolusi Konflik LWW**: Saat sinkronisasi bulk `action: "sync"` dijalankan, data dengan stempel waktu `updatedAt` atau `createdAt` yang lebih baru akan memenangkan pembaruan field.
+- **Tombstones (`nefakky_deleted_orders`)**: ID pesanan yang telah dihapus oleh admin disimpan dalam daftar *tombstones* di `localStorage` klien untuk mencegah pesanan terhapus muncul kembali (*resurrecting*) saat menerima respons sinkronisasi dari server atau RTDB.

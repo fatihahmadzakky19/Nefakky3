@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { useData, isVoucherValidNow, cleanPromoCode, sortReviewsNewestFirst } from '@/context/DataContext';
+import { useData, isVoucherValidNow, cleanPromoCode, sortReviewsNewestFirst, deduplicateVouchers } from '@/context/DataContext';
 import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
 import AuthRequiredModal from '@/components/AuthRequiredModal';
 import Navbar from '@/components/Navbar';
@@ -44,6 +44,11 @@ export default function HomePage() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [authActionName, setAuthActionName] = useState<string>('melakukan aktivitas ini');
+  const [hasMounted, setHasMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const toggleWishlist = (productId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -53,17 +58,24 @@ export default function HomePage() {
   };
 
   // Saring semua voucher aktif yang dibuat oleh Admin dan BELUM pernah dipakai oleh akun pengguna ini
+  // Guard dengan hasMounted agar initial render SSR dan Client 100% identik tanpa hydration mismatch
   const activeVouchers = useMemo(() => {
-    return (vouchers || [])
+    const uniqueVouchers = deduplicateVouchers(vouchers || []);
+    if (!hasMounted) {
+      return uniqueVouchers.filter(v => isVoucherValidNow(v).active);
+    }
+    return uniqueVouchers
       .filter(v => isVoucherValidNow(v).active)
       .filter(v => !isVoucherUsedByUser(v.code, user?.uid, user?.email));
-  }, [vouchers, user, isVoucherUsedByUser]);
+  }, [vouchers, user, isVoucherUsedByUser, hasMounted]);
 
   const currentVoucher = useMemo(() => {
     if (!activeVouchers || activeVouchers.length === 0) return null;
     const cleanSelected = cleanPromoCode(selectedVoucherCode);
     const foundSelected = activeVouchers.find(v => cleanPromoCode(v.code) === cleanSelected);
     if (foundSelected) return foundSelected;
+    const foundNewCustomer = activeVouchers.find(v => cleanPromoCode(v.code).includes('NEFAKKY10') || cleanPromoCode(v.code).includes('NEWUSER'));
+    if (foundNewCustomer) return foundNewCustomer;
     const foundWeekend = activeVouchers.find(v => cleanPromoCode(v.code).includes('WEEKEND'));
     if (foundWeekend) return foundWeekend;
     return activeVouchers[0] || null;
@@ -456,7 +468,7 @@ export default function HomePage() {
 
           {/* ACTIVE VOUCHER STRIP */}
           {currentVoucher && (
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 w-full">
+            <section suppressHydrationWarning className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 w-full">
               <div className="bg-white rounded-xl p-4 sm:p-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 sm:gap-5 border border-stone-200 shadow-subtle">
                 <div className="flex items-start sm:items-center gap-3.5 sm:gap-4">
                   <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-stone-100 flex items-center justify-center text-[#C2410C] shrink-0 border border-stone-200 mt-0.5 sm:mt-0">
@@ -473,6 +485,11 @@ export default function HomePage() {
                       {currentVoucher.event && (
                         <span className="px-2 py-0.5 bg-stone-100 text-stone-700 text-[10px] font-medium rounded border border-stone-200 uppercase">
                           {currentVoucher.event}
+                        </span>
+                      )}
+                      {activeVouchers.length > 1 && (
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-200">
+                          {activeVouchers.length} Kupon Tersedia
                         </span>
                       )}
                     </div>
@@ -806,7 +823,8 @@ export default function HomePage() {
                 const author = item.authorName || item.author || 'Pelanggan Nefakky';
                 const initial = author[0]?.toUpperCase() || 'P';
                 const dish = item.productName || item.dish || 'Menu Pilihan';
-                const rating = typeof item.rating === 'number' ? item.rating : 5;
+                const safeRating = (!Number.isNaN(Number(item.rating)) && Number(item.rating) > 0) ? Number(item.rating) : 5;
+                const starCount = Math.min(5, Math.max(1, Math.round(safeRating)));
                 const avatar = item.authorAvatar || item.avatar;
                 const dateText = item.date || 'Baru saja';
 
@@ -818,7 +836,7 @@ export default function HomePage() {
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex text-[#D97706]">
-                          {[...Array(Math.min(5, Math.max(1, Math.round(rating))))].map((_, i) => (
+                          {[...Array(starCount)].map((_, i) => (
                             <Star key={i} className="w-3.5 h-3.5 fill-[#D97706]" />
                           ))}
                         </div>

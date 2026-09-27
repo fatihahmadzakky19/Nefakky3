@@ -26,6 +26,12 @@ export const getEchoInstance = (): Echo<any> | null => {
     return null;
   }
 
+  // Jika Reverb tidak diaktifkan secara eksplisit, jangan inisialisasi koneksi WebSocket
+  // untuk mencegah spam error net::ERR_CONNECTION_REFUSED di konsol browser saat server Reverb offline.
+  if (process.env.NEXT_PUBLIC_ENABLE_REVERB !== 'true') {
+    return null;
+  }
+
   if (!echoInstance) {
     const key = process.env.NEXT_PUBLIC_REVERB_APP_KEY || 'cp4frec811yllnlrvpbl';
     const host = process.env.NEXT_PUBLIC_REVERB_HOST || 'localhost';
@@ -59,6 +65,13 @@ export const getEchoInstance = (): Echo<any> | null => {
           },
         },
       });
+
+      // Tangani event error koneksi WebSocket secara graceful agar tidak memicu unhandled rejection
+      if (echoInstance && (echoInstance as any).connector?.pusher?.connection) {
+        (echoInstance as any).connector.pusher.connection.bind('error', () => {
+          // Handled: WebSocket Reverb sedang offline, aplikasi beralih ke bus sinkronisasi lokal
+        });
+      }
     } catch (error) {
       console.warn('[Laravel Echo] Gagal menginisialisasi WebSocket connection:', error);
       return null;

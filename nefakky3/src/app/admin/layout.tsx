@@ -19,14 +19,14 @@ import { useRouter } from 'next/navigation';
 // Mengimpor AuthContext untuk membaca sesi admin yang sedang login
 import { useAuth } from '@/context/AuthContext';
 // Mengimpor DataContext untuk membaca pesanan, produk, dan pesan chat
-import { useData, ChatMessage } from '@/context/DataContext';
+import { useData, ChatMessage, AdminOrder } from '@/context/DataContext';
 // Mengimpor modul utilitas pembuat file spreadsheet laporan keuangan
 import { exportNefakkyExcelReport } from '@/lib/exportUtils';
 // Mengimpor komponen sidebar admin
 import AdminSidebar from '@/components/admin/AdminSidebar';
 // Mengimpor komponen header admin
 import AdminHeader from '@/components/admin/AdminHeader';
-import { X, ArrowRight } from 'lucide-react';
+import { X, ArrowRight, ShoppingBag } from 'lucide-react';
 import { MessageCircle } from '@/components/icons/CustomIcons';
 
 /**
@@ -48,9 +48,11 @@ export default function AdminLayout({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   // State untuk menyimpan data pesan chat terbaru yang memicu floating toast
   const [latestChatNotification, setLatestChatNotification] = useState<ChatMessage | null>(null);
+  const [latestOrderNotification, setLatestOrderNotification] = useState<AdminOrder | null>(null);
 
-  // Ref untuk melacak jumlah pesan sebelumnya guna mendeteksi pesan baru secara realtime
+  // Ref untuk melacak jumlah pesan dan pesanan sebelumnya guna mendeteksi item baru secara realtime
   const prevChatCountRef = useRef<number>((chatMessages || []).length);
+  const prevOrdersCountRef = useRef<number>((orders || []).length);
 
   /**
    * Memoize: Menyaring seluruh pesan pelanggan yang belum dibaca oleh admin
@@ -91,6 +93,32 @@ export default function AdminLayout({
   };
 
   /**
+   * Fungsi: Memainkan audio bell lonceng dapur instan saat ada pesanan baru masuk
+   */
+  const playOrderChime = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+      osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12); // E5
+      osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.24); // G5
+      osc.frequency.setValueAtTime(1046.50, audioCtx.currentTime + 0.36); // C6
+
+      gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.6);
+    } catch (e) {}
+  };
+
+  /**
    * Effect Realtime: Memantau pesan masuk baru dan memicu toast mengambang serta audio notifikasi
    */
   useEffect(() => {
@@ -109,6 +137,21 @@ export default function AdminLayout({
     // Perbarui referensi jumlah pesan
     prevChatCountRef.current = chatMessages.length;
   }, [chatMessages]);
+
+  /**
+   * Effect Realtime: Memantau pesanan baru masuk secara instan ke Kitchen Desk
+   */
+  useEffect(() => {
+    if (!orders) return;
+    if (orders.length > prevOrdersCountRef.current && prevOrdersCountRef.current > 0) {
+      const newestOrder = orders[0];
+      if (newestOrder && (newestOrder.status === 'RECEIVED' || newestOrder.status === 'PENDING')) {
+        setLatestOrderNotification(newestOrder);
+        playOrderChime();
+      }
+    }
+    prevOrdersCountRef.current = orders.length;
+  }, [orders]);
 
   // Menghitung jumlah pesanan yang masih pending atau baru diterima
   const pendingOrdersCount = (orders || []).filter(
@@ -217,6 +260,56 @@ export default function AdminLayout({
               className="px-3.5 py-2 bg-[#C2410C] hover:bg-[#9A3412] text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
             >
               <span>Balas Chat Sekarang</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 4. FLOATING TOAST NOTIFIKASI PESANAN MASUK REALTIME (KITCHEN DESK ALERT) */}
+      {latestOrderNotification && (
+        <div 
+          className="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-stone-900 border-2 border-emerald-500/50 rounded-2xl shadow-2xl p-4.5 backdrop-blur-xl animate-bounce-in"
+          role="alert"
+          aria-live="assertive"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                <ShoppingBag className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  ⚡ Pesanan Baru Diterima
+                </span>
+                <h4 className="text-xs font-bold text-white mt-1">
+                  {latestOrderNotification.customerName} ({latestOrderNotification.id})
+                </h4>
+              </div>
+            </div>
+            <button 
+              onClick={() => setLatestOrderNotification(null)}
+              className="text-stone-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+              aria-label="Tutup notifikasi pesanan"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="text-xs text-stone-300 font-normal mt-2 bg-stone-950/70 p-2.5 rounded-xl border border-stone-800 flex justify-between items-center">
+            <span>{latestOrderNotification.itemCount || (latestOrderNotification.items?.length || 1)} menu • {latestOrderNotification.paymentMethod}</span>
+            <span className="font-bold text-emerald-400 font-mono-data">Rp {(latestOrderNotification.total || 0).toLocaleString('id-ID')}</span>
+          </div>
+
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              onClick={() => {
+                setLatestOrderNotification(null);
+                router.push('/admin/orders');
+              }}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            >
+              <span>Buka Kitchen Desk</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

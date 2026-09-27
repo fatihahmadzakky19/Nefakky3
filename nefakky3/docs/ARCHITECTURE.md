@@ -1,6 +1,6 @@
 # Arsitektur Sistem: Nefakky Artisanal Culinary Marketplace
 
-**Versi Dokumen**: 4.5.0 (Anti-AI-Slop Architecture, Reverb WebSocket Broadcaster, & Live Camera Telemetry)  
+**Versi Dokumen**: 4.8.0 (Multi-Tier Server Store, Cross-Incognito Realtime Bridge, Anti-AI-Slop Architecture, & Hardware Audio Synthesizer)  
 **Status**: Production Standard (100% Passed Test Suite, Type-Safe, WCAG 2.1 AA Compliant)  
 **Penulis**: Tim Pengembang Nefakky (Fatih Ahmad Zakky)  
 
@@ -96,6 +96,23 @@ graph TD
   - `products`: Update kuota stok hidangan (misal: penandaan *Sold-Out* instan).
 * Mengonsumsi payload secara non-blocking melalui komponen `RealtimeToastBanner.tsx`.
 
+### 2.6 Multi-Tier Storage & Cross-Incognito Realtime Bridge
+* **Tantangan Partisi Peramban Modern**: Chromium mempartisi `localStorage` dan `BroadcastChannel` antara jendela normal dan Incognito/Private. Hal ini mencegah sinkronisasi client-only ketika pengujian pesanan dilakukan di jendela penyamaran.
+* **Solusi Multi-Tier Store**:
+  1. **Next.js Server Store**: File JSON berkinerja tinggi (`.orders_store.json` dan `.chat_store.json`) di sisi server dengan caching memori (*in-memory caching*) untuk pembacaan instan.
+  2. **Background Polling & Visibility Synchronizer**: Interval 1.5 detik + event listener `document.addEventListener('visibilitychange')` yang secara otomatis menyerap mutasi data saat admin atau pelanggan kembali ke jendela aplikasi.
+  3. **Algoritma Penggabungan LWW (Last-Write-Wins)**: Menggunakan stempel waktu `updatedAt` / `createdAt` dan daftar *tombstones* (`nefakky_deleted_orders`, `nefakky_deleted_vouchers`) untuk mencegah data yang telah dihapus muncul kembali.
+
+### 2.7 Mesin Audio Notifikasi Web Audio API (Hardware-Synthesized Sound)
+* **Zero External Audio Assets**: Tidak bergantung pada file `.mp3` / `.wav` eksternal yang rentan terhadap gagal unduh (404/CORS).
+* **Order Chime Synthesizer**: Menghasilkan nada lonceng segitiga 4-akord harmonik (C5 523.25Hz -> E5 659.25Hz -> G5 783.99Hz -> C6 1046.50Hz) dengan *exponential gain fade-out* 600ms saat pesanan baru masuk.
+* **Chat Chime Synthesizer**: Menghasilkan nada lonceng sinus lembut 2-akord (D5 587.33Hz -> A5 880Hz) saat pesan pelanggan tiba di CS Live Desk.
+
+### 2.8 Mesin Deduplikasi & Integritas Voucher Promo
+* **Sanitasi Normalisasi**: Fungsi `cleanPromoCode` menghapus karakter tanda pagar `#`, spasi, dan menormalisasi teks ke huruf kapital (*uppercase*).
+* **Deduplikasi Ganda**: Menghapus duplikasi kode kupon dan ID voucher secara otomatis pada saat inisialisasi dan penggabungan state.
+* **Auto-Reset Mingguan ISO**: Rekaman kupon terpakai per-pengguna (`nefakky_used_vouchers_<uid>`) direset secara otomatis setiap pergantian minggu ISO baru agar promosi dapat dinikmati kembali secara adil.
+
 ---
 
 ## 3. Matriks Keamanan & Standar Kualitas
@@ -106,3 +123,4 @@ graph TD
 | **Type-Safety** | 100% strict TypeScript mode (`npx tsc --noEmit` selalu lulus 0 error). |
 | **Pencegahan Data Corrupt** | Skema LocalStorage menggunakan migrasi versi otomatis dengan struktur data aman. |
 | **Aksesibilitas (A11y)** | Mematuhi pedoman WCAG 2.1 Level AA dengan rasio kontras warna $\ge 4.5:1$ dan atribut ARIA lengkap. |
+| **Resiliensi Multi-Window** | Dukungan transaksi lintas-jendela penyamaran dan tab browser melalui server store `/api/orders`. |

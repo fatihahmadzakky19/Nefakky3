@@ -10,7 +10,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Store, X, ArrowUpRight } from 'lucide-react';
+import { Store, X, ArrowUpRight, Receipt } from 'lucide-react';
 import { 
   BarChart3, 
   ShoppingBag, 
@@ -51,6 +51,12 @@ export default function AdminSidebar({
           href: '/admin',
           label: 'Business Overview',
           Icon: BarChart3,
+          badge: null
+        },
+        {
+          href: '/admin/reports',
+          label: 'Laporan Keuangan',
+          Icon: Receipt,
           badge: null
         }
       ]

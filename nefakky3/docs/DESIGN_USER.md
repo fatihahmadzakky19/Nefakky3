@@ -1,8 +1,8 @@
 # Spesifikasi Desain Antarmuka: Customer Facing Application — Nefakky Marketplace
 
-**Versi Dokumen**: 4.5.0 (Anti-AI-Slop Bespoke Vector Icons, Realtime Community Reviews, & Priority Reservation System)  
+**Versi Dokumen**: 4.8.0 (Anti-AI-Slop Bespoke Vector Icons, Realtime Cross-Incognito Checkout, & Manual CS Live Chat)  
 **Target Modul**: Antarmuka Belanja Pelanggan (Beranda, Katalog Menu, Detail & Varian Menu, Cart Checkout Stepper, Live GPS Tracking, Ulasan Rasa Komunitas, Profil Akun & CS Live Chat)  
-**Framework Frontend**: Next.js 14.2 (App Router), React 18, Tailwind CSS, 33 Custom Vector Icons, Leaflet / OpenStreetMap / Google Maps, Midtrans Snap SDK  
+**Framework Frontend**: Next.js 14.2 (App Router), React 18, Tailwind CSS, 33 Custom Vector Icons, Leaflet / OpenStreetMap / Google Maps, Midtrans Snap SDK, Next.js Server Stores  
 **Status**: Production Standard (100% Passed Test Suite, Type-Safe, WCAG 2.1 AA Accessible)  
 
 ---
@@ -16,7 +16,7 @@ graph TD
     C --> D["4. Keranjang Belanja & Validasi Voucher Diskon (/cart)"]
     D --> E["5. Titik Antar GPS Map Picker & Kalkulator Ongkir Haversine"]
     E --> F["6. Pilihan Pembayaran: Midtrans Snap (VA/QRIS) atau Tunai COD"]
-    F --> G["7. Layar Sukses Transaksi & Kode Pesanan Resmi"]
+    F --> G["7. Layar Sukses Transaksi & Kode Pesanan Resmi (Instant Server Sync)"]
     G --> H["8. Live Order Tracking 5-Tahap & Peta Rute Kurir (/notifications)"]
     H --> I["9. Tombol Konfirmasi Pesanan Tiba & Unduh Invoice PDF"]
     I --> J["10. Ulasan Rasa Realtime & Diskusi Komunitas (/comments)"]
@@ -66,6 +66,7 @@ graph TD
   * Tombol hapus item menggunakan ikon `Trash` kustom.
 * **Klaim Voucher Diskon**:
   * Input kode kupon dengan tombol validasi instan (`Ticket`).
+  * Mesin sanitasi kode otomatis (`cleanPromoCode`) dan perlindungan anti-duplikasi kupon.
   * Perhitungan diskon nominal rupiah atau persentase langsung memotong subtotal secara transparan.
 * **Pemilih Alamat GPS & Rute Pengiriman (`AutoMapPickerModal.tsx`)**:
   * Peta interaktif Leaflet OpenStreetMap dengan pin lokasi `MapPin` yang dapat digeser (*draggable*).
@@ -75,6 +76,8 @@ graph TD
 * **Pilihan Metode Pembayaran**:
   * **Midtrans Snap Modal**: Pembayaran digital instan via QRIS, GoPay, ShopeePay, Virtual Account BCA/Mandiri/BRI/BNI.
   * **Cash on Delivery (COD)**: Pembayaran tunai saat kurir tiba dengan instruksi nominal uang pas.
+* **Instant Dual-Sync Push**:
+  * Tiket pesanan langsung didorong ke server store `/api/orders` seketika saat pembayaran selesai, menjamin pesanan langsung tampil di Kitchen Desk admin bahkan saat pembeli menggunakan mode Incognito.
 
 ---
 
@@ -103,8 +106,9 @@ graph TD
 
 ---
 
-### 2.6 CS Live Desk & Obrolan Dapur
-* **Chatbot & Live Operator**:
+### 2.6 CS Live Desk & Layanan Pelanggan 100% Manual
+* **Layanan Ramah Tanpa Bot (Human-to-Human)**:
   * Widget percakapan instan di pojok kanan bawah dengan ikon `MessageSquare`.
-  * Pertanyaan sering diajukan (*FAQ canned responses*): jam buka resto, rekomendasi menu, dan konfirmasi alergen.
-  * Dukungan kirim tangkapan layar atau foto bukti via live chat.
+  * Seluruh balasan diketik langsung oleh staf operator/admin manusia, tanpa pesan otomatis template bot yang kaku.
+  * Sinkronisasi realtime melalui server API `/api/chat` dan berkas `.chat_store.json`.
+  * Audio chime Web Audio API yang lembut saat balasan staf admin diterima.

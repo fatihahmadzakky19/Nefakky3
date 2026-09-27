@@ -1,7 +1,7 @@
 # Master Design System & UI/UX Guidelines — Nefakky Marketplace
 
 **Produk**: Nefakky - Artisanal Food & Culinary Marketplace  
-**Versi Design System**: 4.5.0 (Anti-AI-Slop 33 Bespoke Vector Icons, Realtime Calendar Clock, Kitchen POS Telemetry, & Master Design Tokens)  
+**Versi Design System**: 4.8.0 (Anti-AI-Slop 33 Bespoke Vector Icons, Web Audio API Telemetry, Kitchen POS Telemetry, & Master Design Tokens)  
 **Status**: Production Standard (100% Passed Test Suite, Type-Safe, WCAG 2.1 AA Compliant)  
 **Dokumen Terkait**: [DESIGN_USER.md](DESIGN_USER.md) (Customer UI) & [DESIGN_ADMIN.md](DESIGN_ADMIN.md) (Admin Command Center)  
 
@@ -143,3 +143,31 @@ function createMaskIcon(b64: string, label: string) {
 2. **Navigasi Keyboard**: State focus tajam menggunakan `focus:ring-2 focus:ring-[#FF5400]/50`.
 3. **Screen Reader Semantic**: Semua ikon kustom memiliki atribut `role="img"` dan `aria-label` deskriptif.
 4. **Optimasi Asset WebP**: Semua foto sajian di-render via Next.js `<Image />` dengan kompresi WebP otomatis untuk menjaga CLS $\le 0.05$ dan LCP $\le 1.0$s.
+
+---
+
+## 7. Identitas Audio Berbasis Perangkat Keras (Web Audio API Synthesizers)
+
+Untuk melengkapi estetika visual anti-AI-slop dengan umpan balik auditif yang menyenangkan dan profesional, antarmuka Nefakky mengimplementasikan synthesizer suara berbasis Web Audio API bawaan browser:
+
+### 7.1 Lonceng Dapur Pesanan Masuk (*Kitchen Order Chime*)
+* **Bentuk Gelombang**: `triangle` (menghasilkan nada lonceng akustik logam hangat dan ramah).
+* **Akord Melodi**: 4 Arpeggio nada menanjak C-Mayor:
+  - C5 ($523.25\text{ Hz}$) pada $t = 0.00\text{s}$
+  - E5 ($659.25\text{ Hz}$) pada $t = 0.12\text{s}$
+  - G5 ($783.99\text{ Hz}$) pada $t = 0.24\text{s}$
+  - C6 ($1046.50\text{ Hz}$) pada $t = 0.36\text{s}$
+* **Envelope & Volume**: Puncak gain $0.35$ dengan *exponential ramp fade-out* lembut menuju $0.01$ selama $0.6\text{ detik}$.
+* **Konteks**: Dipicu secara otomatis di panel admin saat pesanan baru selesai dibuat oleh pembeli di jendela manapun.
+
+### 7.2 Lonceng Obrolan Pelanggan (*CS Chat Soft Chime*)
+* **Bentuk Gelombang**: `sine` (gelombang sinus murni, tenang, dan tidak mengganggu).
+* **Akord Melodi**: 2 Interval nada:
+  - D5 ($587.33\text{ Hz}$) pada $t = 0.00\text{s}$
+  - A5 ($880.00\text{ Hz}$) pada $t = 0.15\text{s}$
+* **Envelope & Volume**: Puncak gain $0.30$ dengan *fade-out* menuju $0.01$ selama $0.3\text{ detik}$.
+* **Konteks**: Dipicu saat pelanggan mengirimkan pesan obrolan baru ke meja CS Live Desk.
+
+### 7.3 Komponen Floating Alert Toast
+* Menggunakan kontainer gelap `bg-stone-900` dengan pembatas beraksen emerald `border-emerald-500/50` untuk pesanan baru atau orange `border-[#C2410C]/50` untuk pesan chat.
+* Dilengkapi mikro-animasi masuk `animate-bounce-in`, ikon berdenyut, ringkasan nominal/pesan, dan tombol aksi 1-klik menuju halaman terkait.
