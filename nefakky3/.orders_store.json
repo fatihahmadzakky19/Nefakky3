@@ -1,5 +1,61 @@
 [
   {
+    "id": "NFK-567369",
+    "customerName": "anonim1",
+    "customerEmail": "anonim1@gmail.com",
+    "userId": "KlOg1Aep9TbKmHy9YatgW3C5thm1",
+    "avatar": "https://ui-avatars.com/api/?name=anonim1&background=1C1917&color=ffffff",
+    "address": "Susukan,  Bojong Gede,  Bogor,  Jawa Barat,  16929",
+    "phone": "0856838642",
+    "items": [
+      {
+        "id": "m1",
+        "name": "Ayam Bakar",
+        "price": 35000,
+        "quantity": 1,
+        "image": "/images/ayam_bakar.jpg"
+      },
+      {
+        "id": "m2",
+        "name": "Nasi Bakar",
+        "price": 10000,
+        "quantity": 1,
+        "image": "/images/nasi_bakar.jpg"
+      },
+      {
+        "id": "m5",
+        "name": "Garang Asam",
+        "price": 10000,
+        "quantity": 1,
+        "image": "/images/garang_asam.jpg"
+      },
+      {
+        "id": "m6_Mangga",
+        "name": "Jus Mangga Segar",
+        "price": 5000,
+        "quantity": 1,
+        "image": "/images/jus_mangga.jpg"
+      }
+    ],
+    "itemCount": 4,
+    "paymentMethod": "E-Wallet GoPay/ShopeePay (Midtrans)",
+    "paymentBadge": "PAID",
+    "deliveryType": "KURIR NEFAKKY",
+    "distance": "3.1 Km",
+    "status": "COMPLETED",
+    "subtotal": 60000,
+    "shippingCost": 10000,
+    "discount": 24000,
+    "total": 46000,
+    "voucherCode": "PROMO86 + FLASHSALE12",
+    "appliedPromo": "PROMO86 + FLASHSALE12",
+    "date": "Senin, 28 Sep 2026 • 08:15:18 WIB",
+    "createdAt": 1790558118430,
+    "customerConfirmed": true,
+    "updatedAt": 1790558460442,
+    "confirmedAt": "Hari ini, 18.21 WIB"
+  },
+  {
     "id": "NFK-890783",
     "customerName": "anonim1",
     "customerEmail": "anonim1@gmail.com",

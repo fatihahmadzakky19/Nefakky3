@@ -32,6 +32,10 @@ export async function POST(req: Request) {
       }
     };
 
+    // Dynamic callback URL based on incoming request origin or host
+    const origin = req.headers.get('origin') || 'http://localhost:3000';
+    const callbackUrl = `${origin}/notifications`;
+
     // Format per payment type
     if (paymentType === 'va' || paymentType === 'bank_transfer') {
       payload.payment_type = 'bank_transfer';
@@ -47,12 +51,12 @@ export async function POST(req: Request) {
       payload.payment_type = 'gopay';
       payload.gopay = {
         enable_callback: true,
-        callback_url: 'http://localhost:3000/notifications'
+        callback_url: callbackUrl
       };
     } else if (paymentType === 'shopeepay') {
       payload.payment_type = 'shopeepay';
       payload.shopeepay = {
-        callback_url: 'http://localhost:3000/notifications'
+        callback_url: callbackUrl
       };
     } else {
       // Default fallback to BCA VA
@@ -81,9 +85,19 @@ export async function POST(req: Request) {
       }, { status: response.status || 400 });
     }
 
-    // Extract simulator URL & VA code
+    // Extract simulator URL, deeplink, QR code & VA code
     let vaNumber = '';
     let simulatorUrl = 'https://simulator.sandbox.midtrans.com/';
+
+    // 1. Ekstrak deeplink-redirect simulator URL dari data.actions (kunci utama simulator GoPay & ShopeePay)
+    const deeplinkAction = data.actions?.find((a: any) => a.name === 'deeplink-redirect');
+    if (deeplinkAction?.url) {
+      simulatorUrl = deeplinkAction.url;
+    }
+
+    // 2. Ekstrak QR Code image URL dari actions (Midtrans menyediakan generate-qr-code atau generate-qr-code-v2)
+    const qrUrl = data.actions?.find((a: any) => a.name === 'generate-qr-code')?.url || 
+                  data.actions?.find((a: any) => a.name === 'generate-qr-code-v2')?.url;
 
     if (data.va_numbers && data.va_numbers.length > 0) {
       vaNumber = data.va_numbers[0].va_number;
@@ -100,10 +114,15 @@ export async function POST(req: Request) {
       simulatorUrl = 'https://simulator.sandbox.midtrans.com/permata/va/index';
     } else if (data.payment_type === 'qris') {
       vaNumber = data.qr_string || data.order_id;
-      simulatorUrl = 'https://simulator.sandbox.midtrans.com/qris/index';
-    } else if (data.payment_type === 'gopay') {
+      if (!simulatorUrl || simulatorUrl === 'https://simulator.sandbox.midtrans.com/') {
+        simulatorUrl = 'https://simulator.sandbox.midtrans.com/v2/qris/index';
+      }
+    } else if (data.payment_type === 'gopay' || data.payment_type === 'shopeepay') {
       vaNumber = data.order_id;
-      simulatorUrl = 'https://simulator.sandbox.midtrans.com/gopay/partner/index';
+      // Jika deeplinkAction ditemukan, simulatorUrl sudah berisi URL deeplink langsung yang valid!
+      if (!deeplinkAction?.url) {
+        simulatorUrl = 'https://simulator.sandbox.midtrans.com/v2/deeplink/index';
+      }
     }
 
     return NextResponse.json({
@@ -111,12 +130,12 @@ export async function POST(req: Request) {
       orderId: data.order_id || order_id,
       transactionId: data.transaction_id,
       grossAmount: data.gross_amount || targetAmount,
-      paymentType: data.payment_type,
+      paymentType: data.payment_type || paymentType,
       transactionStatus: data.transaction_status || 'pending',
       vaNumber: vaNumber || order_id,
       simulatorUrl: simulatorUrl,
-      qrString: data.qr_string,
-      qrUrl: data.actions?.find((a: any) => a.name === 'generate-qr-code')?.url,
+      qrString: data.qr_string || '',
+      qrUrl: qrUrl,
       raw: data
     });
   } catch (error: any) {

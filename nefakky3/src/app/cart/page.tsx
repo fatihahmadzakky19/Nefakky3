@@ -422,7 +422,7 @@ export default function CartCheckoutWorkflowPage() {
           vaNumber: data.vaNumber || newOrderId,
           simulatorUrl: data.simulatorUrl || 'https://simulator.sandbox.midtrans.com/',
           grossAmount: data.grossAmount || finalPayableTotal,
-          paymentType: selectedPaymentMethod,
+          paymentType: data.paymentType || selectedPaymentMethod,
           qrString: data.qrString,
           qrUrl: data.qrUrl
         });
@@ -433,10 +433,15 @@ export default function CartCheckoutWorkflowPage() {
         startStatusPolling(data.orderId || newOrderId);
       } else {
         console.warn('Midtrans API notice (fallback ke simulator testing sandbox):', data?.error);
+        const fallbackSimUrl = selectedPaymentMethod === 'va'
+          ? 'https://simulator.sandbox.midtrans.com/bca/va/index'
+          : selectedPaymentMethod === 'qris'
+          ? 'https://simulator.sandbox.midtrans.com/v2/qris/index'
+          : 'https://simulator.sandbox.midtrans.com/v2/deeplink/index';
         setMidtransTx({
           orderId: newOrderId,
           vaNumber: `88000${newOrderId.replace(/\D/g, '').padEnd(6, '0')}`,
-          simulatorUrl: 'https://simulator.sandbox.midtrans.com/',
+          simulatorUrl: fallbackSimUrl,
           grossAmount: finalPayableTotal,
           paymentType: selectedPaymentMethod,
           qrString: `QRIS-NEFAKKY-${newOrderId}`
@@ -447,10 +452,15 @@ export default function CartCheckoutWorkflowPage() {
     } catch (err: any) {
       setIsProcessingPayment(false);
       console.warn('Midtrans Charge error (fallback ke simulator testing sandbox):', err?.message || err);
+      const fallbackSimUrl = selectedPaymentMethod === 'va'
+        ? 'https://simulator.sandbox.midtrans.com/bca/va/index'
+        : selectedPaymentMethod === 'qris'
+        ? 'https://simulator.sandbox.midtrans.com/v2/qris/index'
+        : 'https://simulator.sandbox.midtrans.com/v2/deeplink/index';
       setMidtransTx({
         orderId: newOrderId,
         vaNumber: `88000${newOrderId.replace(/\D/g, '').padEnd(6, '0')}`,
-        simulatorUrl: 'https://simulator.sandbox.midtrans.com/',
+        simulatorUrl: fallbackSimUrl,
         grossAmount: finalPayableTotal,
         paymentType: selectedPaymentMethod,
         qrString: `QRIS-NEFAKKY-${newOrderId}`

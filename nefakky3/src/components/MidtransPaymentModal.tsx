@@ -149,6 +149,15 @@ export default function MidtransPaymentModal({
   const isEwallet = midtransTx.paymentType === 'ewallet' || midtransTx.paymentType === 'gopay' || midtransTx.paymentType === 'shopeepay';
   const isCc = midtransTx.paymentType === 'cc';
 
+  // Sanitasi simulator URL jika terdapat URL usang atau 404 seperti /gopay/partner/index
+  const safeSimulatorUrl = (!midtransTx.simulatorUrl || midtransTx.simulatorUrl.includes('/gopay/partner/index'))
+    ? (isVa 
+        ? 'https://simulator.sandbox.midtrans.com/bca/va/index' 
+        : isQris 
+        ? 'https://simulator.sandbox.midtrans.com/v2/qris/index' 
+        : 'https://simulator.sandbox.midtrans.com/v2/deeplink/index')
+    : midtransTx.simulatorUrl;
+
   const qrValue = midtransTx.qrString || midtransTx.vaNumber || `QRIS-NEFAKKY-${midtransTx.orderId}`;
   const totalAmountFormatted = `Rp ${(midtransTx.grossAmount || finalPayableTotal).toLocaleString('id-ID')}`;
 
@@ -180,6 +189,8 @@ export default function MidtransPaymentModal({
                   ? 'Pembayaran Instan QRIS Real-Time' 
                   : isVa 
                   ? 'Virtual Account Otomatis' 
+                  : isEwallet
+                  ? 'E-Wallet Digital (GoPay / QRIS)'
                   : 'Sistem Pembayaran Digital Terverifikasi'}
               </span>
             </div>
@@ -360,7 +371,7 @@ export default function MidtransPaymentModal({
                 </p>
 
                 <a 
-                  href={midtransTx.simulatorUrl || 'https://simulator.sandbox.midtrans.com/qris/index'} 
+                  href={safeSimulatorUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="w-full py-3 px-4 bg-[#004B99] hover:bg-[#003B7A] text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
@@ -434,7 +445,7 @@ export default function MidtransPaymentModal({
               {/* Action Button: Buka Midtrans VA Simulator */}
               <div className="space-y-2">
                 <a 
-                  href={midtransTx.simulatorUrl || 'https://simulator.sandbox.midtrans.com/bca/va/index'} 
+                  href={safeSimulatorUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="w-full py-3.5 px-4 bg-[#004B99] hover:bg-[#003B7A] text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
@@ -514,9 +525,154 @@ export default function MidtransPaymentModal({
           )}
 
           {/* ----------------------------------------------------------------------- */}
-          {/* C. METODE LAINNYA (E-WALLET / KARTU KREDIT) */}
+          {/* C. TAMPILAN KHUSUS METODE E-WALLET (GOPAY, SHOPEEPAY, DANA, OVO) */}
           {/* ----------------------------------------------------------------------- */}
-          {!isQris && !isVa && (
+          {isEwallet && (
+            <div className="space-y-4">
+              {/* E-Wallet Card */}
+              <div className="bg-white rounded-2xl border-2 border-stone-200 shadow-sm overflow-hidden text-center relative">
+                
+                {/* E-Wallet Header Ribbon */}
+                <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white py-2 px-4 flex items-center justify-between shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white text-emerald-700 font-black px-2 py-0.5 rounded text-xs tracking-tighter">
+                      E-WALLET
+                    </div>
+                    <span className="text-[10px] font-bold tracking-wider uppercase opacity-95">
+                      GoPay • ShopeePay • QRIS Digital
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-black bg-white/20 px-1.5 py-0.5 rounded text-white tracking-widest uppercase">
+                    SANDBOX
+                  </span>
+                </div>
+
+                {/* Merchant Information Bar */}
+                <div className="py-2.5 px-4 bg-stone-50 border-b border-stone-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-left">
+                  <div>
+                    <h4 className="font-bold text-xs text-[#25160E] leading-tight">NEFAKKY RESTO & BAKERY</h4>
+                    <span className="text-[10px] text-stone-500 font-mono">Channel: Midtrans GoPay / E-Wallet</span>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <span className="text-[9px] uppercase font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full inline-block">
+                      ONLINE PAYMENT
+                    </span>
+                  </div>
+                </div>
+
+                {/* QR CODE DISPLAY BOX */}
+                <div className="p-5 flex flex-col items-center justify-center bg-stone-50/40">
+                  <div className="relative p-3.5 bg-white rounded-2xl border border-stone-200/90 shadow-md">
+                    
+                    {/* Scan Frame Tech Corners */}
+                    <div className="absolute -top-1 -left-1 w-4 h-4 border-t-3 border-l-3 border-[#00AA13] rounded-tl-lg" />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 border-t-3 border-r-3 border-[#00AA13] rounded-tr-lg" />
+                    <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-3 border-l-3 border-[#00AA13] rounded-bl-lg" />
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-3 border-r-3 border-[#00AA13] rounded-br-lg" />
+
+                    {/* QR Code SVG / Midtrans Image */}
+                    <div className="w-[190px] h-[190px] sm:w-[210px] sm:h-[210px] flex items-center justify-center bg-white rounded-xl overflow-hidden">
+                      {midtransTx.qrUrl ? (
+                        <img 
+                          src={midtransTx.qrUrl} 
+                          alt="QR Code GoPay Midtrans" 
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <QRCode
+                          id="ewallet-svg-code"
+                          value={qrValue}
+                          size={200}
+                          style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                          viewBox="0 0 200 200"
+                          level="M"
+                        />
+                      )}
+                    </div>
+
+                    <div className="mt-2 text-center">
+                      <span className="text-[10px] text-stone-500 font-medium block">
+                        Scan dengan aplikasi GoPay, ShopeePay, OVO, atau DANA
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* QR Action Buttons */}
+                  <div className="flex items-center gap-2 mt-3.5">
+                    {midtransTx.qrUrl && (
+                      <button
+                        onClick={() => window.open(midtransTx.qrUrl, '_blank')}
+                        className="px-3 py-1.5 bg-white hover:bg-stone-100 text-[#25160E] border border-stone-300 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-[#00AA13]" />
+                        <span>Buka Gambar QR ↗</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleCopy(midtransTx.orderId, 'Order ID Disalin!')}
+                      className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-stone-500" />
+                      <span>{copyFeedback || 'Salin Order ID'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Compatibility Row */}
+                <div className="p-3 bg-stone-100/70 border-t border-stone-200 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[10px] text-stone-600 font-medium">
+                  <span className="text-stone-400 font-normal">Mendukung:</span>
+                  <span className="bg-white px-2 py-0.5 rounded-md border border-stone-200 font-bold text-emerald-600">GoPay</span>
+                  <span className="bg-white px-2 py-0.5 rounded-md border border-stone-200 font-bold text-orange-600">ShopeePay</span>
+                  <span className="bg-white px-2 py-0.5 rounded-md border border-stone-200 font-bold text-purple-600">OVO</span>
+                  <span className="bg-white px-2 py-0.5 rounded-md border border-stone-200 font-bold text-blue-500">DANA</span>
+                  <span className="bg-white px-2 py-0.5 rounded-md border border-stone-200 font-bold text-red-500">LinkAja</span>
+                </div>
+              </div>
+
+              {/* Box Simulator Midtrans Sandbox (Testing) */}
+              <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-50/80 p-4 rounded-2xl border border-emerald-200/90 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-emerald-950 font-bold text-xs">
+                    <ExternalLink className="w-4 h-4 text-emerald-700" />
+                    <span>Simulator Pembayaran E-Wallet Midtrans</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                    Mode Sandbox
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-emerald-950/80 leading-relaxed font-light">
+                  Selesaikan pengujian pembayaran di halaman resmi simulator Midtrans:
+                </p>
+
+                {/* Tombol Buka Simulator E-Wallet Midtrans */}
+                <a 
+                  href={safeSimulatorUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 px-4 bg-[#00AA13] hover:bg-[#008f10] text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                >
+                  <ExternalLink className="w-4 h-4 text-white" />
+                  <span>Buka Simulator E-Wallet Midtrans (Klik &apos;Pay&apos;) ↗</span>
+                </a>
+
+                {/* Panduan 3 Langkah Cepat Simulator */}
+                <div className="bg-white/80 p-3 rounded-xl border border-emerald-200/80 text-[11px] text-stone-700 space-y-1 font-light leading-relaxed">
+                  <span className="font-bold text-[#1b4332] block text-xs">Cara Bayar di Simulator Midtrans:</span>
+                  <ol className="list-decimal pl-4 space-y-1">
+                    <li>Klik tombol hijau <strong>Buka Simulator E-Wallet Midtrans</strong> di atas (akan membuka tab baru).</li>
+                    <li>Pada halaman simulator Midtrans, periksa tagihan <strong>{totalAmountFormatted}</strong> lalu klik tombol <strong>Pay</strong>.</li>
+                    <li>Kembali ke tab ini, pembayaran akan otomatis terdeteksi lunas secara real-time!</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* D. METODE LAINNYA (KARTU KREDIT / DLL) */}
+          {/* ----------------------------------------------------------------------- */}
+          {!isQris && !isVa && !isEwallet && (
             <div className="space-y-4">
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl space-y-2">
                 <span className="text-xs font-bold text-blue-950 block">Pembayaran Digital Sandbox</span>
@@ -524,7 +680,7 @@ export default function MidtransPaymentModal({
                   Silakan selesaikan pengujian pembayaran melalui simulator Midtrans:
                 </p>
                 <a 
-                  href={midtransTx.simulatorUrl}
+                  href={safeSimulatorUrl}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="w-full py-3 px-4 bg-[#004B99] hover:bg-[#003B7A] text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -551,6 +707,8 @@ export default function MidtransPaymentModal({
                     ? 'Mengecek Status Pelunasan...' 
                     : isQris 
                     ? 'Menunggu Scan & Pelunasan QRIS...' 
+                    : isEwallet
+                    ? 'Menunggu Konfirmasi Pembayaran E-Wallet...'
                     : 'Menunggu Konfirmasi Pembayaran...'}
                 </span>
                 <span className="text-[10px] text-amber-800/90 font-light block truncate">
@@ -571,7 +729,11 @@ export default function MidtransPaymentModal({
 
           {/* SIMULASI INSTAN UNTUK PENGUJIAN UKK */}
           {onSimulateSuccess && (
-            <div className="pt-1">
+            <div className="pt-1 space-y-1.5">
+              <div className="flex items-center gap-1.5 px-1 text-[10px] text-stone-500 font-medium">
+                <Sparkles className="w-3 h-3 text-amber-600 shrink-0" />
+                <span>Opsi Praktis Uji UKK: Selesaikan verifikasi langsung dengan 1 klik</span>
+              </div>
               <button
                 type="button"
                 onClick={onSimulateSuccess}
