@@ -692,10 +692,10 @@ export default function CartCheckoutWorkflowPage() {
                         {cartItems.map((item) => (
                           <div 
                             key={item.id}
-                            className="bg-white p-5 rounded-2xl shadow-xs border border-stone-200 flex flex-col sm:flex-row gap-5 transition-transform hover:-translate-y-0.5 duration-300"
+                            className="bg-white p-3.5 sm:p-5 rounded-2xl shadow-xs border border-stone-200 flex flex-row items-center sm:items-stretch gap-3.5 sm:gap-5 transition-transform hover:-translate-y-0.5 duration-300"
                           >
-                            <div className="w-full sm:w-32 h-32 shrink-0 rounded-xl overflow-hidden bg-stone-100 border border-stone-200 relative">
-                              <Image src={item.image || '/images/ayam_bakar.jpg'} alt={item.name} fill className="object-cover" sizes="128px" />
+                            <div className="w-20 h-20 sm:w-28 sm:h-28 shrink-0 rounded-xl overflow-hidden bg-stone-100 border border-stone-200 relative">
+                              <Image src={item.image || '/images/ayam_bakar.jpg'} alt={item.name} fill className="object-cover" sizes="(max-width: 640px) 80px, 112px" />
                             </div>
 
                             <div className="flex flex-col flex-1 justify-between gap-3">

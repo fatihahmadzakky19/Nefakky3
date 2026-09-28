@@ -3,10 +3,10 @@
 /**
  * ============================================================================
  * KOMPONEN: AdminReviewsTab (src/components/admin/AdminReviewsTab.tsx)
- * DESKRIPSI: Konversi 100% presisi dari Stitch MCP HTML/Tailwind
- *            (Customer Reviews Moderation, 4 KPI Cards, Bento 2-Kolom Ulasan,
- *            Kartu Ulasan Rating Tinggi & Butuh Perhatian, Balasan CS Inline,
- *            serta Lightbox Zoom Foto).
+ * DESKRIPSI: Halaman Moderasi Ulasan & Testimoni Pelanggan.
+ *            Dilengkapi dengan 4 Kartu KPI Metrik, Filter Kategori Interaktif,
+ *            Kartu Ulasan Visual dengan Foto & Badge Bintang Emas,
+ *            Balasan Resmi Admin Resto (CS), serta Lightbox Zoom Foto.
  * ============================================================================
  */
 
@@ -15,17 +15,25 @@ import {
   Send,
   Maximize2,
   X,
-  ExternalLink,
   Filter,
   Check,
   AlertCircle,
-  History
+  History,
+  Star,
+  MessageCircle,
+  Camera,
+  Trash2,
+  CheckCircle2,
+  Store,
+  Sparkles,
+  Search,
+  Clock,
+  Utensils
 } from 'lucide-react';
-import { Search, Star, MessageCircle, Camera, Trash2, Edit } from '@/components/icons/CustomIcons';
-import { sortReviewsNewestFirst, useData } from '@/context/DataContext';
+import { sortReviewsNewestFirst, useData, UserReview } from '@/context/DataContext';
 
 interface AdminReviewsTabProps {
-  reviewList: any[];
+  reviewList: UserReview[];
   deleteReview: (id: string) => void;
   addReviewReply?: (reviewId: string, replyData: { authorName: string; authorEmail?: string; authorAvatar?: string; comment: string }) => void;
 }
@@ -35,34 +43,56 @@ export default function AdminReviewsTab({
   deleteReview,
   addReviewReply
 }: AdminReviewsTabProps) {
+  // --------------------------------------------------------------------------
+  // STATE MANAGEMENT
+  // --------------------------------------------------------------------------
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [ratingFilter, setRatingFilter] = useState<'ALL' | '5' | '4' | 'LOW' | 'PHOTO' | 'NEEDS_REPLY'>('ALL');
   const [adminReplyTextMap, setAdminReplyTextMap] = useState<Record<string, string>>({});
   const [selectedPhotoZoom, setSelectedPhotoZoom] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState<number>(6);
 
-  // Sorting newest first
+  // ==========================================================================
+  // [SCRUDS - SORT]: Pengurutan Ulasan (Terbaru di Atas)
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengurutkan seluruh ulasan pembeli secara kronologis (descending),
+  //         sehingga testimoni yang baru masuk langsung muncul pertama.
+  // ==========================================================================
   const sortedReviews = useMemo(() => {
     return sortReviewsNewestFirst(reviewList || []);
   }, [reviewList]);
 
-  // KPI Calculations
-  const totalReviewsCount = sortedReviews.length > 0 ? sortedReviews.length : 1240;
+  // ==========================================================================
+  // KALKULASI KPI METRIK MODERASI
+  // ==========================================================================
+  const totalReviewsCount = sortedReviews.length;
+  
   const avgRating = useMemo(() => {
-    if (sortedReviews.length === 0) return '4.8';
+    if (sortedReviews.length === 0) return '5.0';
     const sum = sortedReviews.reduce((acc, r) => acc + (Number(r.rating) || 5), 0);
     return (sum / sortedReviews.length).toFixed(1);
   }, [sortedReviews]);
 
   const photoAttachmentsCount = useMemo(() => {
-    if (sortedReviews.length === 0) return 856;
     return sortedReviews.reduce((acc, r) => {
       const photos = Array.isArray(r.photos) ? r.photos.length : (r.photo || r.photoUrl || r.image ? 1 : 0);
       return acc + photos;
-    }, 0) || 856;
+    }, 0);
   }, [sortedReviews]);
 
-  // Filtering
+  // Hitungan untuk masing-masing tab filter pill
+  const star5Count = useMemo(() => sortedReviews.filter(r => Number(r.rating) >= 5).length, [sortedReviews]);
+  const star4Count = useMemo(() => sortedReviews.filter(r => Number(r.rating) >= 4 && Number(r.rating) < 5).length, [sortedReviews]);
+  const lowCount = useMemo(() => sortedReviews.filter(r => Number(r.rating) <= 3).length, [sortedReviews]);
+  const photoCount = useMemo(() => sortedReviews.filter(r => (Array.isArray(r.photos) && r.photos.length > 0) || r.photo || r.photoUrl || r.image).length, [sortedReviews]);
+  const needsReplyCount = useMemo(() => sortedReviews.filter(r => !r.replies || r.replies.length === 0).length, [sortedReviews]);
+
+  // ==========================================================================
+  // [SCRUDS - SEARCH & FILTER]: Penyaringan Ulasan Berdasarkan Keyword & Bintang
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menyaring daftar ulasan berdasarkan kata kunci pencarian (nama pelanggan,
+  //         menu pesanan, atau isi komentar) dan filter rating/status balasan.
+  // ==========================================================================
   const filteredReviews = useMemo(() => {
     return sortedReviews.filter((rev) => {
       // 1. Search Query
@@ -93,69 +123,21 @@ export default function AdminReviewsTab({
     });
   }, [sortedReviews, searchQuery, ratingFilter]);
 
-  // Fallback Mock Reviews jika list kosong
-  const displayReviews = filteredReviews.length > 0 ? filteredReviews : [
-    {
-      id: 'rev-01',
-      authorName: 'Ahmad Rizky',
-      avatar: '',
-      date: '24 Aug 2026',
-      productName: 'Ayam Bakar Madu Spesial',
-      rating: 5.0,
-      comment: 'Rasa ayam bakarnya benar-benar meresap sampai ke tulang! Madunya memberikan karamelisasi yang sempurna. Pelayanan juga sangat ramah dan cepat.',
-      photos: [
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBH3cd4MpRRuxKLACn7jeaINIquFaRMl_ADQBotj2VXbQ1V3xA51EpjMJHObDPT89bxZraKwSWfgYgB-c_3g8uOp03oGeVlsdbBc86GvqiNO4j5gc-Nv-5xPhaoPXOUNNZQanWSb7LeiP32FeN8nGafuAdq2ARU5SsiFB54wzaIlvq6-ycE5PB5Y6o8pCTOYSNbVOenifRu0P-xwmmMh64kk6vMxbdbLXVuyZUo39pWFcc59u7hxFx8-A'
-      ],
-      replies: [
-        {
-          authorName: 'Nefakky CS',
-          timestamp: '24 Aug 2026, 14:30',
-          comment: 'Terima kasih banyak Bapak Ahmad atas ulasannya! Kami senang ayam bakar madu kami sesuai dengan selera Anda. Ditunggu kedatangannya kembali!'
-        }
-      ]
-    },
-    {
-      id: 'rev-02',
-      authorName: 'Siti Dewi',
-      avatar: '',
-      date: '23 Aug 2026',
-      productName: 'Nasi Goreng Kambing',
-      rating: 2.0,
-      comment: 'Porsinya lumayan besar, tapi daging kambingnya agak keras dan bumbunya kurang meresap hari ini. Biasanya tidak seperti ini, agak kecewa.',
-      photos: [],
-      replies: []
-    },
-    {
-      id: 'rev-03',
-      authorName: 'Budi Kusuma',
-      avatar: '',
-      date: '22 Aug 2026',
-      productName: 'Es Cendol Durian',
-      rating: 4.0,
-      comment: 'Seger banget siang-siang minum ini. Duriannya kerasa asli bukan perasa. Cuma harganya lumayan premium ya.',
-      photos: [
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuC1-VNqFr5i1ZTxbUBUzWnA0Yb4t1LcIIwOfhexIr8jwTy7JD9Zm1wXjKwc1JP4S7mFCnLru4Xgb5ZTrtHklHVaE520DQIjoXCzzQgLjR9xbAhyRWMzEh2SqOqBTY0lxHYoVPCPSTy5ocYLeaOvOWKdOz1Q_Zcwv4x9rpYhVBrvTmEO8IxgNIm0EbwPxUwYhWe6vTUz8FxMsJd08zPpKaeSIl7oJQXwJEblgnjk_PMRooBRKycdmlL0vg',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuCsI8N2fFA_xk3vT3tXV7c1JaLrKBMSSy7Ls12ZwGPRfVmvTqPteYfkoUxdGsqKAGxOqXm9iJz2ItQg9aRR8ExGf7C67dpg7Y_eFSz4HWk1SO_ZzgDHeZw-0YNzm1O_8N0HB5Eq8oAuGuCsKdHcN67iA_Vus2AuZ5e8DTGQYYe28exEqCCflv5wNJ7CLo9TjwNVbYF8yA55EytezG3Q-RVStGLs9-FL2pJ7xAXcwdUQB8DGfyHh7ntaVQ'
-      ],
-      replies: [
-        {
-          authorName: 'Nefakky CS',
-          timestamp: '22 Aug 2026, 16:45',
-          comment: 'Halo Kak Budi! Benar sekali, kami menggunakan 100% daging durian montong asli pilihan untuk menjaga kualitas dan rasa autentik yang Kakak nikmati. Terima kasih apresiasinya!'
-        }
-      ]
-    }
-  ];
-
+  // ==========================================================================
+  // [SCRUDS - CREATE / REPLY]: Mengirimkan Balasan Resmi Admin Resto
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengirimkan teks balasan dari admin resto ke ulasan pembeli tertentu
+  //         dan menyimpannya ke database via `addReviewReply`.
+  // ==========================================================================
   const handleSendAdminReply = (reviewId: string, customerName: string) => {
     const text = adminReplyTextMap[reviewId]?.trim();
     if (!text) return;
 
     if (addReviewReply) {
       addReviewReply(reviewId, {
-        authorName: 'Nefakky CS',
+        authorName: 'Nefakky Official (Dapur Bojong Gede)',
         authorEmail: 'admin@nefakky.com',
-        authorAvatar: 'https://ui-avatars.com/api/?name=Nefakky+CS&background=25160E&color=ffffff&bold=true',
+        authorAvatar: '/images/ayam_bakar.jpg',
         comment: text
       });
     }
@@ -163,304 +145,476 @@ export default function AdminReviewsTab({
     setAdminReplyTextMap(prev => ({ ...prev, [reviewId]: '' }));
   };
 
-  const getInitials = (name: string) => {
-    if (!name) return 'U';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  };
-
   return (
-    <div className="flex flex-col w-full h-full relative font-body-base text-on-surface space-y-6">
+    <div className="flex flex-col w-full h-full relative font-body-base text-stone-900 space-y-6">
       
       {/* 1. HEADER SECTION & SEARCH TOOLBAR */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-stone-200/80 pb-4">
         <div>
-          <h1 className="font-display-lg text-2xl sm:text-3xl font-bold text-on-surface font-['Playfair_Display']">
-            Customer Reviews Moderation
+          <div className="flex items-center gap-2 text-xs text-stone-500 mb-1">
+            <span>ADMIN</span>
+            <span>&gt;</span>
+            <span className="text-[#934B19] font-bold">Moderasi Ulasan</span>
+          </div>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight font-['Playfair_Display']">
+            Moderasi Ulasan &amp; Testimoni Rasa
           </h1>
-          <p className="font-body-base text-xs sm:text-sm text-on-surface-variant mt-1">
-            Monitor, moderate, and respond to customer feedback across all branches.
+          <p className="text-xs sm:text-sm text-stone-500 mt-1 max-w-2xl">
+            Pantau kepuasan rasa kuliner Nusantara, tanggapi ulasan pembeli terverifikasi, dan berikan balasan resmi dapur.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {/* Search bar */}
-          <div className="relative w-full sm:w-64">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-              search
-            </span>
-            <input 
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search reviews, menus, or customers..."
-              className="w-full bg-surface-container rounded-xl pl-9 pr-3 py-2 font-body-sm text-xs focus:outline-none focus:ring-1 focus:ring-primary text-on-surface border border-outline-variant/30"
-            />
-          </div>
-
-          {/* Filter Rating Selector */}
-          <select
-            value={ratingFilter}
-            onChange={(e) => setRatingFilter(e.target.value as any)}
-            className="bg-primary text-on-primary px-3 py-2 rounded-xl font-headline-sm text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer focus:outline-none"
-          >
-            <option value="ALL">Semua Rating</option>
-            <option value="5">Bintang 5 Saja</option>
-            <option value="4">Bintang 4 Saja</option>
-            <option value="LOW">Butuh Perhatian (≤ 3★)</option>
-            <option value="PHOTO">Ada Foto Lampiran</option>
-            <option value="NEEDS_REPLY">Belum Dibalas</option>
-          </select>
+        {/* Search Bar */}
+        <div className="relative w-full lg:w-80">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+          <input 
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari ulasan, nama menu, pembeli..."
+            className="w-full bg-white rounded-2xl pl-10 pr-4 py-2.5 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#934B19]/30 focus:border-[#934B19] border border-stone-200 shadow-2xs transition-all"
+          />
+          {searchQuery && (
+            <button 
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* 2. 4-COLUMN KPI METRIC CARDS ROW */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Average Rating */}
-        <div className="bg-surface-container rounded-2xl p-4 flex items-center justify-between shadow-xs relative overflow-hidden group border border-outline-variant/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-tertiary-fixed/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-          <div className="relative z-10">
-            <div className="font-body-sm text-on-surface-variant mb-1 flex items-center gap-1 uppercase tracking-wider text-[11px] font-bold">
-              <span className="material-symbols-outlined text-[16px] text-tertiary">star</span> Average Rating
+        {/* KPI 1: Average Rating */}
+        <div className="bg-white rounded-2xl p-4.5 border-l-4 border-l-amber-500 border border-stone-200/90 shadow-2xs flex items-center justify-between hover:shadow-md transition-all">
+          <div>
+            <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+              <span>Rata-Rata Rating</span>
             </div>
-            <div className="font-display-lg text-xl sm:text-2xl font-bold text-on-surface">
-              {avgRating}<span className="text-on-surface-variant text-xs font-normal">/5.0</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold text-stone-900 font-mono">
+                {avgRating}
+              </span>
+              <span className="text-stone-400 text-xs font-semibold">/ 5.0</span>
+            </div>
+            <div className="flex items-center gap-1 mt-1 text-amber-500">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className={`w-3.5 h-3.5 ${i < Math.round(Number(avgRating) || 5) ? 'fill-amber-400 text-amber-400' : 'text-stone-300'}`}
+                />
+              ))}
             </div>
           </div>
-          <div className="w-11 h-11 rounded-full bg-surface-container-high flex items-center justify-center relative z-10">
-            <span className="material-symbols-outlined text-on-surface text-[22px]">grade</span>
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-700 shrink-0">
+            <Sparkles className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Total Reviews */}
-        <div className="bg-surface-container rounded-2xl p-4 flex items-center justify-between shadow-xs relative overflow-hidden group border border-outline-variant/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary-fixed/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-          <div className="relative z-10">
-            <div className="font-body-sm text-on-surface-variant mb-1 flex items-center gap-1 uppercase tracking-wider text-[11px] font-bold">
-              <span className="material-symbols-outlined text-[16px] text-primary">chat_bubble</span> Total Reviews
+        {/* KPI 2: Total Reviews */}
+        <div className="bg-white rounded-2xl p-4.5 border-l-4 border-l-[#934B19] border border-stone-200/90 shadow-2xs flex items-center justify-between hover:shadow-md transition-all">
+          <div>
+            <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <MessageCircle className="w-3.5 h-3.5 text-[#934B19]" />
+              <span>Total Ulasan</span>
             </div>
-            <div className="font-display-lg text-xl sm:text-2xl font-bold text-on-surface">
+            <div className="text-2xl sm:text-3xl font-extrabold text-stone-900 font-mono">
               {totalReviewsCount.toLocaleString('id-ID')}
             </div>
+            <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-1 border border-emerald-200">
+              100% Pembeli Nyata
+            </span>
           </div>
-          <div className="w-11 h-11 rounded-full bg-surface-container-high flex items-center justify-center relative z-10">
-            <span className="material-symbols-outlined text-on-surface text-[22px]">reviews</span>
+          <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200/80 flex items-center justify-center text-[#934B19] shrink-0">
+            <MessageCircle className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Photo Attachments */}
-        <div className="bg-surface-container rounded-2xl p-4 flex items-center justify-between shadow-xs relative overflow-hidden group border border-outline-variant/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-secondary-fixed/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-          <div className="relative z-10">
-            <div className="font-body-sm text-on-surface-variant mb-1 flex items-center gap-1 uppercase tracking-wider text-[11px] font-bold">
-              <span className="material-symbols-outlined text-[16px] text-secondary">image</span> Photo Attachments
+        {/* KPI 3: Photo Attachments */}
+        <div className="bg-white rounded-2xl p-4.5 border-l-4 border-l-emerald-600 border border-stone-200/90 shadow-2xs flex items-center justify-between hover:shadow-md transition-all">
+          <div>
+            <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <Camera className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Foto Lampiran</span>
             </div>
-            <div className="font-display-lg text-xl sm:text-2xl font-bold text-on-surface">
+            <div className="text-2xl sm:text-3xl font-extrabold text-stone-900 font-mono">
               {photoAttachmentsCount}
             </div>
+            <span className="text-[11px] text-stone-500 mt-1 block">
+              Bukti hidangan asli
+            </span>
           </div>
-          <div className="w-11 h-11 rounded-full bg-surface-container-high flex items-center justify-center relative z-10">
-            <span className="material-symbols-outlined text-on-surface text-[22px]">photo_camera</span>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 shrink-0">
+            <Camera className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Response Rate */}
-        <div className="bg-surface-container rounded-2xl p-4 flex items-center justify-between shadow-xs relative overflow-hidden group border border-outline-variant/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-error-container/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-          <div className="relative z-10">
-            <div className="font-body-sm text-on-surface-variant mb-1 flex items-center gap-1 uppercase tracking-wider text-[11px] font-bold">
-              <span className="material-symbols-outlined text-[16px] text-error">reply</span> Response Rate
+        {/* KPI 4: Response Rate */}
+        <div className="bg-white rounded-2xl p-4.5 border-l-4 border-l-blue-600 border border-stone-200/90 shadow-2xs flex items-center justify-between hover:shadow-md transition-all">
+          <div>
+            <div className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+              <span>Tingkat Respons</span>
             </div>
-            <div className="font-display-lg text-xl sm:text-2xl font-bold text-on-surface">
+            <div className="text-2xl sm:text-3xl font-extrabold text-stone-900 font-mono">
               98%
             </div>
+            <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md inline-block mt-1 border border-blue-200">
+              Rata-rata &lt;15 menit
+            </span>
           </div>
-          <div className="w-11 h-11 rounded-full bg-surface-container-high flex items-center justify-center relative z-10">
-            <span className="material-symbols-outlined text-on-surface text-[22px]">quickreply</span>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-700 shrink-0">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
         </div>
 
       </div>
 
-      {/* 3. REVIEWS BENTO GRID (2 Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {displayReviews.slice(0, visibleCount).map((rev: any) => {
-          const isLowRating = Number(rev.rating) <= 3;
-          
-          // Kumpulkan seluruh foto lampiran ulasan
-          const photos: string[] = [];
-          if (Array.isArray(rev.photos) && rev.photos.length > 0) {
-            photos.push(...rev.photos.filter(Boolean));
-          }
-          if (rev.photoUrl && !photos.includes(rev.photoUrl)) photos.push(rev.photoUrl);
-          if (rev.photo && !photos.includes(rev.photo)) photos.push(rev.photo);
-          if (rev.image && !photos.includes(rev.image)) photos.push(rev.image);
+      {/* 3. FILTER TABS BAR (PILLS) */}
+      <div className="bg-stone-50 p-2 sm:p-2.5 rounded-2xl border border-stone-200/80 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <button
+          type="button"
+          onClick={() => setRatingFilter('ALL')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            ratingFilter === 'ALL'
+              ? 'bg-[#25160E] text-white shadow-xs'
+              : 'bg-white text-stone-600 hover:bg-stone-200/70 border border-stone-200'
+          }`}
+        >
+          Semua Ulasan ({sortedReviews.length})
+        </button>
 
-          return (
-            <div 
-              key={rev.id}
-              className={`bg-surface-container-lowest rounded-2xl p-5 sm:p-6 shadow-xs border relative flex flex-col justify-between transition-all ${
-                isLowRating 
-                  ? 'border-error/30 bg-gradient-to-b from-error-container/10 to-surface-container-lowest' 
-                  : 'border-outline-variant/20 hover:border-outline-variant/50'
-              }`}
+        <button
+          type="button"
+          onClick={() => setRatingFilter('5')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            ratingFilter === '5'
+              ? 'bg-[#25160E] text-white shadow-xs'
+              : 'bg-white text-stone-600 hover:bg-stone-200/70 border border-stone-200'
+          }`}
+        >
+          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+          <span>Bintang 5 Saja ({star5Count})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setRatingFilter('4')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            ratingFilter === '4'
+              ? 'bg-[#25160E] text-white shadow-xs'
+              : 'bg-white text-stone-600 hover:bg-stone-200/70 border border-stone-200'
+          }`}
+        >
+          <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-500" />
+          <span>Bintang 4 ({star4Count})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setRatingFilter('LOW')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            ratingFilter === 'LOW'
+              ? 'bg-rose-700 text-white shadow-xs'
+              : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'
+          }`}
+        >
+          <AlertCircle className="w-3.5 h-3.5" />
+          <span>Butuh Perhatian (≤3★) ({lowCount})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setRatingFilter('PHOTO')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            ratingFilter === 'PHOTO'
+              ? 'bg-[#25160E] text-white shadow-xs'
+              : 'bg-white text-stone-600 hover:bg-stone-200/70 border border-stone-200'
+          }`}
+        >
+          <Camera className="w-3.5 h-3.5" />
+          <span>Ada Foto Lampiran ({photoCount})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setRatingFilter('NEEDS_REPLY')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            ratingFilter === 'NEEDS_REPLY'
+              ? 'bg-[#934B19] text-white shadow-xs'
+              : 'bg-white text-stone-600 hover:bg-stone-200/70 border border-stone-200'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>Belum Dibalas ({needsReplyCount})</span>
+        </button>
+      </div>
+
+      {/* ==================================================================== */}
+      {/* [SCRUDS - READ]: Menampilkan Kartu-Kartu Ulasan Pelanggan (Bento 2-Kolom)*/}
+      {/* -------------------------------------------------------------------- */}
+      {/* FUNGSI: Merender seluruh ulasan hasil pencarian & filter ke dalam      */}
+      {/*         kartu ulasan modern dengan foto profil, bintang rating emas,  */}
+      {/*         komentar rasa hidangan, galeri foto, dan form balasan admin.   */}
+      {/* ==================================================================== */}
+      {filteredReviews.length === 0 ? (
+        <div className="bg-white rounded-3xl p-12 text-center border border-stone-200 shadow-xs flex flex-col items-center justify-center space-y-3">
+          <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+            <MessageCircle className="w-8 h-8" />
+          </div>
+          <h3 className="font-bold text-base text-stone-900">
+            Tidak Ada Ulasan yang Sesuai Kriteria
+          </h3>
+          <p className="text-xs text-stone-500 max-w-md mx-auto">
+            {searchQuery 
+              ? `Tidak ditemukan ulasan dengan kata kunci "${searchQuery}". Coba kata kunci lain atau ubah filter rating.`
+              : 'Belum ada ulasan pada kategori filter ini.'}
+          </p>
+          {(searchQuery || ratingFilter !== 'ALL') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setRatingFilter('ALL');
+              }}
+              className="mt-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-xl border border-stone-300 transition-all cursor-pointer"
             >
-              <div>
-                {/* Header User & Rating Pill */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-headline-sm text-xs font-bold shrink-0 ${
-                      isLowRating ? 'bg-error-container text-on-error-container' : 'bg-primary text-on-primary'
-                    }`}>
-                      {getInitials(rev.authorName || 'User')}
-                    </div>
-                    <div>
-                      <div className="font-headline-sm text-xs sm:text-sm font-bold text-on-surface">
-                        {rev.authorName || 'Pelanggan'}
-                      </div>
-                      <div className="font-mono-data text-[11px] text-on-surface-variant flex items-center gap-1.5 mt-0.5">
-                        <span>{rev.date || 'Hari ini'}</span> 
-                        <span className="w-1 h-1 rounded-full bg-outline-variant"></span> 
-                        <span className="truncate max-w-[160px] font-sans">{rev.productName || 'Ayam Bakar Madu'}</span>
-                      </div>
-                    </div>
-                  </div>
+              Reset Semua Filter
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredReviews.slice(0, visibleCount).map((rev) => {
+            const isLowRating = Number(rev.rating) <= 3;
+            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.authorName || 'Pelanggan')}&background=934B19&color=ffffff&bold=true`;
+            const avatarUrl = rev.avatar || rev.authorAvatar || fallbackAvatar;
 
-                  {/* Rating Pill */}
-                  <div className={`flex items-center px-2.5 py-1 rounded-full shadow-2xs text-xs font-bold ${
-                    isLowRating 
-                      ? 'bg-error-container text-on-error-container border border-error/20' 
-                      : 'bg-primary text-on-primary'
-                  }`}>
-                    <span className="font-label-caps mr-1">{Number(rev.rating).toFixed(1)}</span>
-                    <span className="material-symbols-outlined text-[13px] fill-amber-300 text-amber-300">star</span>
-                  </div>
-                </div>
+            // Kumpulkan seluruh foto ulasan hidangan
+            const photos: string[] = [];
+            if (Array.isArray(rev.photos) && rev.photos.length > 0) {
+              photos.push(...rev.photos.filter(Boolean));
+            }
+            if (rev.photoUrl && !photos.includes(rev.photoUrl)) photos.push(rev.photoUrl);
+            if (rev.photo && !photos.includes(rev.photo)) photos.push(rev.photo);
+            if (rev.image && !photos.includes(rev.image)) photos.push(rev.image);
 
-                {/* Review Comment */}
-                <div className={`font-body-base text-xs sm:text-sm text-on-surface mb-4 italic pl-3 py-1 border-l-2 leading-relaxed ${
-                  isLowRating ? 'border-error text-error-800' : 'border-tertiary-fixed'
-                }`}>
-                  "{rev.comment}"
-                </div>
-
-                {/* Photo Attachments Gallery */}
-                {photos.length > 0 && (
-                  <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-                    {photos.map((photoUrl, pIdx) => (
-                      <div 
-                        key={pIdx}
-                        onClick={() => setSelectedPhotoZoom(photoUrl)}
-                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-surface-container overflow-hidden relative group cursor-pointer border border-outline-variant/20 shrink-0"
-                      >
+            return (
+              <div 
+                key={rev.id}
+                className={`bg-white rounded-3xl p-5 sm:p-6 shadow-sm border relative flex flex-col justify-between hover:shadow-md transition-all ${
+                  isLowRating 
+                    ? 'border-rose-300 bg-gradient-to-b from-rose-50/40 via-white to-white' 
+                    : 'border-stone-200/90 hover:border-amber-400/50'
+                }`}
+              >
+                <div>
+                  {/* Header: User Info & Golden Rating Badge */}
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      {/* Avatar Gambar / Foto Pembeli */}
+                      <div className="w-11 h-11 rounded-full overflow-hidden shrink-0 border-2 border-amber-200 shadow-2xs relative bg-stone-100">
                         <img 
-                          src={photoUrl} 
-                          alt="Foto Ulasan" 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          src={avatarUrl}
+                          alt={rev.authorName || 'Pelanggan'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = fallbackAvatar;
+                          }}
                         />
-                        <div className="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="material-symbols-outlined text-white text-[18px]">fullscreen</span>
+                      </div>
+
+                      {/* Nama Pelanggan & Info Menu */}
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-bold text-sm sm:text-base text-stone-900 leading-tight">
+                            {rev.authorName || 'Pelanggan'}
+                          </h4>
+                          {rev.isVerifiedBuyer !== false && (
+                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-200 flex items-center gap-1">
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span>Terverifikasi</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-[11px] text-stone-500 flex items-center gap-2 mt-1 flex-wrap">
+                          <span>{rev.date || 'Hari ini'}</span>
+                          <span className="w-1 h-1 rounded-full bg-stone-300"></span>
+                          <span className="px-2 py-0.5 bg-amber-50 text-amber-900 font-semibold rounded-md border border-amber-200/70 flex items-center gap-1">
+                            <Utensils className="w-3 h-3 text-[#934B19]" />
+                            <span>{rev.productName || 'Ayam Bakar'}</span>
+                          </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Existing CS Replies */}
-                {rev.replies && rev.replies.map((reply: any, rIdx: number) => (
-                  <div key={rIdx} className="bg-surface-container-low rounded-xl p-3.5 mb-3 relative border border-outline-variant/20">
-                    <div className="absolute -left-1 top-4 w-2 h-2 rounded-full bg-primary"></div>
-                    <div className="flex items-center gap-1.5 mb-1 text-xs">
-                      <span className="material-symbols-outlined text-[15px] text-primary">support_agent</span>
-                      <span className="font-headline-sm font-bold text-on-surface text-xs">{reply.authorName || 'Nefakky CS'}</span>
-                      <span className="font-mono-data text-[10px] text-on-surface-variant ml-auto">{reply.timestamp || 'Hari ini'}</span>
                     </div>
-                    <p className="font-body-sm text-xs text-on-surface-variant leading-relaxed">
-                      {reply.comment}
-                    </p>
-                  </div>
-                ))}
-              </div>
 
-              {/* Bottom Actions or Inline Reply Input */}
-              <div className="mt-auto pt-3 border-t border-surface-container">
-                {isLowRating && (!rev.replies || rev.replies.length === 0) && (
-                  <div className="flex items-center gap-1.5 mb-2 text-error text-[11px] font-bold">
-                    <span className="material-symbols-outlined text-[15px]">priority_high</span>
-                    <span className="font-label-caps uppercase tracking-wider">Requires Attention</span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[16px]">person</span>
+                    {/* Bintang Rating Emas (Golden Amber Badge) */}
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-300/80 rounded-full shadow-2xs shrink-0">
+                      <div className="flex items-center text-amber-500">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-3.5 h-3.5 ${i < Math.round(Number(rev.rating) || 5) ? 'fill-amber-400 text-amber-400' : 'text-stone-300'}`}
+                          />
+                        ))}
+                      </div>
+                      <span className="font-mono text-xs font-black text-amber-950">
+                        {Number(rev.rating || 5).toFixed(1)}
+                      </span>
+                    </div>
                   </div>
 
-                  <input 
-                    type="text"
-                    value={adminReplyTextMap[rev.id] || ''}
-                    onChange={(e) => setAdminReplyTextMap({ ...adminReplyTextMap, [rev.id]: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSendAdminReply(rev.id, rev.authorName);
-                    }}
-                    placeholder={`Draft a response to ${rev.authorName || 'customer'}...`}
-                    className="flex-1 bg-surface-container rounded-xl px-3 py-2 font-body-sm text-xs focus:outline-none focus:ring-1 focus:ring-primary text-on-surface border border-transparent focus:border-outline-variant"
-                  />
+                  {/* Isi Komentar / Ulasan Rasa Hidangan */}
+                  <div className={`p-3.5 rounded-2xl mb-4 italic text-xs sm:text-sm leading-relaxed border-l-4 ${
+                    isLowRating 
+                      ? 'bg-rose-50/80 border-rose-500 text-rose-950 font-medium' 
+                      : 'bg-stone-50/90 border-[#934B19] text-stone-800 font-normal'
+                  }`}>
+                    &ldquo;{rev.comment}&rdquo;
+                  </div>
 
-                  <button 
-                    onClick={() => handleSendAdminReply(rev.id, rev.authorName)}
-                    className="bg-primary text-on-primary p-2 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center shrink-0 cursor-pointer"
-                    title="Kirim Balasan Resmi"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">send</span>
-                  </button>
+                  {/* Galeri Foto Lampiran Ulasan Hidangan */}
+                  {photos.length > 0 && (
+                    <div className="flex gap-2.5 mb-4 overflow-x-auto pb-1 no-scrollbar">
+                      {photos.map((photoUrl, pIdx) => (
+                        <div 
+                          key={pIdx}
+                          onClick={() => setSelectedPhotoZoom(photoUrl)}
+                          className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-stone-100 overflow-hidden relative group cursor-pointer border border-stone-200 shadow-2xs shrink-0"
+                          title="Klik untuk memperbesar foto"
+                        >
+                          <img 
+                            src={photoUrl} 
+                            alt={`Foto hidangan ${pIdx + 1}`} 
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/images/ayam_bakar.jpg';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <Maximize2 className="w-5 h-5 drop-shadow-md" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                  <button 
-                    onClick={() => {
-                      if (confirm('Apakah Anda yakin ingin menghapus ulasan ini?')) {
-                        deleteReview(rev.id);
-                      }
-                    }}
-                    className="p-2 text-on-surface-variant hover:text-error hover:bg-error-container/50 rounded-xl transition-colors shrink-0 cursor-pointer"
-                    title="Hapus Ulasan"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                  </button>
+                  {/* Riwayat Balasan Resmi Restoran (CS Dapur) */}
+                  {rev.replies && rev.replies.map((reply: any, rIdx: number) => (
+                    <div 
+                      key={rIdx} 
+                      className="bg-amber-50/80 rounded-2xl p-3.5 mb-3 border border-amber-200/80 text-xs text-stone-800 space-y-1"
+                    >
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                          <Store className="w-3.5 h-3.5 text-[#934B19]" />
+                          <span>{reply.authorName || 'Nefakky Official (Dapur Bojong Gede)'}</span>
+                        </span>
+                        <span className="text-stone-500 font-mono text-[10px]">
+                          {reply.timestamp || reply.date || 'Hari ini'}
+                        </span>
+                      </div>
+                      <p className="text-stone-700 leading-relaxed font-sans text-xs pt-0.5">
+                        {reply.comment}
+                      </p>
+                    </div>
+                  ))}
                 </div>
+
+                {/* Bagian Bawah: Form Balasan CS & Tombol Hapus */}
+                <div className="mt-auto pt-3 border-t border-stone-100">
+                  {isLowRating && (!rev.replies || rev.replies.length === 0) && (
+                    <div className="flex items-center gap-1.5 mb-2 text-rose-700 text-[11px] font-bold">
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Ulasan dengan bintang rendah memerlukan perhatian dapur!</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    {/* CS Avatar Indicator */}
+                    <div className="w-8 h-8 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center text-[#934B19] shrink-0" title="Admin CS Resto">
+                      <Store className="w-4 h-4" />
+                    </div>
+
+                    {/* Input Draft Balasan */}
+                    <input 
+                      type="text"
+                      value={adminReplyTextMap[rev.id] || ''}
+                      onChange={(e) => setAdminReplyTextMap({ ...adminReplyTextMap, [rev.id]: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSendAdminReply(rev.id, rev.authorName);
+                      }}
+                      placeholder={`Ketik balasan untuk ${rev.authorName || 'pelanggan'}...`}
+                      className="flex-1 bg-stone-50 hover:bg-stone-100/70 focus:bg-white rounded-xl px-3.5 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#934B19] border border-stone-200 transition-all"
+                    />
+
+                    {/* [SCRUDS - CREATE / REPLY]: Tombol Kirim Balasan */}
+                    <button 
+                      type="button"
+                      onClick={() => handleSendAdminReply(rev.id, rev.authorName)}
+                      className="px-3.5 py-2 bg-[#934B19] hover:bg-[#783603] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm hover:shadow transition-all cursor-pointer active:scale-95 shrink-0"
+                      title="Kirim Balasan Resmi Resto"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Balas</span>
+                    </button>
+
+                    {/* [SCRUDS - DELETE]: Tombol Hapus Ulasan */}
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Apakah Anda yakin ingin menghapus ulasan dari "${rev.authorName || 'Pelanggan'}"?`)) {
+                          deleteReview(rev.id);
+                        }
+                      }}
+                      className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0 cursor-pointer border border-transparent hover:border-rose-200"
+                      title="Hapus Ulasan dari Database"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
               </div>
+            );
+          })}
 
+          {/* Card Load More Reviews jika masih ada ulasan tersisa */}
+          {filteredReviews.length > visibleCount && (
+            <div 
+              onClick={() => setVisibleCount(prev => prev + 6)}
+              className="bg-white rounded-3xl p-6 shadow-xs border-2 border-dashed border-stone-300/80 flex flex-col justify-center items-center text-center hover:border-[#934B19] hover:bg-amber-50/20 transition-all cursor-pointer min-h-[200px] group"
+            >
+              <div className="w-12 h-12 rounded-full bg-stone-100 group-hover:bg-amber-100 flex items-center justify-center text-stone-600 group-hover:text-[#934B19] mb-3 transition-colors">
+                <History className="w-6 h-6" />
+              </div>
+              <div className="font-bold text-sm text-stone-900 group-hover:text-[#934B19] transition-colors mb-1">
+                Muat {filteredReviews.length - visibleCount} Ulasan Lainnya
+              </div>
+              <div className="text-xs text-stone-500">
+                Klik untuk menampilkan lebih banyak testimoni pelanggan
+              </div>
             </div>
-          );
-        })}
-
-        {/* Card Load More Reviews */}
-        <div 
-          onClick={() => setVisibleCount(prev => prev + 6)}
-          className="bg-surface-container-lowest rounded-2xl p-6 shadow-xs border border-surface-container relative flex flex-col justify-center items-center text-center opacity-70 hover:opacity-100 transition-opacity cursor-pointer border-dashed min-h-[220px]"
-        >
-          <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center mb-3">
-            <span className="material-symbols-outlined text-on-surface-variant text-[24px]">history</span>
-          </div>
-          <div className="font-headline-sm text-sm font-bold text-on-surface mb-1">
-            Load Older Reviews
-          </div>
-          <div className="font-body-sm text-xs text-on-surface-variant">
-            View more customer feedbacks &amp; discussions
-          </div>
+          )}
         </div>
+      )}
 
-      </div>
-
-      {/* 4. LIGHTBOX ZOOM MODAL */}
+      {/* 4. LIGHTBOX ZOOM MODAL (FOTO ENLARGED) */}
       {selectedPhotoZoom && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="relative max-w-3xl w-full flex flex-col items-center animate-fade-in">
             <div className="absolute top-0 right-0 flex gap-2 -mt-10">
               <button 
+                type="button"
                 onClick={() => setSelectedPhotoZoom(null)}
                 className="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
+                title="Tutup Foto"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -469,8 +623,8 @@ export default function AdminReviewsTab({
             <div className="relative w-full max-h-[75vh] flex items-center justify-center">
               <img 
                 src={selectedPhotoZoom} 
-                alt="Zoom Ulasan" 
-                className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl"
+                alt="Foto Ulasan Diperbesar" 
+                className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl border border-white/20"
               />
             </div>
           </div>

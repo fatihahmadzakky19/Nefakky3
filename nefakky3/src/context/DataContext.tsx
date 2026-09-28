@@ -1473,6 +1473,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     deleteDoc(doc(db, 'products', 'm7')).catch(() => {});
     deleteDoc(doc(db, 'products', 'm8')).catch(() => {});
 
+    // ========================================================================
+    // [SCRUDS - READ]: 1. Listener Realtime Data Produk (Katalog Menu Hidangan)
+    // ------------------------------------------------------------------------
+    // FUNGSI: Mengambil dan mendengarkan data produk dari database Firestore.
+    // CARA KERJA:
+    // 1. Dipicu otomatis setiap ada produk baru, diedit, atau dihapus di database.
+    // 2. Memfilter produk yang sudah ada di daftar "tombstones" (riwayat hapus).
+    // 3. Menghitung dan menormalkan stok per varian rasa (Mangga, Sirsak, Jambu).
+    // 4. Memperbarui state React (setProductsState) agar katalog menu langsung update.
+    // ========================================================================
     // 1. Products Listener
     const unsubProd = onSnapshot(collection(db, 'products'), (snapshot) => {
       const prodTombs = readTombstones('nefakky_deleted_products');
@@ -1534,6 +1544,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }, (err) => console.warn('Products Firestore notice:', err?.message || err));
 
+    // ========================================================================
+    // [SCRUDS - READ]: 2. Listener Realtime Banner Promosi
+    // ------------------------------------------------------------------------
+    // FUNGSI: Mengambil dan mendengarkan data banner promosi aktif dari Firestore.
+    // ========================================================================
     // 2. Promotions Listener
     const unsubPromo = onSnapshot(collection(db, 'promotions'), (snapshot) => {
       const promoTombs = readTombstones('nefakky_deleted_promotions');
@@ -1551,6 +1566,15 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }, (err) => console.warn('Promotions Firestore notice:', err?.message || err));
 
+    // ========================================================================
+    // [SCRUDS - READ]: 3. Listener Realtime Kupon / Voucher Diskon
+    // ------------------------------------------------------------------------
+    // FUNGSI: Membaca seluruh data voucher diskon secara realtime dari Firestore.
+    // CARA KERJA:
+    // 1. Membaca koleksi 'vouchers' di Firestore.
+    // 2. Menghapus data duplikat kode promo via deduplicateVouchers.
+    // 3. Menghubungkan perubahan secara sinkron ke state React & LocalStorage.
+    // ========================================================================
     // 3. Vouchers Listener
     const unsubVouch = onSnapshot(collection(db, 'vouchers'), (snapshot) => {
       const vouchTombs = readTombstones('nefakky_deleted_vouchers');
@@ -1620,6 +1644,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }, (err) => console.warn('Vouchers Firestore notice:', err?.message || err));
 
+    // ========================================================================
+    // [SCRUDS - READ]: 4. Listener Realtime Pesanan Masuk (Kitchen Desk & Admin)
+    // ------------------------------------------------------------------------
+    // FUNGSI: Mengambil dan memantau daftar seluruh transaksi / pesanan masuk.
+    // CARA KERJA:
+    // 1. Mendengarkan koleksi 'orders' dari Cloud Firestore.
+    // 2. Menggabungkan data server dengan LocalStorage via strategi Last-Write-Wins (LWW)
+    //    agar perubahan status lokal (mis. status masak/kirim) tidak tertimpa.
+    // 3. Menghasilkan sinkronisasi 2 arah realtime untuk admin, kasir, dan kurir.
+    // ========================================================================
     // 4. Orders Listener & Persistent Synchronization
     let unsubOrders = () => {};
     try {
@@ -1653,6 +1687,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       console.warn('Orders Firestore init notice:', err);
     }
 
+    // ========================================================================
+    // [SCRUDS - READ]: 5. Listener Realtime Ulasan & Rating Pelanggan
+    // ------------------------------------------------------------------------
+    // FUNGSI: Mengambil daftar ulasan, bintang, dan testimoni hidangan.
+    // CARA KERJA: Membaca dokumen dari koleksi 'reviews' dan mengurutkan secara
+    //             kronologis (terbaru di atas) dengan sortReviewsNewestFirst.
+    // ========================================================================
     // 5. Reviews Listener
     const unsubRev = onSnapshot(collection(db, 'reviews'), (snapshot) => {
       const revTombs = readTombstones('nefakky_deleted_reviews');
@@ -1670,6 +1711,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }, (err) => console.warn('Reviews Firestore notice:', err?.message || err));
 
+    // ========================================================================
+    // [SCRUDS - READ]: 6. Listener Realtime Percakapan / Pesan Chat CS
+    // ------------------------------------------------------------------------
+    // FUNGSI: Mengambil riwayat pesan konsultasi & reservasi pelanggan secara realtime.
+    // ========================================================================
     // 6. Chat Messages Listener
     const unsubChat = onSnapshot(collection(db, 'chat_messages'), (snapshot) => {
       const chatTombs = readTombstones('nefakky_deleted_chat');
@@ -2358,6 +2404,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
+  // ==========================================================================
+  // [SCRUDS - CREATE]: Menambah Produk / Menu Hidangan Baru
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menerima data hidangan baru dari form admin, membuat ID unik (`m_timestamp`),
+  //         memberikan nilai default (status: Active, visibility: true), lalu menyimpannya
+  //         secara serentak ke React State dan Cloud Firestore.
+  // ==========================================================================
   const addProduct = (productData: Omit<ProductItem, 'id'>): ProductItem => {
     const newId = `m_${Date.now()}`;
     const newProduct: ProductItem = {
@@ -2377,6 +2430,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     return cleanProd;
   };
 
+  // ==========================================================================
+  // [SCRUDS - UPDATE]: Memperbarui / Mengedit Data Produk
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menerima ID produk dan field-field yang diedit (nama, harga, stok, varian, dll.),
+  //         memperbarui state lokal seketika (optimistic UI), memperbarui dokumen Firestore,
+  //         serta otomatis mengirim notifikasi ke user via Chat jika ada barang restock.
+  // ==========================================================================
   const updateProduct = (id: string, updated: Partial<ProductItem>) => {
     const cleanUpdated = { ...cleanForFirestore(updated), updatedAt: Date.now() };
     const prevProduct = products.find(p => p.id === id);
@@ -2404,6 +2464,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // ==========================================================================
+  // [SCRUDS - DELETE]: Menghapus Produk dari Database & Etalase
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menghapus produk dari React state, menambahkan ID ke daftar "tombstones"
+  //         LocalStorage (mencegah data lama muncul kembali saat sync cloud), dan
+  //         menghapus dokumen produk secara permanen dari Cloud Firestore.
+  // ==========================================================================
   const deleteProduct = (id: string) => {
     setProductsState(prev => prev.filter(p => p.id !== id));
     try {
@@ -2420,6 +2487,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // ==========================================================================
+  // [SCRUDS - STATUS / TOGGLE]: Mengubah Status Tampil / Sembunyi Produk
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengubah visibilitas produk (Active <-> Inactive) tanpa menghapus data.
+  //         Jika dinonaktifkan, menu akan disembunyikan sementara dari etalase pelanggan.
+  // ==========================================================================
   const toggleProductVisibility = (id: string) => {
     const target = products.find(p => p.id === id);
     if (target) {
@@ -2560,6 +2633,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // ==========================================================================
+  // [SCRUDS - CREATE]: Membuat Voucher / Kupon Diskon Baru
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menerima data kupon promo dari form admin (kode, % diskon, min belanja,
+  //         aturan hari berlaku, kuota), membuat ID unik, menyimpannya ke state,
+  //         LocalStorage, Firestore, serta membuatkan banner promosi otomatis.
+  // ==========================================================================
   const addVoucher = (voucherData: Omit<AdminVoucher, 'id'> & { id?: string }): AdminVoucher => {
     const cleanCode = cleanPromoCode(voucherData.code);
     
@@ -2651,6 +2731,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     return newVoucher;
   };
 
+  // ==========================================================================
+  // [SCRUDS - UPDATE]: Memperbarui / Mengedit Pengaturan Voucher
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengubah detail kupon (persentase diskon, minimal belanja, masa berlaku,
+  //         atau batas kuota pemakaian), kemudian menyinkronkan pembaruan ke
+  //         LocalStorage, BroadcastChannel (multi-tab), dan Cloud Firestore.
+  // ==========================================================================
   const updateVoucher = (id: string, updated: Partial<AdminVoucher>) => {
     const cleanCode = updated.code ? cleanPromoCode(updated.code) : undefined;
     const finalUpdates = {
@@ -2687,6 +2774,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (e) {}
   };
 
+  // ==========================================================================
+  // [SCRUDS - DELETE]: Menghapus Voucher dari Sistem & Database
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menghapus kupon dari state & LocalStorage, mencatat tombstone agar tidak
+  //         muncul lagi, dan menghapus dokumen voucher & promo terkait di Firestore.
+  // ==========================================================================
   const deleteVoucher = (id: string) => {
     const target = vouchers.find(v => v.id === id || cleanPromoCode(v.code) === cleanPromoCode(id));
     const targetId = target ? target.id : id;
@@ -2749,6 +2842,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // ==========================================================================
+  // [SCRUDS - STATUS / TOGGLE]: Mengaktifkan / Menonaktifkan Kupon Voucher
+  // --------------------------------------------------------------------------
+  // FUNGSI: Membalik status keaktifan voucher (Active <-> Expired/Inactive) tanpa
+  //         menghapus kupon. Pelanggan tidak bisa memakai voucher yang dinonaktifkan.
+  // ==========================================================================
   const toggleVoucherStatus = (id: string) => {
     const target = vouchers.find(v => v.id === id || cleanPromoCode(v.code) === cleanPromoCode(id));
     if (target) {
@@ -2804,6 +2903,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // ==========================================================================
+  // [SCRUDS - CREATE]: Membuat Pesanan Baru (Checkout Pelanggan)
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menerima data checkout pelanggan (nama, alamat, menu dipesan, metode bayar,
+  //         diskon kupon, ongkir), membuat ID unik pesanan (`ORD-XXXXXX`), mengurangi
+  //         stok produk / varian hidangan secara realtime, lalu menyimpannya ke:
+  //         1. State React & LocalStorage (tampil instan di HP pelanggan & Kitchen Desk)
+  //         2. Cloud Firestore & Realtime Database (RTDB)
+  //         3. Server API endpoint `/api/orders`
+  // ==========================================================================
   const addOrder = (orderData: Partial<AdminOrder> & Omit<AdminOrder, 'date'>): AdminOrder => {
     const callerId = (orderData as any).id || (orderData as any).orderId;
     const newId = callerId ? String(callerId).trim() : `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -2981,6 +3090,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     return newOrder;
   };
 
+  // ==========================================================================
+  // [SCRUDS - UPDATE & STATUS]: Memperbarui Status Alur Pesanan (Kitchen Desk & Kurir)
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengubah alur pemrosesan pesanan dari:
+  //         RECEIVED -> PREPARING (Sedang Dimasak) -> READY (Siap Diambil) ->
+  //         DELIVERING (Dalam Pengiriman) -> DELIVERED -> COMPLETED (Selesai).
+  //         Jika status COMPLETED dan metode COD, otomatis menandai pesanan lunas (PAID).
+  // ==========================================================================
   const updateOrderStatus = (id: string, status: AdminOrder['status']) => {
     const target = orders.find(o => o.id === id);
     const isCod = target?.paymentMethod?.toLowerCase().includes('cod') || target?.paymentMethod?.toLowerCase().includes('cash on delivery');
@@ -3030,6 +3147,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (e) {}
   };
 
+  // ==========================================================================
+  // [SCRUDS - UPDATE & STATUS]: Memperbarui Status Pembayaran Pesanan (PAID / UNPAID)
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengubah status badge pembayaran kasir (mis. konfirmasi pembayaran uang tunai COD).
+  // ==========================================================================
   const updatePaymentStatus = (id: string, badge: AdminOrder['paymentBadge']) => {
     setOrdersState(prev => {
       const updated = prev.map(o => o.id === id ? { ...o, paymentBadge: badge } : o);
@@ -3061,6 +3183,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (e) {}
   };
 
+  // ==========================================================================
+  // [SCRUDS - DELETE]: Menghapus Riwayat Pesanan dari Database
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menghapus data transaksi order dari state, LocalStorage, tombstone,
+  //         Cloud Firestore, dan Realtime Database (RTDB).
+  // ==========================================================================
   const deleteOrder = (id: string) => {
     setOrdersState(prev => {
       const updated = prev.filter(o => o.id !== id);
@@ -3595,6 +3723,14 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     return true;
   };
 
+  // ==========================================================================
+  // [SCRUDS - CREATE]: Menambahkan Ulasan & Rating Menu Baru oleh Pelanggan
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menerima bintang rating (1-5), komentar, foto ulasan, dan data pembeli,
+  //         memverifikasi apakah pembeli pernah order (`isVerifiedBuyer`), membuat ID unik,
+  //         menyimpannya ke Firestore, serta otomatis menghitung ulang rata-rata bintang
+  //         (Average Rating) produk terkait di katalog.
+  // ==========================================================================
   const addReview = (reviewData: Omit<UserReview, 'id' | 'date' | 'likesCount'>): UserReview => {
     const newId = `rev_${Date.now()}`;
     const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(reviewData.authorName)}&background=5C3D28&color=ffffff&bold=true`;
@@ -3644,6 +3780,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     return newReview;
   };
 
+  // ==========================================================================
+  // [SCRUDS - DELETE]: Menghapus Ulasan Pelanggan
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menghapus ulasan yang melanggar aturan dari database Firestore serta
+  //         mengurangi dan menghitung ulang rata-rata rating menu terkait.
+  // ==========================================================================
   const deleteReview = (id: string) => {
     const reviewToDelete = reviews.find(r => r.id === id);
     deleteDoc(doc(db, 'reviews', id)).catch(() => {});
@@ -3668,6 +3810,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // ==========================================================================
+  // [SCRUDS - CREATE / UPDATE]: Membalas Ulasan Pelanggan oleh Admin
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menambahkan pesan balasan resmi dari pengelola restoran ke dalam
+  //         array `replies` pada ulasan tersebut, lalu menyimpannya ke Firestore & RTDB.
+  // ==========================================================================
   const addReviewReply = (reviewId: string, replyData: Omit<ReviewReply, 'id' | 'date'>) => {
     const newReply: ReviewReply = {
       id: 'rep_' + Date.now(),

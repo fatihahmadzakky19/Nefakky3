@@ -73,7 +73,13 @@ export default function AdminPromotionsTab({
 
   const allVouchers = deduplicateVouchers(voucherList || vouchers || []);
 
-  // Filtered Vouchers (100% Bersih & Bebas Duplikat Kode Promo)
+  // ==========================================================================
+  // [SCRUDS - SEARCH & FILTER]: Penyaringan Kupon Voucher & Promo
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menyaring voucher aktif yang belum kedaluwarsa berdasarkan:
+  //         1. Masa berlaku tanggal dan jam (`isVoucherTimeExpired`)
+  //         2. Kata kunci pencarian: Kode Voucher, Nama Promo, atau Kategori Event
+  // ==========================================================================
   const displayedVouchers = deduplicateVouchers(
     allVouchers.filter(v => {
       // Promo yang sudah lewat masa berlaku → sembunyikan otomatis dari daftar (sesuai spesifikasi)
@@ -105,7 +111,16 @@ export default function AdminPromotionsTab({
     return `${unique.slice(0, 3).join(', ')} +${unique.length - 3}`;
   };
 
-  // Handlers
+  // --------------------------------------------------------------------------
+  // HANDLERS: MODAL TAMBAH & EDIT VOUCHER
+  // --------------------------------------------------------------------------
+
+  // ==========================================================================
+  // [SCRUDS - CREATE (PERSIAPAN)]: Membuka Modal Tambah Voucher Baru
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengosongkan form input dan membuat kode voucher acak baru (mis. `PROMO88`)
+  //         dengan nilai default diskon 20%, min belanja Rp50.000, kuota 100x.
+  // ==========================================================================
   const handleOpenAddModal = () => {
     setEditingVoucher(null);
     setVoucherCode(`PROMO${Math.floor(10 + Math.random() * 90)}`);
@@ -121,6 +136,12 @@ export default function AdminPromotionsTab({
     setShowVoucherModal(true);
   };
 
+  // ==========================================================================
+  // [SCRUDS - UPDATE (PERSIAPAN)]: Membuka Modal Edit Voucher yang Dipilih
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengambil data kupon `v` yang ingin diedit, mengisikan nilainya ke form,
+  //         dan menampilkan modal edit solid white.
+  // ==========================================================================
   const handleOpenEditModal = (v: AdminVoucher) => {
     setEditingVoucher(v);
     setVoucherCode(v.code);
@@ -174,6 +195,14 @@ export default function AdminPromotionsTab({
     }
   };
 
+  // ==========================================================================
+  // [SCRUDS - CREATE & UPDATE (EKSEKUSI)]: Menyimpan Voucher Baru atau Perubahan
+  // --------------------------------------------------------------------------
+  // FUNGSI: Membaca input kode, persentase diskon, minimal belanja, batasan kuota,
+  //         lalu memanggil:
+  //         - updateVoucher(id, payload) jika sedang mengedit kupon
+  //         - addVoucher(payload) jika sedang membuat kupon promo baru
+  // ==========================================================================
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!voucherCode.trim()) {
@@ -218,13 +247,16 @@ export default function AdminPromotionsTab({
       expiry: expiryVal
     };
 
+    // Percabangan SCRUDS: UPDATE jika editingVoucher != null, CREATE jika voucher baru
     if (editingVoucher) {
+      // [SCRUDS - UPDATE]: Memperbarui kupon promo yang ada
       if (updateVoucher) {
         updateVoucher(editingVoucher.id, payload);
       } else {
         addVoucher({ ...payload, id: editingVoucher.id });
       }
     } else {
+      // [SCRUDS - CREATE]: Menyimpan kupon promo baru
       addVoucher(payload);
     }
 
@@ -311,6 +343,12 @@ export default function AdminPromotionsTab({
           </div>
         </div>
 
+        {/* ================================================================ */}
+        {/* [SCRUDS - READ]: Menampilkan Kartu-Kartu Kupon Promo & Voucher    */}
+        {/* ---------------------------------------------------------------- */}
+        {/* FUNGSI: Merender seluruh kupon voucher aktif dalam bentuk kartu   */}
+        {/*         lengkap dengan kode, nilai diskon, kuota & riwayat user.  */}
+        {/* ================================================================ */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedVouchers.map((voucher) => {
             const isActive = voucher.isActive ?? true;
@@ -350,6 +388,7 @@ export default function AdminPromotionsTab({
                       <span>{(voucher as any).eventCategory || voucher.event || 'Promo Spesial'}</span>
                     </span>
 
+                    {/* [SCRUDS - STATUS / TOGGLE]: Mengaktifkan atau Menonaktifkan Kupon Voucher */}
                     <button 
                       type="button"
                       onClick={() => toggleVoucherStatus(voucher.id)}
@@ -461,6 +500,7 @@ export default function AdminPromotionsTab({
                       <span>Lihat Pengguna</span>
                     </button>
 
+                    {/* [SCRUDS - UPDATE]: Membuka modal formulir untuk mengedit data kupon voucher */}
                     <button 
                       type="button"
                       onClick={() => handleOpenEditModal(voucher)}
@@ -470,6 +510,7 @@ export default function AdminPromotionsTab({
                       <span className="material-symbols-outlined text-[18px]">edit</span>
                     </button>
 
+                    {/* [SCRUDS - DELETE]: Menghapus kupon voucher dari database setelah konfirmasi admin */}
                     <button 
                       type="button"
                       onClick={() => {

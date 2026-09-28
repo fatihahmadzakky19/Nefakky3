@@ -21,7 +21,6 @@ import Navbar from '@/components/Navbar';
 import { 
   Plus, 
   Minus, 
-  Heart,
   X
 } from 'lucide-react';
 import { Search, Clock, Flame, ShieldCheck, Leaf, Star, SlidersHorizontal, UtensilsCrossed, ChefHat } from '@/components/icons/CustomIcons';
@@ -35,18 +34,10 @@ export default function MenuCatalogPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'popular' | 'price-low' | 'price-high' | 'rating'>('popular');
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [authActionName, setAuthActionName] = useState<string>('memesan hidangan');
 
   const categories = ['Semua', 'Makanan Berat', 'Minuman', 'Menu Hemat', 'Segera Hadir'];
-
-  const toggleWishlist = (productId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFavorites(prev => 
-      prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
-    );
-  };
 
   const categoryCounts = useMemo(() => {
     const counts: { [key: string]: number } = {
@@ -139,7 +130,7 @@ export default function MenuCatalogPage() {
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
             
             {/* Category Navigation Pills with Edge-to-Edge mobile scroll */}
-            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto -mx-4 px-4 sm:mx-0 sm:px-0 py-0.5 no-scrollbar">
+            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto -mx-4 px-4 sm:mx-0 sm:px-0 py-0.5 no-scrollbar touch-scroll">
               {categories.map((cat) => {
                 const isActive = activeCategory === cat;
                 const count = categoryCounts[cat] || 0;
@@ -231,11 +222,10 @@ export default function MenuCatalogPage() {
             </div>
           ) : (
             /* Product Cards Grid */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-7">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-7 content-auto">
               {filteredProducts.map((product) => {
                 const inCart = cartItems.find(item => item.id === product.id);
                 const cartQty = inCart ? inCart.quantity : 0;
-                const isFav = favorites.includes(product.id);
                 const rating = Number(product.rating) || 4.9;
                 const price = Number(product.price) || 0;
                 const isOutOfStock = (product.stock ?? 10) <= 0;
@@ -256,6 +246,10 @@ export default function MenuCatalogPage() {
                           src={product.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80'}
                           alt={product.name}
                           className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500 ease-out"
+                          loading="lazy"
+                          decoding="async"
+                          width={400}
+                          height={300}
                         />
                         
                         {/* Rating Badge */}
@@ -287,17 +281,6 @@ export default function MenuCatalogPage() {
                           )}
                         </div>
 
-                        {/* Wishlist Heart Button - Min 40x40px touch friendly */}
-                        <button
-                          type="button"
-                          onClick={(e) => toggleWishlist(product.id, e)}
-                          className={`absolute top-2.5 right-2.5 w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center backdrop-blur-sm transition-colors z-10 ${
-                            isFav ? 'bg-rose-50 text-rose-600' : 'bg-stone-900/40 text-white hover:bg-stone-900/60'
-                          }`}
-                          aria-label="Simpan ke Favorit"
-                        >
-                          <Heart className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
-                        </button>
                       </div>
 
                       {/* Content Body */}

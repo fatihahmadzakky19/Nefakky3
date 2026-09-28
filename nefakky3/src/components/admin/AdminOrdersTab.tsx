@@ -142,7 +142,13 @@ export default function AdminOrdersTab({
     return 0;
   };
 
-  // Sort orders newest-first
+  // ==========================================================================
+  // [SCRUDS - SORT]: Pengurutan Pesanan Masuk (Terbaru di Paling Atas)
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengurutkan daftar pesanan pelanggan secara menurun (descending)
+  //         berdasarkan timestamp waktu pembuatan (createdAt atau format tanggal),
+  //         sehingga pesanan yang baru masuk seketika berada di urutan teratas tiket dapur.
+  // ==========================================================================
   const sortedOrders = useMemo(() => {
     return [...realOrders].sort((a, b) => getOrderTimestamp(b) - getOrderTimestamp(a));
   }, [realOrders]);
@@ -183,7 +189,13 @@ export default function AdminOrdersTab({
   const thisYearOrdersCount = useMemo(() => sortedOrders.filter(o => isOrderThisYear(o)).length, [sortedOrders]);
   const allOrdersCount = sortedOrders.length;
 
-  // 4. Filtered Orders (Hanya dari pesanan riil database yang lolos filter waktu, status, & pencarian)
+  // ==========================================================================
+  // [SCRUDS - SEARCH & FILTER]: Penyaringan Pesanan Berdasarkan Status & Keyword
+  // --------------------------------------------------------------------------
+  // FUNGSI: Menyaring pesanan yang sudah difilter waktu dengan:
+  //         1. Status alur: PENDING, PREPARING, READY, SHIPPING, COMPLETED, CANCELLED
+  //         2. Kata kunci pencarian: ID Pesanan (#ORD-XXX), Nama Pembeli, Alamat, atau Nama Menu
+  // ==========================================================================
   const filteredOrders = useMemo(() => {
     return timeFilteredOrders.filter((order) => {
       // 1. Filter Status
@@ -495,6 +507,13 @@ export default function AdminOrdersTab({
             )}
           </div>
         ) : (
+          /* ================================================================ */
+          /* [SCRUDS - READ]: Menampilkan Kartu Pesanan Masuk (Kitchen Desk)   */
+          /* ---------------------------------------------------------------- */
+          /* FUNGSI: Merender tiket pesanan aktif hasil filter & sort terbaru  */
+          /*         lengkap dengan rincian menu, jam pesanan, status alur,   */
+          /*         data pelanggan, dan tombol aksi dapur & pengantaran.     */
+          /* ================================================================ */
           displayOrders.map((order: any) => {
             const isPending = order.status === 'PENDING' || order.status === 'RECEIVED';
             const isPreparing = order.status === 'PREPARING';
@@ -567,6 +586,12 @@ export default function AdminOrdersTab({
                     </div>
 
                     <div className="flex flex-col items-end gap-1.5">
+                      {/* ============================================================ */}
+                      {/* [SCRUDS - UPDATE & STATUS]: Dropdown Pengubah Status Pesanan */}
+                      {/* ------------------------------------------------------------ */}
+                      {/* FUNGSI: Memungkinkan admin/dapur mengubah status pesanan     */}
+                      {/*         secara manual ke status apa pun seketika (realtime). */}
+                      {/* ============================================================ */}
                       {/* Status Selector Settings (Dropdown Langsung Pengaturan Status) */}
                       <div className="relative group">
                         <select
@@ -735,6 +760,13 @@ export default function AdminOrdersTab({
                       <span>Nota</span>
                     </button>
 
+                    {/* ============================================================ */}
+                    {/* [SCRUDS - UPDATE & STATUS]: Tombol Aksi Cepat Alur Pesanan   */}
+                    {/* ------------------------------------------------------------ */}
+                    {/* FUNGSI: Memajukan status pesanan secara bertahap satu klik: */}
+                    {/*         Siapkan Pesanan -> Pesanan Siap -> Berangkat Antar ->*/}
+                    {/*         Tiba di Lokasi -> Selesai & Lunas                     */}
+                    {/* ============================================================ */}
                     {/* Step-by-Step Status Progression Action Buttons */}
                     {(order.status === 'RECEIVED' || order.status === 'PENDING') && (
                       <button 

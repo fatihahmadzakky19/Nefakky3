@@ -24,6 +24,7 @@ html {
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: #D6D3D1 transparent;
+  touch-action: manipulation;
 }
 
 body {
@@ -34,6 +35,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+/* Touch Momentum Scrolling for Mobile */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Content Visibility Optimization for Off-Screen Sections (improves INP, LCP & reduces initial layout time) */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 400px;
 }
 
 /* Styled Component Primitives */

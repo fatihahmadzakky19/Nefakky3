@@ -10,11 +10,11 @@
 | Parameter | Hasil |
 | :--- | :--- |
 | **Status Keseluruhan** | **PASSED ✅** |
-| **Waktu Eksekusi** | 28/9/2026, 08.56.56 WIB |
+| **Waktu Eksekusi** | 28/9/2026, 10.29.45 WIB |
 | **Total Pengujian** | 11 Tes |
 | **Berhasil (Passed)** | **11** ✅ |
 | **Gagal (Failed)** | **0** ❌ |
-| **Durasi Eksekusi** | 24293 ms |
+| **Durasi Eksekusi** | 10530 ms |
 
 ---
 
@@ -23,19 +23,19 @@
 
 ### 1. 1. TypeScript Compilation — tsc --noEmit type check
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 19201 ms
+- **Waktu Eksekusi**: 6231 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
 ### 2. 2. Route Integrity — Core application routes existence
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 6 ms
+- **Waktu Eksekusi**: 4 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
 ### 3. 3. Product Catalog Integrity — Default 6 product items complete in DataContext
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 2 ms
+- **Waktu Eksekusi**: 1 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
@@ -71,7 +71,7 @@
 
 ### 9. 9. Order Timezone Integrity — Tanggal pesanan konsisten WIB & tab "Hari Ini" benar (orderTimeUtils)
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 4823 ms
+- **Waktu Eksekusi**: 4072 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 
@@ -83,7 +83,7 @@
 
 ### 11. 11. Voucher Deduplication — Strict deduplication of promo codes and IDs
 - **Status**: ✅ PASS
-- **Waktu Eksekusi**: 251 ms
+- **Waktu Eksekusi**: 213 ms
 - **Keterangan**: Pengujian berhasil tanpa masalah.
 
 

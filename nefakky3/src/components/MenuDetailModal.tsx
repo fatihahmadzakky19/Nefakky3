@@ -289,7 +289,7 @@ export default function MenuDetailModal({ product, onClose }: MenuDetailModalPro
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs p-3 sm:p-6 md:p-8 flex items-center justify-center animate-fade-in font-sans">
-      <div className="bg-white w-full max-w-4xl rounded-2xl overflow-hidden shadow-elevated border border-stone-200 relative my-auto max-h-[92vh] overflow-y-auto">
+      <div className="bg-white w-full max-w-4xl rounded-2xl overflow-hidden shadow-elevated border border-stone-200 relative my-auto max-h-[92vh] overflow-y-auto touch-scroll overscroll-contain">
         
         {/* Close Button */}
         <button

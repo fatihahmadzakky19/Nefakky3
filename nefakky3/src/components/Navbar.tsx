@@ -266,11 +266,11 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
         {/* Mobile Slide-Over Drawer Navigation Menu */}
         {isMobileMenuOpen && (
           <div 
-            className="lg:hidden fixed inset-0 top-18 z-40 bg-stone-900/40 backdrop-blur-xs" 
+            className="lg:hidden fixed inset-0 top-16 sm:top-18 z-40 bg-stone-900/40 backdrop-blur-xs" 
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <div 
-              className="bg-white border-b border-stone-200 shadow-elevated p-5 space-y-4 max-h-[calc(100vh-4.5rem)] overflow-y-auto"
+              className="bg-white border-b border-stone-200 shadow-elevated p-5 space-y-4 max-h-[calc(100vh-4rem)] sm:max-h-[calc(100vh-4.5rem)] overflow-y-auto touch-scroll"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-3 border-b border-stone-100">

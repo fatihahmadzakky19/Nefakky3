@@ -156,9 +156,14 @@ export default function AdminProductsTab({
     setProdForm(f => ({ ...f, image: path }));
   };
 
+  // ==========================================================================
+  // [SCRUDS - SEARCH & FILTER]: Penyaringan & Pencarian Menu Hidangan
   // --------------------------------------------------------------------------
-  // KALKULASI DATA & PENCARIAN
-  // --------------------------------------------------------------------------
+  // FUNGSI: Menyaring array produk katalog berdasarkan kriteria:
+  //         1. Status tab: Semua Menu / Aktif Dijual / Segera Hadir (Coming Soon)
+  //         2. Kategori: Semua / Makanan Berat / Minuman / Camilan / Dessert
+  //         3. Pencarian teks: Nama hidangan, kode SKU, kategori, atau alamat dapur
+  // ==========================================================================
   const allProducts = productList || [];
   const comingSoonCount = allProducts.filter(p => p.isComingSoon).length;
   const activeCount = allProducts.filter(p => !p.isComingSoon && p.status !== 'Inactive').length;
@@ -211,6 +216,13 @@ export default function AdminProductsTab({
   // --------------------------------------------------------------------------
   // HANDLERS: MODAL BUKA / SIMPAN / HAPUS
   // --------------------------------------------------------------------------
+
+  // ==========================================================================
+  // [SCRUDS - CREATE (PERSIAPAN)]: Membuka Modal Tambah Menu Baru
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mereset formulir produk ke nilai awal (kosong), men-generate kode SKU
+  //         otomatis (`SKU-XXXX-NFK`), mengatur foto default, serta menampilkan modal.
+  // ==========================================================================
   const handleOpenAddProduct = () => {
     const defaultAddress = getMapSettings()?.centralKitchen?.address || DEFAULT_CENTRAL_KITCHEN.address;
     setEditingProduct(null);
@@ -245,6 +257,12 @@ export default function AdminProductsTab({
     setShowProductModal(true);
   };
 
+  // ==========================================================================
+  // [SCRUDS - UPDATE (PERSIAPAN)]: Membuka Modal Edit Produk
+  // --------------------------------------------------------------------------
+  // FUNGSI: Membaca data produk yang dipilih (`prod`), mengisi seluruh kolom form
+  //         (nama, stok, varian, harga, nutrisi, galeri foto), lalu membuka modal edit.
+  // ==========================================================================
   const handleOpenEditProduct = (prod: ProductItem) => {
     const defaultAddress = getMapSettings()?.centralKitchen?.address || DEFAULT_CENTRAL_KITCHEN.address;
     setEditingProduct(prod);
@@ -310,6 +328,15 @@ export default function AdminProductsTab({
     setShowProductModal(true);
   };
 
+  // ==========================================================================
+  // [SCRUDS - CREATE & UPDATE (EKSEKUSI)]: Menyimpan Produk Baru atau Hasil Edit
+  // --------------------------------------------------------------------------
+  // FUNGSI: Mengambil seluruh input form modal, memvalidasi nama & stok,
+  //         menghitung total stok multi-varian rasa (Mangga, Sirsak, Jambu),
+  //         lalu memanggil:
+  //         - updateProduct(id, payload) jika sedang dalam mode EDIT
+  //         - addProduct(payload) jika sedang membuat MENU BARU
+  // ==========================================================================
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prodForm.name.trim()) {
@@ -374,9 +401,12 @@ export default function AdminProductsTab({
       maxDeliveryKm: parseInt(prodForm.maxDeliveryKm) || 25
     };
 
+    // Percabangan SCRUDS: UPDATE jika editingProduct != null, CREATE jika menu baru
     if (editingProduct) {
+      // [SCRUDS - UPDATE]: Memperbarui data hidangan yang sudah ada
       updateProduct(editingProduct.id, payload);
     } else {
+      // [SCRUDS - CREATE]: Menambah hidangan baru ke katalog
       addProduct(payload);
     }
 
@@ -513,6 +543,13 @@ export default function AdminProductsTab({
             <div className="col-span-2 text-right">Aksi</div>
           </div>
 
+          {/* ================================================================ */}
+          {/* [SCRUDS - READ]: Menampilkan Daftar Tabel Katalog Hidangan        */}
+          {/* ---------------------------------------------------------------- */}
+          {/* FUNGSI: Melakukan iterasi (mapping) data dari displayedProducts   */}
+          {/*         dan merendernya menjadi baris-baris kartu tabel informatif*/}
+          {/*         (foto, nama, asal dapur, kategori, harga, stok/status, aksi)*/}
+          {/* ================================================================ */}
           {/* Table Rows */}
           <div className="divide-y divide-surface-container min-w-[700px]">
             {displayedProducts.length === 0 ? (
@@ -651,6 +688,7 @@ export default function AdminProductsTab({
 
                     {/* Aksi (Col 2) */}
                     <div className="col-span-2 flex items-center justify-end gap-1.5">
+                      {/* [SCRUDS - STATUS / TOGGLE]: Ubah status tampil/sembunyi produk di etalase pembeli */}
                       <button 
                         type="button"
                         onClick={() => toggleProductVisibility(prod.id)}
@@ -662,6 +700,7 @@ export default function AdminProductsTab({
                         {isInactive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
 
+                      {/* [SCRUDS - UPDATE]: Membuka modal formulir untuk mengubah data hidangan & alamat dapur */}
                       <button 
                         type="button"
                         onClick={() => handleOpenEditProduct(prod)}
@@ -671,6 +710,7 @@ export default function AdminProductsTab({
                         <Pencil className="w-4 h-4" />
                       </button>
 
+                      {/* [SCRUDS - DELETE]: Menghapus menu dari katalog setelah konfirmasi admin */}
                       <button 
                         type="button"
                         onClick={() => {

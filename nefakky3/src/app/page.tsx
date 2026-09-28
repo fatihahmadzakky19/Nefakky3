@@ -25,8 +25,7 @@ import {
   ChevronRight, 
   Plus, 
   Minus,
-  AlertCircle,
-  Heart
+  AlertCircle
 } from 'lucide-react';
 import { Clock, Leaf, Ticket, ShieldCheck, Flame, Star, Hourglass, CheckCircle2 } from '@/components/icons/CustomIcons';
 
@@ -41,7 +40,6 @@ export default function HomePage() {
   const [selectedVoucherCode, setSelectedVoucherCode] = useState<string | null>(null);
   const [claimedNotice, setClaimedNotice] = useState<{ text: string; success: boolean } | null>(null);
   const [detailProduct, setDetailProduct] = useState<DetailProduct | null>(null);
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [authActionName, setAuthActionName] = useState<string>('melakukan aktivitas ini');
   const [hasMounted, setHasMounted] = useState<boolean>(false);
@@ -49,13 +47,6 @@ export default function HomePage() {
   useEffect(() => {
     setHasMounted(true);
   }, []);
-
-  const toggleWishlist = (productId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFavorites(prev => 
-      prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
-    );
-  };
 
   // Saring semua voucher aktif yang dibuat oleh Admin dan BELUM pernah dipakai oleh akun pengguna ini
   // Guard dengan hasMounted agar initial render SSR dan Client 100% identik tanpa hydration mismatch
@@ -366,6 +357,10 @@ export default function HomePage() {
                     alt={currentSlide.title} 
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103" 
                     src={currentSlide.image}
+                    fetchPriority="high"
+                    decoding="async"
+                    width={480}
+                    height={360}
                   />
 
                   {/* Gradient Overlay for Legibility */}
@@ -501,7 +496,7 @@ export default function HomePage() {
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
                   {activeVouchers.length > 1 && (
-                    <div className="flex items-center gap-1.5 bg-stone-50 p-1 rounded-lg border border-stone-200 overflow-x-auto no-scrollbar max-w-full">
+                    <div className="flex items-center gap-1.5 bg-stone-50 p-1 rounded-lg border border-stone-200 overflow-x-auto no-scrollbar touch-scroll max-w-full">
                       {activeVouchers.map((v) => (
                         <button
                           key={v.id || v.code}
@@ -549,7 +544,7 @@ export default function HomePage() {
           {/* QUICK CATEGORY FILTER TABS */}
           <section className="sticky top-16 sm:top-18 z-30 bg-[#FBFBFA]/95 backdrop-blur-md border-y border-stone-200 py-2.5 sm:py-3">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 -mx-4 px-4 sm:mx-0 sm:px-0 w-full sm:w-auto">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar touch-scroll py-0.5 -mx-4 px-4 sm:mx-0 sm:px-0 w-full sm:w-auto">
                 {categories.map((cat) => {
                   const isActive = activeCategory === cat;
                   return (
@@ -579,7 +574,7 @@ export default function HomePage() {
           </section>
 
           {/* FEATURED MENU GRID */}
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 w-full">
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 w-full content-auto">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 sm:gap-4 mb-6 sm:mb-8 border-b border-stone-200 pb-4">
               <div>
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[#C2410C] block mb-1">
@@ -603,7 +598,6 @@ export default function HomePage() {
               {displayedFavorites.map((product) => {
                 const inCart = cartItems.find(i => i.id === product.id);
                 const cartQty = inCart?.quantity || 0;
-                const isFav = favorites.includes(product.id);
                 const rating = Number(product.rating) || 4.9;
                 const soldCount = String(product.soldCount || 'Terlaris');
                 const price = Number(product.price) || 0;
@@ -623,6 +617,10 @@ export default function HomePage() {
                         alt={product.name} 
                         className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500 ease-out" 
                         src={product.image}
+                        loading="lazy"
+                        decoding="async"
+                        width={400}
+                        height={300}
                       />
 
                       {/* Rating Badge */}
@@ -631,18 +629,7 @@ export default function HomePage() {
                         <span>{rating.toFixed(1)}</span>
                       </div>
 
-                      {/* Wishlist Heart Button - Min 40x40px touch friendly */}
-                      <button
-                        type="button"
-                        onClick={(e) => toggleWishlist(product.id, e)}
-                        className={`absolute top-2.5 right-2.5 w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center backdrop-blur-sm transition-colors z-10 ${
-                          isFav ? 'bg-rose-50 text-rose-600' : 'bg-stone-900/40 text-white hover:bg-stone-900/60'
-                        }`}
-                        title="Simpan ke Favorit"
-                        aria-label="Simpan ke Favorit"
-                      >
-                        <Heart className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
-                      </button>
+
 
                       {/* Status Badges */}
                       {isOutOfStock ? (
@@ -795,7 +782,7 @@ export default function HomePage() {
           </section>
 
           {/* COMMUNITY TESTIMONIALS (REALTIME ULASAN RASA) */}
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full">
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full content-auto">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
               <div>
                 <span className="text-xs text-[#C2410C] font-semibold uppercase tracking-wider block mb-1">
@@ -854,7 +841,7 @@ export default function HomePage() {
                         <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center font-semibold text-xs overflow-hidden shrink-0">
                           {avatar ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={avatar} alt={author} className="w-full h-full object-cover" />
+                            <img src={avatar} alt={author} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                           ) : (
                             <span>{initial}</span>
                           )}
@@ -871,6 +858,10 @@ export default function HomePage() {
                           src={item.photoUrl} 
                           alt="Foto Makanan" 
                           className="w-9 h-9 rounded-lg object-cover border border-stone-200 shrink-0" 
+                          loading="lazy"
+                          decoding="async"
+                          width={36}
+                          height={36}
                         />
                       )}
                     </div>
