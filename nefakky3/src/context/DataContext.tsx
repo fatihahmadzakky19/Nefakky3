@@ -550,6 +550,27 @@ export const sortReviewsNewestFirst = (revs: UserReview[]): UserReview[] => {
   });
 };
 
+/**
+ * Helper function untuk menentukan apakah suatu produk layak tampil di etalase pelanggan/pengunjung toko.
+ * Suatu produk TIDAK AKAN DITAMPILKAN di sisi pengguna jika:
+ * 1. Dihapus (isDeleted: true)
+ * 2. Dinonaktifkan/disembunyikan oleh admin (visibility === false atau status === 'Inactive')
+ * 3. Disetting kosong / stok habis (stock <= 0) KECUALI produk dengan status 'Segera Hadir' (isComingSoon: true)
+ */
+export const isCustomerVisibleProduct = (p?: ProductItem | null): boolean => {
+  if (!p || p.isDeleted) return false;
+  // Sembunyikan jika status nonaktif / visibility false
+  if (p.visibility === false || String(p.visibility) === 'false' || p.status === 'Inactive') {
+    return false;
+  }
+  // Sembunyikan jika stok kosong (0 porsi), kecuali produk Segera Hadir
+  const stockNum = Number(p.stock) || 0;
+  if (stockNum <= 0 && !p.isComingSoon) {
+    return false;
+  }
+  return true;
+};
+
 /** Interface Pesan Bantuan (Customer Support Chat) */
 export interface ChatMessage {
   id: string;
@@ -1854,6 +1875,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           } catch (e) {}
           return updated;
         });
+        if (typeof window !== 'undefined') {
+          try {
+            window.dispatchEvent(new CustomEvent('nefakky_chat_updated', { detail: data }));
+          } catch (e) {}
+        }
       } else if (data.type === 'CHAT_MESSAGES_READ') {
         setChatMessagesState(prev => {
           const emailNorm = (data.userEmail || '').toLowerCase();
@@ -1875,6 +1901,39 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           });
           try {
             localStorage.setItem('nefakky_chat_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'PRODUCT_VISIBILITY_TOGGLED' && data.productId) {
+        setProductsState(prev => {
+          const updated = prev.map(p => p.id === data.productId ? ({ ...p, visibility: data.visibility, status: data.status as ProductItem['status'], updatedAt: Date.now() }) : p);
+          try {
+            localStorage.setItem('nefakky_products_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'PRODUCT_UPDATED' && data.productId) {
+        setProductsState(prev => {
+          const updated = prev.map(p => p.id === data.productId ? ({ ...p, ...(data.updates || {}), updatedAt: Date.now() } as ProductItem) : p);
+          try {
+            localStorage.setItem('nefakky_products_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'PRODUCT_CREATED' && data.product) {
+        setProductsState(prev => {
+          if (prev.some(p => p.id === data.product.id)) return prev;
+          const updated = [data.product, ...prev];
+          try {
+            localStorage.setItem('nefakky_products_live', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      } else if (data.type === 'PRODUCT_DELETED' && data.productId) {
+        setProductsState(prev => {
+          const updated = prev.filter(p => p.id !== data.productId);
+          try {
+            localStorage.setItem('nefakky_products_live', JSON.stringify(updated));
           } catch (e) {}
           return updated;
         });
@@ -1945,8 +2004,33 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     };
     window.addEventListener('nefakky_chat_updated', handleCustomChatEvent);
 
+    const handleCustomProductEvent = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      if (customEvt?.detail?.type) {
+        handleOrderEvent(customEvt.detail);
+      } else {
+        try {
+          const stored = localStorage.getItem('nefakky_products_live');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              setProductsState(parsed);
+            }
+          }
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('nefakky_products_updated', handleCustomProductEvent);
+
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'nefakky_live_orders' && e.newValue) {
+      if (e.key === 'nefakky_products_live' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setProductsState(parsed);
+          }
+        } catch (err) {}
+      } else if (e.key === 'nefakky_live_orders' && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) {
@@ -1982,6 +2066,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       window.removeEventListener('nefakky_orders_updated', handleCustomOrderEvent);
       window.removeEventListener('nefakky_vouchers_updated', handleCustomVoucherEvent);
       window.removeEventListener('nefakky_chat_updated', handleCustomChatEvent);
+      window.removeEventListener('nefakky_products_updated', handleCustomProductEvent);
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
@@ -2008,12 +2093,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (e) {}
 
+    let isInitialFetch = true;
+
     const syncWithServer = async () => {
       try {
         const res = await fetch('/api/chat', { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         if (!isSubscribed || !data.success || !Array.isArray(data.messages)) return;
+
+        const newlyReceivedAdminMsgs: ChatMessage[] = [];
 
         setChatMessagesState(prev => {
           const serverMsgs: ChatMessage[] = data.messages;
@@ -2025,6 +2114,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             if (!pm) {
               prevMap.set(sm.id, sm);
               changed = true;
+              if (!isInitialFetch && sm.sender === 'admin' && !sm.readByUser) {
+                newlyReceivedAdminMsgs.push(sm);
+              }
             } else if (pm.readByAdmin !== sm.readByAdmin || pm.readByUser !== sm.readByUser || pm.text !== sm.text) {
               prevMap.set(sm.id, { ...pm, ...sm });
               changed = true;
@@ -2039,6 +2131,19 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           } catch (e) {}
           return merged;
         });
+
+        // Trigger notifikasi instan jika ada pesan admin baru yang terdeteksi dari polling server
+        if (!isInitialFetch && newlyReceivedAdminMsgs.length > 0 && typeof window !== 'undefined') {
+          newlyReceivedAdminMsgs.forEach(msg => {
+            try {
+              window.dispatchEvent(new CustomEvent('nefakky_chat_updated', {
+                detail: { type: 'CHAT_MESSAGE_REPLIED', message: msg, userEmail: msg.userEmail }
+              }));
+            } catch (e) {}
+          });
+        }
+
+        isInitialFetch = false;
       } catch (e) {}
     };
 
@@ -2421,7 +2526,24 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       updatedAt: Date.now()
     };
     const cleanProd = cleanForFirestore(newProduct) as ProductItem;
-    setProductsState(prev => [cleanProd, ...prev]);
+    setProductsState(prev => {
+      const updated = [cleanProd, ...prev.filter(p => p.id !== newId)];
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_products_live', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'PRODUCT_CREATED', product: cleanProd });
+        window.dispatchEvent(new CustomEvent('nefakky_products_updated', { detail: { type: 'PRODUCT_CREATED', product: cleanProd } }));
+      } catch (e) {}
+    }
+
     try {
       setDoc(doc(db, 'products', newId), cleanProd).catch(() => {});
     } catch (e) {
@@ -2440,7 +2562,24 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const updateProduct = (id: string, updated: Partial<ProductItem>) => {
     const cleanUpdated = { ...cleanForFirestore(updated), updatedAt: Date.now() };
     const prevProduct = products.find(p => p.id === id);
-    setProductsState(prev => prev.map(p => p.id === id ? { ...p, ...cleanUpdated } : p));
+    setProductsState(prev => {
+      const updatedList = prev.map(p => p.id === id ? { ...p, ...cleanUpdated } : p);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_products_live', JSON.stringify(updatedList));
+        } catch (e) {}
+      }
+      return updatedList;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'PRODUCT_UPDATED', productId: id, updates: cleanUpdated });
+        window.dispatchEvent(new CustomEvent('nefakky_products_updated', { detail: { type: 'PRODUCT_UPDATED', productId: id, updates: cleanUpdated } }));
+      } catch (e) {}
+    }
+
     try {
       updateDoc(doc(db, 'products', id), cleanUpdated).catch(err => console.warn('updateProduct error:', err));
     } catch (e) {
@@ -2472,7 +2611,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   //         menghapus dokumen produk secara permanen dari Cloud Firestore.
   // ==========================================================================
   const deleteProduct = (id: string) => {
-    setProductsState(prev => prev.filter(p => p.id !== id));
+    setProductsState(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nefakky_products_live', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+
     try {
       if (typeof window !== 'undefined') {
         const tombs = readTombstones('nefakky_deleted_products');
@@ -2480,6 +2628,15 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem('nefakky_deleted_products', JSON.stringify(Array.from(tombs)));
       }
     } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      try {
+        const bc = getOrdersBroadcastChannel();
+        if (bc) bc.postMessage({ type: 'PRODUCT_DELETED', productId: id });
+        window.dispatchEvent(new CustomEvent('nefakky_products_updated', { detail: { type: 'PRODUCT_DELETED', productId: id } }));
+      } catch (e) {}
+    }
+
     try {
       deleteDoc(doc(db, 'products', id)).catch(() => {});
     } catch (e) {
@@ -2496,15 +2653,37 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const toggleProductVisibility = (id: string) => {
     const target = products.find(p => p.id === id);
     if (target) {
-      const nextVis = !target.visibility;
-      const nextStatus = nextVis ? 'Active' : 'Inactive';
-      setProductsState(prev => prev.map(p => p.id === id ? { ...p, visibility: nextVis, status: nextStatus, updatedAt: Date.now() } : p));
+      const isCurrentlyVisible = target.visibility !== false && String(target.visibility) !== 'false' && target.status !== 'Inactive';
+      const nextVis = !isCurrentlyVisible;
+      const nextStatus: ProductItem['status'] = nextVis ? (Number(target.stock) <= 0 ? 'Low Stock' : 'Active') : 'Inactive';
+      
+      const cleanUpdates: Partial<ProductItem> = {
+        visibility: nextVis,
+        status: nextStatus,
+        updatedAt: Date.now()
+      };
+
+      setProductsState(prev => {
+        const updated = prev.map(p => p.id === id ? { ...p, ...cleanUpdates } : p);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('nefakky_products_live', JSON.stringify(updated));
+          } catch (e) {}
+        }
+        return updated;
+      });
+
+      // Siarkan ke seluruh tab & window seketika via BroadcastChannel dan CustomEvent
+      if (typeof window !== 'undefined') {
+        try {
+          const bc = getOrdersBroadcastChannel();
+          if (bc) bc.postMessage({ type: 'PRODUCT_VISIBILITY_TOGGLED', productId: id, visibility: nextVis, status: nextStatus, updates: cleanUpdates });
+          window.dispatchEvent(new CustomEvent('nefakky_products_updated', { detail: { type: 'PRODUCT_VISIBILITY_TOGGLED', productId: id, visibility: nextVis, status: nextStatus, updates: cleanUpdates } }));
+        } catch (e) {}
+      }
+
       try {
-        updateDoc(doc(db, 'products', id), {
-          visibility: nextVis,
-          status: nextStatus,
-          updatedAt: Date.now()
-        }).catch(() => {});
+        updateDoc(doc(db, 'products', id), cleanUpdates).catch(() => {});
       } catch (e) {
         console.warn('Catch toggleProductVisibility error:', e);
       }

@@ -9,7 +9,7 @@
  * ============================================================================
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   useRealtimeBroadcaster, 
   RealtimeOrderPayload, 
@@ -22,10 +22,14 @@ import {
   Package, 
   X, 
   Sparkles, 
-  ChevronRight 
+  ChevronRight,
+  Headphones 
 } from 'lucide-react';
 import { ShoppingBag, MessageSquare, CheckCircle2, Bell, Radio } from '@/components/icons/CustomIcons';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { getOrdersBroadcastChannel } from '@/context/DataContext';
+import { playChatNotificationSound, showSystemNotification } from '@/lib/soundNotification';
 
 interface ToastItem {
   id: string;
@@ -40,6 +44,8 @@ interface ToastItem {
 export default function RealtimeToastBanner() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(true);
+  const { user, isAdmin } = useAuth();
+  const notifiedIdsRef = useRef<Set<string>>(new Set());
 
   // Helper untuk menambahkan toast baru
   const addToast = (toast: Omit<ToastItem, 'id' | 'timestamp'>) => {
@@ -68,6 +74,84 @@ export default function RealtimeToastBanner() {
     return () => clearTimeout(timer);
   }, [toasts]);
 
+  // Handler terpadu untuk notifikasi pesan balasan dari Admin CS kepada user
+  const handleIncomingAdminMessage = useCallback((msg: any) => {
+    if (!msg || msg.sender !== 'admin') return;
+    if (isAdmin) return; // Jangan notifikasi admin sendiri
+
+    const msgId = msg.id || `${msg.timestamp}-${msg.text}`;
+    if (notifiedIdsRef.current.has(msgId)) return;
+    notifiedIdsRef.current.add(msgId);
+
+    // Verifikasi apakah pesan ditujukan untuk user ini
+    const targetEmail = (msg.userEmail || '').trim().toLowerCase();
+    const currentEmail = (user?.email || '').trim().toLowerCase();
+    const currentName = (user?.displayName || '').trim().toLowerCase();
+
+    if (targetEmail && currentEmail) {
+      const matchEmail = targetEmail === currentEmail || targetEmail.includes(currentEmail) || currentEmail.includes(targetEmail);
+      const matchName = currentName && (targetEmail.includes(currentName) || currentName.includes(targetEmail));
+      if (!matchEmail && !matchName) return;
+    }
+
+    // 1. Mainkan nada notifikasi yang ramah dan elegan
+    playChatNotificationSound();
+
+    // 2. Tampilkan pop-up toast floating
+    addToast({
+      type: 'chat',
+      title: '💬 Balasan dari CS Nefakky',
+      description: msg.text || 'Admin CS Support telah menanggapi pesan Anda.',
+      badge: 'Pesan Baru',
+      link: '/profile',
+    });
+
+    // 3. Notifikasi sistem peramban jika diizinkan
+    showSystemNotification(
+      '💬 Balasan dari CS Nefakky',
+      msg.text || 'Admin CS Support telah menanggapi pesan Anda.',
+      () => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/profile';
+        }
+      }
+    );
+  }, [isAdmin, user]);
+
+  // Listener sinkronisasi lintas-tab (BroadcastChannel) & lokal (Window CustomEvent)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const bc = getOrdersBroadcastChannel();
+    const handleBroadcast = (event: MessageEvent) => {
+      const data = event.data;
+      if (data?.type === 'CHAT_MESSAGE_REPLIED' && data.message) {
+        handleIncomingAdminMessage(data.message);
+      }
+    };
+
+    if (bc) {
+      bc.addEventListener('message', handleBroadcast);
+    }
+
+    const handleWindowChatEvent = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const detail = customEvent.detail;
+      if (detail?.type === 'CHAT_MESSAGE_REPLIED' && detail.message) {
+        handleIncomingAdminMessage(detail.message);
+      }
+    };
+
+    window.addEventListener('nefakky_chat_updated', handleWindowChatEvent);
+
+    return () => {
+      if (bc) {
+        bc.removeEventListener('message', handleBroadcast);
+      }
+      window.removeEventListener('nefakky_chat_updated', handleWindowChatEvent);
+    };
+  }, [handleIncomingAdminMessage]);
+
   // Pasang listener Laravel Reverb
   useRealtimeBroadcaster({
     onOrderPlaced: (data: RealtimeOrderPayload) => {
@@ -91,12 +175,23 @@ export default function RealtimeToastBanner() {
     },
 
     onChatMessageSent: (data: RealtimeChatPayload) => {
-      addToast({
-        type: 'chat',
-        title: `Pesan Chat (${data.user_name || data.sender})`,
-        description: data.text ? (data.text.length > 50 ? data.text.substring(0, 50) + '...' : data.text) : 'Pesan baru diterima',
-        badge: data.sender === 'admin' ? 'Admin' : 'Customer',
-      });
+      if (data.sender === 'admin' && !isAdmin) {
+        handleIncomingAdminMessage({
+          id: data.chat_id,
+          sender: 'admin',
+          userEmail: data.user_email,
+          userName: data.user_name || 'Admin CS',
+          text: data.text,
+          timestamp: data.timestamp
+        });
+      } else {
+        addToast({
+          type: 'chat',
+          title: `Pesan Chat (${data.user_name || data.sender})`,
+          description: data.text ? (data.text.length > 50 ? data.text.substring(0, 50) + '...' : data.text) : 'Pesan baru diterima',
+          badge: data.sender === 'admin' ? 'Admin' : 'Customer',
+        });
+      }
     },
 
     onProductStockUpdated: (data: RealtimeProductPayload) => {
@@ -142,7 +237,7 @@ export default function RealtimeToastBanner() {
           bgGradient = 'from-blue-50 to-indigo-50 border-blue-200 text-blue-950';
           iconBg = 'bg-blue-600 text-white shadow-blue-500/30';
         } else if (t.type === 'chat') {
-          Icon = MessageSquare;
+          Icon = Headphones;
           bgGradient = 'from-violet-50 to-purple-50 border-violet-200 text-violet-950';
           iconBg = 'bg-violet-600 text-white shadow-violet-500/30';
         } else if (t.type === 'product') {

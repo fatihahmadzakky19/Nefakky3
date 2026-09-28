@@ -22,6 +22,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AutoMapPickerModal from '@/components/AutoMapPickerModal';
 import { validateAddressGeocode } from '@/lib/mapService';
+import { playChatNotificationSound } from '@/lib/soundNotification';
 import { 
   Briefcase, 
   Headphones, 
@@ -385,21 +386,51 @@ export default function UserProfilePage() {
   const userEmail = user?.email || 'pelanggan@nefakky.com';
   const userName = user?.displayName || editName || 'Pelanggan Nefakky';
 
-  // Filter messages for current user
-  const userChats = (chatMessages || []).filter(
-    (msg: any) => (msg.userEmail || '').toLowerCase() === userEmail.toLowerCase()
-  );
+  // Filter messages for current user (dukung pencocokan email & username anonim)
+  const userChats = (chatMessages || []).filter((msg: any) => {
+    const mEmail = (msg.userEmail || '').toLowerCase();
+    const uEmail = userEmail.toLowerCase();
+    const uName = (user?.displayName || editName || '').toLowerCase();
+    if (mEmail === uEmail) return true;
+    if (uName && mEmail.includes(uName)) return true;
+    if (uEmail && (mEmail.includes(uEmail) || uEmail.includes(mEmail))) return true;
+    return false;
+  });
 
-  // Auto mark user messages as read when user opens or sees new chat
+  // Hitung jumlah pesan baru dari admin yang belum dibaca
+  const unreadAdminCount = (userChats || []).filter(
+    (msg: any) => msg.sender === 'admin' && !msg.readByUser
+  ).length;
+
+  // Bunyikan nada notifikasi saat pesan balasan admin baru masuk ke layar profile
+  const lastAdminMsgIdRef = useRef<string>('');
   useEffect(() => {
-    if (!userEmail || !markChatAsRead) return;
-    const hasUnread = (chatMessages || []).some(
-      (msg: any) => (msg.userEmail || '').toLowerCase() === userEmail.toLowerCase() && msg.sender === 'admin' && !msg.readByUser
-    );
-    if (hasUnread) {
+    const latestAdminMsg = [...userChats].reverse().find((m: any) => m.sender === 'admin');
+    if (latestAdminMsg && latestAdminMsg.id !== lastAdminMsgIdRef.current) {
+      if (!latestAdminMsg.readByUser && lastAdminMsgIdRef.current !== '') {
+        playChatNotificationSound();
+      }
+      lastAdminMsgIdRef.current = latestAdminMsg.id;
+    }
+  }, [userChats]);
+
+  // Handler interaksi chat untuk menandai pesan terbaca saat pengguna menyentuh/mengklik chat
+  const handleChatInteraction = () => {
+    if (unreadAdminCount > 0 && userEmail && markChatAsRead) {
       markChatAsRead(userEmail, 'user');
     }
-  }, [userEmail, markChatAsRead, chatMessages]);
+  };
+
+  // Tandai pesan dibaca setelah jeda agar pengguna sempat melihat notifikasi visual
+  useEffect(() => {
+    if (!userEmail || !markChatAsRead || unreadAdminCount === 0) return;
+
+    const timer = setTimeout(() => {
+      markChatAsRead(userEmail, 'user');
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [userEmail, markChatAsRead, unreadAdminCount]);
 
   // Auto scroll chat to bottom on new message
   useEffect(() => {
@@ -610,7 +641,15 @@ export default function UserProfilePage() {
                 
                 {/* LEFT SIDEBAR: CS Live Chat (4 Cols) */}
                 <aside className="lg:col-span-4 flex flex-col">
-                  <div className="bg-white shadow-subtle rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col h-[480px] sm:h-[580px] lg:h-[700px] relative overflow-hidden border border-stone-200">
+                  <div 
+                    id="chat"
+                    onClick={handleChatInteraction}
+                    className={`bg-white shadow-subtle rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col h-[480px] sm:h-[580px] lg:h-[700px] relative overflow-hidden border transition-all duration-300 ${
+                      unreadAdminCount > 0 
+                        ? 'border-amber-400 ring-4 ring-amber-500/20' 
+                        : 'border-stone-200'
+                    }`}
+                  >
                     
                     {/* Chat Header */}
                     <div className="flex items-center justify-between pb-3.5 mb-2.5 border-b border-stone-100">
@@ -623,10 +662,17 @@ export default function UserProfilePage() {
                           <p className="text-[10px] text-stone-500 font-medium">Bantuan Langsung Dapur</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 rounded-full border border-emerald-200">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-800">Online</span>
-                      </div>
+                      {unreadAdminCount > 0 ? (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 rounded-full border border-rose-300 animate-pulse">
+                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                          <span className="text-[10px] sm:text-[11px] font-bold text-rose-700">{unreadAdminCount} Pesan Baru CS</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 rounded-full border border-emerald-200">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                          <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-800">Online</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Quick Chips */}
@@ -650,6 +696,22 @@ export default function UserProfilePage() {
                         Rekomendasi Menu
                       </button>
                     </div>
+
+                    {/* Live Unread Banner saat ada balasan baru dari CS */}
+                    {unreadAdminCount > 0 && (
+                      <div 
+                        onClick={handleChatInteraction}
+                        className="my-1.5 p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300/80 rounded-xl flex items-center justify-between text-xs text-amber-900 cursor-pointer shadow-xs animate-fade-in shrink-0"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#C2410C] animate-ping" />
+                          <span className="font-semibold">CS Support Dapur membalas pesan Anda!</span>
+                        </div>
+                        <span className="text-[10px] font-medium text-amber-800 bg-amber-100/90 px-2 py-0.5 rounded-md">
+                          Klik untuk baca
+                        </span>
+                      </div>
+                    )}
 
                     {/* Chat Feed */}
                     <div className="flex-1 overflow-y-auto py-2 flex flex-col gap-2.5 pr-1">
@@ -722,6 +784,7 @@ export default function UserProfilePage() {
 
                       <form 
                         onSubmit={(e) => { e.preventDefault(); handleSendChat(); }}
+                        onFocus={handleChatInteraction}
                         className="flex items-center gap-2"
                       >
                         <input 

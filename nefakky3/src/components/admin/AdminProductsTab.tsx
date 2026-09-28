@@ -380,8 +380,10 @@ export default function AdminProductsTab({
       stock: finalStock,
       variantStocks: variantStocksObj,
       variants: variantsPayload,
-      visibility: prodForm.visibility,
-      status: finalStock < 5 ? 'Low Stock' : prodForm.status,
+      visibility: Boolean(prodForm.visibility),
+      status: !prodForm.visibility 
+        ? 'Inactive' 
+        : (finalStock <= 0 ? 'Low Stock' : (finalStock < 5 ? 'Low Stock' : (prodForm.status || 'Active'))),
       badge: prodForm.badge || undefined,
       isComingSoon: prodForm.isComingSoon,
       releaseDate: prodForm.isComingSoon ? prodForm.releaseDate : undefined,
@@ -559,7 +561,7 @@ export default function AdminProductsTab({
             ) : (
               displayedProducts.map((prod) => {
                 const isComingSoon = prod.isComingSoon;
-                const isInactive = prod.status === 'Inactive' || prod.visibility === false;
+                const isInactive = prod.status === 'Inactive' || prod.visibility === false || String(prod.visibility) === 'false';
                 const displayAddress = (prod as any).kitchenAddress || prod.origin || 'Dapur Bojong Gede';
 
                 return (
@@ -693,11 +695,11 @@ export default function AdminProductsTab({
                         type="button"
                         onClick={() => toggleProductVisibility(prod.id)}
                         className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                          isInactive ? 'text-stone-400 hover:text-stone-700' : 'text-emerald-600 hover:bg-emerald-50'
+                          isInactive ? 'text-stone-400 hover:text-stone-700 bg-stone-100' : 'text-emerald-600 hover:bg-emerald-50'
                         }`}
-                        title={isInactive ? 'Tampilkan Menu' : 'Sembunyikan Menu'}
+                        title={isInactive ? 'Menu Sedang Tersembunyi (Klik untuk Tampilkan)' : 'Menu Sedang Ditampilkan (Klik untuk Sembunyikan)'}
                       >
-                        {isInactive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {isInactive ? <EyeOff className="w-4 h-4 text-stone-500" /> : <Eye className="w-4 h-4 text-emerald-600" />}
                       </button>
 
                       {/* [SCRUDS - UPDATE]: Membuka modal formulir untuk mengubah data hidangan & alamat dapur */}
@@ -850,6 +852,29 @@ export default function AdminProductsTab({
                           <option value="Camilan">Camilan</option>
                           <option value="Dessert">Dessert</option>
                         </select>
+                      </div>
+
+                      {/* Visibilitas Menu di Toko Publik Toggle */}
+                      <div className="p-3.5 bg-stone-50 rounded-xl flex items-center justify-between border border-stone-200 mt-1">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-xs text-stone-900">Visibilitas Menu di Toko Publik</span>
+                          <span className="text-[10px] text-stone-500">
+                            {prodForm.visibility ? 'Ditampilkan ke pelanggan di etalase toko (Aktif)' : 'Disembunyikan dari etalase toko (Nonaktif / Draft)'}
+                          </span>
+                        </div>
+                        <input 
+                          type="checkbox"
+                          checked={prodForm.visibility}
+                          onChange={(e) => {
+                            const isVis = e.target.checked;
+                            setProdForm(p => ({ 
+                              ...p, 
+                              visibility: isVis,
+                              status: isVis ? (parseInt(p.stock) <= 0 ? 'Low Stock' : 'Active') : 'Inactive'
+                            }));
+                          }}
+                          className="w-4 h-4 accent-[#934B19] cursor-pointer"
+                        />
                       </div>
 
                       {/* Coming Soon Toggle */}

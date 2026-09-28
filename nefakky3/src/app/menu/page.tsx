@@ -12,7 +12,7 @@
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useData } from '@/context/DataContext';
+import { useData, isCustomerVisibleProduct } from '@/context/DataContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
@@ -49,7 +49,7 @@ export default function MenuCatalogPage() {
     };
 
     (products || []).forEach(p => {
-      if (p.visibility === false || p.isDeleted) return;
+      if (!isCustomerVisibleProduct(p)) return;
       counts['Semua'] = (counts['Semua'] || 0) + 1;
       if (p.isComingSoon) {
         counts['Segera Hadir'] = (counts['Segera Hadir'] || 0) + 1;
@@ -63,6 +63,7 @@ export default function MenuCatalogPage() {
 
   const filteredProducts = useMemo(() => {
     return (products || []).filter(product => {
+      if (!isCustomerVisibleProduct(product)) return false;
       let matchCategory = true;
       if (activeCategory === 'Segera Hadir') {
         matchCategory = Boolean(product.isComingSoon);
@@ -72,7 +73,7 @@ export default function MenuCatalogPage() {
       const matchSearch = 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
         product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCategory && matchSearch && product.visibility !== false && !product.isDeleted;
+      return matchCategory && matchSearch;
     }).sort((a, b) => {
       if (sortBy === 'price-low') return a.price - b.price;
       if (sortBy === 'price-high') return b.price - a.price;

@@ -8,15 +8,17 @@
  * ============================================================================
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import { useData } from '@/context/DataContext';
 import { 
   Menu, 
   X, 
-  ChevronDown
+  ChevronDown,
+  Headphones
 } from 'lucide-react';
 import { ShoppingBag, Home, User, Clock, ShieldCheck, LogOut, Flame, MessageSquare, Utensils } from '@/components/icons/CustomIcons';
 
@@ -30,6 +32,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
   const pathname = usePathname();
   const { user, isAdmin, logout } = useAuth();
   const { totalCartCount } = useCart();
+  const { chatMessages } = useData();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
@@ -37,6 +40,37 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  // Hitung jumlah balasan dari Admin CS yang belum dibaca oleh pengguna yang sedang aktif
+  const unreadAdminChatCount = useMemo(() => {
+    if (!hasMounted || !user) return 0;
+    const uEmail = (user.email || '').trim().toLowerCase();
+    const uName = (user.displayName || '').trim().toLowerCase();
+
+    return (chatMessages || []).filter((msg: any) => {
+      if (msg.sender !== 'admin' || msg.readByUser) return false;
+      const target = (msg.userEmail || '').trim().toLowerCase();
+      if (!target) return false;
+      if (uEmail && target === uEmail) return true;
+      if (uName && target.includes(uName)) return true;
+      if (uEmail && (target.includes(uEmail) || uEmail.includes(target))) return true;
+      return false;
+    }).length;
+  }, [hasMounted, user, chatMessages]);
+
+  // Sinkronisasi judul tab peramban saat ada pesan baru dari CS
+  useEffect(() => {
+    if (!hasMounted || typeof document === 'undefined') return;
+
+    if (unreadAdminChatCount > 0) {
+      const cleanTitle = document.title.replace(/^\(\d+\)\s*Pesan Baru CS!\s*•?\s*/i, '');
+      document.title = `(${unreadAdminChatCount}) Pesan Baru CS! • ${cleanTitle}`;
+    } else {
+      if (document.title.includes('Pesan Baru CS!')) {
+        document.title = document.title.replace(/^\(\d+\)\s*Pesan Baru CS!\s*•?\s*/i, '');
+      }
+    }
+  }, [unreadAdminChatCount, hasMounted]);
 
   const userAvatar = user?.photoURL || (user?.displayName 
     ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=1C1917&color=ffffff&bold=true` 
@@ -178,7 +212,7 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                 <button
                   type="button"
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className={`flex items-center gap-1.5 h-10 p-1 sm:pr-2.5 rounded-lg bg-white border transition-colors cursor-pointer shrink-0 ${
+                  className={`relative flex items-center gap-1.5 h-10 p-1 sm:pr-2.5 rounded-lg bg-white border transition-colors cursor-pointer shrink-0 ${
                     isProfileActive 
                       ? 'border-[#C2410C] ring-1 ring-[#C2410C]/25 bg-amber-50/30' 
                       : 'border-stone-200 hover:border-stone-300'
@@ -198,6 +232,16 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                     {user.displayName || user.email?.split('@')[0] || 'Pelanggan'}
                   </span>
                   <ChevronDown className="w-3 h-3 text-stone-400 hidden sm:inline" />
+
+                  {/* Badge Unread Balasan CS Admin */}
+                  {unreadAdminChatCount > 0 && (
+                    <span 
+                      title={`${unreadAdminChatCount} pesan baru dari CS Dapur`}
+                      className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[9px] font-extrabold min-w-4 h-4 px-1 rounded-full flex items-center justify-center border-2 border-[#FBFBFA] shadow-xs animate-bounce z-10"
+                    >
+                      {unreadAdminChatCount}
+                    </span>
+                  )}
                 </button>
 
                 {/* Profile Dropdown Menu */}
@@ -223,6 +267,29 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                         <User className="w-4 h-4 text-[#C2410C]" />
                         <span>Profil Akun</span>
                       </Link>
+
+                      {/* CS Support Desk Quick Link with Live Unread Pill */}
+                      <Link 
+                        href="/profile" 
+                        className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-lg transition-colors mt-0.5 ${
+                          unreadAdminChatCount > 0 
+                            ? 'bg-rose-50 text-rose-900 border border-rose-200 hover:bg-rose-100' 
+                            : 'text-stone-700 hover:text-stone-900 hover:bg-stone-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Headphones className={`w-4 h-4 ${unreadAdminChatCount > 0 ? 'text-rose-600 animate-pulse' : 'text-emerald-600'}`} />
+                          <span>Support Desk (CS)</span>
+                        </div>
+                        {unreadAdminChatCount > 0 ? (
+                          <span className="bg-rose-600 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full animate-bounce">
+                            {unreadAdminChatCount} baru
+                          </span>
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        )}
+                      </Link>
+
                       <Link 
                         href="/notifications" 
                         className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-stone-700 hover:text-stone-900 hover:bg-stone-50 rounded-lg transition-colors"
@@ -328,6 +395,23 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
                   <Clock className="w-4 h-4 text-stone-500" />
                   <span>Status & Lacak Pesanan</span>
                 </Link>
+                <Link
+                  href="/profile"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center justify-between p-2.5 rounded-lg text-xs font-medium transition-colors ${
+                    unreadAdminChatCount > 0 ? 'bg-rose-50 text-rose-900 border border-rose-200' : 'text-stone-700 hover:bg-stone-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Headphones className={`w-4 h-4 ${unreadAdminChatCount > 0 ? 'text-rose-600 animate-pulse' : 'text-emerald-600'}`} />
+                    <span>Support Desk (CS Dapur)</span>
+                  </div>
+                  {unreadAdminChatCount > 0 && (
+                    <span className="bg-rose-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full animate-bounce">
+                      {unreadAdminChatCount} Baru
+                    </span>
+                  )}
+                </Link>
               </div>
 
               <div className="bg-stone-50 p-3.5 rounded-xl border border-stone-200 space-y-1.5">
@@ -409,11 +493,18 @@ export default function Navbar({ showSearch, searchQuery, onSearchChange }: Navb
 
           <Link
             href="/profile"
-            className={`flex flex-col items-center justify-center gap-1 py-1.5 min-h-[48px] rounded-xl transition-colors active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center gap-1 py-1.5 min-h-[48px] rounded-xl transition-colors active:scale-95 ${
               isProfileActive ? 'text-[#C2410C] font-semibold' : 'text-stone-500 hover:text-stone-900'
             }`}
           >
-            <User className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="relative">
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
+              {hasMounted && unreadAdminChatCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white text-[9px] font-extrabold min-w-4 h-4 px-1 rounded-full flex items-center justify-center border-2 border-white shadow-xs animate-bounce">
+                  {unreadAdminChatCount}
+                </span>
+              )}
+            </div>
             <span className="text-[10px] leading-none">Profil</span>
           </Link>
         </div>

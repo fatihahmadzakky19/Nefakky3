@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { useData, isVoucherValidNow, cleanPromoCode, sortReviewsNewestFirst, deduplicateVouchers } from '@/context/DataContext';
+import { useData, isVoucherValidNow, cleanPromoCode, sortReviewsNewestFirst, deduplicateVouchers, isCustomerVisibleProduct } from '@/context/DataContext';
 import MenuDetailModal, { DetailProduct } from '@/components/MenuDetailModal';
 import AuthRequiredModal from '@/components/AuthRequiredModal';
 import Navbar from '@/components/Navbar';
@@ -140,7 +140,7 @@ export default function HomePage() {
     ];
 
     if (!products || products.length === 0) return defaultSlides;
-    const active = products.filter(p => p.visibility !== false && !p.isDeleted);
+    const active = products.filter(isCustomerVisibleProduct);
     if (active.length === 0) return defaultSlides;
 
     return active.map((p) => {
@@ -196,7 +196,7 @@ export default function HomePage() {
 
   const activeProducts = useMemo(() => {
     if (!products || products.length === 0) return [];
-    return products.filter(p => p.visibility !== false && !p.isDeleted);
+    return products.filter(isCustomerVisibleProduct);
   }, [products]);
 
   const displayedFavorites = useMemo(() => {
