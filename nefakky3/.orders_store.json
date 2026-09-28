@@ -1,5 +1,39 @@
 [
   {
+    "id": "NFK-947962",
+    "customerName": "anonim1",
+    "customerEmail": "anonim1@gmail.com",
+    "userId": "KlOg1Aep9TbKmHy9YatgW3C5thm1",
+    "avatar": "https://ui-avatars.com/api/?name=anonim1&background=1C1917&color=ffffff",
+    "address": "Susukan,  Bojong Gede,  Bogor,  Jawa Barat,  16929",
+    "phone": "0856838642",
+    "items": [
+      {
+        "id": "m4",
+        "name": "Gudeg",
+        "price": 10000,
+        "quantity": 1,
+        "image": "/images/gudeg.jpg"
+      }
+    ],
+    "itemCount": 1,
+    "paymentMethod": "Virtual Account BCA (Midtrans)",
+    "paymentBadge": "PAID",
+    "deliveryType": "KURIR NEFAKKY",
+    "distance": "3.1 Km",
+    "status": "RECEIVED",
+    "subtotal": 10000,
+    "shippingCost": 10000,
+    "discount": 0,
+    "total": 20000,
+    "voucherCode": "FLASHSALE12",
+    "appliedPromo": "FLASHSALE12",
+    "date": "Senin, 28 Sep 2026 • 12:44:24 WIB",
+    "createdAt": 1790574264059,
+    "customerConfirmed": false,
+    "updatedAt": 1790574264060
+  },
+  {
     "id": "NFK-567369",
     "customerName": "anonim1",
     "customerEmail": "anonim1@gmail.com",
