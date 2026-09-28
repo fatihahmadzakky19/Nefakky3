@@ -23,7 +23,7 @@ import {
 } from 'firebase/firestore';
 import { ref, onValue, onChildAdded, onChildChanged, onChildRemoved, set as setRtdb, update as updateRtdb, remove as removeRtdb } from 'firebase/database';
 import { db, rtdb } from '@/lib/firebase';
-import { formatCurrentRealtimeOrderDate, parseIndonesianDateStringToDate } from '@/lib/orderTimeUtils';
+import { formatCurrentRealtimeOrderDate, parseIndonesianDateStringToDate, getJakartaDate } from '@/lib/orderTimeUtils';
 import { getEchoInstance } from '@/lib/echo';
 import { isAdminEmail } from '@/context/AuthContext';
 
@@ -123,9 +123,10 @@ export interface AdminVoucher {
   deletedAt?: string;
 }
 
-/** Helper untuk mendapatkan identifier minggu ISO (contoh: "2026-W33") */
+/** Helper untuk mendapatkan identifier minggu ISO (contoh: "2026-W33") berbasis kalender Jakarta (WIB) */
 export const getISOWeekString = (d: Date = new Date()): string => {
-  const date = new Date(d.getTime());
+  const jak = getJakartaDate(d);
+  const date = new Date(jak.getTime());
   date.setHours(0, 0, 0, 0);
   date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
   const week1 = new Date(date.getFullYear(), 0, 4);
@@ -391,15 +392,14 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
   }
 
   // 4. Weekend / Day of Week Validation (Aturan Batas Hari Aktif)
-  // Sesuai standar industri F&B Nusantara (WIB), Promo Weekend / Akhir Pekan berlaku hari Jumat, Sabtu, & Minggu (0 = Minggu, 5 = Jumat, 6 = Sabtu)
-  const now = new Date();
+  // Standar waktu operasional: Selalu gunakan jam dinding Asia/Jakarta (WIB) agar konsisten dengan jam operasional toko
+  // Sesuai standar industri F&B & admin panel: Promo Weekend / Khusus Akhir Pekan hanya berlaku pada hari Sabtu & Minggu (0 = Minggu, 6 = Sabtu)
+  const now = getJakartaDate(new Date());
   const day = now.getDay(); 
-  const isWeekendDay = day === 0 || day === 5 || day === 6;
-  const isWeekday = day >= 1 && day <= 5;
+  const isWeekendDay = day === 0 || day === 6; // 0 = Minggu, 6 = Sabtu
+  const isWeekday = day >= 1 && day <= 5; // 1 = Senin, 2 = Selasa, 3 = Rabu, 4 = Kamis, 5 = Jumat
 
-  const isAllDays = daysLower.includes('semua hari') || daysLower.includes('setiap hari') || daysLower.includes('all');
-
-  const isWeekendPromo = !isAllDays && (
+  const isWeekendPromo = 
     daysLower.includes('weekend') ||
     daysLower.includes('akhir pekan') ||
     daysLower.includes('sabtu') ||
@@ -408,15 +408,17 @@ export const isVoucherValidNow = (voucher?: AdminVoucher | any): { active: boole
     nameLower.includes('weekend') ||
     expiryLower.includes('akhir pekan') ||
     expiryLower.includes('weekend') ||
-    eventLower.includes('akhir pekan')
-  );
+    eventLower.includes('akhir pekan');
 
-  const isWeekdayPromo = daysLower.includes('weekday') || daysLower.includes('kerja');
+  const isWeekdayPromo = !isWeekendPromo && (
+    daysLower.includes('weekday') || 
+    daysLower.includes('kerja')
+  );
 
   if (isWeekendPromo && !isWeekendDay) {
     return { 
       active: false, 
-      reason: `Promo ${voucher.code || ''} (${voucher.name || ''}) hanya berlaku pada hari Jumat, Sabtu & Minggu (Weekend).` 
+      reason: `Promo ${voucher.code || ''} (${voucher.name || ''}) hanya berlaku pada akhir pekan (Sabtu & Minggu).` 
     };
   }
 
@@ -852,7 +854,7 @@ export const DEFAULT_VOUCHERS: AdminVoucher[] = [
     eventCategory: 'Flash Sale',
     status: 'Active',
     isActive: true,
-    validDays: 'Semua Hari',
+    validDays: 'Weekend',
     autoResetWeekly: true,
     updatedAt: 1789125300000
   },
@@ -1310,15 +1312,21 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       const savedVouchers = readLS<AdminVoucher[]>('nefakky_vouchers_live', []);
       if (savedVouchers && savedVouchers.length > 0) {
         const vTombs = readTombstones('nefakky_deleted_vouchers');
-        const existingIds = new Set(savedVouchers.map(v => v.id));
-        const existingCodes = new Set(savedVouchers.map(v => cleanPromoCode(v.code)).filter(Boolean));
+        const normalizedSaved = savedVouchers.map(v => {
+          if (cleanPromoCode(v.code) === 'WEEKENDSERU' && (!v.validDays || v.validDays === 'Semua Hari')) {
+            return { ...v, validDays: 'Weekend' };
+          }
+          return v;
+        });
+        const existingIds = new Set(normalizedSaved.map(v => v.id));
+        const existingCodes = new Set(normalizedSaved.map(v => cleanPromoCode(v.code)).filter(Boolean));
         const missing = DEFAULT_VOUCHERS.filter(v => 
           !existingIds.has(v.id) && 
           !existingCodes.has(cleanPromoCode(v.code)) && 
           !vTombs.has(v.id) && 
           !vTombs.has(cleanPromoCode(v.code))
         );
-        const deduped = deduplicateVouchers([...savedVouchers, ...missing]);
+        const deduped = deduplicateVouchers([...normalizedSaved, ...missing]);
         setVouchersState(deduped);
         try {
           localStorage.setItem('nefakky_vouchers_live', JSON.stringify(deduped));
@@ -1556,10 +1564,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         batch.commit().catch(err => console.warn('Seeding vouchers notice:', err?.message || err));
       } else {
         const rawVouches = snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as AdminVoucher);
+        const normalizedRaw = rawVouches.map(v => {
+          if (cleanPromoCode(v.code) === 'WEEKENDSERU' && (!v.validDays || v.validDays === 'Semua Hari')) {
+            return { ...v, validDays: 'Weekend' };
+          }
+          return v;
+        });
 
         // Bersihkan dokumen duplikat dari server Firestore jika memiliki kode promo yang sama
         const codeToDocs = new Map<string, AdminVoucher[]>();
-        rawVouches.forEach(v => {
+        normalizedRaw.forEach(v => {
           const code = cleanPromoCode(v.code);
           if (code) {
             if (!codeToDocs.has(code)) codeToDocs.set(code, []);
@@ -1577,7 +1591,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           }
         });
 
-        const vouches = deduplicateVouchers(rawVouches);
+        const vouches = deduplicateVouchers(normalizedRaw);
         const existingIds = new Set(vouches.map(v => v.id));
         const existingCodes = new Set(vouches.map(v => cleanPromoCode(v.code)).filter(Boolean));
         const missingVouchers = DEFAULT_VOUCHERS.filter(v => 
